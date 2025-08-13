@@ -310,12 +310,6 @@ static void perform_group_gain(struct char_data *ch, int base,
 
   share = MIN(CONFIG_MAX_EXP_GAIN, MAX(1, base));
 
-  if ((IS_HAPPYHOUR) && (IS_HAPPYEXP))
-  {
-    /* This only reports the correct amount - the calc is done in gain_exp */
-    hap_share = share + (int)((float)share * ((float)HAPPY_EXP / (float)(100)));
-    share = MIN(CONFIG_MAX_EXP_GAIN, MAX(1, hap_share));
-  }
   if (share > 1)
     send_to_char(ch, "You receive your share of experience -- %d points.\r\n", share);
   else
@@ -353,7 +347,7 @@ static void group_gain(struct char_data *ch, struct char_data *victim)
 
 static void solo_gain(struct char_data *ch, struct char_data *victim)
 {
-  int exp, happy_exp;
+  int exp;
 
   exp = MIN(CONFIG_MAX_EXP_GAIN, GET_EXP(victim) / 3);
 
@@ -364,11 +358,6 @@ static void solo_gain(struct char_data *ch, struct char_data *victim)
     exp += MAX(0, (exp * MIN(8, (GET_LEVEL(victim) - GET_LEVEL(ch)))) / 8);
 
   exp = MAX(exp, 1);
-
-  if (IS_HAPPYHOUR && IS_HAPPYEXP) {
-    happy_exp = exp + (int)((float)exp * ((float)HAPPY_EXP / (float)(100)));
-    exp = MAX(happy_exp, 1);
-  }
 
   if (exp > 1)
     send_to_char(ch, "You receive %d experience points.\r\n", exp);
@@ -587,7 +576,7 @@ int skill_message(int dam, struct char_data *ch, struct char_data *vict,
  *	> 0	How much damage done. */
 int damage(struct char_data *ch, struct char_data *victim, int dam, int attacktype)
 {
-  long local_gold = 0, happy_gold = 0;
+  long local_gold = 0;
   char local_buf[256];
   struct char_data *tmp_char;
   struct obj_data *corpse_obj;
@@ -756,12 +745,6 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
     }
     /* Cant determine GET_GOLD on corpse, so do now and store */
     if (IS_NPC(victim)) {
-      if ((IS_HAPPYHOUR) && (IS_HAPPYGOLD))
-      {
-        happy_gold = (long)(GET_GOLD(victim) * (((float)(HAPPY_GOLD))/(float)100));
-        happy_gold = MAX(0, happy_gold);
-        increase_gold(victim, happy_gold);
-      }
       local_gold = GET_GOLD(victim);
       sprintf(local_buf,"%ld", (long)local_gold);
     }
