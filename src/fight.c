@@ -306,7 +306,7 @@ void die(struct char_data * ch, struct char_data * killer)
 static void perform_group_gain(struct char_data *ch, int base,
 			     struct char_data *victim)
 {
-  int share, hap_share;
+  int share;
 
   share = MIN(CONFIG_MAX_EXP_GAIN, MAX(1, base));
 

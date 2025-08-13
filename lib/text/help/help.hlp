@@ -3683,22 +3683,6 @@ HANDBOOK WIZHANDBOOK WIZ-HANDBOOK IMMHANDBOOK IMM-HANDBOOK
 Usage: handbook
 
    Guidelines for having an Immortal character -- you should read it.
-#31
-HAPPYHOUR
-
-Usage: happyhour              - show usage (this info)
-       happyhour show         - display current settings (what mortals see)
-       happyhour time <ticks> - set happyhour time and start timer
-       happyhour qp <num>     - set qp percentage gain
-       happyhour exp <num>    - set exp percentage gain
-       happyhour gold <num>   - set gold percentage gain
-       happyhour default      - sets a default setting for happyhour
-
-Configure the happyhour settings and start a happyhour.
-Currently 1 hour IRL = 48 ticks
-If no number is specified, 0 (off) is assumed.
-The command happyhour time will therefore stop the happyhour timer.
-
 
 #31
 HARM
