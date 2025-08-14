@@ -824,12 +824,8 @@ ACMD(do_score)
   send_to_char(ch, "Your armor class is %d/10, and your alignment is %d.\r\n",
       compute_armor_class(ch), GET_ALIGNMENT(ch));
 
-  send_to_char(ch, "You have %d exp, %d gold coins, and %d questpoints.\r\n",
-      GET_EXP(ch), GET_GOLD(ch), GET_QUESTPOINTS(ch));
-
-  if (GET_LEVEL(ch) < LVL_IMMORT)
-    send_to_char(ch, "You need %d exp to reach your next level.\r\n",
-    level_exp(GET_CLASS(ch), GET_LEVEL(ch) + 1) - GET_EXP(ch));
+  send_to_char(ch, "You have %d gold coins, and %d questpoints.\r\n",
+      GET_GOLD(ch), GET_QUESTPOINTS(ch));
 
   send_to_char(ch, "You have earned %d quest points.\r\n", GET_QUESTPOINTS(ch));
   send_to_char(ch, "You have completed %d quest%s, ",
@@ -852,9 +848,6 @@ ACMD(do_score)
   send_to_char(ch, "You have been playing for %d day%s and %d hour%s.\r\n",
      playing_time.day, playing_time.day == 1 ? "" : "s",
      playing_time.hours, playing_time.hours == 1 ? "" : "s");
-
-  send_to_char(ch, "This ranks you as %s %s (level %d).\r\n",
-      GET_NAME(ch), GET_TITLE(ch), GET_LEVEL(ch));
 
   switch (GET_POS(ch)) {
   case POS_DEAD:
