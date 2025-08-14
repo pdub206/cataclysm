@@ -870,15 +870,6 @@ autoquests scattered throughout the World.
 
 See Also: QUEST-FLAG, QUESTPOINTS
 #0
-AUTOSACRIFICE SACRIFICE
-
-Usage: toggle autosac
-
-   Enables you to automatically sacrifice any mob you kill. If you do not have
-autoloot enabled the objects and gold will also be sacrificed.
-
-See Also: TOGGLE
-#0
 AUTOSPLIT 
 
 Usage: toggle autosplit
@@ -2550,20 +2541,6 @@ Modify your prompt to show your hit points, mana, and/or movement points.
                     prompt if the values drop below 30% of max.
 See also: TOGGLE
 #0
-DONATE
-
-Usage: donate <object>
-       donate <number> coins
-
-This command takes an object that you no longer want and deposits it in one of
-the MUDs donation rooms.
-
-  > donate shield
-  > donate all.bread
-  > donate 500 coins
-
-See also: JUNK, GET
-#0
 DROP THROWN
 
 Usage: drop <item>
@@ -2578,7 +2555,7 @@ If you lose interest in a carried item, you can drop it on the ground.
   > drop all
   > drop 1000 coins
 
-See also: DONATE, GET, JUNK
+See also: GET, JUNK
 #0
 DRUNK WINE LIQUID-CONTAINERS BEER SPIRITS DRINK-TYPES LIQUOR WHISKEY WHISKY LIQUIDS LIQ-CONTAINERS
 
@@ -4156,7 +4133,7 @@ Examples:
   > junk all.bronze
   > junk 500 coins
 
-See also: DONATE, DROP
+See also: DROP
 #0
 KEY-BASICS KEYS-BASICS OEDIT-KEYS
 
@@ -5735,7 +5712,7 @@ INVENTORY EQUIPMENT               - Inventory is carried, equipment is worn.
 GRAB HOLD WIELD WEAR REMOVE       - Different ways of using equipment.
 EXAMINE LOOK                      - More or less like a 'look in object'
 EAT TASTE DRINK SIP POUR FILL     - All living creatures must eat and drink.
-JUNK DONATE                       - Get rid of an object.
+JUNK                              - Get rid of an object.
 USE RECITE QUAFF                  - For wands, scrolls and potions.
 SPLIT                             - For dividing gold between party members.
 DEPOSIT WITHDRAW BALANCE          - Used to communicate in banks.
@@ -7108,7 +7085,7 @@ Level       : Cleric level 8.
 
 The meaning of this spell is not yet fully defined.
 #0
-PURGE DESTROY SACRIFICE UNLOAD DELETE-MOBILE DISINTEGRATE DECOMPOSE CLEANUP 
+PURGE DESTROY UNLOAD DELETE-MOBILE DISINTEGRATE DECOMPOSE CLEANUP 
 
 Usage: purge [target]
 

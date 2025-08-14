@@ -98,7 +98,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "autokey"  , "autokey" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOKEY },
   { "autoloot" , "autoloot", POS_DEAD    , do_gen_tog , 0, SCMD_AUTOLOOT },
   { "automap"  , "automap" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOMAP },
-  { "autosac"  , "autosac" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOSAC },
   { "autosplit", "autospl" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOSPLIT },
 
   { "backstab" , "ba"      , POS_STANDING, do_backstab , 1, 0 },
@@ -132,7 +131,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "diagnose" , "diag"    , POS_RESTING , do_diagnose , 0, 0 },
   { "dig"      , "dig"     , POS_DEAD    , do_dig      , LVL_BUILDER, 0 },
   { "display"  , "disp"    , POS_DEAD    , do_display  , 0, 0 },
-  { "donate"   , "don"     , POS_RESTING , do_drop     , 0, SCMD_DONATE },
   { "drink"    , "dri"     , POS_RESTING , do_drink    , 0, SCMD_DRINK },
   { "drop"     , "dro"     , POS_RESTING , do_drop     , 0, SCMD_DROP },
 
@@ -273,7 +271,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "rcopy"    , "rcopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_REDIT },
   { "roomflags", "roomflags", POS_DEAD   , do_gen_tog  , LVL_IMMORT, SCMD_SHOWVNUMS },
 
-  { "sacrifice", "sac"     , POS_RESTING , do_sac      , 0, 0 },
   { "say"      , "s"       , POS_RESTING , do_say      , 0, 0 },
   { "score"    , "sc"      , POS_DEAD    , do_score    , 0, 0 },
   { "scan"     , "sca"     , POS_RESTING , do_scan     , 0, 0 },
