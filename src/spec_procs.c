@@ -190,10 +190,7 @@ SPECIAL(dump)
     send_to_char(ch, "You are awarded for outstanding performance.\r\n");
     act("$n has been awarded for being a good citizen.", TRUE, ch, 0, 0, TO_ROOM);
 
-    if (GET_LEVEL(ch) < 3)
-      gain_exp(ch, value);
-    else
-      increase_gold(ch, value);
+    increase_gold(ch, value);
   }
   return (TRUE);
 }

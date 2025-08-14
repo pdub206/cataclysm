@@ -295,7 +295,6 @@ struct char_data *i;
 
 void die(struct char_data * ch, struct char_data * killer)
 {
-  gain_exp(ch, -(GET_EXP(ch) / 2));
   if (!IS_NPC(ch)) {
     REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_KILLER);
     REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_THIEF);
@@ -315,7 +314,6 @@ static void perform_group_gain(struct char_data *ch, int base,
   else
     send_to_char(ch, "You receive your share of experience -- one measly little point!\r\n");
 
-  gain_exp(ch, share);
   change_alignment(ch, victim);
 }
 
@@ -364,7 +362,6 @@ static void solo_gain(struct char_data *ch, struct char_data *victim)
   else
     send_to_char(ch, "You receive one lousy experience point.\r\n");
 
-  gain_exp(ch, exp);
   change_alignment(ch, victim);
 }
 
@@ -649,10 +646,6 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   /* Set the maximum damage per round and subtract the hit points */
   dam = MAX(MIN(dam, 100), 0);
   GET_HIT(victim) -= dam;
-
-  /* Gain exp for the hit */
-  if (ch != victim)
-    gain_exp(ch, GET_LEVEL(victim) * dam);
 
   update_pos(victim);
 

@@ -250,7 +250,6 @@ ACMD(do_flee)
         if (was_fighting && !IS_NPC(ch)) {
 	  loss = GET_MAX_HIT(was_fighting) - GET_HIT(was_fighting);
 	  loss *= GET_LEVEL(was_fighting);
-	  gain_exp(ch, -loss);
         }
       if (FIGHTING(ch)) 
         stop_fighting(ch); 

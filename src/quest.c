@@ -305,12 +305,6 @@ void generic_complete_quest(struct char_data *ch)
             "You have been awarded %d gold coins for your service.\r\n",
             QST_GOLD(rnum));
     }
-    if (QST_EXP(rnum)) {
-      gain_exp(ch, QST_EXP(rnum));
-      send_to_char(ch,
-            "You have been awarded %d experience points for your service.\r\n",
-            QST_EXP(rnum));
-    }
     if (QST_OBJ(rnum) && QST_OBJ(rnum) != NOTHING) {
       if (real_object(QST_OBJ(rnum)) != NOTHING) {
         if ((new_obj = read_object((QST_OBJ(rnum)),VIRTUAL)) != NULL) {
