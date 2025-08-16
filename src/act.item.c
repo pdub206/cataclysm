@@ -409,42 +409,34 @@ static void perform_drop_gold(struct char_data *ch, int amount, byte mode, room_
     if (mode != SCMD_JUNK) {
       WAIT_STATE(ch, PULSE_VIOLENCE); /* to prevent coin-bombing */
       obj = create_money(amount);
-      if (mode == SCMD_DONATE) {
-	      send_to_char(ch, "You throw some gold into the air where it disappears in a puff of smoke!\r\n");
-	      act("$n throws some gold into the air where it disappears in a puff of smoke!",
-	          FALSE, ch, 0, 0, TO_ROOM);
-	      obj_to_room(obj, RDR);
-	      act("$p suddenly appears in a puff of orange smoke!", 0, 0, obj, 0, TO_ROOM);
-      } else {
-        char buf[MAX_STRING_LENGTH];
-        long object_id = obj_script_id(obj);
+      char buf[MAX_STRING_LENGTH];
+      long object_id = obj_script_id(obj);
 
-        if (!drop_wtrigger(obj, ch)) {
-          if (has_obj_by_uid_in_lookup_table(object_id))
-            extract_obj(obj);
+      if (!drop_wtrigger(obj, ch)) {
+        if (has_obj_by_uid_in_lookup_table(object_id))
+          extract_obj(obj);
 
-          return;
-        }
-
-	      snprintf(buf, sizeof(buf), "$n drops %s.", money_desc(amount));
-	      act(buf, TRUE, ch, 0, 0, TO_ROOM);
-
-	      send_to_char(ch, "You drop some gold.\r\n");
-	      obj_to_room(obj, IN_ROOM(ch));
+        return;
       }
-    } else {
+
+      snprintf(buf, sizeof(buf), "$n drops %s.", money_desc(amount));
+      act(buf, TRUE, ch, 0, 0, TO_ROOM);
+
+      send_to_char(ch, "You drop some gold.\r\n");
+      obj_to_room(obj, IN_ROOM(ch));
+    } else { 
       char buf[MAX_STRING_LENGTH];
 
-      snprintf(buf, sizeof(buf), "$n drops %s which disappears in a puff of smoke!", money_desc(amount));
+      snprintf(buf, sizeof(buf), "$n discards %s.", money_desc(amount));
       act(buf, FALSE, ch, 0, 0, TO_ROOM);
 
-      send_to_char(ch, "You drop some gold which disappears in a puff of smoke!\r\n");
+      send_to_char(ch, "You discard some gold.\r\n");
     }
     decrease_gold(ch, amount);
   }
 }
 
-#define VANISH(mode) ((mode == SCMD_DONATE || mode == SCMD_JUNK) ? \
+#define VANISH(mode) ((mode == SCMD_JUNK) ? \
 		      "  It vanishes in a puff of smoke!" : "")
 static int perform_drop(struct char_data *ch, struct obj_data *obj,
 		     byte mode, const char *sname, room_rnum RDR)
@@ -479,16 +471,9 @@ static int perform_drop(struct char_data *ch, struct obj_data *obj,
 
   obj_from_char(obj);
 
-  if ((mode == SCMD_DONATE) && OBJ_FLAGGED(obj, ITEM_NODONATE))
-    mode = SCMD_JUNK;
-
   switch (mode) {
   case SCMD_DROP:
     obj_to_room(obj, IN_ROOM(ch));
-    return (0);
-  case SCMD_DONATE:
-    obj_to_room(obj, RDR);
-    act("$p suddenly appears in a puff a smoke!", FALSE, 0, obj, 0, TO_ROOM);
     return (0);
   case SCMD_JUNK:
     value = MAX(1, MIN(200, GET_OBJ_COST(obj) / 16));
@@ -510,37 +495,13 @@ ACMD(do_drop)
   struct obj_data *obj, *next_obj;
   room_rnum RDR = 0;
   byte mode = SCMD_DROP;
-  int dotmode, amount = 0, multi, num_don_rooms;
+  int dotmode, amount = 0, multi;
   const char *sname;
 
   switch (subcmd) {
   case SCMD_JUNK:
     sname = "junk";
     mode = SCMD_JUNK;
-    break;
-  case SCMD_DONATE:
-    sname = "donate";
-    mode = SCMD_DONATE;
-    /* fail + double chance for room 1   */
-    num_don_rooms = (CONFIG_DON_ROOM_1 != NOWHERE) * 2 +
-                    (CONFIG_DON_ROOM_2 != NOWHERE)     +
-                    (CONFIG_DON_ROOM_3 != NOWHERE)     + 1 ;
-    switch (rand_number(0, num_don_rooms)) {
-    case 0:
-      mode = SCMD_JUNK;
-      break;
-    case 1:
-    case 2:
-      RDR = real_room(CONFIG_DON_ROOM_1);
-      break;
-    case 3: RDR = real_room(CONFIG_DON_ROOM_2); break;
-    case 4: RDR = real_room(CONFIG_DON_ROOM_3); break;
-
-    }
-    if (RDR == NOWHERE) {
-      send_to_char(ch, "Sorry, you can't donate anything right now.\r\n");
-      return;
-    }
     break;
   default:
     sname = "drop";
@@ -574,12 +535,10 @@ ACMD(do_drop)
     dotmode = find_all_dots(arg);
 
     /* Can't junk or donate all */
-    if ((dotmode == FIND_ALL) && (subcmd == SCMD_JUNK || subcmd == SCMD_DONATE)) {
+    if ((dotmode == FIND_ALL) && (subcmd == SCMD_JUNK)) {
       if (subcmd == SCMD_JUNK)
-	send_to_char(ch, "Go to the dump if you want to junk EVERYTHING!\r\n");
-      else
-	send_to_char(ch, "Go do the donation room if you want to donate EVERYTHING!\r\n");
-      return;
+	      send_to_char(ch, "You need to specify what you want to junk.\r\n");
+        return;
     }
     if (dotmode == FIND_ALL) {
       if (!ch->carrying)

@@ -118,7 +118,6 @@ void weight_change_object(struct obj_data *obj, int weight);
 ACMD(do_drop);
 #define SCMD_DROP   0
 #define SCMD_JUNK   1
-#define SCMD_DONATE 2
 /* do_eat */
 ACMD(do_eat);
 #define SCMD_EAT    0
