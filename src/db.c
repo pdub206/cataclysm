@@ -3839,7 +3839,6 @@ static void load_default_config( void )
   CONFIG_PK_ALLOWED 	        = pk_allowed;
   CONFIG_PT_ALLOWED             = pt_allowed;
   CONFIG_LEVEL_CAN_SHOUT 	    = level_can_shout;
-  CONFIG_HOLLER_MOVE_COST 	    = holler_move_cost;
   CONFIG_TUNNEL_SIZE 	        = tunnel_size;
   CONFIG_MAX_EXP_GAIN	        = max_exp_gain;
   CONFIG_MAX_EXP_LOSS 	        = max_exp_loss;
@@ -4006,9 +4005,7 @@ void load_config( void )
         break;
 
       case 'h':
-        if (!str_cmp(tag, "holler_move_cost"))
-          CONFIG_HOLLER_MOVE_COST = num;
-        else if (!str_cmp(tag, "huh")) {
+        if (!str_cmp(tag, "huh")) {
           char tmp[READ_SIZE];
           if (CONFIG_HUH)
             free(CONFIG_HUH);

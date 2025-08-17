@@ -942,7 +942,6 @@ const char *history_types[] = {
   "tell",
   "shout",
   "grats",
-  "holler",
   "auction",
   "\n"
 };

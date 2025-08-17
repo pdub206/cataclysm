@@ -132,10 +132,9 @@
 #define HIST_TELL      4 /**< Index to history of all 'tell' */
 #define HIST_SHOUT     5 /**< Index to history of all 'shout' */
 #define HIST_GRATS     6 /**< Index to history of all 'grats' */
-#define HIST_HOLLER    7 /**< Index to history of all 'holler' */
-#define HIST_AUCTION   8 /**< Index to history of all 'auction' */
+#define HIST_AUCTION   7 /**< Index to history of all 'auction' */
 
-#define NUM_HIST       9 /**< Total number of history indexes */
+#define NUM_HIST       8 /**< Total number of history indexes */
 
 #define HISTORY_SIZE   5 /**< Number of last commands kept in each history */
 
@@ -1285,7 +1284,6 @@ struct game_data
   int pk_allowed; /**< Is player killing allowed?    */
   int pt_allowed; /**< Is player thieving allowed?   */
   int level_can_shout; /**< Level player must be to shout.   */
-  int holler_move_cost; /**< Cost to holler in move points.    */
   int tunnel_size; /**< Number of people allowed in a tunnel.*/
   int max_exp_gain; /**< Maximum experience gainable per kill.*/
   int max_exp_loss; /**< Maximum experience losable per death.*/
