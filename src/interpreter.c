@@ -226,6 +226,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "olc"      , "olc"     , POS_DEAD    , do_show_save_list, LVL_BUILDER, 0 },
   { "olist"    , "olist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_OLIST },
   { "oedit"    , "oedit"   , POS_DEAD    , do_oasis_oedit, LVL_BUILDER, 0 },
+  { "ooc"      , "oo"      , POS_RESTING , do_ooc      , 0, 0 },
   { "oset"     , "oset"    , POS_DEAD    , do_oset,        LVL_BUILDER, 0 },  
   { "ocopy"    , "ocopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_OEDIT },
 
