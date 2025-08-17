@@ -3230,14 +3230,47 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
     case 46: /* siteok */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_SITEOK);
       break;
-    case 47: /* skill */
-      char skill_name[MAX_INPUT_LENGTH], value_arg[MAX_INPUT_LENGTH];
+    case 47: /* skills/spells */
+    {
+      char local_buf[MAX_INPUT_LENGTH], *value_arg, *name_end;
+      char skill_name[MAX_INPUT_LENGTH];
       int snum;
 
-      /* Expect: val_arg = "<skill-name> <0-100>" */
-      char *p = val_arg;
-      p = one_argument(p, skill_name);
-      p = one_argument(p, value_arg);
+      /* Make a writable copy and trim trailing spaces */
+      strlcpy(local_buf, val_arg, sizeof(local_buf));
+      {
+        int len = strlen(local_buf);
+        while (len > 0 && isspace((unsigned char)local_buf[len - 1])) {
+          local_buf[--len] = '\0';
+        }
+      }
+
+      if (!*local_buf) {
+        send_to_char(ch, "Usage: set <player> skill <skill-name> <0-100>\r\n");
+        return (0);
+      }
+
+      /* Find last word (the numeric value) by walking backwards */
+      name_end = local_buf + strlen(local_buf) - 1;
+      while (name_end > local_buf && !isspace((unsigned char)*name_end))
+        name_end--;
+
+      if (name_end <= local_buf) {
+        send_to_char(ch, "Usage: set <player> skill <skill-name> <0-100>\r\n");
+        return (0);
+      }
+
+      *name_end = '\0';             /* terminate skill name string */
+      value_arg = name_end + 1;     /* point to numeric string */
+
+      /* Trim trailing whitespace from skill name */
+      while (name_end > local_buf && isspace((unsigned char)name_end[-1])) {
+        *--name_end = '\0';
+      }
+
+      char *skill_ptr = local_buf;
+      skip_spaces(&skill_ptr);
+      strlcpy(skill_name, skill_ptr, sizeof(skill_name));
 
       if (!*skill_name || !*value_arg) {
         send_to_char(ch, "Usage: set <player> skill <skill-name> <0-100>\r\n");
@@ -3254,47 +3287,34 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
 
-      snum = find_skill_num(skill_name); /* handles abbrevs & case-insensitive */
-      if (snum <= 0) {
-        send_to_char(ch, "That skill doesn't exist.\r\n");
-        return (0);
-      }
-
-      #ifdef SKTYPE_SKILL
-        /* Optional: only allow actual skills (not spells/songs/etc.) */
-        if (spell_info[snum].type != SKTYPE_SKILL) {
-          send_to_char(ch, "That is not a skill.\r\n");
-          return (0);
-        }
-      #endif
-
       value = atoi(value_arg);
       if (value < 0)   value = 0;
       if (value > 100) value = 100;
 
-      #ifdef SET_SKILL
-        SET_SKILL(vict, snum, value);
-      #else
-        GET_SKILL(vict, snum) = value;
-      #endif
+      snum = find_skill_num(skill_name); /* handles case-insensitive, abbrev match */
+      if (snum <= 0) {
+        send_to_char(ch, "That skill or spell doesn't exist.\r\n");
+        return (0);
+      }
+
+      SET_SKILL(vict, snum, value);
 
       send_to_char(ch, "Set %s's %s to %d%%.\r\n",
                   GET_NAME(vict), spell_info[snum].name, value);
+
       if (vict != ch)
         send_to_char(vict, "%s has set your %s to %d%%.\r\n",
                     GET_NAME(ch), spell_info[snum].name, value);
 
-      #ifdef save_char
-        /* Persist immediately (matches style used elsewhere) */
-        save_char(vict, NOWHERE);
-      #endif
+      save_char(vict);
 
-      #ifdef CONFIG_IMMORTAL_LOGS
-        mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
-              "%s set %s's %s skill to %d.",
-              GET_NAME(ch), GET_NAME(vict), spell_info[snum].name, value);
-      #endif
-      break;
+      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
+            "%s set %s's %s skill to %d.",
+            GET_NAME(ch), GET_NAME(vict), spell_info[snum].name, value);
+
+    }
+    break;
+
     case 48: /* str */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
