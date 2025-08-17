@@ -86,6 +86,7 @@ static const char *prac_types[] = {
   "skill"
 };
 
+/* TO-DO: Dig deeper and figure out if the min/max practice defines can be removed */
 #define LEARNED_LEVEL	0	/* % known which is considered "learned" */
 #define MAX_PER_PRAC	1	/* max percent gain in skill per practice */
 #define MIN_PER_PRAC	2	/* min percent gain in skill per practice */
@@ -103,9 +104,7 @@ void list_skills(struct char_data *ch)
   size_t len = 0;
   char buf2[MAX_STRING_LENGTH];
 
-  len = snprintf(buf2, sizeof(buf2), "You have %d practice session%s remaining.\r\n"
-	"You know of the following %ss:\r\n", GET_PRACTICES(ch),
-	GET_PRACTICES(ch) == 1 ? "" : "s", SPLSKL(ch));
+  len = snprintf(buf2, sizeof(buf2), "You know of the following %ss:\r\n", SPLSKL(ch));
 
   for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
     i = spell_sort_info[sortpos];
@@ -120,49 +119,6 @@ void list_skills(struct char_data *ch)
     strcpy(buf2 + sizeof(buf2) - strlen(overflow) - 1, overflow); /* strcpy: OK */
 
   page_string(ch->desc, buf2, TRUE);
-}
-
-SPECIAL(guild)
-{
-  int skill_num, percent;
-
-  if (IS_NPC(ch) || !CMD_IS("practice"))
-    return (FALSE);
-
-  skip_spaces(&argument);
-
-  if (!*argument) {
-    list_skills(ch);
-    return (TRUE);
-  }
-  if (GET_PRACTICES(ch) <= 0) {
-    send_to_char(ch, "You do not seem to be able to practice now.\r\n");
-    return (TRUE);
-  }
-
-  skill_num = find_skill_num(argument);
-
-  if (skill_num < 1 ||
-      GET_LEVEL(ch) < spell_info[skill_num].min_level[(int) GET_CLASS(ch)]) {
-    send_to_char(ch, "You do not know of that %s.\r\n", SPLSKL(ch));
-    return (TRUE);
-  }
-  if (GET_SKILL(ch, skill_num) >= LEARNED(ch)) {
-    send_to_char(ch, "You are already learned in that area.\r\n");
-    return (TRUE);
-  }
-  send_to_char(ch, "You practice for a while...\r\n");
-  GET_PRACTICES(ch)--;
-
-  percent = GET_SKILL(ch, skill_num);
-  percent += MIN(MAXGAIN(ch), MAX(MINGAIN(ch), int_app[GET_INT(ch)].learn));
-
-  SET_SKILL(ch, skill_num, MIN(LEARNED(ch), percent));
-
-  if (GET_SKILL(ch, skill_num) >= LEARNED(ch))
-    send_to_char(ch, "You are now learned in that area.\r\n");
-
-  return (TRUE);
 }
 
 SPECIAL(dump)

@@ -67,46 +67,6 @@ void assign_mobiles(void)
 
   ASSIGNMOB(3095, cryogenicist);
 
-  ASSIGNMOB(120, guild);
-  ASSIGNMOB(121, guild);
-  ASSIGNMOB(122, guild);
-  ASSIGNMOB(123, guild);
-  ASSIGNMOB(2556, guild);
-  ASSIGNMOB(2559, guild);
-  ASSIGNMOB(2562, guild);
-  ASSIGNMOB(2564, guild);
-  ASSIGNMOB(2800, guild);
-  ASSIGNMOB(3020, guild);
-  ASSIGNMOB(3021, guild);
-  ASSIGNMOB(3022, guild);
-  ASSIGNMOB(3023, guild);
-  ASSIGNMOB(5400, guild);
-  ASSIGNMOB(5401, guild);
-  ASSIGNMOB(5402, guild);
-  ASSIGNMOB(5403, guild);
-  ASSIGNMOB(11518, guild);
-  ASSIGNMOB(25720, guild);
-  ASSIGNMOB(25721, guild);
-  ASSIGNMOB(25722, guild);
-  ASSIGNMOB(25723, guild);
-  ASSIGNMOB(25726, guild);
-  ASSIGNMOB(25732, guild);
-  ASSIGNMOB(27572, guild);
-  ASSIGNMOB(27573, guild);
-  ASSIGNMOB(27574, guild);
-  ASSIGNMOB(27575, guild);
-  ASSIGNMOB(27721, guild);
-  ASSIGNMOB(29204, guild);
-  ASSIGNMOB(29227, guild);
-  ASSIGNMOB(31601, guild);
-  ASSIGNMOB(31603, guild);
-  ASSIGNMOB(31605, guild);
-  ASSIGNMOB(31607, guild);
-  ASSIGNMOB(31609, guild);
-  ASSIGNMOB(31611, guild);
-  ASSIGNMOB(31639, guild);
-  ASSIGNMOB(31641, guild);
-
   ASSIGNMOB(3105, mayor);
 
   ASSIGNMOB(110, postmaster);
@@ -188,7 +148,6 @@ static struct spec_func_data spec_func_list[] = {
   {"Bank",           bank }, 
   {"Pet Shop",       pet_shops }, 
   {"Dump",           dump }, 
-  {"Guildmaster",    guild }, 
   {"Guild Guard",    guild_guard }, 
   {"Questmaster",    questmaster }, 
   {"Shopkeeper",     shop_keeper }, 

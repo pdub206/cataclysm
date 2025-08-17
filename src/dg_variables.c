@@ -930,13 +930,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             }
             snprintf(str, slen, "%s", position_types[GET_POS(c)]);
           }
-          else if (!str_cmp(field, "prac")) {
-            if (subfield && *subfield) {
-              int addition = atoi(subfield);
-              GET_PRACTICES(c) = MAX(0, GET_PRACTICES(c) + addition);
-            }
-            snprintf(str, slen, "%d", GET_PRACTICES(c));
-          }
           else if (!str_cmp(field, "pref")) {
             if (subfield && *subfield) {
               int pref = get_flag_by_name(preference_bits, subfield);

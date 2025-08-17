@@ -952,7 +952,6 @@ struct player_special_data_saved
   struct txt_block *comm_hist[NUM_HIST]; /**< Communication history */
   ubyte page_length;      /**< Max number of rows of text to send at once */
   ubyte screen_width;     /**< How wide the display page is */
-  int spells_to_learn;    /**< Remaining number of practice sessions */
   int olc_zone;           /**< Current olc permissions */
   int questpoints;        /**< Number of quest points earned */
   qst_vnum *completed_quests;   /**< Quests completed              */
@@ -1209,7 +1208,7 @@ struct str_app_type
  * wisdom attribute. */
 struct wis_app_type
 {
-  byte bonus; /**< how many practices player gains per lev */
+  byte bonus; /**< how many practices player gains per lev, unused now  */
 };
 
 /** Describes the bonuses applied for a specific value of a character's

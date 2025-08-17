@@ -265,7 +265,6 @@ int load_char(const char *name, struct char_data *ch)
     GET_COND(ch, THIRST) = PFDEF_THIRST;
     GET_COND(ch, DRUNK) = PFDEF_DRUNK;
     GET_BAD_PWS(ch) = PFDEF_BADPWS;
-    GET_PRACTICES(ch) = PFDEF_PRACTICES;
     GET_GOLD(ch) = PFDEF_GOLD;
     GET_BANK_GOLD(ch) = PFDEF_BANK;
     GET_EXP(ch) = PFDEF_EXP;
@@ -384,7 +383,6 @@ int load_char(const char *name, struct char_data *ch)
 
       case 'L':
 	     if (!strcmp(tag, "Last"))	ch->player.time.logon	= atol(line);
-  else if (!strcmp(tag, "Lern"))	GET_PRACTICES(ch)	= atoi(line);
 	else if (!strcmp(tag, "Levl"))	GET_LEVEL(ch)		= atoi(line);
         else if (!strcmp(tag, "Lmot"))   GET_LAST_MOTD(ch)   = atoi(line);
         else if (!strcmp(tag, "Lnew"))   GET_LAST_NEWS(ch)   = atoi(line);
@@ -623,7 +621,6 @@ void save_char(struct char_data * ch)
   if (GET_LOADROOM(ch)	   != PFDEF_LOADROOM)	fprintf(fl, "Room: %d\n", GET_LOADROOM(ch));
 
   if (GET_BAD_PWS(ch)	   != PFDEF_BADPWS)	fprintf(fl, "Badp: %d\n", GET_BAD_PWS(ch));
-  if (GET_PRACTICES(ch)	   != PFDEF_PRACTICES)	fprintf(fl, "Lern: %d\n", GET_PRACTICES(ch));
 
   if (GET_COND(ch, HUNGER)   != PFDEF_HUNGER && GET_LEVEL(ch) < LVL_IMMORT) fprintf(fl, "Hung: %d\n", GET_COND(ch, HUNGER));
   if (GET_COND(ch, THIRST) != PFDEF_THIRST && GET_LEVEL(ch) < LVL_IMMORT) fprintf(fl, "Thir: %d\n", GET_COND(ch, THIRST));
