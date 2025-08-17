@@ -2876,9 +2876,10 @@ static struct set_struct {
    { "quest",		LVL_GOD, 	PC, 	BINARY },
    { "room",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "screenwidth", LVL_GOD,  PC,   NUMBER },
-   { "sex", 		LVL_GOD, 	BOTH, 	MISC },  /* 45 */
-   { "showvnums",  LVL_BUILDER,  PC, BINARY },
+   { "sex", 		LVL_GOD, 	BOTH, 	MISC },
+   { "showvnums",  LVL_BUILDER,  PC, BINARY }, /* 45 */
    { "siteok",   LVL_GOD,  PC,   BINARY },
+   { "skill",   LVL_GOD,  BOTH,   NUMBER },
    { "str",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "stradd",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "thief",		LVL_GOD, 	PC, 	BINARY }, /* 50 */
@@ -3229,7 +3230,72 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
     case 46: /* siteok */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_SITEOK);
       break;
-    case 47: /* str */
+    case 47: /* skill */
+      char skill_name[MAX_INPUT_LENGTH], value_arg[MAX_INPUT_LENGTH];
+      int snum;
+
+      /* Expect: val_arg = "<skill-name> <0-100>" */
+      char *p = val_arg;
+      p = one_argument(p, skill_name);
+      p = one_argument(p, value_arg);
+
+      if (!*skill_name || !*value_arg) {
+        send_to_char(ch, "Usage: set <player> skill <skill-name> <0-100>\r\n");
+        return (0);
+      }
+
+      if (IS_NPC(vict)) {
+        send_to_char(ch, "You can only set skills on player characters.\r\n");
+        return (0);
+      }
+
+      if (!is_number(value_arg)) {
+        send_to_char(ch, "The skill value must be a number from 0 to 100.\r\n");
+        return (0);
+      }
+
+      snum = find_skill_num(skill_name); /* handles abbrevs & case-insensitive */
+      if (snum <= 0) {
+        send_to_char(ch, "That skill doesn't exist.\r\n");
+        return (0);
+      }
+
+      #ifdef SKTYPE_SKILL
+        /* Optional: only allow actual skills (not spells/songs/etc.) */
+        if (spell_info[snum].type != SKTYPE_SKILL) {
+          send_to_char(ch, "That is not a skill.\r\n");
+          return (0);
+        }
+      #endif
+
+      value = atoi(value_arg);
+      if (value < 0)   value = 0;
+      if (value > 100) value = 100;
+
+      #ifdef SET_SKILL
+        SET_SKILL(vict, snum, value);
+      #else
+        GET_SKILL(vict, snum) = value;
+      #endif
+
+      send_to_char(ch, "Set %s's %s to %d%%.\r\n",
+                  GET_NAME(vict), spell_info[snum].name, value);
+      if (vict != ch)
+        send_to_char(vict, "%s has set your %s to %d%%.\r\n",
+                    GET_NAME(ch), spell_info[snum].name, value);
+
+      #ifdef save_char
+        /* Persist immediately (matches style used elsewhere) */
+        save_char(vict, NOWHERE);
+      #endif
+
+      #ifdef CONFIG_IMMORTAL_LOGS
+        mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
+              "%s set %s's %s skill to %d.",
+              GET_NAME(ch), GET_NAME(vict), spell_info[snum].name, value);
+      #endif
+      break;
+    case 48: /* str */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3238,16 +3304,16 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.str_add = 0;
       affect_total(vict);
       break;
-    case 48: /* stradd */
+    case 49: /* stradd */
       vict->real_abils.str_add = RANGE(0, 100);
       if (value > 0)
         vict->real_abils.str = 18;
       affect_total(vict);
       break;
-    case 49: /* thief */
+    case 50: /* thief */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_THIEF);
       break;
-    case 50: /* thirst */
+    case 51: /* thirst */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, THIRST) = -1;
         send_to_char(ch, "%s's thirst is now off.\r\n", GET_NAME(vict));
@@ -3261,17 +3327,17 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 51: /* title */
+    case 52: /* title */
       set_title(vict, val_arg);
       send_to_char(ch, "%s's title is now: %s\r\n", GET_NAME(vict), GET_TITLE(vict));
       break;
-    case 52: /* variable */
+    case 53: /* variable */
       return perform_set_dg_var(ch, vict, val_arg);
-    case 53: /* weight */
+    case 54: /* weight */
       GET_WEIGHT(vict) = value;
       affect_total(vict);
       break;
-    case 54: /* wis */
+    case 55: /* wis */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3279,10 +3345,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.wis = value;
       affect_total(vict);
       break;
-    case 55: /* questpoints */
+    case 56: /* questpoints */
       GET_QUESTPOINTS(vict) = RANGE(0, 100000000);
       break;
-    case 56: /* questhistory */
+    case 57: /* questhistory */
       qvnum = atoi(val_arg);
       if (real_quest(qvnum) == NOTHING) {
         send_to_char(ch, "That quest doesn't exist.\r\n");
