@@ -250,7 +250,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "quit"     , "quit"    , POS_DEAD    , do_quit     , 0, SCMD_QUIT },
   { "qsay"     , "qsay"    , POS_RESTING , do_qcomm    , 0, SCMD_QSAY },
 
-  { "reply"    , "r"       , POS_SLEEPING, do_reply    , 0, 0 },
+  { "reply"    , "r"       , POS_SLEEPING, do_reply    , LVL_IMMORT, 0 },
   { "rest"     , "res"     , POS_RESTING , do_rest     , 0, 0 },
   { "read"     , "rea"     , POS_RESTING , do_look     , 0, SCMD_READ },
   { "reload"   , "reload"  , POS_DEAD    , do_reboot   , LVL_IMPL, 0 },
@@ -299,7 +299,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "steal"    , "ste"     , POS_STANDING, do_steal    , 1, 0 },
   { "switch"   , "switch"  , POS_DEAD    , do_switch   , LVL_GOD, 0 },
 
-  { "tell"     , "t"       , POS_DEAD    , do_tell     , 0, 0 },
+  { "tell"     , "t"       , POS_DEAD    , do_tell     , LVL_IMMORT, 0 },
   { "take"     , "ta"      , POS_RESTING , do_get      , 0, 0 },
   { "taste"    , "tas"     , POS_RESTING , do_eat      , 0, SCMD_TASTE },
   { "teleport" , "tele"    , POS_DEAD    , do_teleport , LVL_BUILDER, 0 },

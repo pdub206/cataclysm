@@ -758,7 +758,7 @@ Examples:
   > gossip Hey, is that a short sword on your belt or are you happy to see me?
   > grats GRATS Detta!!!!!!!!
 
-See also: TOGGLE, EMOTE, GSAY, HOLLER, NOREPEAT, SAY, SHOUT
+See also: TOGGLE, EMOTE, GSAY, NOREPEAT, SAY, SHOUT
 
 #0
 AUTOASSIST
@@ -1455,7 +1455,6 @@ CEDIT-GAMES
 A) Player Killing Allowed  : No
 B) Player Thieving Allowed : No
 C) Minimum Level To Shout  : 0
-D) Holler Move Cost        : 20
 E) Tunnel Size             : 2
 F) Maximum Experience Gain : 100000
 G) Maximum Experience Loss : 500000
@@ -1932,7 +1931,7 @@ COMMUNICATION
 SAY ASK WHISPER                    - Talk to people in the room
 GSAY GTELL REPORT                  - Talk to a person in the group.
 TELL QSAY REPLY                    - Talk to a person in the game / the quest.
-SHOUT HOLLER GOSSIP GRATS AUCTION  - Send a message on a public channel
+SHOUT GOSSIP GRATS AUCTION         - Send a message on a public channel
 MAIL RECEIVE CHECK                 - Used to communicate with a postman.
 WRITE READ REMOVE                  - Used to communicate via boards.
 DEPOSIT WITHDRAW BALANCE           - Used to communicate in banks.
@@ -3820,7 +3819,7 @@ newbie-policy       newbies             news
 #0
 HISTORY
 
-Usage: history < all | say | gossip | wiznet | tell | shout | grats | holler | auction >
+Usage: history < all | say | gossip | wiznet | tell | shout | grats | auction >
 
    This command displays what has been said over the channel you input along
 with a time stamp for when it was sent. History all will list the history of
@@ -5549,7 +5548,7 @@ NOREPEAT REPEAT
 Usage: norepeat
 
 This command toggles whether or not you see your communication echoed
-back to you (i.e., from commands such as SAY, SHOUT, HOLLER, GOSSIP, etc.)
+back to you (i.e., from commands such as SAY, SHOUT, GOSSIP, etc.)
 Useful if you have a slow connection or if it just annoys you.
 
 See also: TOGGLE
@@ -7886,7 +7885,7 @@ Someone tells you, 'I am your secret admirer.'
 You tell someone, 'Who are you?'
 
 See also: TELL, NOTELL
-#0
+#2
 REPORT GROUP-REPORT GROUPREPORT
 
 Usage: report
@@ -8078,26 +8077,24 @@ saying "yes" to save internally.
 
 See also: OLC, BUILDWALK, DIG, ROOMDELETE
 #31
-SAYS TELLS ASKS WHISPERS SHOUTS YELLS HOLLERS ' CHATS TALKS CHANNELS VOICES COMMON SPEAK SPEECH
+SAYS ASKS WHISPERS SHOUTS YELLS ' CHATS TALKS CHANNELS VOICES COMMON SPEAK SPEECH
 
-Usage: say | shout | holler <string>
-       tell | whisper | ask <player> <string>
+Usage: say | shout <string>
+       whisper | ask <player> <string>
 
    If you consider communicating with other beings, you might be understood
-better if you start your sentences with either say, tell, whisper or shout.
+better if you start your sentences with either say, whisper or shout.
 
 Examples:
 
   > say Hey, does anyone know how to get to Oz?
-  > tell catje hi, how are you?
+  > whisper catje hi, how are you?
 
 You can use ' as a shorthand for say, as in:
 
   > ' hello there.
 
-Shout broadcasts your message to everyone is your geographic zone.  Holler
-broadcasts to everyone in the game but costs 20 movement points.  You must
-be level 3 before you can use shout and yell.
+Shout broadcasts your message to everyone is your geographic zone.
 
 See also: AUCTION, GOSSIP, GSAY, WIZNET, NOREPEAT, QSAY, REPLY
 #0
@@ -8656,7 +8653,7 @@ The following room flags can be selected:
 4)  INDOORS    - Weather messages will not be sent to room, always lighted. 
                  Call lightning will not work.
 5)  PEACEFUL   - No violence will work here. Use sparingly.
-6)  SOUNDPROOF - Tell, gossip, shout, holler will not be heard here. This flag
+6)  SOUNDPROOF - Tell, gossip, shout will not be heard here. This flag
                  should be used sparingly also, it is very annoying IMHO.
 7)  NO_TRACK   - Track will never find a path through this room.
 8)  NO_MAGIC   - No magic will work here. 
@@ -12603,11 +12600,11 @@ Level 31 (Immortal):
 detach       dig          echo         handbook     holylight    imotd        
 invis        load         medit        mlist        nohassle     nowiz        
 oedit        olc          olist        peace        purge        qedit        
-qlist        recent       redit        rlist        roomflags    saveall      
-sedit        set          show         slist        stat         teleport     
-tlist        trigedit     tstat        vdelete      vnum         vstat        
-wiznet       wizhelp      zcheck       zedit        zlist        zpurge       
-zreset       
+qlist        recent       redit        reply        rlist        roomflags
+saveall      sedit        set          show         slist        stat
+teleport     tell         tlist        trigedit     tstat        vdelete
+vnum         vstat        wiznet       wizhelp      zcheck       zedit
+zlist        zpurge       zreset       
 
 @RHELP <any of the above commands>@n
 #31
