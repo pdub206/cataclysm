@@ -559,21 +559,83 @@ void do_start(struct char_data *ch)
   switch (GET_CLASS(ch)) {
 
   case CLASS_MAGIC_USER:
+    SET_SKILL(ch, SPELL_MAGIC_MISSILE, 5);
+    SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
+    SET_SKILL(ch, SPELL_DETECT_MAGIC, 5);
+    SET_SKILL(ch, SPELL_CHILL_TOUCH, 5);
+    SET_SKILL(ch, SPELL_INFRAVISION, 5);
+    SET_SKILL(ch, SPELL_INVISIBLE, 5);
+    SET_SKILL(ch, SPELL_ARMOR, 5);
+    SET_SKILL(ch, SPELL_BURNING_HANDS, 5);
+    SET_SKILL(ch, SPELL_LOCATE_OBJECT, 5);
+    SET_SKILL(ch, SPELL_STRENGTH, 5);
+    SET_SKILL(ch, SPELL_SHOCKING_GRASP, 5);
+    SET_SKILL(ch, SPELL_SLEEP, 5);
+    SET_SKILL(ch, SPELL_LIGHTNING_BOLT, 5);
+    SET_SKILL(ch, SPELL_BLINDNESS, 5);
+    SET_SKILL(ch, SPELL_DETECT_POISON, 5);
+    SET_SKILL(ch, SPELL_COLOR_SPRAY, 5);
+    SET_SKILL(ch, SPELL_ENERGY_DRAIN, 5);
+    SET_SKILL(ch, SPELL_CURSE, 5);
+    SET_SKILL(ch, SPELL_POISON, 5);
+    SET_SKILL(ch, SPELL_FIREBALL, 5);
+    SET_SKILL(ch, SPELL_CHARM, 5);
+    SET_SKILL(ch, SPELL_IDENTIFY, 5);
+    SET_SKILL(ch, SPELL_FLY, 5);
+    SET_SKILL(ch, SPELL_ENCHANT_WEAPON, 5);
+    SET_SKILL(ch, SPELL_CLONE, 5);
     break;
 
   case CLASS_CLERIC:
+    SET_SKILL(ch, SPELL_CURE_LIGHT, 5);
+    SET_SKILL(ch, SPELL_ARMOR, 5);
+    SET_SKILL(ch, SPELL_CREATE_FOOD, 5);
+    SET_SKILL(ch, SPELL_CREATE_WATER, 5);
+    SET_SKILL(ch, SPELL_DETECT_POISON, 5);
+    SET_SKILL(ch, SPELL_DETECT_ALIGN, 5);
+    SET_SKILL(ch, SPELL_CURE_BLIND, 5);
+    SET_SKILL(ch, SPELL_BLESS, 5);
+    SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
+    SET_SKILL(ch, SPELL_BLINDNESS, 5);
+    SET_SKILL(ch, SPELL_INFRAVISION, 5);
+    SET_SKILL(ch, SPELL_PROT_FROM_EVIL, 5);
+    SET_SKILL(ch, SPELL_POISON, 5);
+    SET_SKILL(ch, SPELL_GROUP_ARMOR, 5);
+    SET_SKILL(ch, SPELL_CURE_CRITIC, 5);
+    SET_SKILL(ch, SPELL_SUMMON, 5);
+    SET_SKILL(ch, SPELL_REMOVE_POISON, 5);
+    SET_SKILL(ch, SPELL_IDENTIFY, 5);
+    SET_SKILL(ch, SPELL_WORD_OF_RECALL, 5);
+    SET_SKILL(ch, SPELL_DARKNESS, 5);
+    SET_SKILL(ch, SPELL_EARTHQUAKE, 5);
+    SET_SKILL(ch, SPELL_DISPEL_EVIL, 5);
+    SET_SKILL(ch, SPELL_DISPEL_GOOD, 5);
+    SET_SKILL(ch, SPELL_SANCTUARY, 5);
+    SET_SKILL(ch, SPELL_CALL_LIGHTNING, 5);
+    SET_SKILL(ch, SPELL_HEAL, 5);
+    SET_SKILL(ch, SPELL_CONTROL_WEATHER, 5);
+    SET_SKILL(ch, SPELL_SENSE_LIFE, 5);
+    SET_SKILL(ch, SPELL_HARM, 5);
+    SET_SKILL(ch, SPELL_GROUP_HEAL, 5);
+    SET_SKILL(ch, SPELL_REMOVE_CURSE, 5);
     break;
 
   case CLASS_THIEF:
-    SET_SKILL(ch, SKILL_SNEAK, 10);
+    SET_SKILL(ch, SKILL_SNEAK, 5);
     SET_SKILL(ch, SKILL_HIDE, 5);
-    SET_SKILL(ch, SKILL_STEAL, 15);
-    SET_SKILL(ch, SKILL_BACKSTAB, 10);
-    SET_SKILL(ch, SKILL_PICK_LOCK, 10);
-    SET_SKILL(ch, SKILL_TRACK, 10);
+    SET_SKILL(ch, SKILL_STEAL, 5);
+    SET_SKILL(ch, SKILL_BACKSTAB, 5);
+    SET_SKILL(ch, SKILL_PICK_LOCK, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
     break;
 
   case CLASS_WARRIOR:
+    SET_SKILL(ch, SKILL_KICK, 5);
+    SET_SKILL(ch, SKILL_RESCUE, 5);
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
+    SET_SKILL(ch, SKILL_BASH, 5);
+    SET_SKILL(ch, SKILL_WHIRLWIND, 5);
     break;
   }
 
@@ -682,79 +744,79 @@ void init_spell_levels(void)
 {
   /* MAGES */
   spell_level(SPELL_MAGIC_MISSILE, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_DETECT_INVIS, CLASS_MAGIC_USER, 2);
-  spell_level(SPELL_DETECT_MAGIC, CLASS_MAGIC_USER, 2);
-  spell_level(SPELL_CHILL_TOUCH, CLASS_MAGIC_USER, 3);
-  spell_level(SPELL_INFRAVISION, CLASS_MAGIC_USER, 3);
-  spell_level(SPELL_INVISIBLE, CLASS_MAGIC_USER, 4);
-  spell_level(SPELL_ARMOR, CLASS_MAGIC_USER, 4);
-  spell_level(SPELL_BURNING_HANDS, CLASS_MAGIC_USER, 5);
-  spell_level(SPELL_LOCATE_OBJECT, CLASS_MAGIC_USER, 6);
-  spell_level(SPELL_STRENGTH, CLASS_MAGIC_USER, 6);
-  spell_level(SPELL_SHOCKING_GRASP, CLASS_MAGIC_USER, 7);
-  spell_level(SPELL_SLEEP, CLASS_MAGIC_USER, 8);
-  spell_level(SPELL_LIGHTNING_BOLT, CLASS_MAGIC_USER, 9);
-  spell_level(SPELL_BLINDNESS, CLASS_MAGIC_USER, 9);
-  spell_level(SPELL_DETECT_POISON, CLASS_MAGIC_USER, 10);
-  spell_level(SPELL_COLOR_SPRAY, CLASS_MAGIC_USER, 11);
-  spell_level(SPELL_ENERGY_DRAIN, CLASS_MAGIC_USER, 13);
-  spell_level(SPELL_CURSE, CLASS_MAGIC_USER, 14);
-  spell_level(SPELL_POISON, CLASS_MAGIC_USER, 14);
-  spell_level(SPELL_FIREBALL, CLASS_MAGIC_USER, 15);
-  spell_level(SPELL_CHARM, CLASS_MAGIC_USER, 16);
-  spell_level(SPELL_IDENTIFY, CLASS_MAGIC_USER, 20);
-  spell_level(SPELL_FLY, CLASS_MAGIC_USER, 22);
-  spell_level(SPELL_ENCHANT_WEAPON, CLASS_MAGIC_USER, 26);
-  spell_level(SPELL_CLONE, CLASS_MAGIC_USER, 30);
+  spell_level(SPELL_DETECT_INVIS, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_DETECT_MAGIC, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_CHILL_TOUCH, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_INFRAVISION, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_INVISIBLE, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_ARMOR, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_BURNING_HANDS, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_LOCATE_OBJECT, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_STRENGTH, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_SHOCKING_GRASP, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_SLEEP, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_LIGHTNING_BOLT, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_BLINDNESS, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_DETECT_POISON, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_COLOR_SPRAY, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_ENERGY_DRAIN, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_CURSE, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_POISON, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_FIREBALL, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_CHARM, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_IDENTIFY, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_FLY, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_ENCHANT_WEAPON, CLASS_MAGIC_USER, 1);
+  spell_level(SPELL_CLONE, CLASS_MAGIC_USER, 1);
 
   /* CLERICS */
   spell_level(SPELL_CURE_LIGHT, CLASS_CLERIC, 1);
   spell_level(SPELL_ARMOR, CLASS_CLERIC, 1);
-  spell_level(SPELL_CREATE_FOOD, CLASS_CLERIC, 2);
-  spell_level(SPELL_CREATE_WATER, CLASS_CLERIC, 2);
-  spell_level(SPELL_DETECT_POISON, CLASS_CLERIC, 3);
-  spell_level(SPELL_DETECT_ALIGN, CLASS_CLERIC, 4);
-  spell_level(SPELL_CURE_BLIND, CLASS_CLERIC, 4);
-  spell_level(SPELL_BLESS, CLASS_CLERIC, 5);
-  spell_level(SPELL_DETECT_INVIS, CLASS_CLERIC, 6);
-  spell_level(SPELL_BLINDNESS, CLASS_CLERIC, 6);
-  spell_level(SPELL_INFRAVISION, CLASS_CLERIC, 7);
-  spell_level(SPELL_PROT_FROM_EVIL, CLASS_CLERIC, 8);
-  spell_level(SPELL_POISON, CLASS_CLERIC, 8);
-  spell_level(SPELL_GROUP_ARMOR, CLASS_CLERIC, 9);
-  spell_level(SPELL_CURE_CRITIC, CLASS_CLERIC, 9);
-  spell_level(SPELL_SUMMON, CLASS_CLERIC, 10);
-  spell_level(SPELL_REMOVE_POISON, CLASS_CLERIC, 10);
-  spell_level(SPELL_IDENTIFY, CLASS_CLERIC, 11);
-  spell_level(SPELL_WORD_OF_RECALL, CLASS_CLERIC, 12);
-  spell_level(SPELL_DARKNESS, CLASS_CLERIC, 12);
-  spell_level(SPELL_EARTHQUAKE, CLASS_CLERIC, 12);
-  spell_level(SPELL_DISPEL_EVIL, CLASS_CLERIC, 14);
-  spell_level(SPELL_DISPEL_GOOD, CLASS_CLERIC, 14);
-  spell_level(SPELL_SANCTUARY, CLASS_CLERIC, 15);
-  spell_level(SPELL_CALL_LIGHTNING, CLASS_CLERIC, 15);
-  spell_level(SPELL_HEAL, CLASS_CLERIC, 16);
-  spell_level(SPELL_CONTROL_WEATHER, CLASS_CLERIC, 17);
-  spell_level(SPELL_SENSE_LIFE, CLASS_CLERIC, 18);
-  spell_level(SPELL_HARM, CLASS_CLERIC, 19);
-  spell_level(SPELL_GROUP_HEAL, CLASS_CLERIC, 22);
-  spell_level(SPELL_REMOVE_CURSE, CLASS_CLERIC, 26);
+  spell_level(SPELL_CREATE_FOOD, CLASS_CLERIC, 1);
+  spell_level(SPELL_CREATE_WATER, CLASS_CLERIC, 1);
+  spell_level(SPELL_DETECT_POISON, CLASS_CLERIC, 1);
+  spell_level(SPELL_DETECT_ALIGN, CLASS_CLERIC, 1);
+  spell_level(SPELL_CURE_BLIND, CLASS_CLERIC, 1);
+  spell_level(SPELL_BLESS, CLASS_CLERIC, 1);
+  spell_level(SPELL_DETECT_INVIS, CLASS_CLERIC, 1);
+  spell_level(SPELL_BLINDNESS, CLASS_CLERIC, 1);
+  spell_level(SPELL_INFRAVISION, CLASS_CLERIC, 1);
+  spell_level(SPELL_PROT_FROM_EVIL, CLASS_CLERIC, 1);
+  spell_level(SPELL_POISON, CLASS_CLERIC, 1);
+  spell_level(SPELL_GROUP_ARMOR, CLASS_CLERIC, 1);
+  spell_level(SPELL_CURE_CRITIC, CLASS_CLERIC, 1);
+  spell_level(SPELL_SUMMON, CLASS_CLERIC, 1);
+  spell_level(SPELL_REMOVE_POISON, CLASS_CLERIC, 1);
+  spell_level(SPELL_IDENTIFY, CLASS_CLERIC, 1);
+  spell_level(SPELL_WORD_OF_RECALL, CLASS_CLERIC, 1);
+  spell_level(SPELL_DARKNESS, CLASS_CLERIC, 1);
+  spell_level(SPELL_EARTHQUAKE, CLASS_CLERIC, 1);
+  spell_level(SPELL_DISPEL_EVIL, CLASS_CLERIC, 1);
+  spell_level(SPELL_DISPEL_GOOD, CLASS_CLERIC, 1);
+  spell_level(SPELL_SANCTUARY, CLASS_CLERIC, 1);
+  spell_level(SPELL_CALL_LIGHTNING, CLASS_CLERIC, 1);
+  spell_level(SPELL_HEAL, CLASS_CLERIC, 1);
+  spell_level(SPELL_CONTROL_WEATHER, CLASS_CLERIC, 1);
+  spell_level(SPELL_SENSE_LIFE, CLASS_CLERIC, 1);
+  spell_level(SPELL_HARM, CLASS_CLERIC, 1);
+  spell_level(SPELL_GROUP_HEAL, CLASS_CLERIC, 1);
+  spell_level(SPELL_REMOVE_CURSE, CLASS_CLERIC, 1);
 
   /* THIEVES */
   spell_level(SKILL_SNEAK, CLASS_THIEF, 1);
-  spell_level(SKILL_PICK_LOCK, CLASS_THIEF, 2);
-  spell_level(SKILL_BACKSTAB, CLASS_THIEF, 3);
-  spell_level(SKILL_STEAL, CLASS_THIEF, 4);
-  spell_level(SKILL_HIDE, CLASS_THIEF, 5);
-  spell_level(SKILL_TRACK, CLASS_THIEF, 6);
+  spell_level(SKILL_PICK_LOCK, CLASS_THIEF, 1);
+  spell_level(SKILL_BACKSTAB, CLASS_THIEF, 1);
+  spell_level(SKILL_STEAL, CLASS_THIEF, 1);
+  spell_level(SKILL_HIDE, CLASS_THIEF, 1);
+  spell_level(SKILL_TRACK, CLASS_THIEF, 1);
 
   /* WARRIORS */
   spell_level(SKILL_KICK, CLASS_WARRIOR, 1);
-  spell_level(SKILL_RESCUE, CLASS_WARRIOR, 3);
-  spell_level(SKILL_BANDAGE, CLASS_WARRIOR, 7);
-  spell_level(SKILL_TRACK, CLASS_WARRIOR, 9);
-  spell_level(SKILL_BASH, CLASS_WARRIOR, 12);
-  spell_level(SKILL_WHIRLWIND, CLASS_WARRIOR, 16);
+  spell_level(SKILL_RESCUE, CLASS_WARRIOR, 1);
+  spell_level(SKILL_BANDAGE, CLASS_WARRIOR, 1);
+  spell_level(SKILL_TRACK, CLASS_WARRIOR, 1);
+  spell_level(SKILL_BASH, CLASS_WARRIOR, 1);
+  spell_level(SKILL_WHIRLWIND, CLASS_WARRIOR, 1);
 }
 
 /* This is the exp given to implementors -- it must always be greater than the
@@ -782,7 +844,7 @@ int level_exp(int chclass, int level)
     switch (level) {
       case  0: return 0;
       case  1: return 1;
-      case LVL_IMMORT: return 8000000;
+      case LVL_IMMORT: return 9999999;
     }
     break;
 
@@ -790,7 +852,7 @@ int level_exp(int chclass, int level)
     switch (level) {
       case  0: return 0;
       case  1: return 1;
-      case LVL_IMMORT: return 7000000;
+      case LVL_IMMORT: return 9999999;
     }
     break;
 
@@ -798,7 +860,7 @@ int level_exp(int chclass, int level)
     switch (level) {
       case  0: return 0;
       case  1: return 1;
-      case LVL_IMMORT: return 7000000;
+      case LVL_IMMORT: return 9999999;
     }
     break;
 
@@ -806,7 +868,7 @@ int level_exp(int chclass, int level)
     switch (level) {
       case  0: return 0;
       case  1: return 1;
-      case LVL_IMMORT: return 8000000;
+      case LVL_IMMORT: return 9999999;
     }
     break;
   }
