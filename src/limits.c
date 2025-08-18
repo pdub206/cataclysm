@@ -12,6 +12,7 @@
 #include "sysdep.h"
 #include "structs.h"
 #include "utils.h"
+#include "constants.h"
 #include "spells.h"
 #include "comm.h"
 #include "db.h"
@@ -218,6 +219,34 @@ void run_autowiz(void)
       log("Cannot run autowiz: command-line doesn't fit in buffer.");
   }
 #endif /* CIRCLE_UNIX || CIRCLE_WINDOWS */
+}
+
+void gain_skill(struct char_data *ch, char *skill, bool success)
+{
+  int skill_num, base, roll, increase;
+
+  if (IS_NPC(ch))
+    return;
+
+  skill_num = find_skill_num(skill);
+  if (skill_num <= 0)
+    return;
+
+  base = GET_SKILL(ch, skill_num);
+
+  if (success) { /* learning from successes is more difficult */
+    roll = rand_number(1, 400);
+    if (roll >= (400 - (wis_app[GET_WIS(ch)].bonus) * 4)) {
+      increase = base + 1;
+      SET_SKILL(ch, skill_num, MIN(90, increase));
+    }
+  } else { /* learning from failures is easier */
+    roll = rand_number(1, 100);
+    if (roll >= (100 - wis_app[GET_WIS(ch)].bonus)) {
+      increase = base + 1;
+      SET_SKILL(ch, skill_num, MIN(90, increase));
+    }
+  }
 }
 
 void gain_exp(struct char_data *ch, int gain)

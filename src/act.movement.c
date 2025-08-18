@@ -570,6 +570,7 @@ static void do_doorcmd(struct char_data *ch, struct obj_data *obj, int door, int
       TOGGLE_LOCK(other_room, obj, rev_dir[door]);
     send_to_char(ch, "The lock quickly yields to your skills.\r\n");
     len = strlcpy(buf, "$n skillfully picks the lock on ", sizeof(buf));
+    gain_skill(ch, "pick lock", TRUE);
     break;
   }
 
@@ -597,14 +598,19 @@ static int ok_pick(struct char_data *ch, obj_vnum keynum, int pickproof, int scm
   percent = rand_number(1, 101);
   skill_lvl = GET_SKILL(ch, SKILL_PICK_LOCK) + dex_app_skill[GET_DEX(ch)].p_locks;
 
-  if (keynum == NOTHING)
+  if (keynum == NOTHING) {
     send_to_char(ch, "Odd - you can't seem to find a keyhole.\r\n");
-  else if (pickproof)
+  }
+  else if (pickproof) {
     send_to_char(ch, "It resists your attempts to pick it.\r\n");
-  else if (percent > skill_lvl)
+  }
+  else if (percent > skill_lvl) {
     send_to_char(ch, "You failed to pick the lock.\r\n");
-  else
+    gain_skill(ch, "pick lock", FALSE);
+  }
+  else {
     return (1);
+  }
 
   return (0);
 }

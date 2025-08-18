@@ -111,14 +111,17 @@ ACMD(do_sneak)
 
   percent = rand_number(1, 101);	/* 101% is a complete failure */
 
-  if (percent > GET_SKILL(ch, SKILL_SNEAK) + dex_app_skill[GET_DEX(ch)].sneak)
+  if (percent > GET_SKILL(ch, SKILL_SNEAK) + dex_app_skill[GET_DEX(ch)].sneak){
+    gain_skill(ch, "sneak", FALSE);
     return;
-
-  new_affect(&af);
-  af.spell = SKILL_SNEAK;
-  af.duration = GET_LEVEL(ch);
-  SET_BIT_AR(af.bitvector, AFF_SNEAK);
-  affect_to_char(ch, &af);
+  } else {
+      new_affect(&af);
+      af.spell = SKILL_SNEAK;
+      af.duration = GET_LEVEL(ch);
+      SET_BIT_AR(af.bitvector, AFF_SNEAK);
+      affect_to_char(ch, &af);
+      gain_skill(ch, "sneak", TRUE);
+      }
 }
 
 ACMD(do_hide)
@@ -137,10 +140,13 @@ ACMD(do_hide)
 
   percent = rand_number(1, 101);	/* 101% is a complete failure */
 
-  if (percent > GET_SKILL(ch, SKILL_HIDE) + dex_app_skill[GET_DEX(ch)].hide)
+  if (percent > GET_SKILL(ch, SKILL_HIDE) + dex_app_skill[GET_DEX(ch)].hide){
+    gain_skill(ch, "hide", FALSE);
     return;
-
-  SET_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
+  } else {
+      SET_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
+      send_to_char(ch, "You hide yourself as best you can.\r\n");
+  }
 }
 
 ACMD(do_steal)
@@ -219,16 +225,16 @@ ACMD(do_steal)
       percent += GET_OBJ_WEIGHT(obj);	/* Make heavy harder */
 
       if (percent > GET_SKILL(ch, SKILL_STEAL)) {
-	ohoh = TRUE;
-	send_to_char(ch, "Oops..\r\n");
-	act("$n tried to steal something from you!", FALSE, ch, 0, vict, TO_VICT);
-	act("$n tries to steal something from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+        ohoh = TRUE;
+        send_to_char(ch, "Oops..\r\n");
+        act("$n tried to steal something from you!", FALSE, ch, 0, vict, TO_VICT);
+        act("$n tries to steal something from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+        gain_skill(ch, "steal", FALSE);
       } else {			/* Steal the item */
-	if (IS_CARRYING_N(ch) + 1 < CAN_CARRY_N(ch)) {
-          if (!give_otrigger(obj, vict, ch) ||
-              !receive_mtrigger(ch, vict, obj) ) {
-            send_to_char(ch, "Impossible!\r\n");
-            return;
+          if (IS_CARRYING_N(ch) + 1 < CAN_CARRY_N(ch)) {
+            if (!give_otrigger(obj, vict, ch) || !receive_mtrigger(ch, vict, obj) ) {
+              send_to_char(ch, "Impossible!\r\n");
+              return;
           }
 	  if (IS_CARRYING_W(ch) + GET_OBJ_WEIGHT(obj) < CAN_CARRY_W(ch)) {
 	    obj_from_char(obj);
@@ -245,20 +251,22 @@ ACMD(do_steal)
       send_to_char(ch, "Oops..\r\n");
       act("You discover that $n has $s hands in your wallet.", FALSE, ch, 0, vict, TO_VICT);
       act("$n tries to steal gold from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+      gain_skill(ch, "steal", FALSE);
     } else {
       /* Steal some gold coins */
       gold = (GET_GOLD(vict) * rand_number(1, 10)) / 100;
       gold = MIN(1782, gold);
       if (gold > 0) {
-		increase_gold(ch, gold);
-		decrease_gold(vict, gold);
+        increase_gold(ch, gold);
+        decrease_gold(vict, gold);
+        gain_skill(ch, "steal", TRUE);
         if (gold > 1)
-	  send_to_char(ch, "Bingo!  You got %d gold coins.\r\n", gold);
-	else
-	  send_to_char(ch, "You manage to swipe a solitary gold coin.\r\n");
-      } else {
-	send_to_char(ch, "You couldn't get any gold...\r\n");
-      }
+          send_to_char(ch, "Bingo!  You got %d gold coins.\r\n", gold);
+        else
+          send_to_char(ch, "You manage to swipe a solitary gold coin.\r\n");
+          } else {
+      send_to_char(ch, "You couldn't get any gold...\r\n");
+          }
     }
   }
 

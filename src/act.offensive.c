@@ -167,10 +167,13 @@ ACMD(do_backstab)
   percent = rand_number(1, 101);	/* 101% is a complete failure */
   prob = GET_SKILL(ch, SKILL_BACKSTAB);
 
-  if (AWAKE(vict) && (percent > prob))
+  if (AWAKE(vict) && (percent > prob)) {
     damage(ch, vict, 0, SKILL_BACKSTAB);
-  else
+    gain_skill(ch, "backstab", FALSE);
+  } else {
     hit(ch, vict, SKILL_BACKSTAB);
+    gain_skill(ch, "backstab", TRUE);
+  }
 
   WAIT_STATE(ch, 2 * PULSE_VIOLENCE);
 }
@@ -256,7 +259,7 @@ ACMD(do_flee)
       if (was_fighting && ch == FIGHTING(was_fighting))
         stop_fighting(was_fighting); 
       } else {
-	act("$n tries to flee, but can't!", TRUE, ch, 0, 0, TO_ROOM);
+	        act("$n tries to flee, but can't!", TRUE, ch, 0, 0, TO_ROOM);
       }
       return;
     }
@@ -310,6 +313,7 @@ ACMD(do_bash)
   if (percent > prob) {
     damage(ch, vict, 0, SKILL_BASH);
     GET_POS(ch) = POS_SITTING;
+    gain_skill(ch, "bash", FALSE);
   } else {
     /*
      * If we bash a player and they wimp out, they will move to the previous
@@ -319,8 +323,10 @@ ACMD(do_bash)
      */
     if (damage(ch, vict, 1, SKILL_BASH) > 0) {	/* -1 = dead, 0 = miss */
       WAIT_STATE(vict, PULSE_VIOLENCE);
-      if (IN_ROOM(ch) == IN_ROOM(vict))
+      if (IN_ROOM(ch) == IN_ROOM(vict)) {
         GET_POS(vict) = POS_SITTING;
+        gain_skill(ch, "bash", TRUE);
+      }
     }
   }
   WAIT_STATE(ch, PULSE_VIOLENCE * 2);
@@ -371,6 +377,7 @@ ACMD(do_rescue)
 
   if (percent > prob) {
     send_to_char(ch, "You fail the rescue!\r\n");
+    gain_skill(ch, "rescue", FALSE);
     return;
   }
   send_to_char(ch, "Banzai!  To the rescue...\r\n");
@@ -381,8 +388,10 @@ ACMD(do_rescue)
     stop_fighting(vict);
   if (FIGHTING(tmp_ch))
     stop_fighting(tmp_ch);
-  if (FIGHTING(ch))
+  if (FIGHTING(ch)) {
     stop_fighting(ch);
+    gain_skill(ch, "rescue", TRUE);
+  }
 
   set_fighting(ch, tmp_ch);
   set_fighting(tmp_ch, ch);
@@ -396,6 +405,7 @@ EVENTFUNC(event_whirlwind)
   struct mud_event_data *pMudEvent;
   struct list_data *room_list;
   int count;
+  int roll;
 	
   /* This is just a dummy check, but we'll do it anyway */
   if (event_obj == NULL)
@@ -432,6 +442,10 @@ EVENTFUNC(event_whirlwind)
   for (count = dice(1, 4); count > 0; count--) {
     tch = random_from_list(room_list);
     hit(ch, tch, TYPE_UNDEFINED);
+    roll = rand_number(1, 20);
+    if (roll >= 20) {
+      gain_skill(ch, "whirlwind", FALSE); /* on a critical success, give whirlwind a chance to gain */
+    }
   }
   
   /* Now that our attack is done, let's free out list */
@@ -518,8 +532,11 @@ ACMD(do_kick)
 
   if (percent > prob) {
     damage(ch, vict, 0, SKILL_KICK);
-  } else
+    gain_skill(ch, "kick", FALSE);
+  } else {
     damage(ch, vict, GET_LEVEL(ch) / 2, SKILL_KICK);
+    gain_skill(ch, "kick", TRUE);
+  }
 
   WAIT_STATE(ch, PULSE_VIOLENCE * 3);
 }
@@ -563,6 +580,7 @@ ACMD(do_bandage)
     act("$n tries to bandage $N, but fails miserably.", TRUE, ch, 
       0, vict, TO_NOTVICT);
     damage(vict, vict, 2, TYPE_SUFFERING);
+    gain_skill(ch, "bandage", FALSE);
     return;
   }
 
@@ -572,4 +590,5 @@ ACMD(do_bandage)
   act("Someone bandages you, and you feel a bit better now.",
          FALSE, ch, 0, vict, TO_VICT);
   GET_HIT(vict) = 0;
+  gain_skill(ch, "bandage", TRUE);
 }

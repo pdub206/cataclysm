@@ -130,6 +130,7 @@ void	set_title(struct char_data *ch, char *title);
 void	gain_exp(struct char_data *ch, int gain);
 void	gain_exp_regardless(struct char_data *ch, int gain);
 void	gain_condition(struct char_data *ch, int condition, int value);
+void  gain_skill(struct char_data *ch, char *skill, bool failure);
 void	point_update(void);
 void	update_pos(struct char_data *victim);
 void run_autowiz(void);

@@ -627,6 +627,7 @@ ACMD(do_cast) {
   /* You throws the dice and you takes your chances.. 101% is total failure */
   if (rand_number(0, 101) > GET_SKILL(ch, spellnum)) {
     WAIT_STATE(ch, PULSE_VIOLENCE);
+    gain_skill(ch, s, FALSE);
     if (!tch || !skill_message(0, ch, tch, spellnum))
       send_to_char(ch, "You lost your concentration!\r\n");
     if (mana > 0)
@@ -636,6 +637,7 @@ ACMD(do_cast) {
   } else { /* cast spell returns 1 on success; subtract mana & set waitstate */
     if (cast_spell(ch, tch, tobj, spellnum)) {
       WAIT_STATE(ch, PULSE_VIOLENCE);
+      gain_skill(ch, s, TRUE);
       if (mana > 0)
         GET_MANA(ch) = MAX(0, MIN(GET_MAX_MANA(ch), GET_MANA(ch) - mana));
     }
