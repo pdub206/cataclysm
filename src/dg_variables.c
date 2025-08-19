@@ -1022,21 +1022,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             snprintf(str, slen, "%s", genders[(int)GET_SEX(c)]);
           else if (!str_cmp(field, "skill"))
             snprintf(str, slen, "%s", skill_percent(c, subfield));
-          else if (!str_cmp(field, "skillset")) {
-            if (!IS_NPC(c) && subfield && *subfield) {
-              char skillname[MAX_INPUT_LENGTH], *amount;
-              amount = one_word(subfield, skillname);
-              skip_spaces(&amount);
-              if (amount && *amount && is_number(amount)) {
-                int skillnum = find_skill_num(skillname);
-                if (skillnum > 0) {
-                  int new_value = MAX(0, MIN(100, atoi(amount)));
-                  SET_SKILL(c, skillnum, new_value);
-                }
-              }
-            }
-            *str = '\0'; /* so the parser know we recognize 'skillset' as a field */
-          }
           else if (!str_cmp(field, "str")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);

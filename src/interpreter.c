@@ -31,7 +31,6 @@
 #include "hedit.h"
 #include "house.h"
 #include "config.h"
-#include "modify.h" /* for do_skillset... */
 #include "quest.h"
 #include "asciimap.h"
 #include "prefedit.h"
@@ -287,7 +286,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "shutdow"  , "shutdow" , POS_DEAD    , do_shutdown , LVL_IMPL, 0 },
   { "shutdown" , "shutdown", POS_DEAD    , do_shutdown , LVL_IMPL, SCMD_SHUTDOWN },
   { "sip"      , "sip"     , POS_RESTING , do_drink    , 0, SCMD_SIP },
-  { "skillset" , "skillset", POS_SLEEPING, do_skillset , LVL_GRGOD, 0 },
   { "sleep"    , "sl"      , POS_SLEEPING, do_sleep    , 0, 0 },
   { "slist"    , "slist"   , POS_SLEEPING, do_oasis_list, LVL_BUILDER, SCMD_OASIS_SLIST },
   { "sneak"    , "sneak"   , POS_STANDING, do_sneak    , 1, 0 },
@@ -1607,9 +1605,9 @@ void nanny(struct descriptor_data *d, char *arg)
     if (load_result == CLASS_UNDEFINED) {
       write_to_output(d, "\r\nThat's not a class.\r\nClass: ");
       return;
-    } else
+    } else {
       GET_CLASS(d->character) = load_result;
-
+    }
       if (d->olc) {
         free(d->olc);
         d->olc = NULL;
