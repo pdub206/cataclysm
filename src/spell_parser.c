@@ -929,5 +929,10 @@ void mag_assign_spells(void) {
   skillo(SKILL_TRACK, "track");
   skillo(SKILL_WHIRLWIND, "whirlwind");
   skillo(SKILL_BANDAGE, "bandage");
+  skillo(SKILL_UNARMED, "unarmed fighting");
+  skillo(SKILL_SHIELD_USE, "shield use");
+  skillo(SKILL_PIERCING_WEAPONS, "piercing weapons");
+  skillo(SKILL_SLASHING_WEAPONS, "slashing weapons");
+  skillo(SKILL_BLUDGEONING_WEAPONS, "bludgeoning weapons");
 }
 

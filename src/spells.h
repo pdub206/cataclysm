@@ -111,6 +111,11 @@
 #define SKILL_STEAL                 139 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_TRACK                 140 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_BANDAGE               141 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_UNARMED               142 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_SHIELD_USE            143 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_PIERCING_WEAPONS      144 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_SLASHING_WEAPONS      145 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_BLUDGEONING_WEAPONS   146 /* Reserved Skill[] DO NOT CHANGE */
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 
