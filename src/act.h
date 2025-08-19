@@ -280,6 +280,7 @@ void perform_immort_vis(struct char_data *ch);
 void snoop_check(struct char_data *ch);
 bool change_player_name(struct char_data *ch, struct char_data *vict, char *new_name);
 bool AddRecentPlayer(char *chname, char *chhost, bool newplr, bool cpyplr);
+void perform_emote(struct char_data *ch, char *argument, bool possessive);
 /* Functions with subcommands */
 /* do_date */
 ACMD(do_date);
@@ -288,7 +289,11 @@ ACMD(do_date);
 /* do_echo */
 ACMD(do_echo);
 #define SCMD_ECHO   0
-#define SCMD_EMOTE  1
+/* do emote */
+ACMD(do_emote);
+ACMD(do_pemote);
+#define SCMD_EMOTE   0
+#define SCMD_PEMOTE  1
 /* do_last */
 ACMD(do_last);
 #define SCMD_LIST_ALL 1

@@ -89,6 +89,278 @@ static int purge_room(room_rnum room)
   return 1;
 }
 
+/* =======================
+ * Emote helpers & engine
+ * ======================= */
+
+#ifndef MAX_EMOTE_TOKENS
+#define MAX_EMOTE_TOKENS  16
+#endif
+
+/* ---- Pronouns for characters ---- */
+static const char *pron_obj(struct char_data *tch) { /* him/her/them */
+  switch (GET_SEX(tch)) {
+    case SEX_MALE:   return "him";
+    case SEX_FEMALE: return "her";
+    default:         return "them";
+  }
+}
+
+static const char *pron_pos_adj(struct char_data *tch) { /* his/her/their */
+  switch (GET_SEX(tch)) {
+    case SEX_MALE:   return "his";
+    case SEX_FEMALE: return "her";
+    default:         return "their";
+  }
+}
+
+static const char *pron_pos_pron(struct char_data *tch) { /* his/hers/theirs */
+  switch (GET_SEX(tch)) {
+    case SEX_MALE:   return "his";
+    case SEX_FEMALE: return "hers";
+    default:         return "theirs";
+  }
+}
+
+static const char *pron_subj(struct char_data *tch) { /* he/she/they */
+  switch (GET_SEX(tch)) {
+    case SEX_MALE:   return "he";
+    case SEX_FEMALE: return "she";
+    default:         return "they";
+  }
+}
+
+static const char *pron_refl(struct char_data *tch) { /* himself/herself/themself */
+  switch (GET_SEX(tch)) {
+    case SEX_MALE:   return "himself";
+    case SEX_FEMALE: return "herself";
+    default:         return "themself";
+  }
+}
+
+/* ---- Possessive form of a name: James → James', Patrick → Patrick's ---- */
+static void make_possessive(const char *name, char *out, size_t outsz) {
+  size_t n = strlcpy(out, name, outsz);
+  if (n > 0 && out[n-1] == 's') strlcat(out, "'", outsz);
+  else                          strlcat(out, "'s", outsz);
+}
+
+/* ---- Collapse repeated spaces (prevents “Name  does…”) ---- */
+static void collapse_spaces(char *s) {
+  char *src = s, *dst = s;
+  bool last_space = false;
+  while (*src) {
+    if (isspace((unsigned char)*src)) {
+      if (!last_space) *dst++ = ' ';
+      last_space = true;
+    } else {
+      *dst++ = *src;
+      last_space = false;
+    }
+    src++;
+  }
+  *dst = '\0';
+}
+
+/* ---- Is punctuation we consider as sentence end? ---- */
+static bool is_end_punct(char c) {
+  return (c == '.' || c == '!' || c == '?');
+}
+
+/* ---- Resolve a reference token (character or object) from room/inv/eq ---- */
+static bool resolve_reference(struct char_data *actor,
+                              const char *raw, /* e.g., "2.club" */
+                              struct char_data **out_ch,
+                              struct obj_data **out_obj) {
+  char search[MAX_NAME_LENGTH];
+  strlcpy(search, raw, sizeof(search));
+
+  /* Characters: use number for nth match in room */
+  char *pchar = search;
+  int cnum = get_number(&pchar);
+  struct char_data *tch = get_char_room_vis(actor, pchar, &cnum);
+  if (tch) {
+    *out_ch = tch;
+    *out_obj = NULL;
+    return true;
+  }
+
+  /* Objects: run number for each list independently */
+  struct obj_data *obj = NULL;
+  char *pobj;
+  int onum;
+
+  /* Room contents */
+  pobj = search;
+  onum = get_number(&pobj);
+  obj = get_obj_in_list_vis(actor, pobj, &onum, world[IN_ROOM(actor)].contents);
+  if (!obj) {
+    /* Inventory */
+    pobj = search;
+    onum = get_number(&pobj);
+    obj = get_obj_in_list_vis(actor, pobj, &onum, actor->carrying);
+  }
+  if (!obj) {
+    /* Equipment */
+    pobj = search;
+    onum = get_number(&pobj);
+    obj = get_obj_in_equip_vis(actor, pobj, &onum, actor->equipment);
+  }
+
+  if (obj) {
+    *out_ch = NULL;
+    *out_obj = obj;
+    return true;
+  }
+
+  return false;
+}
+
+/* ---- Token extracted from the emote string ---- */
+struct emote_tok {
+  char op;                                /* one of ~ ! % ^ # & = + or '@' */
+  char name[MAX_NAME_LENGTH];             /* raw token text after operator (empty for '@') */
+  struct char_data *tch;                  /* resolved character (if any) */
+  struct obj_data  *tobj;                 /* resolved object (if any) */
+};
+
+/* ---- Build (actor) name or possessive for @ / default prefix ---- */
+static void build_actor_name(struct char_data *actor, bool possessive, char *out, size_t outsz) {
+  if (!possessive) {
+    strlcpy(out, GET_NAME(actor), outsz);
+  } else {
+    make_possessive(GET_NAME(actor), out, outsz);
+  }
+}
+
+/* ---- Replacement text per viewer for a single token ---- */
+static void build_replacement(const struct emote_tok *tok,
+                              struct char_data *actor,
+                              struct char_data *viewer,
+                              bool actor_possessive_for_at, /* true for pemote when op=='@' */
+                              char *out, size_t outsz) {
+  out[0] = '\0';
+
+  /* '@' just inserts the actor’s (maybe possessive) name (not personalized as "you") */
+  if (tok->op == '@') {
+    if (!actor_possessive_for_at)
+      strlcpy(out, GET_NAME(actor), outsz);
+    else
+      make_possessive(GET_NAME(actor), out, outsz);
+    return;
+  }
+
+  /* Character target? */
+  if (tok->tch) {
+    bool is_target_viewer = (viewer == tok->tch);
+    switch (tok->op) {
+      case '~': /* (name) / you */
+        if (is_target_viewer) strlcpy(out, "you", outsz);
+        else                  strlcpy(out, GET_NAME(tok->tch), outsz);
+        break;
+      case '!': /* him/her/them / you */
+        if (is_target_viewer) strlcpy(out, "you", outsz);
+        else                  strlcpy(out, pron_obj(tok->tch), outsz);
+        break;
+      case '%': /* (name)'s / your */
+        if (is_target_viewer) strlcpy(out, "your", outsz);
+        else                  make_possessive(GET_NAME(tok->tch), out, outsz);
+        break;
+      case '^': /* his/her/their / your */
+        if (is_target_viewer) strlcpy(out, "your", outsz);
+        else                  strlcpy(out, pron_pos_adj(tok->tch), outsz);
+        break;
+      case '#': /* he/she/they / you */
+        if (is_target_viewer) strlcpy(out, "you", outsz);
+        else                  strlcpy(out, pron_subj(tok->tch), outsz);
+        break;
+      case '&': /* himself/herself/themself / yourself */
+        if (is_target_viewer) strlcpy(out, "yourself", outsz);
+        else                  strlcpy(out, pron_refl(tok->tch), outsz);
+        break;
+      case '=': /* (name)'s / yours */
+        if (is_target_viewer) strlcpy(out, "yours", outsz);
+        else                  make_possessive(GET_NAME(tok->tch), out, outsz);
+        break;
+      case '+': /* his/hers/theirs / yours */
+        if (is_target_viewer) strlcpy(out, "yours", outsz);
+        else                  strlcpy(out, pron_pos_pron(tok->tch), outsz);
+        break;
+      default:
+        strlcpy(out, GET_NAME(tok->tch), outsz);
+        break;
+    }
+    return;
+  }
+
+  /* Object target? Provide sensible object pronouns where needed */
+  if (tok->tobj) {
+    const char *sdesc = (tok->tobj->short_description && *tok->tobj->short_description)
+                        ? tok->tobj->short_description
+                        : "something";
+    char posbuf[MAX_INPUT_LENGTH];
+
+    switch (tok->op) {
+      case '~': /* (name) */
+        strlcpy(out, sdesc, outsz);
+        break;
+      case '!': /* it */
+      case '#': /* it (subject) */
+        strlcpy(out, "it", outsz);
+        break;
+      case '%': /* (name)'s */
+      case '=': /* (name)'s for others’ side too */
+        make_possessive(sdesc, posbuf, sizeof(posbuf));
+        strlcpy(out, posbuf, outsz);
+        break;
+      case '^': /* its */
+      case '+': /* its */
+        strlcpy(out, "its", outsz);
+        break;
+      case '&': /* itself */
+        strlcpy(out, "itself", outsz);
+        break;
+      default:
+        strlcpy(out, sdesc, outsz);
+        break;
+    }
+    return;
+  }
+
+  /* Fallback */
+  strlcpy(out, "something", outsz);
+}
+
+/* ---- Replace every occurrence of needle in hay with repl (safe, single buffer) ---- */
+static void replace_all_tokens(char *hay, size_t haysz, const char *needle, const char *repl) {
+  char work[MAX_STRING_LENGTH];
+  work[0] = '\0';
+
+  const char *src = hay;
+  size_t nlen = strlen(needle);
+
+  while (*src) {
+    const char *pos = strstr(src, needle);
+    if (!pos) {
+      strlcat(work, src, sizeof(work));
+      break;
+    }
+    /* copy up to pos */
+    size_t head = (size_t)(pos - src);
+    char chunk[1024];
+    if (head >= sizeof(chunk)) head = sizeof(chunk) - 1;
+    memcpy(chunk, src, head);
+    chunk[head] = '\0';
+
+    strlcat(work, chunk, sizeof(work));
+    strlcat(work, repl, sizeof(work));
+
+    src = pos + nlen;
+  }
+
+  strlcpy(hay, work, haysz);
+}
+
 ACMD(do_wizhelp) 
 { 
   extern int *cmd_sort_info; 
@@ -138,6 +410,160 @@ ACMD(do_echo)
       send_to_char(ch, "%s", CONFIG_OK);
     else
       act(buf, FALSE, ch, 0, 0, TO_CHAR);
+  }
+}
+
+ACMD(do_emote)
+{
+  perform_emote(ch, argument, FALSE);
+}
+
+ACMD(do_pemote)
+{
+  perform_emote(ch, argument, TRUE);
+}
+
+/* ---- Main emote engine ---- */
+void perform_emote(struct char_data *ch, char *argument, bool possessive) {
+  char base[MAX_STRING_LENGTH];
+  char with_placeholders[MAX_STRING_LENGTH];
+  int at_count = 0;
+
+  struct emote_tok toks[MAX_EMOTE_TOKENS];
+  int tokc = 0;
+
+  skip_spaces(&argument);
+  if (!*argument) {
+    send_to_char(ch, "Yes... but what?\r\n");
+    return;
+  }
+
+  /* Count @ (enforce at most one) */
+  for (const char *c = argument; *c; ++c) if (*c == '@') at_count++;
+  if (at_count > 1) {
+    send_to_char(ch, "You can only use '@' once in an emote.\r\n");
+    return;
+  }
+  bool has_at = (at_count == 1);
+
+  /* If '@' is present, do not auto-prefix the actor name;
+     otherwise prefix with Name or Name's at the start. */
+  if (!has_at) {
+    char who[MAX_INPUT_LENGTH];
+    build_actor_name(ch, possessive, who, sizeof(who));
+    snprintf(base, sizeof(base), "%s %s", who, argument);
+  } else {
+    strlcpy(base, argument, sizeof(base));
+  }
+
+  /* Parse tokens and replace them with $Tn placeholders */
+  {
+    char out[MAX_STRING_LENGTH];
+    out[0] = '\0';
+    const char *p = base;
+
+    while (*p && tokc < MAX_EMOTE_TOKENS) {
+      if (*p == '@' || *p == '~' || *p == '!' || *p == '%' ||
+          *p == '^' || *p == '#' || *p == '&' || *p == '=' || *p == '+') {
+
+        char op = *p++;
+        char name[MAX_NAME_LENGTH];
+        int ni = 0;
+
+        /* '@' carries no name; others do (accept digits and '.' for 2.club) */
+        if (op == '@') {
+          name[0] = '\0';
+        } else {
+          while (*p && !isspace((unsigned char)*p) && ni < (int)sizeof(name) - 1) {
+            if (isalnum((unsigned char)*p) || *p == '.' || *p == '_')
+              name[ni++] = *p++;
+            else
+              break;
+          }
+          name[ni] = '\0';
+        }
+
+        /* Resolve references for non-@ operators */
+        toks[tokc].op = op;
+        toks[tokc].name[0] = '\0';
+        toks[tokc].tch = NULL;
+        toks[tokc].tobj = NULL;
+
+        if (op != '@') {
+          strlcpy(toks[tokc].name, name, sizeof(toks[tokc].name));
+          if (!resolve_reference(ch, name, &toks[tokc].tch, &toks[tokc].tobj)) {
+            send_to_char(ch, "You can't find one of the references here.\r\n");
+            return;
+          }
+        }
+
+        /* Emit placeholder */
+        char ph[16];
+        snprintf(ph, sizeof(ph), "$T%d", tokc + 1);
+        strlcat(out, ph, sizeof(out));
+        tokc++;
+        continue;
+      }
+
+      /* copy through normal chars */
+      char buf[2] = { *p++, '\0' };
+      strlcat(out, buf, sizeof(out));
+    }
+
+    /* copy rest (if we stopped due to MAX_EMOTE_TOKENS) */
+    strlcat(out, p, sizeof(out));
+    strlcpy(with_placeholders, out, sizeof(with_placeholders));
+  }
+
+  /* If '@' was present, replace its literal with a synthetic placeholder */
+  if (has_at) {
+    if (tokc < MAX_EMOTE_TOKENS) {
+      toks[tokc].op = '@';
+      toks[tokc].name[0] = '\0';
+      toks[tokc].tch = NULL;
+      toks[tokc].tobj = NULL;
+      char ph[16]; snprintf(ph, sizeof(ph), "$T%d", tokc + 1);
+      replace_all_tokens(with_placeholders, sizeof(with_placeholders), "@", ph);
+      tokc++;
+    }
+  }
+
+  /* Normalize: ensure end punctuation; capitalize first char; collapse spaces */
+  {
+    size_t n = strlen(with_placeholders);
+    if (n > 0 && !is_end_punct(with_placeholders[n - 1]))
+      strlcat(with_placeholders, ".", sizeof(with_placeholders));
+    if (with_placeholders[0])
+      with_placeholders[0] = toupper((unsigned char)with_placeholders[0]);
+    collapse_spaces(with_placeholders);
+  }
+
+  /* Deliver a personalized message to everyone in the room (including actor) */
+  for (struct descriptor_data *d = descriptor_list; d; d = d->next) {
+    if (STATE(d) != CON_PLAYING || !d->character) continue;
+    if (IN_ROOM(d->character) != IN_ROOM(ch))     continue;
+
+    char msg[MAX_STRING_LENGTH];
+    strlcpy(msg, with_placeholders, sizeof(msg));
+
+    /* For pemote, when op=='@', we insert actor possessive; for emote, non-possessive */
+    bool actor_poss_for_at = possessive;
+
+    /* Substitute each placeholder for this viewer */
+    for (int i = 0; i < tokc; i++) {
+      char token[16], repl[MAX_INPUT_LENGTH];
+      snprintf(token, sizeof(token), "$T%d", i + 1);
+      build_replacement(&toks[i], ch, d->character, actor_poss_for_at, repl, sizeof(repl));
+      replace_all_tokens(msg, sizeof(msg), token, repl);
+    }
+
+    /* Final space normalization */
+    collapse_spaces(msg);
+
+    if (d->character == ch)
+      act(msg, FALSE, ch, NULL, NULL, TO_CHAR);
+    else
+      act(msg, FALSE, ch, NULL, d->character, TO_VICT);
   }
 }
 
