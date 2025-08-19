@@ -130,7 +130,7 @@ void	set_title(struct char_data *ch, char *title);
 void	gain_exp(struct char_data *ch, int gain);
 void	gain_exp_regardless(struct char_data *ch, int gain);
 void	gain_condition(struct char_data *ch, int condition, int value);
-void  gain_skill(struct char_data *ch, char *skill, bool failure);
+void  gain_skill(struct char_data *ch, char *skill, bool success);
 void	point_update(void);
 void	update_pos(struct char_data *victim);
 void run_autowiz(void);
@@ -617,6 +617,9 @@ do                                                              \
 #define GET_SKILL(ch, i)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.skills[i]))
 /** Copy the current skill level i of ch to pct. */
 #define SET_SKILL(ch, i, pct)	do { CHECK_PLAYER_SPECIAL((ch), (ch)->player_specials->saved.skills[i]) = pct; } while(0)
+/** Per-skill next gain time (epoch seconds). Index with a valid skill number. **/
+#define GET_SKILL_NEXT_GAIN(ch, i) \
+  (CHECK_PLAYER_SPECIAL((ch), (ch)->player_specials->saved.next_skill_gain[(i)]))
 
 /** The player's default sector type when buildwalking */
 #define GET_BUILDWALK_SECTOR(ch) CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->buildwalk_sector))

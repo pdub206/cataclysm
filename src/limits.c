@@ -23,6 +23,7 @@
 #include "fight.h"
 #include "screen.h"
 #include "mud_event.h"
+#include <time.h>
 
 /* local file scope function prototypes */
 static int graf(int grafage, int p0, int p1, int p2, int p3, int p4, int p5, int p6);
@@ -221,30 +222,65 @@ void run_autowiz(void)
 #endif /* CIRCLE_UNIX || CIRCLE_WINDOWS */
 }
 
+/* Requires: find_skill_num(), GET_WIS(), wis_app[], GET_SKILL(), SET_SKILL(), rand_number()
+ * Cooldown: 1 hour - 5 * WIS bonus minutes (floored at 0)
+ * Rolls: failure -> 1..20, success -> 1..100
+ * Cap: 90% (change MIN(90, ...) if you want a different cap)
+ */
 void gain_skill(struct char_data *ch, char *skill, bool success)
 {
   int skill_num, base, roll, increase;
+  int wisb, cd_seconds;
+  time_t now;
 
   if (IS_NPC(ch))
     return;
 
+  /* Resolve index and validate against table size */
   skill_num = find_skill_num(skill);
-  if (skill_num <= 0)
+  if (skill_num <= 0 || skill_num > MAX_SKILLS)
     return;
 
-  base = GET_SKILL(ch, skill_num);
+  /* Respect per-skill cooldown: do nothing if still cooling down */
+  now = time(0);
+  if (GET_SKILL_NEXT_GAIN(ch, skill_num) != 0 &&
+      now < GET_SKILL_NEXT_GAIN(ch, skill_num)) {
+    return;
+  }
 
-  if (success) { /* learning from successes is more difficult */
-    roll = rand_number(1, 400);
-    if (roll >= (400 - (wis_app[GET_WIS(ch)].bonus) * 4)) {
-      increase = base + 1;
-      SET_SKILL(ch, skill_num, MIN(90, increase));
-    }
-  } else { /* learning from failures is easier */
+  base = GET_SKILL(ch, skill_num);
+  /* If already capped, bail early (and don’t start cooldown) */
+  if (base >= 90)
+    return;
+
+  /* Wisdom bonus from wis_app[] (constants.c). Higher = better learning & shorter cooldown. */
+  wisb = wis_app[GET_WIS(ch)].bonus;
+
+  if (success) {
+    /* Learning from success is harder: 1..100, threshold scales with WIS */
     roll = rand_number(1, 100);
-    if (roll >= (100 - wis_app[GET_WIS(ch)].bonus)) {
+    /* Old 1..400 with (400 - wisb*4) ⇒ scaled: (100 - wisb) */
+    if (roll >= (100 - wisb)) {
       increase = base + 1;
       SET_SKILL(ch, skill_num, MIN(90, increase));
+
+      /* Cooldown only when an increase actually happens */
+      cd_seconds = 3600 - (wisb * 5 * 60);  /* 1 hour - 5 * WIS minutes */
+      if (cd_seconds < 0) cd_seconds = 0;
+      GET_SKILL_NEXT_GAIN(ch, skill_num) = now + cd_seconds;
+    }
+  } else {
+    /* Learning from failure is easier: 1..20, threshold scales with WIS */
+    roll = rand_number(1, 20);
+    /* Old 1..100 with (100 - wisb) ⇒ scaled: (20 - wisb) */
+    if (roll >= (20 - wisb)) {
+      increase = base + 1;
+      SET_SKILL(ch, skill_num, MIN(90, increase));
+
+      /* Cooldown only when an increase actually happens */
+      cd_seconds = 3600 - (wisb * 5 * 60);  /* 1 hour - 5 * WIS minutes */
+      if (cd_seconds < 0) cd_seconds = 0;
+      GET_SKILL_NEXT_GAIN(ch, skill_num) = now + cd_seconds;
     }
   }
 }

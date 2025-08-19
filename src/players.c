@@ -434,6 +434,14 @@ int load_char(const char *name, struct char_data *ch)
 	     if (!strcmp(tag, "Sex "))	GET_SEX(ch)		= atoi(line);
   else if (!strcmp(tag, "ScrW"))  GET_SCREEN_WIDTH(ch) = atoi(line);
 	else if (!strcmp(tag, "Skil"))	load_skills(fl, ch);
+  else if (!strcmp(tag, "SkGt")) {  /* Skill Gain Timers */
+    for (int i = 1; i <= MAX_SKILLS; i++) {
+      long t = 0;
+      if (fscanf(fl, " %ld", &t) != 1)
+        t = 0;
+      GET_SKILL_NEXT_GAIN(ch, i) = (time_t)t;
+    }
+  }
 	else if (!strcmp(tag, "Str "))	load_HMVS(ch, line, LOAD_STRENGTH);
 	break;
 
@@ -672,6 +680,12 @@ void save_char(struct char_data * ch)
     }
     fprintf(fl, "0 0\n");
   }
+
+  /* Write per-skill next gain times as epoch seconds. */
+  fprintf(fl, "SkGt:");  /* Skill Gain Timer */
+  for (int i = 1; i <= MAX_SKILLS; i++)
+    fprintf(fl, " %ld", (long)GET_SKILL_NEXT_GAIN(ch, i));
+  fputc('\n', fl);
 
   /* Save affects */
   if (tmp_aff[0].spell > 0) {

@@ -14,6 +14,7 @@
 
 #include "protocol.h" /* Kavir Plugin*/
 #include "lists.h"
+#include <time.h>
 
 /** If you want equipment to be automatically equipped to the same place
  * it was when players rented, set the define below to 1 because
@@ -968,6 +969,7 @@ struct player_special_data_saved
   int    quest_counter;         /**< Count of targets left to get  */
   time_t   lastmotd;            /**< Last time player read motd */
   time_t   lastnews;            /**< Last time player read news */
+  time_t next_skill_gain[MAX_SKILLS+1];  /* indexed by skill/spell number */
 };
 
 /** Specials needed only by PCs, not NPCs.  Space for this structure is
