@@ -863,6 +863,18 @@ do                                                              \
 /** 1 if ch is warrior class, 0 if not. */
 #define IS_WARRIOR(ch)		(!IS_NPC(ch) && \
         (GET_CLASS(ch) == CLASS_WARRIOR))
+/** 1 if ch is warrior class, 0 if not. */
+#define IS_BARBARIAN(ch)		(!IS_NPC(ch) && \
+        (GET_CLASS(ch) == CLASS_BARBARIAN))
+/** 1 if ch is warrior class, 0 if not. */
+#define IS_RANGER(ch)		(!IS_NPC(ch) && \
+        (GET_CLASS(ch) == CLASS_RANGER))
+/** 1 if ch is warrior class, 0 if not. */
+#define IS_BARD(ch)		(!IS_NPC(ch) && \
+        (GET_CLASS(ch) == CLASS_BARD))
+/** 1 if ch is warrior class, 0 if not. */
+#define IS_DRUID(ch)		(!IS_NPC(ch) && \
+        (GET_CLASS(ch) == CLASS_DRUID))
 
 /** Defines if ch is outdoors or not. */
 #define OUTSIDE(ch) (!ROOM_FLAGGED(IN_ROOM(ch), ROOM_INDOORS))

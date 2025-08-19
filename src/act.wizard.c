@@ -3179,14 +3179,18 @@ ACMD(do_show)
 
   /* show thaco */
   case 11:
-    len = strlcpy(buf, "LvL - Mu Cl Th Wa\r\n----------------\r\n", sizeof(buf));
+    len = strlcpy(buf, "LvL - Mu Cl Th Wa Ba Ra Br Dr\r\n----------------\r\n", sizeof(buf));
 
     for (j = 1; j < LVL_IMMORT; j++) {
-      nlen = snprintf(buf + len, sizeof(buf) - len,  "%-3d - %-2d %-2d %-2d %-2d\r\n", j, 
+      nlen = snprintf(buf + len, sizeof(buf) - len,  "%-3d - %-2d %-2d %-2d %-2d %-2d %-2d %-2d %-2d\r\n", j, 
 				thaco(CLASS_MAGIC_USER, j),
 				thaco(CLASS_CLERIC, j),
 				thaco(CLASS_THIEF, j),
-				thaco(CLASS_WARRIOR, j));
+				thaco(CLASS_WARRIOR, j),
+				thaco(CLASS_BARBARIAN, j),
+				thaco(CLASS_RANGER, j),
+				thaco(CLASS_BARD, j),
+				thaco(CLASS_DRUID, j));
       if (len + nlen >= sizeof(buf))
         break;
       len += nlen;
@@ -3197,14 +3201,18 @@ ACMD(do_show)
 
   /* show experience tables */
   case 12:
-    len = strlcpy(buf, "LvL - Mu     Cl     Th     Wa\r\n--------------------------\r\n", sizeof(buf));
+    len = strlcpy(buf, "LvL - Mu     Cl     Th     Wa     BA     Ra     Br     Dr\r\n--------------------------\r\n", sizeof(buf));
 
     for (i = 1; i < LVL_IMMORT; i++) { 
-      nlen = snprintf(buf + len, sizeof(buf) - len,  "%-3d - %-6d %-6d %-6d %-6d\r\n", i,  
+      nlen = snprintf(buf + len, sizeof(buf) - len,  "%-3d - %-6d %-6d %-6d %-6d %-6d %-6d %-6d %-6d\r\n", i,  
 				level_exp(CLASS_MAGIC_USER, i) - level_exp(CLASS_MAGIC_USER, i - 1),
 				level_exp(CLASS_CLERIC, i) - level_exp(CLASS_CLERIC, i - 1),
 				level_exp(CLASS_THIEF, i) - level_exp(CLASS_THIEF, i - 1),
-				level_exp(CLASS_WARRIOR, i) - level_exp(CLASS_WARRIOR, i - 1));
+				level_exp(CLASS_WARRIOR, i) - level_exp(CLASS_WARRIOR, i - 1),
+				level_exp(CLASS_BARBARIAN, i) - level_exp(CLASS_BARBARIAN, i - 1),
+				level_exp(CLASS_RANGER, i) - level_exp(CLASS_RANGER, i - 1),
+				level_exp(CLASS_BARD, i) - level_exp(CLASS_BARD, i - 1),
+				level_exp(CLASS_DRUID, i) - level_exp(CLASS_DRUID, i - 1));
       if (len + nlen >= sizeof(buf))
         break;
       len += nlen;

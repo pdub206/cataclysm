@@ -30,6 +30,10 @@ const char *class_abbrevs[] = {
   "Cl",
   "Th",
   "Wa",
+  "Ba",
+  "Ra",
+  "Br",
+  "Dr",
   "\n"
 };
 
@@ -38,6 +42,10 @@ const char *pc_class_types[] = {
   "Cleric",
   "Thief",
   "Warrior",
+  "Barbarian",
+  "Ranger",
+  "Bard",
+  "Druid",
   "\n"
 };
 
@@ -48,7 +56,11 @@ const char *class_menu =
 "  [\t(C\t)]leric\r\n"
 "  [\t(T\t)]hief\r\n"
 "  [\t(W\t)]arrior\r\n"
-"  [\t(M\t)]agic-user\r\n";
+"  [\t(M\t)]agic-user\r\n"
+"  [\t(B\t)]arbarian\r\n"
+"  [\t(R\t)]anger\r\n"
+"  B[\t(A\t)]rd\r\n"
+"  [\t(D\t)]ruid\r\n";
 
 /* The code to interpret a class letter -- used in interpreter.c when a new
  * character is selecting a class and by 'set class' in act.wizard.c. */
@@ -61,6 +73,10 @@ int parse_class(char arg)
   case 'c': return CLASS_CLERIC;
   case 'w': return CLASS_WARRIOR;
   case 't': return CLASS_THIEF;
+  case 'b': return CLASS_BARBARIAN;
+  case 'r': return CLASS_RANGER;
+  case 'a': return CLASS_BARD;
+  case 'd': return CLASS_DRUID;
   default:  return CLASS_UNDEFINED;
   }
 }
@@ -106,11 +122,11 @@ bitvector_t find_class_bitvector(const char *arg)
 /* #define PRAC_TYPE		3  should it say 'spell' or 'skill'?	*/
 
 int prac_params[4][NUM_CLASSES] = {
-  /* MAG	CLE	THE	WAR */
-  { 95,		95,	85,	80	},	/* learned level */
-  { 100,	100,	12,	12	},	/* max per practice */
-  { 25,		25,	0,	0	},	/* min per practice */
-  { SPELL,	SPELL,	SKILL,	SKILL	},	/* prac name */
+  /* MAG	CLE	THE	WAR BAR RAN BARD DRU */
+  { 95,		95,	85,	80, 75, 85, 85, 95	},	/* learned level */
+  { 100,	100,	12,	12, 11, 12, 13, 90	},	/* max per practice */
+  { 25,		25,	0,	0, 0, 0, 25, 25	},	/* min per practice */
+  { SPELL,	SPELL,	SKILL,	SKILL, SKILL, SKILL, SKILL, SKILL	},	/* prac name */
 };
 
 /* The appropriate rooms for each guildmaster/guildguard; controls which types
@@ -121,6 +137,7 @@ int prac_params[4][NUM_CLASSES] = {
  * existing mobs that are used in other guilds for your new guild, then you
  * don't have to change that file, only here. Guildguards are now implemented
  * via triggers. This code remains as an example. */
+/* TO-DO: Is this necessary anymore now that there are no official guild rooms? */
 struct guild_info_type guild_info[] = {
 
 /* Midgaard */
@@ -128,6 +145,10 @@ struct guild_info_type guild_info[] = {
  { CLASS_CLERIC,        3004,    NORTH   },
  { CLASS_THIEF,         3027,    EAST   },
  { CLASS_WARRIOR,       3021,    EAST   },
+ { CLASS_BARBARIAN,     3021,    EAST   },
+ { CLASS_RANGER,        3021,    EAST   },
+ { CLASS_BARD,          3021,    EAST   },
+ { CLASS_DRUID,          3021,    EAST   },
 
 /* Brass Dragon */
   { -999 /* all */ ,	5065,	WEST	},
@@ -152,8 +173,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for mage paralyzation saving throw.");
-	break;
+        log("SYSERR: Missing level for mage paralyzation saving throw.");
+        break;
       }
     case SAVING_ROD:	/* Rods */
       switch (level) {
@@ -164,8 +185,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for mage rod saving throw.");
-	break;
+        log("SYSERR: Missing level for mage rod saving throw.");
+        break;
       }
     case SAVING_PETRI:	/* Petrification */
       switch (level) {
@@ -176,8 +197,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for mage petrification saving throw.");
-	break;
+        log("SYSERR: Missing level for mage petrification saving throw.");
+        break;
       }
     case SAVING_BREATH:	/* Breath weapons */
       switch (level) {
@@ -188,8 +209,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for mage breath saving throw.");
-	break;
+        log("SYSERR: Missing level for mage breath saving throw.");
+        break;
       }
     case SAVING_SPELL:	/* Generic spells */
       switch (level) {
@@ -200,8 +221,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for mage spell saving throw.");
-	break;
+        log("SYSERR: Missing level for mage spell saving throw.");
+        break;
       }
     default:
       log("SYSERR: Invalid saving throw type.");
@@ -219,8 +240,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for cleric paralyzation saving throw.");
-	break;
+        log("SYSERR: Missing level for cleric paralyzation saving throw.");
+        break;
       }
     case SAVING_ROD:	/* Rods */
       switch (level) {
@@ -231,8 +252,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for cleric rod saving throw.");
-	break;
+        log("SYSERR: Missing level for cleric rod saving throw.");
+        break;
       }
     case SAVING_PETRI:	/* Petrification */
       switch (level) {
@@ -243,8 +264,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for cleric petrification saving throw.");
-	break;
+        log("SYSERR: Missing level for cleric petrification saving throw.");
+        break;
       }
     case SAVING_BREATH:	/* Breath weapons */
       switch (level) {
@@ -255,8 +276,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for cleric breath saving throw.");
-	break;
+        log("SYSERR: Missing level for cleric breath saving throw.");
+        break;
       }
     case SAVING_SPELL:	/* Generic spells */
       switch (level) {
@@ -267,8 +288,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for cleric spell saving throw.");
-	break;
+        log("SYSERR: Missing level for cleric spell saving throw.");
+        break;
       }
     default:
       log("SYSERR: Invalid saving throw type.");
@@ -286,8 +307,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for thief paralyzation saving throw.");
-	break;
+        log("SYSERR: Missing level for thief paralyzation saving throw.");
+        break;
       }
     case SAVING_ROD:	/* Rods */
       switch (level) {
@@ -298,8 +319,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for thief rod saving throw.");
-	break;
+        log("SYSERR: Missing level for thief rod saving throw.");
+        break;
       }
     case SAVING_PETRI:	/* Petrification */
       switch (level) {
@@ -310,8 +331,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for thief petrification saving throw.");
-	break;
+        log("SYSERR: Missing level for thief petrification saving throw.");
+        break;
       }
     case SAVING_BREATH:	/* Breath weapons */
       switch (level) {
@@ -322,8 +343,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for thief breath saving throw.");
-	break;
+        log("SYSERR: Missing level for thief breath saving throw.");
+        break;
       }
     case SAVING_SPELL:	/* Generic spells */
       switch (level) {
@@ -334,8 +355,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for thief spell saving throw.");
-	break;
+        log("SYSERR: Missing level for thief spell saving throw.");
+        break;
       }
     default:
       log("SYSERR: Invalid saving throw type.");
@@ -353,8 +374,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for warrior paralyzation saving throw.");
-	break;
+        log("SYSERR: Missing level for warrior paralyzation saving throw.");
+        break;
       }
     case SAVING_ROD:	/* Rods */
       switch (level) {
@@ -365,8 +386,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for warrior rod saving throw.");
-	break;
+        log("SYSERR: Missing level for warrior rod saving throw.");
+        break;
       }
     case SAVING_PETRI:	/* Petrification */
       switch (level) {
@@ -377,8 +398,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for warrior petrification saving throw.");
-	break;
+        log("SYSERR: Missing level for warrior petrification saving throw.");
+        break;
       }
     case SAVING_BREATH:	/* Breath weapons */
       switch (level) {
@@ -389,8 +410,8 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for warrior breath saving throw.");
-	break;
+        log("SYSERR: Missing level for warrior breath saving throw.");
+        break;
       }
     case SAVING_SPELL:	/* Generic spells */
       switch (level) {
@@ -401,15 +422,280 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-	log("SYSERR: Missing level for warrior spell saving throw.");
-	break;
+        log("SYSERR: Missing level for warrior spell saving throw.");
+        break;
       }
     default:
       log("SYSERR: Invalid saving throw type.");
       break;
     }
-  default:
-    log("SYSERR: Invalid class saving throw.");
+  case CLASS_BARBARIAN:
+    switch (type) {
+    case SAVING_PARA:	/* Paralyzation */
+      switch (level) {
+      case  0: return 80;
+      case  1: return 60;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for barbarian paralyzation saving throw.");
+        break;
+      }
+    case SAVING_ROD:	/* Rods */
+      switch (level) {
+      case  0: return 90;
+      case  1: return 80;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for barbarian rod saving throw.");
+        break;
+      }
+    case SAVING_PETRI:	/* Petrification */
+      switch (level) {
+      case  0: return 70;
+      case  1: return 65;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for barbarian petrification saving throw.");
+        break;
+      }
+    case SAVING_BREATH:	/* Breath weapons */
+      switch (level) {
+      case  0: return 90;
+      case  1: return 85;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for barbarian breath saving throw.");
+        break;
+      }
+    case SAVING_SPELL:	/* Generic spells */
+      switch (level) {
+      case  0: return 90;
+      case  1: return 85;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for barbarian spell saving throw.");
+        break;
+      }
+    default:
+      log("SYSERR: Invalid saving throw type.");
+      break;
+    }
+    break;
+  case CLASS_RANGER:
+    switch (type) {
+    case SAVING_PARA:	/* Paralyzation */
+      switch (level) {
+      case  0: return 75;
+      case  1: return 70;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for ranger paralyzation saving throw.");
+        break;
+      }
+    case SAVING_ROD:	/* Rods */
+      switch (level) {
+      case  0: return 85;
+      case  1: return 80;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for ranger rod saving throw.");
+        break;
+      }
+    case SAVING_PETRI:	/* Petrification */
+      switch (level) {
+      case  0: return 80;
+      case  1: return 75;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for ranger petrification saving throw.");
+        break;
+      }
+    case SAVING_BREATH:	/* Breath weapons */
+      switch (level) {
+      case  0: return 90;
+      case  1: return 85;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for ranger breath saving throw.");
+        break;
+      }
+    case SAVING_SPELL:	/* Generic spells */
+      switch (level) {
+      case  0: return 90;
+      case  1: return 85;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for ranger spell saving throw.");
+        break;
+      }
+    default:
+      log("SYSERR: Invalid saving throw type.");
+      break;
+    }
+    break;
+  case CLASS_BARD:
+    switch (type) {
+    case SAVING_PARA:	/* Paralyzation */
+      switch (level) {
+      case  0: return 90;
+      case  1: return 70;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for bard paralyzation saving throw.");
+        break;
+      }
+    case SAVING_ROD:	/* Rods */
+      switch (level) {
+      case  0: return 85;
+      case  1: return 80;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for bard rod saving throw.");
+        break;
+      }
+    case SAVING_PETRI:	/* Petrification */
+      switch (level) {
+      case  0: return 85;
+      case  1: return 75;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for bard petrification saving throw.");
+        break;
+      }
+    case SAVING_BREATH:	/* Breath weapons */
+      switch (level) {
+      case  0: return 85;
+      case  1: return 85;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for bard breath saving throw.");
+        break;
+      }
+    case SAVING_SPELL:	/* Generic spells */
+      switch (level) {
+      case  0: return 85;
+      case  1: return 80;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for bard spell saving throw.");
+        break;
+      }
+    default:
+      log("SYSERR: Invalid saving throw type.");
+      break;
+    }
+    break;
+  case CLASS_DRUID:
+    switch (type) {
+    case SAVING_PARA:	/* Paralyzation */
+      switch (level) {
+      case  0: return 75;
+      case  1: return 70;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for druid paralyzation saving throw.");
+        break;
+      }
+    case SAVING_ROD:	/* Rods */
+      switch (level) {
+      case  0: return 80;
+      case  1: return 80;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for druid rod saving throw.");
+        break;
+      }
+    case SAVING_PETRI:	/* Petrification */
+      switch (level) {
+      case  0: return 90;
+      case  1: return 75;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for druid petrification saving throw.");
+        break;
+      }
+    case SAVING_BREATH:	/* Breath weapons */
+      switch (level) {
+      case  0: return 90;
+      case  1: return 85;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+	     log("SYSERR: Missing level for druid breath saving throw.");
+	     break;
+      }
+    case SAVING_SPELL:	/* Generic spells */
+      switch (level) {
+      case  0: return 85;
+      case  1: return 80;
+      case  2: return 0;
+      case  3: return 0;
+      case  4: return 0;
+      case  5: return 0;
+      default:
+        log("SYSERR: Missing level for druid spell saving throw.");
+        break;
+      }
+    default:
+      log("SYSERR: Invalid saving throw type.");
+      break;
+    }
     break;
   }
 
@@ -464,6 +750,50 @@ int thaco(int class_num, int level)
     case  5: return  16;
     default:
       log("SYSERR: Missing level for warrior thac0.");
+    }
+  case CLASS_BARBARIAN:
+    switch (level) {
+    case  0: return 100;
+    case  1: return  20;
+    case  2: return  19;
+    case  3: return  18;
+    case  4: return  17;
+    case  5: return  16;
+    default:
+      log("SYSERR: Missing level for barbarian thac0.");
+    }
+  case CLASS_RANGER:
+    switch (level) {
+    case  0: return 100;
+    case  1: return  20;
+    case  2: return  19;
+    case  3: return  18;
+    case  4: return  17;
+    case  5: return  16;
+    default:
+      log("SYSERR: Missing level for ranger thac0.");
+    }
+  case CLASS_BARD:
+    switch (level) {
+    case  0: return 100;
+    case  1: return  20;
+    case  2: return  19;
+    case  3: return  19;
+    case  4: return  18;
+    case  5: return  17;
+    default:
+      log("SYSERR: Missing level for bard thac0.");
+    }
+  case CLASS_DRUID:
+    switch (level) {
+    case  0: return 100;
+    case  1: return  20;
+    case  2: return  20;
+    case  3: return  20;
+    case  4: return  18;
+    case  5: return  18;
+    default:
+      log("SYSERR: Missing level for druid thac0.");
     }
   default:
     log("SYSERR: Unknown class in thac0 chart.");
@@ -538,6 +868,38 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.cha = table[5];
     if (ch->real_abils.str == 18)
       ch->real_abils.str_add = rand_number(0, 100);
+    break;
+  case CLASS_BARBARIAN:
+    ch->real_abils.dex = table[0];
+    ch->real_abils.str = table[1];
+    ch->real_abils.con = table[2];
+    ch->real_abils.intel = table[3];
+    ch->real_abils.wis = table[4];
+    ch->real_abils.cha = table[5];
+    break;
+  case CLASS_RANGER:
+    ch->real_abils.dex = table[0];
+    ch->real_abils.str = table[1];
+    ch->real_abils.con = table[2];
+    ch->real_abils.intel = table[3];
+    ch->real_abils.wis = table[4];
+    ch->real_abils.cha = table[5];
+    break;
+  case CLASS_BARD:
+    ch->real_abils.dex = table[0];
+    ch->real_abils.str = table[1];
+    ch->real_abils.con = table[2];
+    ch->real_abils.intel = table[3];
+    ch->real_abils.wis = table[4];
+    ch->real_abils.cha = table[5];
+    break;
+  case CLASS_DRUID:
+    ch->real_abils.dex = table[0];
+    ch->real_abils.str = table[1];
+    ch->real_abils.con = table[2];
+    ch->real_abils.intel = table[3];
+    ch->real_abils.wis = table[4];
+    ch->real_abils.cha = table[5];
     break;
   }
   ch->aff_abils = ch->real_abils;
@@ -626,16 +988,45 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_STEAL, 5);
     SET_SKILL(ch, SKILL_BACKSTAB, 5);
     SET_SKILL(ch, SKILL_PICK_LOCK, 5);
-    SET_SKILL(ch, SKILL_TRACK, 5);
     break;
 
   case CLASS_WARRIOR:
     SET_SKILL(ch, SKILL_KICK, 5);
     SET_SKILL(ch, SKILL_RESCUE, 5);
     SET_SKILL(ch, SKILL_BANDAGE, 5);
-    SET_SKILL(ch, SKILL_TRACK, 5);
     SET_SKILL(ch, SKILL_BASH, 5);
     SET_SKILL(ch, SKILL_WHIRLWIND, 5);
+    break;
+
+  case CLASS_BARBARIAN:
+    SET_SKILL(ch, SKILL_KICK, 5);
+    SET_SKILL(ch, SKILL_RESCUE, 5);
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_WHIRLWIND, 5);
+    break;
+
+  case CLASS_RANGER:
+    SET_SKILL(ch, SKILL_SNEAK, 5);
+    SET_SKILL(ch, SKILL_HIDE, 5);
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
+    SET_SKILL(ch, SKILL_BASH, 5);
+    break;
+
+  case CLASS_BARD:
+    SET_SKILL(ch, SPELL_ARMOR, 5);
+    SET_SKILL(ch, SPELL_IDENTIFY, 5);
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
+    SET_SKILL(ch, SKILL_PICK_LOCK, 5);
+    break;
+
+  case CLASS_DRUID:
+    SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
+    SET_SKILL(ch, SPELL_DETECT_MAGIC, 5);
+    SET_SKILL(ch, SPELL_LOCATE_OBJECT, 5);
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
     break;
   }
 
@@ -688,6 +1079,32 @@ void advance_level(struct char_data *ch)
     add_mana = 0;
     add_move = rand_number(1, 3);
     break;
+
+  case CLASS_BARBARIAN:
+    add_hp += rand_number(12, 18);
+    add_mana = 0;
+    add_move = rand_number(1, 3);
+    break;
+
+  case CLASS_RANGER:
+    add_hp += rand_number(10, 15);
+    add_mana = 0;
+    add_move = rand_number(2, 4);
+    break;
+
+  case CLASS_BARD:
+    add_hp += rand_number(7, 13);
+    add_mana = rand_number(GET_LEVEL(ch), (int)(1.5 * GET_LEVEL(ch)));
+    add_mana = MIN(add_mana, 10);
+    add_move = rand_number(1, 3);
+    break;
+
+  case CLASS_DRUID:
+    add_hp += rand_number(10, 15);
+    add_mana = rand_number(GET_LEVEL(ch), (int)(1.5 * GET_LEVEL(ch)));
+    add_mana = MIN(add_mana, 10);
+    add_move = rand_number(1, 4);
+    break;
   }
 
   ch->points.max_hit += MAX(1, add_hp);
@@ -732,6 +1149,18 @@ int invalid_class(struct char_data *ch, struct obj_data *obj)
     return TRUE;
 
   if (OBJ_FLAGGED(obj, ITEM_ANTI_THIEF) && IS_THIEF(ch))
+    return TRUE;
+
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_BARBARIAN) && IS_BARBARIAN(ch))
+    return TRUE;
+
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_RANGER) && IS_RANGER(ch))
+    return TRUE;
+
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_BARD) && IS_BARD(ch))
+    return TRUE;
+
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_DRUID) && IS_DRUID(ch))
     return TRUE;
 
   return FALSE;
@@ -817,6 +1246,33 @@ void init_spell_levels(void)
   spell_level(SKILL_TRACK, CLASS_WARRIOR, 1);
   spell_level(SKILL_BASH, CLASS_WARRIOR, 1);
   spell_level(SKILL_WHIRLWIND, CLASS_WARRIOR, 1);
+
+  /* BARBARIANS */
+  spell_level(SKILL_KICK, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_RESCUE, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_BANDAGE, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_WHIRLWIND, CLASS_BARBARIAN, 1);
+
+  /* RANGERS */
+  spell_level(SKILL_SNEAK, CLASS_RANGER, 1);
+  spell_level(SKILL_HIDE, CLASS_RANGER, 1);
+  spell_level(SKILL_BANDAGE, CLASS_RANGER, 1);
+  spell_level(SKILL_TRACK, CLASS_RANGER, 1);
+  spell_level(SKILL_BASH, CLASS_RANGER, 1);
+
+  /* BARDS */
+  spell_level(SPELL_ARMOR, CLASS_BARD, 1);
+  spell_level(SPELL_IDENTIFY, CLASS_BARD, 1);
+  spell_level(SKILL_BANDAGE, CLASS_BARD, 1);
+  spell_level(SKILL_TRACK, CLASS_BARD, 1);
+  spell_level(SKILL_PICK_LOCK, CLASS_BARD, 1);
+
+  /* DRUIDS */
+  spell_level(SPELL_DETECT_INVIS, CLASS_DRUID, 1);
+  spell_level(SPELL_DETECT_MAGIC, CLASS_DRUID, 1);
+  spell_level(SPELL_LOCATE_OBJECT, CLASS_DRUID, 1);
+  spell_level(SKILL_BANDAGE, CLASS_DRUID, 1);
+  spell_level(SKILL_TRACK, CLASS_DRUID, 1);
 }
 
 /* This is the exp given to implementors -- it must always be greater than the
@@ -865,6 +1321,38 @@ int level_exp(int chclass, int level)
     break;
 
     case CLASS_WARRIOR:
+    switch (level) {
+      case  0: return 0;
+      case  1: return 1;
+      case LVL_IMMORT: return 9999999;
+    }
+    break;
+
+    case CLASS_BARBARIAN:
+    switch (level) {
+      case  0: return 0;
+      case  1: return 1;
+      case LVL_IMMORT: return 9999999;
+    }
+    break;
+
+    case CLASS_RANGER:
+    switch (level) {
+      case  0: return 0;
+      case  1: return 1;
+      case LVL_IMMORT: return 9999999;
+    }
+    break;
+
+    case CLASS_BARD:
+    switch (level) {
+      case  0: return 0;
+      case  1: return 1;
+      case LVL_IMMORT: return 9999999;
+    }
+    break;
+
+    case CLASS_DRUID:
     switch (level) {
       case  0: return 0;
       case  1: return 1;
@@ -925,6 +1413,42 @@ const char *title_male(int chclass, int level)
       case LVL_GRGOD: return "the God of War";
       default: return "the Warrior";
     }
+
+    case CLASS_BARBARIAN:
+    switch(level) {
+      case  1: return "the Savage";
+      case LVL_IMMORT: return "the Immortal Conquerer";
+      case LVL_GOD: return "the Primal";
+      case LVL_GRGOD: return "the God of Blood and Thunder";
+      default: return "the Barbarian";
+    }
+
+    case CLASS_RANGER:
+    switch(level) {
+      case  1: return "the Pathfinder";
+      case LVL_IMMORT: return "the Immortal Trapmaster";
+      case LVL_GOD: return "the Wanderer";
+      case LVL_GRGOD: return "the God of the Hunt";
+      default: return "the Ranger";
+    }
+
+    case CLASS_BARD:
+    switch(level) {
+      case  1: return "the Singer";
+      case LVL_IMMORT: return "the Immortal Songwriter";
+      case LVL_GOD: return "the Musician";
+      case LVL_GRGOD: return "the God of Ballads";
+      default: return "the Bard";
+    }
+
+    case CLASS_DRUID:
+    switch(level) {
+      case  1: return "the Communer";
+      case LVL_IMMORT: return "the Immortal Augur";
+      case LVL_GOD: return "the Naturophile";
+      case LVL_GRGOD: return "the God of Nature";
+      default: return "the Druid";
+    }
   }
 
   /* Default title for classes which do not have titles defined */
@@ -975,6 +1499,42 @@ const char *title_female(int chclass, int level)
       case LVL_GOD: return "the Queen of Destruction";
       case LVL_GRGOD: return "the Goddess of War";
       default: return "the Warrior";
+    }
+
+    case CLASS_BARBARIAN:
+    switch(level) {
+      case  1: return "the Savage";
+      case LVL_IMMORT: return "the Immortal Conquerer";
+      case LVL_GOD: return "the Primal";
+      case LVL_GRGOD: return "the Goddess of Blood and Thunder";
+      default: return "the Barbarian";
+    }
+
+    case CLASS_RANGER:
+    switch(level) {
+      case  1: return "the Pathfinder";
+      case LVL_IMMORT: return "the Immortal Trapmaster";
+      case LVL_GOD: return "the Wanderer";
+      case LVL_GRGOD: return "the Goddess of the Hunt";
+      default: return "the Ranger";
+    }
+
+    case CLASS_BARD:
+    switch(level) {
+      case  1: return "the Singer";
+      case LVL_IMMORT: return "the Immortal Songwriter";
+      case LVL_GOD: return "the Musician";
+      case LVL_GRGOD: return "the Goddess of Ballads";
+      default: return "the Bard";
+    }
+
+    case CLASS_DRUID:
+    switch(level) {
+      case  1: return "the Communer";
+      case LVL_IMMORT: return "the Immortal Augur";
+      case LVL_GOD: return "the Naturophile";
+      case LVL_GRGOD: return "the Goddess of Nature";
+      default: return "the Druid";
     }
   }
 

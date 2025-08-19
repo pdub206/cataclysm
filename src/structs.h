@@ -149,8 +149,12 @@
 #define CLASS_CLERIC      1    /**< PC Class Cleric */
 #define CLASS_THIEF       2    /**< PC Class Thief */
 #define CLASS_WARRIOR     3    /**< PC Class Warrior */
+#define CLASS_BARBARIAN   4    /**< PC Class Barbarian */
+#define CLASS_RANGER      5    /**< PC Class Ranger */
+#define CLASS_BARD        6    /**< PC Class Bard */
+#define CLASS_DRUID       7    /**< PC Class Druid */
 /** Total number of available PC Classes */
-#define NUM_CLASSES	  4
+#define NUM_CLASSES	      8
 
 /* NPC classes (currently unused - feel free to implement!) */
 #define CLASS_OTHER       0    /**< NPC Class Other (or undefined) */
@@ -423,10 +427,14 @@
 #define ITEM_ANTI_CLERIC      13   /**< Not usable by clerics */
 #define ITEM_ANTI_THIEF	      14   /**< Not usable by thieves */
 #define ITEM_ANTI_WARRIOR     15   /**< Not usable by warriors */
-#define ITEM_NOSELL           16   /**< Shopkeepers won't touch it */
-#define ITEM_QUEST            17   /**< Item is a quest item         */
+#define ITEM_ANTI_BARBARIAN   16   /**< Not usable by barbarians */
+#define ITEM_ANTI_RANGER      17   /**< Not usable by rangers */
+#define ITEM_ANTI_BARD        18   /**< Not usable by bards */
+#define ITEM_ANTI_DRUID       19   /**< Not usable by druids */
+#define ITEM_NOSELL           20   /**< Shopkeepers won't touch it */
+#define ITEM_QUEST            21   /**< Item is a quest item         */
 /** Total number of item flags */
-#define NUM_ITEM_FLAGS    18
+#define NUM_ITEM_FLAGS    22
 
 /* Modifier constants used with obj affects ('A' fields) */
 #define APPLY_NONE              0	/**< No effect			*/
