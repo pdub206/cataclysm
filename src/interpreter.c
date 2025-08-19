@@ -247,7 +247,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "quest"    , "que"     , POS_DEAD    , do_quest    , 0, 0 },
   { "qui"      , "qui"     , POS_DEAD    , do_quit     , 0, 0 },
   { "quit"     , "quit"    , POS_DEAD    , do_quit     , 0, SCMD_QUIT },
-  { "qsay"     , "qsay"    , POS_RESTING , do_qcomm    , 0, SCMD_QSAY },
 
   { "reply"    , "r"       , POS_SLEEPING, do_reply    , LVL_IMMORT, 0 },
   { "rest"     , "res"     , POS_RESTING , do_rest     , 0, 0 },

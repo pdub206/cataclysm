@@ -33,8 +33,7 @@ ACMD(do_gen_comm);
 #define SCMD_GEMOTE   4
 /* do_qcomm */
 ACMD(do_qcomm);
-#define SCMD_QSAY     0
-#define SCMD_QECHO    1
+#define SCMD_QECHO    0
 /* do_spec_com */
 ACMD(do_spec_comm);
 #define SCMD_WHISPER  0

@@ -528,6 +528,7 @@ ACMD(do_gen_comm)
   }
 }
 
+/* Currently used for qecho only */
 ACMD(do_qcomm)
 {
   if (!PRF_FLAGGED(ch, PRF_QUEST)) {
@@ -547,18 +548,11 @@ ACMD(do_qcomm)
 
     if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_NOREPEAT))
       send_to_char(ch, "%s", CONFIG_OK);
-    else if (subcmd == SCMD_QSAY) {
-      snprintf(buf, sizeof(buf), "You quest-say, '%s'", argument);
-      act(buf, FALSE, ch, 0, argument, TO_CHAR);
-    } else
+    else
       act(argument, FALSE, ch, 0, argument, TO_CHAR);
 
-    if (subcmd == SCMD_QSAY)
-      snprintf(buf, sizeof(buf), "$n quest-says, '%s'", argument);
-    else {
-      strlcpy(buf, argument, sizeof(buf));
-      mudlog(CMP, MAX(LVL_BUILDER, GET_INVIS_LEV(ch)), TRUE, "(GC) %s qechoed: %s", GET_NAME(ch), argument);
-    }
+    strlcpy(buf, argument, sizeof(buf));
+    mudlog(CMP, MAX(LVL_BUILDER, GET_INVIS_LEV(ch)), TRUE, "(GC) %s qechoed: %s", GET_NAME(ch), argument);
     for (i = descriptor_list; i; i = i->next)
       if (STATE(i) == CON_PLAYING && i != ch->desc && PRF_FLAGGED(i->character, PRF_QUEST))
         act(buf, 0, ch, 0, i->character, TO_VICT | TO_SLEEP);
