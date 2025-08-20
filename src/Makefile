@@ -1,0 +1,108 @@
+# Generated automatically from Makefile.in by configure.
+# tbaMUD Makefile.in - Makefile template used by 'configure'
+# Clean-up provided by seqwith.
+
+# C compiler to use
+CC = gcc
+
+# Any special flags you want to pass to the compiler
+MYFLAGS = -Wall -Wno-char-subscripts -Wno-unused-but-set-variable
+
+#flags for profiling (see hacker.doc for more information)
+PROFILE = 
+
+##############################################################################
+# Do Not Modify Anything Below This Line (unless you know what you're doing) #
+##############################################################################
+
+BINDIR = ../bin
+
+CFLAGS = -g -O2 $(MYFLAGS) $(PROFILE)
+
+LIBS =  -lcrypt 
+
+SRCFILES := $(shell ls *.c | sort)
+OBJFILES := $(patsubst %.c,%.o,$(SRCFILES))  
+
+default: all
+
+all: .accepted
+	$(MAKE) $(BINDIR)/circle
+	$(MAKE) utils
+
+.accepted:
+	@./licheck less
+
+utils: .accepted
+	(cd util; $(MAKE) all)
+
+circle:
+	$(MAKE) $(BINDIR)/circle
+
+$(BINDIR)/circle : $(OBJFILES)
+	$(CC) -o $(BINDIR)/circle $(PROFILE) $(OBJFILES) $(LIBS)
+
+$%.o: %.c
+	$(CC) $< $(CFLAGS) -c -o $@ 
+
+clean:
+	rm -f *.o depend
+
+# Dependencies for the object files (automagically generated with
+# gcc -MM)
+
+depend:
+	$(CC) -MM *.c > depend
+
+-include depend
+
+# ---- Unit tests (5e-like rules) ----
+.PHONY: tests check
+
+BINDIR        ?= ../bin
+TESTS_DIR     := tests
+TESTS_SRC     := $(TESTS_DIR)/tests_5e.c
+TESTS_BIN     := $(BINDIR)/tests_5e
+TESTS_OBJS    := $(TESTS_DIR)/tests_5e.o $(TESTS_DIR)/stubs_unit.o
+
+# Only what we need; add more .o if the linker asks
+TEST_LINK_OBJS := utils.o constants.o random.o
+
+$(BINDIR):
+	mkdir -p $(BINDIR)
+
+tests: $(TESTS_BIN)
+
+check: $(TESTS_BIN)
+	@echo "Running tests_5e..."
+	@$(TESTS_BIN)
+
+$(TESTS_BIN): $(TESTS_OBJS) $(TEST_LINK_OBJS) | $(BINDIR)
+	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS) $(LIBS) -lm
+
+$(TESTS_DIR)/tests_5e.o: $(TESTS_SRC)
+	$(CC) $(CFLAGS) -I. -c -o $@ $<
+
+$(TESTS_DIR)/stubs_unit.o: $(TESTS_DIR)/stubs_unit.c
+	$(CC) $(CFLAGS) -I. -c -o $@ $<
+
+# ---- Simulations (5e-like rules) ----
+.PHONY: sims run_sims
+
+SIMS_DIR      := tests
+SIMS_SRC      := $(SIMS_DIR)/sim_5e.c
+SIMS_BIN      := $(BINDIR)/sim_5e
+SIMS_OBJS     := $(SIMS_DIR)/sim_5e.o $(SIMS_DIR)/stubs_unit.o
+SIM_LINK_OBJS := utils.o constants.o random.o
+
+sims: $(SIMS_BIN)
+
+run_sims: $(SIMS_BIN)
+	@echo "Running sim_5e..."
+	@$(SIMS_BIN)
+
+$(SIMS_BIN): $(SIMS_OBJS) $(SIM_LINK_OBJS) | $(BINDIR)
+	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS) $(LIBS) -lm
+
+$(SIMS_DIR)/sim_5e.o: $(SIMS_SRC)
+	$(CC) $(CFLAGS) -I. -c -o $@ $<
