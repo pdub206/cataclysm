@@ -124,10 +124,9 @@ void list_skills(struct char_data *ch)
 SPECIAL(dump)
 {
   struct obj_data *k;
-  int value = 0;
 
   for (k = world[IN_ROOM(ch)].contents; k; k = world[IN_ROOM(ch)].contents) {
-    act("$p vanishes in a puff of smoke!", FALSE, 0, k, 0, TO_ROOM);
+    act("$p is covered in a pile of ever-growing debris.", FALSE, 0, k, 0, TO_ROOM);
     extract_obj(k);
   }
 
@@ -137,17 +136,10 @@ SPECIAL(dump)
   do_drop(ch, argument, cmd, SCMD_DROP);
 
   for (k = world[IN_ROOM(ch)].contents; k; k = world[IN_ROOM(ch)].contents) {
-    act("$p vanishes in a puff of smoke!", FALSE, 0, k, 0, TO_ROOM);
-    value += MAX(1, MIN(50, GET_OBJ_COST(k) / 10));
+    act("$p vis covered in a pile of ever-growing debris.", FALSE, 0, k, 0, TO_ROOM);
     extract_obj(k);
   }
 
-  if (value) {
-    send_to_char(ch, "You are awarded for outstanding performance.\r\n");
-    act("$n has been awarded for being a good citizen.", TRUE, ch, 0, 0, TO_ROOM);
-
-    increase_gold(ch, value);
-  }
   return (TRUE);
 }
 
