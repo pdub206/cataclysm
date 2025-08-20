@@ -436,8 +436,6 @@ static void perform_drop_gold(struct char_data *ch, int amount, byte mode, room_
   }
 }
 
-#define VANISH(mode) ((mode == SCMD_JUNK) ? \
-		      "  It vanishes in a puff of smoke!" : "")
 static int perform_drop(struct char_data *ch, struct obj_data *obj,
 		     byte mode, const char *sname, room_rnum RDR)
 {
@@ -463,10 +461,10 @@ static int perform_drop(struct char_data *ch, struct obj_data *obj,
     return (0);
   }
 
-  snprintf(buf, sizeof(buf), "You %s $p.%s", sname, VANISH(mode));
+  snprintf(buf, sizeof(buf), "You %s $p.", sname);
   act(buf, FALSE, ch, obj, 0, TO_CHAR);
 
-  snprintf(buf, sizeof(buf), "$n %ss $p.%s", sname, VANISH(mode));
+  snprintf(buf, sizeof(buf), "$n %ss $p.", sname);
   act(buf, TRUE, ch, obj, 0, TO_ROOM);
 
   obj_from_char(obj);
@@ -500,7 +498,7 @@ ACMD(do_drop)
 
   switch (subcmd) {
   case SCMD_JUNK:
-    sname = "junk";
+    sname = "discard";
     mode = SCMD_JUNK;
     break;
   default:
@@ -537,7 +535,7 @@ ACMD(do_drop)
     /* Can't junk or donate all */
     if ((dotmode == FIND_ALL) && (subcmd == SCMD_JUNK)) {
       if (subcmd == SCMD_JUNK)
-	      send_to_char(ch, "You need to specify what you want to junk.\r\n");
+	      send_to_char(ch, "You need to specify what you want to discard.\r\n");
         return;
     }
     if (dotmode == FIND_ALL) {
