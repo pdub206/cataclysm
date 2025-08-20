@@ -59,4 +59,28 @@ extern size_t affected_bits_count;
 extern size_t extra_bits_count;
 extern size_t wear_bits_count;
 
+/* 5e system helpers */
+
+/* Armor slot constraints for AC calculation */
+struct armor_slot {
+  const char *name;
+  int max_piece_ac;   /* max base AC contribution from this slot */
+  int max_magic;      /* max magic bonus contribution from this slot */
+  int bulk_weight;    /* bulk contribution for encumbrance / Dex cap */
+};
+
+/* Armor slot table (defined in constants.c) */
+extern const struct armor_slot armor_slots[];
+extern const int NUM_ARMOR_SLOTS;
+extern const int ARMOR_WEAR_POSITIONS[];
+/* Armor flags (obj->value[3]) */
+extern const char *armor_flag_bits[];
+
+/* Bounded accuracy caps */
+#define MAX_TOTAL_ATTACK_BONUS     10  /* stats + prof + magic + situational */
+#define MAX_WEAPON_MAGIC            3
+#define MAX_SHIELD_MAGIC            3
+/* We already set this earlier: */
+#define MAX_TOTAL_ARMOR_MAGIC       3
+
 #endif /* _CONSTANTS_H_ */

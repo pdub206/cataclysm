@@ -947,6 +947,39 @@ const char *ibt_bits[] = {
   "InProgress",
   "\n"
 };
+
+/* 5e system helpers */
+
+/* Armor slot table for ascending AC rules */
+const struct armor_slot armor_slots[] = {
+  { "head",   2, 1, 1 },
+  { "body",   3, 3, 3 },
+  { "legs",   2, 1, 2 },
+  { "arms",   1, 1, 1 },
+  { "hands",  1, 1, 1 },
+  { "feet",   1, 1, 1 },
+  /* shield handled separately in compute_ascending_ac() */
+};
+
+const int NUM_ARMOR_SLOTS = sizeof(armor_slots) / sizeof(armor_slots[0]);
+
+/* Wear-position mapping for armor_slots[] order */
+const int ARMOR_WEAR_POSITIONS[] = {
+  WEAR_HEAD,   /* "head"  */
+  WEAR_BODY,   /* "body"  */
+  WEAR_LEGS,   /* "legs"  */
+  WEAR_ARMS,   /* "arms"  */
+  WEAR_HANDS,  /* "hands" */
+  WEAR_FEET    /* "feet"  */
+};
+
+/* Armor flag names for obj->value[3] */
+const char *armor_flag_bits[] = {
+  "STEALTHDISADV",  /* ARMF_STEALTH_DISADV */
+  "REQ_STR15",      /* ARMF_REQ_STR15 */
+  "\n"
+};
+
 /* --- End of constants arrays. --- */
 
 /* Various arrays we count so we can check the world files.  These

@@ -296,26 +296,158 @@ to list all forms. i. e. the keyword rumble could be used to cover anyone who
 types <action> rumble rumbl rumb rum ru.
 
 #31
-AC-CONFIDENCE ARMOR-CLASS ARMOUR-CLASS AC-APPLY 
+ACAUDIT ARMOR-AUDIT AUDIT-ARMOR IMMORTAL
 
-   Your Armor Class (often called AC) is an expression for how good your armor
-is at protecting you.  When you don armor, any AC apply that armor has is 
-subtracted from your standard (naked) AC value, modified depending on where on
-the body you are wearing the armor.  Some items have a special bonus, and 
-subtract from the AC directly. Negative AC is better. Modifiers: Body X3, 
-head and legs X2.
+   Summary: Imm-only tool that scans all ITEM\_ARMOR prototypes and reports
+per-piece fields against slot caps. Use this to catch outliers and quickly
+rebalance items to the Light/Medium/Heavy targets.
 
-See also: MEDIT-AC
-#31
-AC-CONFIDENCE ARMOR-CLASS ARMOUR-CLASS AC-APPLY 
+Usage:
+acaudit
 
-   Your Armor Class (often called AC) is an expression for how good your armor
-is at protecting you.  When you don armor, any AC apply that armor has is 
-subtracted from your standard (naked) AC value, modified depending on where on
-the body you are wearing the armor.  Some items have a special bonus, and 
-subtract from the AC directly. Negative AC is better. 
+What it does:
 
-See Also: ARMOR-SPELL
+Scans prototypes for armor slots (head, body, legs, arms, hands, feet) and
+prints one line per item:
+\[#VNUM] <name> slot=<slot>  ac=\<piece\_ac>  bulk=<bulk>  mag=+<magic>  flags=<mask>
+
+Markers:
+
+OVER  : value exceeds the slot’s hard cap (e.g., piece AC > slot max, or
+magic > slot max)
+WARN  : value outside 0..3 (invalid for piece AC, bulk, or magic)
+(STEALTHDISADV): flag is set (the piece imposes Stealth Disadvantage)
+
+Notes:
+
+• Shields are audited separately in AC calculations and are skipped here.
+• Armor magic across all worn pieces is globally capped at +3 (shield
+is separate).
+• Bulk affects the Dex cap: Light (≤5) cap +5, Medium (6–10) cap +2,
+Heavy (≥11) cap +0.
+• Heavy bulk or any piece with Stealth Disadvantage imposes stealth
+disadvantage.
+• Values are clamped on save/load; this command helps you find and fix
+prototypes.
+
+Typical targets (including Dex/shield effects):
+
+Light  : AC \~12–16
+Medium : AC \~14–18
+Heavy  : AC \~16–20
+
+See Also: ARMOR PIECES, BULK, SHIELDS, MAGIC CAPS, SCORE, OEDIT ARMOR
+#32
+AC ARMOR-CLASS ASCENDING-AC DEFENSE
+
+   Summary: We use an ascending AC system (higher is better). A typical
+unarmored character has AC 10. Attacks roll 1d20 + attack modifiers and
+hit if the total  your AC. Natural 1 always misses; natural 20 always hits.
+
+How AC is built:
+
+Base: 10
+
+Armor pieces: each worn slot contributes 03 AC (clamped by slot caps)
+Armor magic: total armor magic across all pieces is capped at +3
+Dexterity: add min(DEX modifier, Dex cap); Dex cap depends on total armor bulk
+Shield: base +2 (tower +3 if present), plus shield magic (capped at +3), plus
+Shield Use skill proficiency
+Situational: cover (+2/+5), spells (Shield, Haste, etc.)
+
+See Also: SCORE
+#0
+ARMOR SLOTS
+
+   Summary: Armor is split across six slots: head, body, legs, arms, hands,
+feet. Each piece has:
+
+Piece AC (value[0]): 0–3 (per-slot hard cap)
+Bulk (value[1]): 0–3 (drives Dex cap & stealth)
+Magic (value[2]): 0–3 (per-slot cap; global armor magic cap +3)
+Flags (value[3]): special rules (e.g., Stealth Disadvantage)
+Slot caps (defaults)
+Head: AC ≤2, Magic ≤1
+Body: AC ≤3, Magic ≤3
+Legs: AC ≤2, Magic ≤1
+Arms/Hands/Feet: AC ≤1, Magic ≤1
+Shield is handled separately
+
+SEE ALSO: SHIELDS
+#0
+BULK DEX-CAP LIGHT MEDIUM HEAVY
+
+   Summary: Armor bulk limits how much of your Dex modifier you can apply 
+to AC.
+
+Light (bulk ≤ 5): Dex cap +5
+Medium (bulk 6–10): Dex cap +2
+Heavy (bulk ≥ 11): Dex cap +0 and imposes Stealth Disadvantage
+
+Bulk is computed by summing each piece’s bulk × slot weight. 
+Slot weights: head 1, body 3, legs 2, arms 1, hands 1, feet 1.
+
+SEE ALSO: ARMOR
+#0
+SHIELD SHIELDS SHIELD-USE
+
+   Summary: A shield adds to AC:
+
+Base +2 (tower +3 if applicable)
+Shield magic (capped at +3)
+Shield Use proficiency (based on your skill%)
+
+Shield Use proficiency (from skill%)
+<=14:+0
+<=29:+1
+<=44:+2
+<=59:+3
+<=74:+4
+<=90:+5
+<=100:+6
+
+SEE ALSO: AC ARMOR SLOTS
+#0
+MAGIC-CAP ENCHANTED-ITEMS
+
+   Summary: Sum of magic across all worn pieces is capped at +3 (after
+slot caps)
+
+Shield: magic is capped at +3 (separate from armor)
+Weapons: magic is capped at +3
+Total attack bonus (stats + proficiency + magic + situational) is gently
+capped around +10 for balance
+
+These caps are enforced automatically in calculations.
+
+SEE ALSO: AC ARMOR SLOTS SHIELDS
+#0
+PROFICIENCY WEAPON SKILL SAVING THROWS
+
+   Summary: We map your skill % to a 5e-like proficiency bonus:
+
+<=14:+0
+<=29:+1
+<=44:+2
+<=59:+3
+<=74:+4
+<=90:+5
+<=100:+6
+
+This is used for weapon attacks, shields, and (when applicable) saving throws.
+
+SEE ALSO: SHIELDS
+#0
+STEALTH SNEAK HIDE DISADVTANGE
+
+    Summary: You have Stealth Disadvantage if certain conditions are met,
+such as:
+
+Any worn piece has the Stealth Disadvantage armor flag, or
+Your total armor bulk puts you in Heavy (Dex cap 0)
+
+With Stealth Disadvantage, Sneak and Hide roll twice and take the worse result.
+Both success and failure can grant training progress.
 #0
 ACRONYMS TERMINOLOGY VOCABULARY
 
@@ -5642,17 +5774,27 @@ See Also: TRIG-TYPES
 #31
 OASIS OLC CREATION ONLINE-CREATION ON-LINE-CREATION 
 
-On-line creation
+   Summary: OnLine Creation tool used by the game to create, modify, or delete
+zones, rooms, objects, mobiles (NPC's), shops, and triggers.
 
 The OLC command will show you any unsaved, edited world files.
 
-To use OLC you have to have permission from one of the greater
-gods or implementors. When you are granted the right,
-you will receive further information.
+New updates to OLC:
 
-To learn more about building check the website (help building) 
+OLC fields for ITEM_ARMOR):
 
-@RGOTO 3@n to enter The Builder Academy.
+value[0] Piece AC: 0–3 (slot-capped)
+value[1] Bulk: 0–3 (affects Dex cap/stealth)
+value[2] Magic: 0–3 (slot-capped; global armor magic cap +3)
+value[3] Flags: armor-specific bitvector (e.g., STEALTH_DISADV, REQ_STR15)
+
+Target bands (typical, including Dex/shield):
+
+Light: AC ~12–16
+
+Medium: AC ~14–18
+
+Heavy: AC ~16–20
 
 See also: REDIT, OEDIT, MEDIT, SEDIT, ZEDIT, ZRESET,
           RLIST, OLIST, MLIST, SLIST, SHOW-ZONE  
@@ -8108,14 +8250,20 @@ See Also: LOOK
 #0
 SCORE
 
-Usage: score
+   Summary: Score provides useful information about your character that you
+would find on a traditional tabletop character sheet. Examples:
 
-Provides useful information on your status such as age, hit points,
-mana, movement points, armor class, alignment, experience points, how long
-you've been playing, and your level. Your money can be viewed with the 
-'gold' command.
-
-See also: ARMOR-CLASS, EXPERIENCE, GOLD
+HP, Mana, and Movement points
+Strength, Dexterity, Constituion, Intelligence, Wisdom, and Charisma scores
+Armor Class with breakdown
+Stealth Disadvantage
+Age
+Carried coins
+Quest points
+Current quest
+Time played
+Current position
+Conditions and affects
 #0
 SCREENWIDTHS SCREEN_WIDTHS
 
@@ -12588,12 +12736,12 @@ ban          copyover     freeze       hcontrol     reroll       skillset
 thaw         unban        wizupdate    
 
 Level 32 (God):
-advance      aedit        checkload    dc           file         force        
-gecho        hedit        helpcheck    hsedit       last         links        
-mcopy        mute         notitle      ocopy        pardon       plist        
-qecho        rcopy        restore      scopy        send         snoop        
-switch       tcopy        tedit        transfer     unaffect     uptime       
-users        zlock        zunlock      
+acaudit      advance      aedit        checkload    dc           file
+force        gecho        hedit        helpcheck    hsedit       last
+links        mcopy        mute         notitle      ocopy        pardon
+plist        qecho        rcopy        restore      scopy        send
+snoop        switch       tcopy        tedit        transfer     unaffect
+uptime       users        zlock        zunlock      
 
 Level 31 (Immortal):
 ;            at           attach       buildwalk    date         

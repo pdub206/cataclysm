@@ -1279,6 +1279,28 @@ struct recent_player
    struct recent_player *next;    /* Pointer to the next instance    */
 };
 
+/* 5e system helpers */
+
+/* Armor item values (for ITEM_ARMOR objects)
+ * value[0] = piece_ac (0–3)
+ * value[1] = bulk (0–3)
+ * value[2] = magic_bonus (0–3, capped globally later)
+ * value[3] = armor flags (bitvector, see ARMF_*)
+ */
+#define VAL_ARMOR_PIECE_AC      0
+#define VAL_ARMOR_BULK          1
+#define VAL_ARMOR_MAGIC_BONUS   2
+#define VAL_ARMOR_FLAGS         3
+
+/* Armor flags (value[3]) */
+#define ARMF_STEALTH_DISADV   (1 << 0)  /* Disadvantage on Stealth */
+
+/* Armor-specific flags stored in obj->value[3] */
+#define ARMF_STEALTH_DISADV   (1 << 0)  /* Disadvantage on Stealth checks */
+#define ARMF_REQ_STR15        (1 << 1)  /* Requires STR 15 to wear */
+#define ARMF_RESERVED2        (1 << 2)  /* Reserved for future use */
+#define ARMF_RESERVED3        (1 << 3)  /* Reserved */
+
 /* Config structs */
 
 /** The game configuration structure used for configurating the game play

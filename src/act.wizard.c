@@ -2878,7 +2878,6 @@ ACMD(do_show)
     { "shops",		LVL_IMMORT },
     { "houses",		LVL_IMMORT },
     { "snoop",		LVL_IMMORT },			/* 10 */
-    { "thaco",      LVL_IMMORT },
     { "exp",        LVL_IMMORT },
     { "colour",     LVL_IMMORT },
     { "\n", 0 }
@@ -3115,30 +3114,8 @@ ACMD(do_show)
       send_to_char(ch, "No one is currently snooping.\r\n");
     break;
 
-  /* show thaco */
-  case 11:
-    len = strlcpy(buf, "LvL - Mu Cl Th Wa Ba Ra Br Dr\r\n----------------\r\n", sizeof(buf));
-
-    for (j = 1; j < LVL_IMMORT; j++) {
-      nlen = snprintf(buf + len, sizeof(buf) - len,  "%-3d - %-2d %-2d %-2d %-2d %-2d %-2d %-2d %-2d\r\n", j, 
-				thaco(CLASS_MAGIC_USER, j),
-				thaco(CLASS_CLERIC, j),
-				thaco(CLASS_THIEF, j),
-				thaco(CLASS_WARRIOR, j),
-				thaco(CLASS_BARBARIAN, j),
-				thaco(CLASS_RANGER, j),
-				thaco(CLASS_BARD, j),
-				thaco(CLASS_DRUID, j));
-      if (len + nlen >= sizeof(buf))
-        break;
-      len += nlen;
-    }
-
-    page_string(ch->desc, buf, TRUE);
-    break;
-
   /* show experience tables */
-  case 12:
+  case 11:
     len = strlcpy(buf, "LvL - Mu     Cl     Th     Wa     BA     Ra     Br     Dr\r\n--------------------------\r\n", sizeof(buf));
 
     for (i = 1; i < LVL_IMMORT; i++) { 
@@ -3159,7 +3136,7 @@ ACMD(do_show)
     page_string(ch->desc, buf, TRUE);
     break;
 
-  case 13:
+  case 12:
     len = strlcpy(buf, "Colours\r\n--------------------------\r\n", sizeof(buf));
     k = 0;
     for (r = 0; r < 6; r++)
@@ -5563,3 +5540,161 @@ ACMD(do_oset)
      }
   }
 }
+
+/* 5e system helpers */
+
+/* Helper: map wear flags to our armor_slots[] index (-1 if not an armor slot) */
+static int armor_slot_index_from_wear(const struct obj_data *obj) {
+  if (!obj) return -1;
+
+  /* IMPORTANT: use your project's wear flag macros.
+     Typical tbaMUD macros: CAN_WEAR(obj, ITEM_WEAR_*) */
+  if (CAN_WEAR(obj, ITEM_WEAR_HEAD))   return 0; /* "head"  */
+  if (CAN_WEAR(obj, ITEM_WEAR_BODY))   return 1; /* "body"  */
+  if (CAN_WEAR(obj, ITEM_WEAR_LEGS))   return 2; /* "legs"  */
+  if (CAN_WEAR(obj, ITEM_WEAR_ARMS))   return 3; /* "arms"  */
+  if (CAN_WEAR(obj, ITEM_WEAR_HANDS))  return 4; /* "hands" */
+  if (CAN_WEAR(obj, ITEM_WEAR_FEET))   return 5; /* "feet"  */
+
+  /* Shield is audited separately in AC compute; skip it here */
+  if (CAN_WEAR(obj, ITEM_WEAR_SHIELD)) return -2; /* special */
+
+  return -1;
+}
+
+/* Pretty: slot name (matches armor_slots[] order) */
+static const char *slot_name_from_index(int idx) {
+  switch (idx) {
+    case 0: return "head";
+    case 1: return "body";
+    case 2: return "legs";
+    case 3: return "arms";
+    case 4: return "hands";
+    case 5: return "feet";
+    default: return "unknown";
+  }
+}
+
+/* Wizard command: scan armor prototypes, validate per-piece fields (compact, paged, 25 lines) */
+ACMD(do_acaudit)
+{
+  int found = 0, warned = 0;
+
+  if (IS_NPC(ch) || GET_LEVEL(ch) < LVL_IMMORT) {
+    send_to_char(ch, "You lack the authority to use this.\r\n");
+    return;
+  }
+
+  /* --- dynamic buffer builder --- */
+  size_t cap = 8192, len = 0;
+  char *out = (char *)malloc(cap);
+  if (!out) { send_to_char(ch, "Memory error.\r\n"); return; }
+  out[0] = '\0';
+
+#define APPEND_FMT(...) do {                                               \
+    int need = snprintf(NULL, 0, __VA_ARGS__);                              \
+    if (need < 0) need = 0;                                                 \
+    if (len + (size_t)need + 1 > cap) {                                     \
+      size_t ncap = cap * 2;                                                \
+      if (ncap < len + (size_t)need + 1) ncap = len + (size_t)need + 1;     \
+      char *tmp = (char *)realloc(out, ncap);                               \
+      if (!tmp) { free(out); send_to_char(ch, "Memory error.\r\n"); return; } \
+      out = tmp; cap = ncap;                                                \
+    }                                                                       \
+    len += (size_t)snprintf(out + len, cap - len, __VA_ARGS__);             \
+  } while (0)
+
+  /* Header (short so it won’t wrap) */
+  APPEND_FMT("\r\n\tY[Armor Audit]\tn ITEM_ARMOR scan\r\n");
+  APPEND_FMT("Legend: \tR!\tn over-cap, \tY?\tn warn, S stealth-disadv\r\n");
+
+  for (obj_rnum r = 0; r <= top_of_objt; r++) {
+    struct obj_data *obj = &obj_proto[r];
+    char namebuf[128] = {0};
+    int idx, vnum, piece_ac, bulk, magic, flags;
+
+    if (GET_OBJ_TYPE(obj) != ITEM_ARMOR)
+      continue;
+
+    /* Identify slot (skip shields here) */
+    idx = armor_slot_index_from_wear(obj);
+    if (idx == -2) continue; /* shield handled in AC; skip */
+    if (idx < 0)  continue;  /* not a supported armor slot */
+
+    vnum     = GET_OBJ_VNUM(obj);
+    piece_ac = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
+    bulk     = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
+    magic    = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
+    flags    = GET_OBJ_VAL(obj, VAL_ARMOR_FLAGS);
+
+    /* Display name (trim to keep line width < ~78 cols) */
+    if (obj->short_description)
+      snprintf(namebuf, sizeof(namebuf), "%s", obj->short_description);
+    else if (obj->name)
+      snprintf(namebuf, sizeof(namebuf), "%s", obj->name);
+    else
+      snprintf(namebuf, sizeof(namebuf), "object");
+
+    /* Slot caps */
+    const int max_piece_ac = armor_slots[idx].max_piece_ac;
+    const int max_magic    = armor_slots[idx].max_magic;
+
+    /* Validations */
+    bool over_ac    = (piece_ac > max_piece_ac);
+    bool over_magic = (magic    > max_magic);
+    bool bad_ac     = (piece_ac < 0 || piece_ac > 3);
+    bool bad_bulk   = (bulk     < 0 || bulk     > 3);
+    bool bad_magic  = (magic    < 0 || magic    > 3);
+
+    found++;
+
+    /* Compact, non-wrapping row (~70 cols worst case) */
+    APPEND_FMT("\tc[#%5d]\tn %-24.24s sl=%-5.5s ac=%2d%s b=%d%s m=%+d%s f=%d%s\r\n",
+      vnum,
+      namebuf,
+      slot_name_from_index(idx),
+      piece_ac,  over_ac    ? " \tR!\tn" : (bad_ac   ? " \tY?\tn" : ""),
+      bulk,      bad_bulk   ? " \tY?\tn" : "",
+      magic,     over_magic ? " \tR!\tn" : (bad_magic? " \tY?\tn" : ""),
+      flags,     (flags & ARMF_STEALTH_DISADV) ? " S" : "");
+
+    if (over_ac || over_magic || bad_ac || bad_bulk || bad_magic)
+      warned++;
+  }
+
+  if (!found) {
+    free(out);
+    send_to_char(ch, "No ITEM_ARMOR prototypes found for the audited slots.\r\n");
+    return;
+  }
+
+  /* Footer */
+  APPEND_FMT("\r\nScanned: %d items, %d with issues. Armor magic cap +%d (shield separate).\r\n",
+             found, warned, MAX_TOTAL_ARMOR_MAGIC);
+
+  /* Page it (copy mode) and try to force 25-line pages */
+  if (ch->desc) {
+    int old_len = 0; bool changed = false;
+#if defined(GET_SCREEN_HEIGHT)
+    old_len = GET_SCREEN_HEIGHT(ch); GET_SCREEN_HEIGHT(ch) = 25; changed = true;
+#elif defined(GET_PAGE_LENGTH)
+    old_len = GET_PAGE_LENGTH(ch);   GET_PAGE_LENGTH(ch)   = 25; changed = true;
+#endif
+    page_string(ch->desc, out, 0); /* copy; we free out */
+    free(out);
+    if (changed) {
+#if defined(GET_SCREEN_HEIGHT)
+      GET_SCREEN_HEIGHT(ch) = old_len;
+#elif defined(GET_PAGE_LENGTH)
+      GET_PAGE_LENGTH(ch)   = old_len;
+#endif
+    }
+  } else {
+    send_to_char(ch, "%s", out);
+    free(out);
+  }
+
+#undef APPEND_FMT
+}
+
+

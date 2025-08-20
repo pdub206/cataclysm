@@ -593,3 +593,26 @@ bool oset_long_description(struct obj_data *obj, char * argument)
   
   return TRUE;
 }
+
+/* 5e system helpers */
+
+/* Clamp 5e-like armor values to safe ranges */
+void clamp_armor_values(struct obj_data *obj) {
+  if (!obj || GET_OBJ_TYPE(obj) != ITEM_ARMOR) return;
+
+  int v;
+
+  v = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
+  if (v < 0) v = 0; else if (v > 3) v = 3;
+  GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC) = v;
+
+  v = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
+  if (v < 0) v = 0; else if (v > 3) v = 3;
+  GET_OBJ_VAL(obj, VAL_ARMOR_BULK) = v;
+
+  v = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
+  if (v < 0) v = 0; else if (v > 3) v = 3;   /* total armor magic still capped at runtime */
+  GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS) = v;
+
+  /* flags are a bitvector; leave as-is (OLC will manage legal bits) */
+}

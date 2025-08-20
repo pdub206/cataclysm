@@ -806,9 +806,53 @@ ACMD(do_gold)
 ACMD(do_score)
 {
   struct time_info_data playing_time;
+  struct ac_breakdown acb;
 
   if (IS_NPC(ch))
     return;
+
+  /* Compute AC components using new 5e-like system */
+  compute_ac_breakdown(ch, &acb);
+
+  send_to_char(ch,
+      "\r\n"
+      "====================[ Score ]====================\r\n");
+
+  send_to_char(ch,
+      "HP:   %d/%d   Mana: %d/%d   Move: %d/%d\r\n",
+      GET_HIT(ch), GET_MAX_HIT(ch),
+      GET_MANA(ch), GET_MAX_MANA(ch),
+      GET_MOVE(ch), GET_MAX_MOVE(ch));
+
+  /* Abilities and 5e modifiers */
+  send_to_char(ch,
+      "STR %2d (%+d)   DEX %2d (%+d)   CON %2d (%+d)\r\n"
+      "INT %2d (%+d)   WIS %2d (%+d)   CHA %2d (%+d)\r\n",
+      GET_STR(ch), ability_mod(GET_STR(ch)),
+      GET_DEX(ch), ability_mod(GET_DEX(ch)),
+      GET_CON(ch), ability_mod(GET_CON(ch)),
+      GET_INT(ch), ability_mod(GET_INT(ch)),
+      GET_WIS(ch), ability_mod(GET_WIS(ch)),
+      GET_CHA(ch), ability_mod(GET_CHA(ch)));
+
+  /* Ascending AC breakdown */
+  send_to_char(ch,
+      "\r\n"
+      "Armor Class (ascending): %d\r\n"
+      "  base: %d, armor: %d, armor magic: +%d, DEX (cap %d): %+d,\r\n"
+      "  shield: +%d, situational: %+d, bulk score: %d\r\n",
+      acb.total,
+      acb.base,
+      acb.armor_piece_sum,
+      acb.armor_magic_sum,
+      acb.dex_cap,
+      acb.dex_mod_applied,
+      acb.shield_bonus,
+      acb.situational,
+      acb.total_bulk);
+
+  send_to_char(ch, "Stealth Disadvantage: %s\r\n",
+             has_stealth_disadv(ch) ? "Yes" : "No");
 
   send_to_char(ch, "You are %d years old.", GET_AGE(ch));
 
@@ -817,20 +861,9 @@ ACMD(do_score)
   else
     send_to_char(ch, "\r\n");
 
-  send_to_char(ch, "You have %d(%d) hit, %d(%d) mana and %d(%d) movement points.\r\n",
-      GET_HIT(ch), GET_MAX_HIT(ch), GET_MANA(ch), GET_MAX_MANA(ch),
-      GET_MOVE(ch), GET_MAX_MOVE(ch));
-
-  send_to_char(ch, "Your armor class is %d/10, and your alignment is %d.\r\n",
-      compute_armor_class(ch), GET_ALIGNMENT(ch));
-
   send_to_char(ch, "You have %d gold coins, and %d questpoints.\r\n",
       GET_GOLD(ch), GET_QUESTPOINTS(ch));
 
-  send_to_char(ch, "You have earned %d quest points.\r\n", GET_QUESTPOINTS(ch));
-  send_to_char(ch, "You have completed %d quest%s, ",
-       GET_NUM_QUESTS(ch),
-       GET_NUM_QUESTS(ch) == 1 ? "" : "s");
   if (GET_QUEST(ch) == NOTHING)
     send_to_char(ch, "and you are not on a quest at the moment.\r\n");
   else

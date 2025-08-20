@@ -22,7 +22,7 @@
 #include "handler.h"
 #include "interpreter.h"
 #include "class.h"
-
+#include "constants.h"
 
 /** Aportable random number function.
  * @param from The lower bounds of the random number.
@@ -1553,4 +1553,227 @@ void remove_from_string(char *string, const char *to_remove)
         }
     }
     
+}
+
+/* 5e system helpers */
+
+extern const struct armor_slot armor_slots[];      /* in constants.c */
+extern const int NUM_ARMOR_SLOTS;                  /* in constants.c */
+extern const int ARMOR_WEAR_POSITIONS[];           /* in constants.c */
+
+/* --- Advantage/Disadvantage rollers --- */
+int roll_d20(void)            { return rand_number(1, 20); }
+int roll_d20_adv(void)        { int a=roll_d20(), b=roll_d20(); return (a>b)?a:b; }
+int roll_d20_disadv(void)     { int a=roll_d20(), b=roll_d20(); return (a<b)?a:b; }
+
+/* Percent style (for legacy percent-based skill checks) */
+bool percent_success(int chance_pct) {
+  if (chance_pct <= 0) return FALSE;
+  if (chance_pct >= 100) return TRUE;
+  return rand_number(1, 100) <= chance_pct;
+}
+bool percent_success_adv(int chance_pct) {
+  /* better of two tries */
+  int r1 = rand_number(1, 100), r2 = rand_number(1, 100);
+  int best = (r1 < r2) ? r1 : r2;
+  return best <= chance_pct;
+}
+bool percent_success_disadv(int chance_pct) {
+  /* worse of two tries */
+  int r1 = rand_number(1, 100), r2 = rand_number(1, 100);
+  int worst = (r1 > r2) ? r1 : r2;
+  return worst <= chance_pct;
+}
+
+/* Helper: derive Dex cap from total bulk */
+static int dex_cap_from_bulk(int total_bulk) {
+  if (total_bulk <= 5)  /* Light */
+    return 5;
+  else if (total_bulk <= 10) /* Medium */
+    return 2;
+  else /* Heavy */
+    return 0;
+}
+
+/* --- Stealth disadvantage detector ---
+ * Returns TRUE if:
+ *  - Any worn armor piece has ARMF_STEALTH_DISADV, or
+ *  - Total bulk category is Heavy (Dex cap == 0).
+ */
+bool has_stealth_disadv(struct char_data *ch) {
+  if (!ch) return FALSE;
+
+  int total_bulk = 0;
+  bool piece_imposes = FALSE;
+
+  for (int i = 0; i < NUM_ARMOR_SLOTS; i++) {
+    int wear_pos = ARMOR_WEAR_POSITIONS[i];
+    struct obj_data *obj = GET_EQ(ch, wear_pos);
+    if (!obj || GET_OBJ_TYPE(obj) != ITEM_ARMOR)
+      continue;
+
+    /* flags in value[3] */
+    int flags = GET_OBJ_VAL(obj, VAL_ARMOR_FLAGS);
+    if (flags & ARMF_STEALTH_DISADV)
+      piece_imposes = TRUE;
+
+    /* accumulate bulk */
+    int piece_bulk = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
+    if (piece_bulk < 0) piece_bulk = 0;
+    total_bulk += piece_bulk * armor_slots[i].bulk_weight;
+  }
+
+  /* Heavy armor bulk ⇒ Dex cap 0 ⇒ stealth disadvantage */
+  int cap = dex_cap_from_bulk(total_bulk); /* Light<=5:5 / <=10:2 / else:0 */
+  if (cap == 0) return TRUE;
+
+  return piece_imposes;
+}
+
+/* Returns the 5e-style ability modifier for a given ability score. */
+int ability_mod(int score) {
+  int mod = (score - 10) / 2;
+  if ((score - 10) < 0 && ((score - 10) % 2 != 0))
+    mod -= 1;  /* adjust for C truncation toward zero */
+  return mod;
+}
+
+/* Converts a skill percentage (0-100) into a 5e-like proficiency bonus. */
+int prof_from_skill(int pct) {
+  if (pct <= 14) return 0;
+  if (pct <= 29) return 1;
+  if (pct <= 44) return 2;
+  if (pct <= 59) return 3;
+  if (pct <= 74) return 4;
+  if (pct <= 90) return 5;
+  return 6; /* 91–100 (inclusive) */
+}
+
+/* Forward declaration */
+int situational_ac_mods(struct char_data *ch);
+
+void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out)
+{
+  int total_magic = 0;
+
+  if (!out) return;
+  memset(out, 0, sizeof(*out));
+  out->base = 10;
+
+  /* Armor pieces: head/body/legs/arms/hands/feet (no shield here) */
+  for (int i = 0; i < NUM_ARMOR_SLOTS; i++) {
+    int wear_pos = ARMOR_WEAR_POSITIONS[i];
+    struct obj_data *obj = GET_EQ(ch, wear_pos);
+    if (!obj || GET_OBJ_TYPE(obj) != ITEM_ARMOR)
+      continue;
+
+    /* piece AC */
+    int piece_ac = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
+    if (piece_ac < 0) piece_ac = 0;
+    if (piece_ac > armor_slots[i].max_piece_ac)
+      piece_ac = armor_slots[i].max_piece_ac;
+    out->armor_piece_sum += piece_ac;
+
+    /* piece magic (slot-capped; total cap applied after loop) */
+    int piece_magic = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
+    if (piece_magic < 0) piece_magic = 0;
+    if (piece_magic > armor_slots[i].max_magic)
+      piece_magic = armor_slots[i].max_magic;
+    total_magic += piece_magic;
+
+    /* bulk contribution */
+    int piece_bulk = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
+    if (piece_bulk < 0) piece_bulk = 0;
+    out->total_bulk += piece_bulk * armor_slots[i].bulk_weight;
+  }
+
+  /* global armor magic cap (armor only; shield handled separately) */
+  if (total_magic > MAX_TOTAL_ARMOR_MAGIC)
+    total_magic = MAX_TOTAL_ARMOR_MAGIC;
+  out->armor_magic_sum = total_magic;
+
+  /* Dex cap from bulk and applied dex mod */
+  {
+    int dexmod = ability_mod(GET_DEX(ch));
+    out->dex_cap = dex_cap_from_bulk(out->total_bulk); /* Light<=5:5 / <=10:2 / else:0 */
+    out->dex_mod_applied = (dexmod > out->dex_cap) ? out->dex_cap : dexmod;
+  }
+
+  /* Shield: base +2, magic (capped), +Shield Use proficiency */
+  {
+    struct obj_data *shield = GET_EQ(ch, WEAR_SHIELD);
+    if (shield && GET_OBJ_TYPE(shield) == ITEM_ARMOR) {
+      int shield_bonus = 2;
+      int shield_magic = GET_OBJ_VAL(shield, VAL_ARMOR_MAGIC_BONUS);
+      if (shield_magic < 0) shield_magic = 0;
+      if (shield_magic > MAX_SHIELD_MAGIC) shield_magic = MAX_SHIELD_MAGIC;
+      shield_bonus += shield_magic;
+      shield_bonus += prof_from_skill(GET_SKILL(ch, SKILL_SHIELD_USE));
+      out->shield_bonus = shield_bonus;
+    }
+  }
+
+  /* Situational */
+  out->situational = situational_ac_mods(ch);
+
+  /* Total */
+  out->total = out->base
+             + out->armor_piece_sum
+             + out->armor_magic_sum
+             + out->dex_mod_applied
+             + out->shield_bonus
+             + out->situational;
+}
+
+/* Compute ascending AC using 5e-like rules */
+int compute_ascending_ac(struct char_data *ch)
+{
+  struct ac_breakdown b;
+  compute_ac_breakdown(ch, &b);
+  return b.total;
+}
+
+/* Stub: situational AC mods */
+int situational_ac_mods(struct char_data *ch)
+{
+  int mod = 0;
+
+  /* --- Shield spell (5e-style +5 AC while active) --- */
+#if defined(AFF_SHIELD_SPELL)
+  if (AFF_FLAGGED(ch, AFF_SHIELD_SPELL)) mod += 5;
+#elif defined(SPELL_SHIELD)
+  if (affected_by_spell(ch, SPELL_SHIELD)) mod += 5;
+#endif
+
+  /* --- Haste (small defensive bump; tune as desired) --- */
+#if defined(AFF_HASTE)
+  if (AFF_FLAGGED(ch, AFF_HASTE)) mod += 2;
+#elif defined(SPELL_HASTE)
+  if (affected_by_spell(ch, SPELL_HASTE)) mod += 2;
+#endif
+
+  /* --- Cover (if your codebase models it as affects) --- */
+#if defined(AFF_HALF_COVER)
+  if (AFF_FLAGGED(ch, AFF_HALF_COVER)) mod += 2;
+#endif
+#if defined(AFF_THREEQ_COVER)
+  if (AFF_FLAGGED(ch, AFF_THREEQ_COVER)) mod += 5;
+#endif
+
+  /* Add more here as you formalize effects:
+     - Blur/Protection, Barkskin, Stoneskin, etc.
+     Example pattern:
+     #if defined(AFF_BLUR)
+       if (AFF_FLAGGED(ch, AFF_BLUR)) mod += 2;
+     #elif defined(SPELL_BLUR)
+       if (affected_by_spell(ch, SPELL_BLUR)) mod += 2;
+     #endif
+  */
+
+  return mod;
+}
+
+/* Shim: ascending AC wrapper for migration */
+int compute_armor_class_asc(struct char_data *ch) {
+  return compute_ascending_ac(ch);
 }

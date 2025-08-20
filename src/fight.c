@@ -62,7 +62,29 @@ static void group_gain(struct char_data *ch, struct char_data *victim);
 static void solo_gain(struct char_data *ch, struct char_data *victim);
 /** @todo refactor this function name */
 static char *replace_string(const char *str, const char *weapon_singular, const char *weapon_plural);
-static int compute_thaco(struct char_data *ch, struct char_data *vict);
+static int roll_damage(struct char_data *ch, struct char_data *victim,
+                       struct obj_data *wielded, int w_type);
+
+/* Base damage roller; STR-based while there are no ranged types. */
+static int roll_damage(struct char_data *ch, struct char_data *victim,
+                       struct obj_data *wielded, int w_type)
+{
+  int dam = 0;
+
+  if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {
+    int ndice = GET_OBJ_VAL(wielded, 1); /* #dice */
+    int sdice = GET_OBJ_VAL(wielded, 2); /* sides */
+    dam = dice(ndice, sdice);
+    dam += ability_mod(GET_STR(ch));     /* STR adds to weapon damage */
+  } else {
+    /* unarmed */
+    dam = dice(1, 2);
+    dam += ability_mod(GET_STR(ch));
+  }
+
+  if (dam < 0) dam = 0;
+  return dam;
+}
 
 /* Map the current attack (unarmed/weapon damage type) to SKILL_* constant. */
 static int weapon_family_skill_num(struct char_data *ch, struct obj_data *wielded, int w_type) {
@@ -798,45 +820,21 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   return (dam);
 }
 
-/* Calculate the THAC0 of the attacker. 'victim' currently isn't used but you
- * could use it for special cases like weapons that hit evil creatures easier
- * or a weapon that always misses attacking an animal. */
-static int compute_thaco(struct char_data *ch, struct char_data *victim)
-{
-  int calc_thaco;
-
-  if (!IS_NPC(ch))
-    calc_thaco = thaco(GET_CLASS(ch), GET_LEVEL(ch));
-  else		/* THAC0 for monsters is set in the HitRoll */
-    calc_thaco = 20;
-  calc_thaco -= str_app[STRENGTH_APPLY_INDEX(ch)].tohit;
-  calc_thaco -= GET_HITROLL(ch);
-  calc_thaco -= (int) ((GET_INT(ch) - 13) / 1.5);	/* Intelligence helps! */
-  calc_thaco -= (int) ((GET_WIS(ch) - 13) / 1.5);	/* So does wisdom */
-
-  return calc_thaco;
-}
-
+/*
+ * hit() -- one character attempts to hit another with a weapon or attack.
+ * Ascending AC (5e-like), nat 1/20, bounded bonuses, and skill gains.
+ * Since there are no ranged types yet, we always use STR for attack & damage mods.
+ */
 void hit(struct char_data *ch, struct char_data *victim, int type)
 {
   struct obj_data *wielded = GET_EQ(ch, WEAR_WIELD);
-  int w_type, victim_ac, calc_thaco, diceroll;
-  int dam;
+  int w_type, d20, attack_mod = 0, target_ac, dam = 0;
+  bool hit_success = FALSE;
 
-  /* Check that the attacker and victim exist */
+  /* Basic sanity */
   if (!ch || !victim) return;
 
-  /* check if the character has a fight trigger */
-  fight_mtrigger(ch);
-
-  /* Do some sanity checking, in case someone flees, etc. */
-  if (IN_ROOM(ch) != IN_ROOM(victim)) {
-    if (FIGHTING(ch) && FIGHTING(ch) == victim)
-      stop_fighting(ch);
-    return;
-  }
-
-  /* Find the weapon type (for display purposes only) */
+  /* Determine attack message type exactly like stock code */
   if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON)
     w_type = GET_OBJ_VAL(wielded, 3) + TYPE_HIT;
   else {
@@ -844,113 +842,82 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
       w_type = ch->mob_specials.attack_type + TYPE_HIT;
     else
       w_type = TYPE_HIT;
-  }
+  } /* matches stock message mapping */ /*  */
 
-  /* Calculate chance of hit. Lower THAC0 is better for attacker. */
-  calc_thaco = compute_thaco(ch, victim);
+  /* Roll d20 */
+  d20 = rand_number(1, 20);
 
-  /* Calculate the raw armor including magic armor.  Lower AC is better for defender. */
-  victim_ac = compute_armor_class(victim) / 10;
+  /* Ability modifier: STR only (no ranged types yet) */
+  attack_mod += ability_mod(GET_STR(ch));
 
-  /* roll the die and take your chances... */
-  diceroll = rand_number(1, 20);
-
-  /* report for debugging if necessary */
-  if (CONFIG_DEBUG_MODE >= NRM)
-    send_to_char(ch, "\t1Debug:\r\n   \t2Thaco: \t3%d\r\n   \t2AC: \t3%d\r\n   \t2Diceroll: \t3%d\tn\r\n",
-      calc_thaco, victim_ac, diceroll);
-
-  /* -----------------------------------------------------------
-   * To-hit & Shield bonuses:
-   * - Natural 20 = auto hit, 1 = auto miss (keep unchanged)
-   * - Otherwise, modify the *roll* with:
-   *     + (attacker skill / 10)   // attack bonus
-   *     - (defender shield / 10)  // shield reduces attacker's roll
-   *   Bonuses < 1 count as zero.
-   * ----------------------------------------------------------- */
-  if (diceroll == 20 || !AWAKE(victim)) {
-    dam = TRUE;
-  } else if (diceroll == 1) {
-    dam = FALSE;
-  } else {
-    int d_adj = diceroll;
-
-    /* Attacker’s family skill */
-    int atk_skillnum = weapon_family_skill_num(ch, wielded, w_type);
-    int atk_skill    = (atk_skillnum > 0) ? GET_SKILL(ch, atk_skillnum) : 0;
-    int atk_bonus    = atk_skill / 10;                  /* e.g., 0..10 */
-    if (atk_bonus < 1) atk_bonus = 0;                   /* ignore < 1 */
-
-    /* Defender shield */
-    int sh_bonus = 0;
-    if (GET_EQ(victim, WEAR_SHIELD)) {
-      int sh_skill = GET_SKILL(victim, SKILL_SHIELD_USE);
-      sh_bonus = sh_skill / 10;
-      if (sh_bonus < 1) sh_bonus = 0;
-    }
-
-    d_adj += atk_bonus;
-    d_adj -= sh_bonus;
-
-    /* NOTE: do not force auto-1/20 from adjusted roll; we keep raw auto logic above. */
-    dam = (calc_thaco - d_adj <= victim_ac);
-
-    if (CONFIG_DEBUG_MODE >= NRM) {
-      send_to_char(ch, "   \t2Atk bonus: \t3%d\t2  Shield red: \t3%d\t2  Adj roll: \t3%d\tn\r\n",
-                   atk_bonus, sh_bonus, d_adj);
-    }
-  }
-
-  /* Skill gains: once per swing, after hit/miss known */
+  /* Skill family & proficiency */
   {
-    /* Attacker gains in the family skill used */
-    int atk_skillnum = weapon_family_skill_num(ch, wielded, w_type);
-    const char *atk_skill_name = skill_name_for_gain(atk_skillnum);
-    gain_skill(ch, (char *)atk_skill_name, dam ? FALSE : TRUE);
+    int  skillnum  = weapon_family_skill_num(ch, wielded, w_type);
+    const char *skillname = skill_name_for_gain(skillnum); /* maps to "unarmed", "piercing weapons", etc. */
 
-    /* Defender gains in shield use if wearing a shield */
-    if (GET_EQ(victim, WEAR_SHIELD)) {
-      /* If miss → shield succeeded (failure=FALSE). If hit → shield failed (failure=TRUE). */
-      gain_skill(victim, "shield use", dam ? TRUE : FALSE);
-    }
-  }
+    /* proficiency from current % */
+    attack_mod += prof_from_skill(GET_SKILL(ch, skillnum));
 
-  if (!dam) {
-    /* the attacker missed the victim */
-    damage(ch, victim, 0, (type == SKILL_BACKSTAB) ? SKILL_BACKSTAB : w_type);
-  } else {
-    /* okay, we know the guy has been hit.  now calculate damage.
-     * Start with the damage bonuses: the damroll and strength apply */
-    dam = str_app[STRENGTH_APPLY_INDEX(ch)].todam;
-    dam += GET_DAMROLL(ch);
-
-    /* Weapon or bare hands? */
+    /* Weapon magic (cap +3) */
     if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {
-      dam += dice(GET_OBJ_VAL(wielded, 1), GET_OBJ_VAL(wielded, 2));
-    } else {
-      if (IS_NPC(ch))
-        dam += dice(ch->mob_specials.damnodice, ch->mob_specials.damsizedice);
-      else
-        dam += rand_number(0, 2);	/* Max 2 bare hand damage for players */
+      int wmag = GET_OBJ_VAL(wielded, VAL_ARMOR_MAGIC_BONUS);
+      if (wmag > MAX_WEAPON_MAGIC) wmag = MAX_WEAPON_MAGIC;  /* was hard-coded 3 */
+      attack_mod += wmag;
     }
 
-    /* Position-based damage multiplier (unchanged) */
-    if (GET_POS(victim) < POS_FIGHTING)
-      dam *= 1 + (POS_FIGHTING - GET_POS(victim)) / 3;
+    /* Situational attack modifiers hook (spells, conditions) */
+    attack_mod += 0;
 
-    /* at least 1 hp damage min per hit */
-    dam = MAX(1, dam);
+    /* Cap total attack bonus to +10 */
+    if (attack_mod > MAX_TOTAL_ATTACK_BONUS)
+      attack_mod = MAX_TOTAL_ATTACK_BONUS;
 
-    if (type == SKILL_BACKSTAB)
-      damage(ch, victim, dam * backstab_mult(GET_LEVEL(ch)), SKILL_BACKSTAB);
-    else
+    /* Ascending AC target */
+    target_ac = compute_armor_class_asc(victim);
+
+    /* Nat 1/20, then normal resolution */
+    if (d20 == 1)       hit_success = FALSE;
+    else if (d20 == 20) hit_success = TRUE;
+    else                hit_success = ((d20 + attack_mod) >= target_ac);
+
+    /* Apply result */
+    if (hit_success) {
+      dam = roll_damage(ch, victim, wielded, w_type);
       damage(ch, victim, dam, w_type);
+    } else {
+      damage(ch, victim, 0, w_type); /* miss messaging */
+    }
+
+    /* --- Skill gains ---
+       You specified that both success and failure attempt a skill gain. */
+    if (!IS_NPC(ch) && skillname) {
+      gain_skill(ch, (char *)skillname, hit_success);
+    }
+
+    /* Defender shield use: every swing trains it if they’re wearing a shield.
+       Treat a MISS as a "success" for the shield user (they successfully defended). */
+    if (!IS_NPC(victim) && GET_EQ(victim, WEAR_SHIELD)) {
+      gain_skill(victim, "shield use", !hit_success);
+    }
   }
 
-  /* check if the victim has a hitprcnt trigger */
-  hitprcnt_mtrigger(victim);
+  /* Optional combat numbers for debugging / builders */
+  if (CONFIG_DEBUG_MODE >= NRM) {
+    const char *crit = (d20 == 20) ? " (CRIT)" : ((d20 == 1) ? " (NAT 1)" : "");
+    send_to_char(ch,
+      "\t1Attack:\tn d20=%d%s, mod=%+d \t1⇒\tn total=%d vs AC %d — %s\r\n",
+      d20, crit, attack_mod, d20 + attack_mod, target_ac,
+      hit_success ? "\t2HIT\tn" : "\t1MISS\tn");
+    /* Optional: show the same line to the victim if they are a player */
+    if (!IS_NPC(victim)) {
+      send_to_char(victim,
+        "\t1Defense:\tn %s rolled total=%d vs your AC %d — %s%s\r\n",
+        GET_NAME(ch), d20 + attack_mod, target_ac,
+        hit_success ? "\t1HIT\tn" : "\t2MISS\tn",
+        (d20 == 20) ? " (CRIT)" : ((d20 == 1) ? " (NAT 1)" : ""));
+    }
+  }
 }
-
 
 /* control the fights going on.  Called every 2 seconds from comm.c. */
 void perform_violence(void)

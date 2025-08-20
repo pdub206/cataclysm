@@ -99,34 +99,49 @@ ACMD(do_not_here)
 ACMD(do_sneak)
 {
   struct affected_type af;
-  byte percent;
+  int chance;
+  bool ok;
 
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_SNEAK)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
+
   send_to_char(ch, "Okay, you'll try to move silently for a while.\r\n");
+
   if (AFF_FLAGGED(ch, AFF_SNEAK))
     affect_from_char(ch, SKILL_SNEAK);
 
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
+  /* Base chance: skill % + Dex-based adjustment */
+  chance = GET_SKILL(ch, SKILL_SNEAK) + dex_app_skill[GET_DEX(ch)].sneak;
+  if (chance < 0)   chance = 0;
+  if (chance > 100) chance = 100;
 
-  if (percent > GET_SKILL(ch, SKILL_SNEAK) + dex_app_skill[GET_DEX(ch)].sneak){
+  /* Apply disadvantage if heavy/bulky armor or flagged pieces */
+  if (has_stealth_disadv(ch))
+    ok = percent_success_disadv(chance);
+  else
+    ok = percent_success(chance);
+
+  if (!ok) {
     gain_skill(ch, "sneak", FALSE);
     return;
-  } else {
-      new_affect(&af);
-      af.spell = SKILL_SNEAK;
-      af.duration = GET_LEVEL(ch);
-      SET_BIT_AR(af.bitvector, AFF_SNEAK);
-      affect_to_char(ch, &af);
-      gain_skill(ch, "sneak", TRUE);
-      }
+  }
+
+  /* Success: apply Sneak affect */
+  new_affect(&af);
+  af.spell = SKILL_SNEAK;
+  af.duration = GET_LEVEL(ch);
+  SET_BIT_AR(af.bitvector, AFF_SNEAK);
+  affect_to_char(ch, &af);
+
+  gain_skill(ch, "sneak", TRUE);
 }
 
 ACMD(do_hide)
 {
-  byte percent;
+  int chance;
+  bool ok;
 
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_HIDE)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
@@ -138,15 +153,26 @@ ACMD(do_hide)
   if (AFF_FLAGGED(ch, AFF_HIDE))
     REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
 
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
+  /* Base chance: skill % + Dex-based adjustment */
+  chance = GET_SKILL(ch, SKILL_HIDE) + dex_app_skill[GET_DEX(ch)].hide;
+  if (chance < 0)   chance = 0;
+  if (chance > 100) chance = 100;
 
-  if (percent > GET_SKILL(ch, SKILL_HIDE) + dex_app_skill[GET_DEX(ch)].hide){
+  /* Apply disadvantage if heavy/bulky armor or flagged pieces */
+  if (has_stealth_disadv(ch))
+    ok = percent_success_disadv(chance);
+  else
+    ok = percent_success(chance);
+
+  if (!ok) {
     gain_skill(ch, "hide", FALSE);
     return;
-  } else {
-      SET_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
-      send_to_char(ch, "You hide yourself as best you can.\r\n");
   }
+
+  /* Success */
+  SET_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
+  send_to_char(ch, "You hide yourself as best you can.\r\n");
+  gain_skill(ch, "hide", TRUE);
 }
 
 ACMD(do_steal)
