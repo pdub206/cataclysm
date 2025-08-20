@@ -2646,7 +2646,6 @@ char *act(const char *str, int hide_invisible, struct char_data *ch,
 
     for (i = descriptor_list; i; i = i->next) {
       if (!i->connected && i->character &&
-          !PRF_FLAGGED(i->character, PRF_NOGOSS) &&
           !PLR_FLAGGED(i->character, PLR_WRITING) &&
           !ROOM_FLAGGED(IN_ROOM(i->character), ROOM_SOUNDPROOF)) {
 

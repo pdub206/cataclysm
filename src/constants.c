@@ -236,9 +236,6 @@ const char *preference_bits[] = {
   "NO_WIZ",
   "L1",
   "L2",
-  "NO_AUC",
-  "NO_GOS",
-  "NO_GTZ",
   "RMFLG",
   "D_AUTO",
   "CLS",
@@ -937,12 +934,9 @@ const char *wtrig_types[] = {
 const char *history_types[] = {
   "all",
   "say",
-  "gossip",
   "wiznet",
   "tell",
   "shout",
-  "grats",
-  "auction",
   "\n"
 };
 

@@ -89,7 +89,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "ask"      , "ask"     , POS_RESTING , do_spec_comm, 0, SCMD_ASK },
   { "astat"    , "ast"     , POS_DEAD    , do_astat    , 0, 0 },
   { "attach"   , "attach"  , POS_DEAD    , do_attach   , LVL_BUILDER, 0 },
-  { "auction"  , "auc"     , POS_SLEEPING, do_gen_comm , 0, SCMD_AUCTION },
   { "autoexits" , "autoex"  , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOEXIT },
   { "autoassist","autoass" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOASSIST },
   { "autodoor" , "autodoor", POS_DEAD    , do_gen_tog , 0, SCMD_AUTODOOR },
@@ -155,10 +154,8 @@ cpp_extern const struct command_info cmd_info[] = {
   { "give"     , "giv"     , POS_RESTING , do_give     , 0, 0 },
   { "goto"     , "go"      , POS_SLEEPING, do_goto     , LVL_IMMORT, 0 },
   { "gold"     , "gol"     , POS_RESTING , do_gold     , 0, 0 },
-  { "gossip"   , "gos"     , POS_SLEEPING, do_gen_comm , 0, SCMD_GOSSIP },
   { "group"    , "gr"      , POS_RESTING , do_group    , 1, 0 },
   { "grab"     , "grab"    , POS_RESTING , do_grab     , 0, 0 },
-  { "grats"    , "grat"    , POS_SLEEPING, do_gen_comm , 0, SCMD_GRATZ },
   { "gsay"     , "gsay"    , POS_SLEEPING, do_gsay     , 0, 0 },
   { "gtell"    , "gt"      , POS_SLEEPING, do_gsay     , 0, 0 },
 
@@ -206,9 +203,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "mute"     , "mute"    , POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_MUTE },
 
   { "news"     , "news"    , POS_SLEEPING, do_gen_ps   , 0, SCMD_NEWS },
-  { "noauction", "noauction",POS_DEAD    , do_gen_tog  , 0, SCMD_NOAUCTION },
-  { "nogossip" , "nogossip", POS_DEAD    , do_gen_tog  , 0, SCMD_NOGOSSIP },
-  { "nograts"  , "nograts" , POS_DEAD    , do_gen_tog  , 0, SCMD_NOGRATZ },
   { "nohassle" , "nohassle", POS_DEAD    , do_gen_tog  , LVL_IMMORT, SCMD_NOHASSLE },
   { "norepeat" , "norepeat", POS_DEAD    , do_gen_tog  , 0, SCMD_NOREPEAT },
   { "noshout"  , "noshout" , POS_SLEEPING, do_gen_tog  , 1, SCMD_NOSHOUT },

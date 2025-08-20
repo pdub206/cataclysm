@@ -27,10 +27,7 @@
 /* do_gen_comm */
 ACMD(do_gen_comm);
 #define SCMD_SHOUT    0
-#define SCMD_GOSSIP   1
-#define SCMD_AUCTION  2
-#define SCMD_GRATZ    3
-#define SCMD_GEMOTE   4
+#define SCMD_GEMOTE   1
 /* do_qcomm */
 ACMD(do_qcomm);
 #define SCMD_QECHO    0
@@ -134,7 +131,6 @@ ACMD(do_give);
 ACMD(do_grab);
 ACMD(do_put);
 ACMD(do_remove);
-ACMD(do_sac);
 ACMD(do_wear);
 ACMD(do_wield);
 
@@ -195,35 +191,31 @@ ACMD(do_gen_tog);
 #define SCMD_BRIEF       2
 #define SCMD_COMPACT     3
 #define SCMD_NOTELL      4
-#define SCMD_NOAUCTION   5
-#define SCMD_NOSHOUT     6
-#define SCMD_NOGOSSIP    7
-#define SCMD_NOGRATZ     8
-#define SCMD_NOWIZ       9
-#define SCMD_QUEST       10
-#define SCMD_SHOWVNUMS   11
-#define SCMD_NOREPEAT    12
-#define SCMD_HOLYLIGHT   13
-#define SCMD_SLOWNS      14
-#define SCMD_AUTOEXIT    15
-#define SCMD_TRACK       16
-#define SCMD_CLS         17
-#define SCMD_BUILDWALK   18
-#define SCMD_AFK         19
-#define SCMD_AUTOLOOT    20
-#define SCMD_AUTOGOLD    21
-#define SCMD_AUTOSPLIT   22
-#define SCMD_AUTOSAC     23
-#define SCMD_AUTOASSIST  24
-#define SCMD_AUTOMAP     25
-#define SCMD_AUTOKEY     26
-#define SCMD_AUTODOOR    27
-#define SCMD_ZONERESETS  28
-#define SCMD_SYSLOG      29
-#define SCMD_WIMPY       30
-#define SCMD_PAGELENGTH  31
-#define SCMD_SCREENWIDTH 32
-#define SCMD_COLOR       33
+#define SCMD_NOSHOUT     5
+#define SCMD_NOWIZ       6
+#define SCMD_QUEST       7
+#define SCMD_SHOWVNUMS   8
+#define SCMD_NOREPEAT    9
+#define SCMD_HOLYLIGHT   10
+#define SCMD_SLOWNS      11
+#define SCMD_AUTOEXIT    12
+#define SCMD_TRACK       13
+#define SCMD_CLS         14
+#define SCMD_BUILDWALK   15
+#define SCMD_AFK         16
+#define SCMD_AUTOLOOT    17
+#define SCMD_AUTOGOLD    18
+#define SCMD_AUTOSPLIT   19
+#define SCMD_AUTOASSIST  20
+#define SCMD_AUTOMAP     21
+#define SCMD_AUTOKEY     22
+#define SCMD_AUTODOOR    23
+#define SCMD_ZONERESETS  24
+#define SCMD_SYSLOG      25
+#define SCMD_WIMPY       26
+#define SCMD_PAGELENGTH  27
+#define SCMD_SCREENWIDTH 28
+#define SCMD_COLOR       29
 
 /* do_quit */
 ACMD(do_quit);

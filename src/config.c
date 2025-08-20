@@ -49,7 +49,7 @@ int pk_allowed = NO;
 /* Is playerthieving allowed? */
 int pt_allowed = NO;
 
-/* Minimum level a player must be to shout/gossip/auction. */
+/* Minimum level a player must be to shout */
 int level_can_shout = 1;
 
 /* How many people can get into a tunnel?  The default is two, but there is

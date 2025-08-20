@@ -684,16 +684,8 @@ ACMD(do_gen_tog)
     "Brief mode on.\r\n"},
     {"Compact mode off.\r\n",
     "Compact mode on.\r\n"},
-    {"You can now hear tells.\r\n",
-    "You are now deaf to tells.\r\n"},
-    {"You can now hear auctions.\r\n",
-    "You are now deaf to auctions.\r\n"},
     {"You can now hear shouts.\r\n",
     "You are now deaf to shouts.\r\n"},
-    {"You can now hear gossip.\r\n",
-    "You are now deaf to gossip.\r\n"},
-    {"You can now hear the congratulation messages.\r\n",
-    "You are now deaf to the congratulation messages.\r\n"},
     {"You can now hear the Wiz-channel.\r\n",
     "You are now deaf to the Wiz-channel.\r\n"},
     {"You are no longer part of the Quest.\r\n",
@@ -722,8 +714,6 @@ ACMD(do_gen_tog)
     "Autogold enabled.\r\n"},
     {"Autosplit disabled.\r\n",
     "Autosplit enabled.\r\n"},
-    {"Autosacrifice disabled.\r\n",
-    "Autosacrifice enabled.\r\n"},
     {"Autoassist disabled.\r\n",
     "Autoassist enabled.\r\n"},
     {"Automap disabled.\r\n",
@@ -752,20 +742,8 @@ ACMD(do_gen_tog)
   case SCMD_COMPACT:
     result = PRF_TOG_CHK(ch, PRF_COMPACT);
     break;
-  case SCMD_NOTELL:
-    result = PRF_TOG_CHK(ch, PRF_NOTELL);
-    break;
-  case SCMD_NOAUCTION:
-    result = PRF_TOG_CHK(ch, PRF_NOAUCT);
-    break;
   case SCMD_NOSHOUT:
     result = PRF_TOG_CHK(ch, PRF_NOSHOUT);
-    break;
-  case SCMD_NOGOSSIP:
-    result = PRF_TOG_CHK(ch, PRF_NOGOSS);
-    break;
-  case SCMD_NOGRATZ:
-    result = PRF_TOG_CHK(ch, PRF_NOGRATZ);
     break;
   case SCMD_NOWIZ:
     result = PRF_TOG_CHK(ch, PRF_NOWIZ);
@@ -828,9 +806,6 @@ ACMD(do_gen_tog)
     break;
   case SCMD_AUTOSPLIT:
     result = PRF_TOG_CHK(ch, PRF_AUTOSPLIT);
-    break;
-  case SCMD_AUTOSAC:
-    result = PRF_TOG_CHK(ch, PRF_AUTOSAC);
     break;
   case SCMD_AUTOASSIST:
     result = PRF_TOG_CHK(ch, PRF_AUTOASSIST);

@@ -157,15 +157,13 @@ static int is_tell_ok(struct char_data *ch, struct char_data *vict)
     send_to_char(ch, "%s", CONFIG_NOPERSON);
   else if (ch == vict)
     send_to_char(ch, "You try to tell yourself something.\r\n");
-  else if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_NOTELL))
-    send_to_char(ch, "You can't tell other people while you have notell on.\r\n");
   else if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD))
     send_to_char(ch, "The walls seem to absorb your words.\r\n");
   else if (!IS_NPC(vict) && !vict->desc)        /* linkless */
     act("$E's linkless at the moment.", FALSE, ch, 0, vict, TO_CHAR | TO_SLEEP);
   else if (PLR_FLAGGED(vict, PLR_WRITING))
     act("$E's writing a message right now; try again later.", FALSE, ch, 0, vict, TO_CHAR | TO_SLEEP);
-  else if ((!IS_NPC(vict) && PRF_FLAGGED(vict, PRF_NOTELL)) || (ROOM_FLAGGED(IN_ROOM(vict), ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD)))
+  else if ((!IS_NPC(vict)) || (ROOM_FLAGGED(IN_ROOM(vict), ROOM_SOUNDPROOF) && (GET_LEVEL(ch) < LVL_GOD)))
     act("$E can't hear you.", FALSE, ch, 0, vict, TO_CHAR | TO_SLEEP);
   else
     return (TRUE);
@@ -406,18 +404,11 @@ ACMD(do_gen_comm)
   int channels[] = {
     0,
     PRF_NOSHOUT,
-    PRF_NOGOSS,
-    PRF_NOAUCT,
-    PRF_NOGRATZ,
-    PRF_NOGOSS,
     0
   };
 
   int hist_type[] = {
     HIST_SHOUT,
-    HIST_GOSSIP,
-    HIST_AUCTION,
-    HIST_GRATS,
   };
 
   /* com_msgs: [0] Message if you can't perform the action because of noshout
@@ -430,21 +421,6 @@ ACMD(do_gen_comm)
       "shout",
       "Turn off your noshout flag first!\r\n",
       KYEL},
-
-    {"You cannot gossip!!\r\n",
-      "gossip",
-      "You aren't even on the channel!\r\n",
-      KYEL},
-
-    {"You cannot auction!!\r\n",
-      "auction",
-      "You aren't even on the channel!\r\n",
-      KMAG},
-
-    {"You cannot congratulate!\r\n",
-      "congrat",
-      "You aren't even on the channel!\r\n",
-      KGRN},
 
     {"You cannot gossip your emotions!\r\n",
       "gossip",

@@ -1324,14 +1324,10 @@ ACMD(do_who)
           send_to_char(ch, " (Buildwalking)");
         if (PRF_FLAGGED(tch, PRF_AFK))
           send_to_char(ch, " (AFK)");
-        if (PRF_FLAGGED(tch, PRF_NOGOSS))
-          send_to_char(ch, " (nogos)");
         if (PRF_FLAGGED(tch, PRF_NOWIZ))
           send_to_char(ch, " (nowiz)");
         if (PRF_FLAGGED(tch, PRF_NOSHOUT))
           send_to_char(ch, " (noshout)");
-        if (PRF_FLAGGED(tch, PRF_NOTELL))
-          send_to_char(ch, " (notell)");
         if (PRF_FLAGGED(tch, PRF_QUEST))
           send_to_char(ch, " (quest)");
         if (PLR_FLAGGED(tch, PLR_THIEF))
@@ -1915,21 +1911,9 @@ ACMD(do_toggle)
     {"compact", PRF_COMPACT, 0,
     "Compact mode off.\r\n",
     "Compact mode on.\r\n"},
-    {"notell", PRF_NOTELL, 0,
-    "You can now hear tells.\r\n",
-    "You are now deaf to tells.\r\n"},
-    {"noauction", PRF_NOAUCT, 0,
-    "You can now hear auctions.\r\n",
-    "You are now deaf to auctions.\r\n"},
     {"noshout", PRF_NOSHOUT, 0,
     "You can now hear shouts.\r\n",
     "You are now deaf to shouts.\r\n"},
-    {"nogossip", PRF_NOGOSS, 0,
-    "You can now hear gossip.\r\n",
-    "You are now deaf to gossip.\r\n"},
-    {"nograts", PRF_NOGRATZ, 0,
-    "You can now hear gratz.\r\n",
-    "You are now deaf to gratz.\r\n"},
     {"nowiz", PRF_NOWIZ, LVL_IMMORT,
     "You can now hear the Wiz-channel.\r\n",
     "You are now deaf to the Wiz-channel.\r\n"},
@@ -1972,9 +1956,6 @@ ACMD(do_toggle)
     {"autosplit", PRF_AUTOSPLIT, 0,
     "Autosplit disabled.\r\n",
     "Autosplit enabled.\r\n"},
-    {"autosac", PRF_AUTOSAC, 0,
-    "Autosac disabled.\r\n",
-    "Autosac enabled.\r\n"},
     {"autoassist", PRF_AUTOASSIST, 0,
     "Autoassist disabled.\r\n",
     "Autoassist enabled.\r\n"},
@@ -2061,22 +2042,16 @@ ACMD(do_toggle)
     "          Quest: %-3s\r\n"
 
     "   Mana Display: %-3s    "
-    "         NoTell: %-3s    "
     "       NoRepeat: %-3s\r\n"
 
     "      AutoExits: %-3s    "
     "        NoShout: %-3s    "
     "          Wimpy: %-3s\r\n"
 
-    "       NoGossip: %-3s    "
-    "      NoAuction: %-3s    "
-    "        NoGrats: %-3s\r\n"
-
     "       AutoLoot: %-3s    "
     "       AutoGold: %-3s    "
     "      AutoSplit: %-3s\r\n"
 
-    "        AutoSac: %-3s    "
     "     AutoAssist: %-3s    "
     "        AutoMap: %-3s\r\n"
 
@@ -2097,22 +2072,16 @@ ACMD(do_toggle)
     ONOFF(PRF_FLAGGED(ch, PRF_QUEST)),
 
     ONOFF(PRF_FLAGGED(ch, PRF_DISPMANA)),
-    ONOFF(PRF_FLAGGED(ch, PRF_NOTELL)),
     ONOFF(PRF_FLAGGED(ch, PRF_NOREPEAT)),
 
     ONOFF(PRF_FLAGGED(ch, PRF_AUTOEXIT)),
     ONOFF(PRF_FLAGGED(ch, PRF_NOSHOUT)),
     buf2,
 
-    ONOFF(PRF_FLAGGED(ch, PRF_NOGOSS)),
-    ONOFF(PRF_FLAGGED(ch, PRF_NOAUCT)),
-    ONOFF(PRF_FLAGGED(ch, PRF_NOGRATZ)),
-
     ONOFF(PRF_FLAGGED(ch, PRF_AUTOLOOT)),
     ONOFF(PRF_FLAGGED(ch, PRF_AUTOGOLD)),
     ONOFF(PRF_FLAGGED(ch, PRF_AUTOSPLIT)),
 
-    ONOFF(PRF_FLAGGED(ch, PRF_AUTOSAC)),
     ONOFF(PRF_FLAGGED(ch, PRF_AUTOASSIST)),
     ONOFF(PRF_FLAGGED(ch, PRF_AUTOMAP)),
 
