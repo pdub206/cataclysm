@@ -78,25 +78,21 @@ void remove_from_string(char *string, const char *to_remove);
 /* --- Ascending AC breakdown --- */
 struct ac_breakdown {
   int base;               /* always 10 */
-  int armor_piece_sum;    /* sum of clamped per-piece AC (no shield) */
+  int armor_piece_sum;    /* sum of clamped per-piece AC */
   int armor_magic_sum;    /* sum of clamped per-piece magic (capped globally) */
   int total_bulk;         /* sum of bulk * weight across armor pieces */
   int dex_cap;            /* cap derived from bulk (Light 5 / Med 2 / Heavy 0) */
   int dex_mod_applied;    /* min(DEX_mod, dex_cap) */
-  int shield_bonus;       /* base 2 + magic (cap) + Shield Use proficiency */
   int situational;        /* cover, spells, etc. */
   int total;              /* final AC */
 };
 
-int ability_mod(int score);
-int prof_from_skill(int pct);
-int ability_mod(int score);
-int prof_from_skill(int pct);
+int GET_ABILITY_MOD(int score);
+int GET_PROFICIENCY(int pct);
 int compute_ascending_ac(struct char_data *ch);
 int situational_ac_mods(struct char_data *ch);
 int compute_armor_class_asc(struct char_data *ch);
 void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out);
-int  compute_ascending_ac(struct char_data *ch); /* still available */
 
 /* Advantage/Disadvantage helpers */
 int roll_d20(void);

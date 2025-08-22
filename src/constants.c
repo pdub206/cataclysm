@@ -950,7 +950,9 @@ const char *ibt_bits[] = {
 
 /* 5e system helpers */
 
-/* Armor slot table for ascending AC rules */
+/* Armor slot table for ascending AC rules
+*  Fields are AC, bulk, magic cap
+*/
 const struct armor_slot armor_slots[] = {
   { "head",   2, 1, 1 },
   { "body",   3, 3, 3 },
@@ -958,19 +960,22 @@ const struct armor_slot armor_slots[] = {
   { "arms",   1, 1, 1 },
   { "hands",  1, 1, 1 },
   { "feet",   1, 1, 1 },
-  /* shield handled separately in compute_ascending_ac() */
+  { "right wrist",  1, 1, 1 },
+  { "left wrist",  1, 1, 1 },
 };
 
 const int NUM_ARMOR_SLOTS = sizeof(armor_slots) / sizeof(armor_slots[0]);
 
 /* Wear-position mapping for armor_slots[] order */
 const int ARMOR_WEAR_POSITIONS[] = {
-  WEAR_HEAD,   /* "head"  */
-  WEAR_BODY,   /* "body"  */
-  WEAR_LEGS,   /* "legs"  */
-  WEAR_ARMS,   /* "arms"  */
-  WEAR_HANDS,  /* "hands" */
-  WEAR_FEET    /* "feet"  */
+  WEAR_HEAD,      /* "head"  */
+  WEAR_BODY,      /* "body"  */
+  WEAR_LEGS,      /* "legs"  */
+  WEAR_ARMS,      /* "arms"  */
+  WEAR_HANDS,     /* "hands" */
+  WEAR_FEET,      /* "feet"  */
+  WEAR_WRIST_R,   /* "right wrist"  */
+  WEAR_WRIST_L    /* "left wrist"  */
 };
 
 /* Armor flag names for obj->value[3] */

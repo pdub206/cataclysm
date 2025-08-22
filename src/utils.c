@@ -1589,7 +1589,7 @@ bool percent_success_disadv(int chance_pct) {
 static int dex_cap_from_bulk(int total_bulk) {
   if (total_bulk <= 5)  /* Light */
     return 5;
-  else if (total_bulk <= 10) /* Medium */
+  else if (total_bulk <= 9) /* Medium */
     return 2;
   else /* Heavy */
     return 0;
@@ -1631,7 +1631,7 @@ bool has_stealth_disadv(struct char_data *ch) {
 }
 
 /* Returns the 5e-style ability modifier for a given ability score. */
-int ability_mod(int score) {
+int GET_ABILITY_MOD(int score) {
   int mod = (score - 10) / 2;
   if ((score - 10) < 0 && ((score - 10) % 2 != 0))
     mod -= 1;  /* adjust for C truncation toward zero */
@@ -1639,7 +1639,7 @@ int ability_mod(int score) {
 }
 
 /* Converts a skill percentage (0-100) into a 5e-like proficiency bonus. */
-int prof_from_skill(int pct) {
+int GET_PROFICIENCY(int pct) {
   if (pct <= 14) return 0;
   if (pct <= 29) return 1;
   if (pct <= 44) return 2;
@@ -1660,7 +1660,7 @@ void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out)
   memset(out, 0, sizeof(*out));
   out->base = 10;
 
-  /* Armor pieces: head/body/legs/arms/hands/feet (no shield here) */
+  /* Armor pieces: head/body/legs/arms/hands/feet */
   for (int i = 0; i < NUM_ARMOR_SLOTS; i++) {
     int wear_pos = ARMOR_WEAR_POSITIONS[i];
     struct obj_data *obj = GET_EQ(ch, wear_pos);
@@ -1684,33 +1684,19 @@ void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out)
     /* bulk contribution */
     int piece_bulk = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
     if (piece_bulk < 0) piece_bulk = 0;
-    out->total_bulk += piece_bulk * armor_slots[i].bulk_weight;
+    out->total_bulk += piece_bulk;
   }
 
-  /* global armor magic cap (armor only; shield handled separately) */
+  /* global armor magic cap (armor only) */
   if (total_magic > MAX_TOTAL_ARMOR_MAGIC)
     total_magic = MAX_TOTAL_ARMOR_MAGIC;
   out->armor_magic_sum = total_magic;
 
   /* Dex cap from bulk and applied dex mod */
   {
-    int dexmod = ability_mod(GET_DEX(ch));
+    int dexmod = GET_ABILITY_MOD(GET_DEX(ch));
     out->dex_cap = dex_cap_from_bulk(out->total_bulk); /* Light<=5:5 / <=10:2 / else:0 */
     out->dex_mod_applied = (dexmod > out->dex_cap) ? out->dex_cap : dexmod;
-  }
-
-  /* Shield: base +2, magic (capped), +Shield Use proficiency */
-  {
-    struct obj_data *shield = GET_EQ(ch, WEAR_SHIELD);
-    if (shield && GET_OBJ_TYPE(shield) == ITEM_ARMOR) {
-      int shield_bonus = 2;
-      int shield_magic = GET_OBJ_VAL(shield, VAL_ARMOR_MAGIC_BONUS);
-      if (shield_magic < 0) shield_magic = 0;
-      if (shield_magic > MAX_SHIELD_MAGIC) shield_magic = MAX_SHIELD_MAGIC;
-      shield_bonus += shield_magic;
-      shield_bonus += prof_from_skill(GET_SKILL(ch, SKILL_SHIELD_USE));
-      out->shield_bonus = shield_bonus;
-    }
   }
 
   /* Situational */
@@ -1721,7 +1707,6 @@ void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out)
              + out->armor_piece_sum
              + out->armor_magic_sum
              + out->dex_mod_applied
-             + out->shield_bonus
              + out->situational;
 }
 

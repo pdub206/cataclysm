@@ -828,26 +828,25 @@ ACMD(do_score)
   send_to_char(ch,
       "STR %2d (%+d)   DEX %2d (%+d)   CON %2d (%+d)\r\n"
       "INT %2d (%+d)   WIS %2d (%+d)   CHA %2d (%+d)\r\n",
-      GET_STR(ch), ability_mod(GET_STR(ch)),
-      GET_DEX(ch), ability_mod(GET_DEX(ch)),
-      GET_CON(ch), ability_mod(GET_CON(ch)),
-      GET_INT(ch), ability_mod(GET_INT(ch)),
-      GET_WIS(ch), ability_mod(GET_WIS(ch)),
-      GET_CHA(ch), ability_mod(GET_CHA(ch)));
+      GET_STR(ch), GET_ABILITY_MOD(GET_STR(ch)),
+      GET_DEX(ch), GET_ABILITY_MOD(GET_DEX(ch)),
+      GET_CON(ch), GET_ABILITY_MOD(GET_CON(ch)),
+      GET_INT(ch), GET_ABILITY_MOD(GET_INT(ch)),
+      GET_WIS(ch), GET_ABILITY_MOD(GET_WIS(ch)),
+      GET_CHA(ch), GET_ABILITY_MOD(GET_CHA(ch)));
 
   /* Ascending AC breakdown */
   send_to_char(ch,
       "\r\n"
       "Armor Class (ascending): %d\r\n"
       "  base: %d, armor: %d, armor magic: +%d, DEX (cap %d): %+d,\r\n"
-      "  shield: +%d, situational: %+d, bulk score: %d\r\n",
+      "  situational: %+d, bulk score: %d\r\n",
       acb.total,
       acb.base,
       acb.armor_piece_sum,
       acb.armor_magic_sum,
       acb.dex_cap,
       acb.dex_mod_applied,
-      acb.shield_bonus,
       acb.situational,
       acb.total_bulk);
 

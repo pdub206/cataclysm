@@ -75,11 +75,11 @@ static int roll_damage(struct char_data *ch, struct char_data *victim,
     int ndice = GET_OBJ_VAL(wielded, 1); /* #dice */
     int sdice = GET_OBJ_VAL(wielded, 2); /* sides */
     dam = dice(ndice, sdice);
-    dam += ability_mod(GET_STR(ch));     /* STR adds to weapon damage */
+    dam += GET_ABILITY_MOD(GET_STR(ch));     /* STR adds to weapon damage */
   } else {
     /* unarmed */
     dam = dice(1, 2);
-    dam += ability_mod(GET_STR(ch));
+    dam += GET_ABILITY_MOD(GET_STR(ch));
   }
 
   if (dam < 0) dam = 0;
@@ -848,7 +848,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
   d20 = rand_number(1, 20);
 
   /* Ability modifier: STR only (no ranged types yet) */
-  attack_mod += ability_mod(GET_STR(ch));
+  attack_mod += GET_ABILITY_MOD(GET_STR(ch));
 
   /* Skill family & proficiency */
   {
@@ -856,7 +856,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
     const char *skillname = skill_name_for_gain(skillnum); /* maps to "unarmed", "piercing weapons", etc. */
 
     /* proficiency from current % */
-    attack_mod += prof_from_skill(GET_SKILL(ch, skillnum));
+    attack_mod += GET_PROFICIENCY(GET_SKILL(ch, skillnum));
 
     /* Weapon magic (cap +3) */
     if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {

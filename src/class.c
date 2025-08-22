@@ -886,6 +886,7 @@ void do_start(struct char_data *ch)
   case CLASS_THIEF:
     SET_SKILL(ch, SKILL_SNEAK, 5);
     SET_SKILL(ch, SKILL_HIDE, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
     SET_SKILL(ch, SKILL_STEAL, 5);
     SET_SKILL(ch, SKILL_BACKSTAB, 5);
     SET_SKILL(ch, SKILL_PICK_LOCK, 5);

@@ -1,4 +1,4 @@
-/* tests/sim_5e.c — quick simulations for 5e-like tuning (fixed RNG + bounds) */
+/* tests/sim_5e.c — quick simulations for 5e-like tuning */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +30,7 @@ static void init_test_char(struct char_data *ch) {
   memset(ch, 0, sizeof(*ch));
   /* ensure skills and other saved fields exist if GET_SKILL() dereferences */
   ch->player_specials = calloc(1, sizeof(struct player_special_data));
-  /* if your tree uses player_specials->saved, calloc above keeps it zeroed */
+  /* if the tree uses player_specials->saved, calloc above keeps it zeroed */
   ch->in_room = 0; /* park them in room #0 (we'll make a stub room below) */
 }
 
@@ -98,36 +98,43 @@ static int duel_rounds(int atk_mod, int ndice, int sdice, int att_str_mod,
   return (int) floor((double)rounds_sum / (double)trials);
 }
 
-/* build three defenders with your real slot weights and caps */
+/* build three defenders with real slot weights and caps */
 static void build_light(struct char_data *ch) {
   init_test_char(ch);
   set_ability_scores(ch, 10, 18, 10, 10, 10, 10);
-  equip_at(ch, WEAR_HEAD, make_armor(1,1,1,0));
-  equip_at(ch, WEAR_BODY, make_armor(2,1,2,0));
+  equip_at(ch, WEAR_HEAD,   make_armor(1,1,0,0));
+  equip_at(ch, WEAR_BODY,   make_armor(1,1,0,0));
+  equip_at(ch, WEAR_LEGS,   make_armor(1,2,0,0));
+  equip_at(ch, WEAR_FEET,   make_armor(1,1,0,0));
 }
 
 static void build_medium(struct char_data *ch) {
   init_test_char(ch);
   set_ability_scores(ch, 10, 18, 10, 10, 10, 10);
-  equip_at(ch, WEAR_LEGS,  make_armor(2,2,2,0));
-  equip_at(ch, WEAR_HANDS, make_armor(1,1,0,0));
-  equip_at(ch, WEAR_FEET,  make_armor(1,1,0,0));
+  equip_at(ch, WEAR_HEAD,   make_armor(2,1,0,0));
+  equip_at(ch, WEAR_BODY,   make_armor(2,2,1,0));
+  equip_at(ch, WEAR_LEGS,   make_armor(2,2,0,0));
+  equip_at(ch, WEAR_HANDS,  make_armor(1,1,0,0));
+  equip_at(ch, WEAR_FEET,   make_armor(1,1,0,0));
 }
 
-static void build_heavy(struct char_data *ch, int shield_magic) {
+static void build_heavy(struct char_data *ch) {
   init_test_char(ch);
   set_ability_scores(ch, 10, 18, 10, 10, 10, 10);
-  equip_at(ch, WEAR_BODY, make_armor(3,3,3,0));
-  equip_at(ch, WEAR_LEGS, make_armor(2,2,3,0));
-  struct obj_data *shield = make_armor(0,0,shield_magic,0);
-  equip_at(ch, WEAR_SHIELD, shield);
+  equip_at(ch, WEAR_HEAD,        make_armor(2,1,1,0));
+  equip_at(ch, WEAR_BODY,        make_armor(3,3,1,0));
+  equip_at(ch, WEAR_LEGS,        make_armor(2,1,1,0));
+  equip_at(ch, WEAR_ARMS,        make_armor(1,1,0,0));
+  equip_at(ch, WEAR_HANDS,       make_armor(1,1,0,0));
+  equip_at(ch, WEAR_FEET,        make_armor(1,1,0,0));
+  equip_at(ch, WEAR_WRIST_L,     make_armor(1,1,0,0));
+  equip_at(ch, WEAR_WRIST_R,     make_armor(1,1,0,0));
 }
-
 
 /* attacker profiles: compute attack_mod = STRmod + prof(skill%) + weapon_magic */
 static int compute_attack_mod(int str_score, int skill_pct, int weapon_magic) {
-  int mod = ability_mod(str_score);
-  mod += prof_from_skill(skill_pct);
+  int mod = GET_ABILITY_MOD(str_score);
+  mod += GET_PROFICIENCY(skill_pct);
   if (weapon_magic > MAX_WEAPON_MAGIC) weapon_magic = MAX_WEAPON_MAGIC;
   mod += weapon_magic;
   if (mod > MAX_TOTAL_ATTACK_BONUS) mod = MAX_TOTAL_ATTACK_BONUS;
@@ -152,32 +159,27 @@ int main(void) {
   }
   printf("\n");
 
-  /* 2) Real defenders AC using your compute_ac_breakdown */
-  struct char_data light, medium, heavy0, heavy3;
+  /* 2) Real defenders AC using compute_ac_breakdown */
+  struct char_data light, medium, heavy;
   build_light(&light);
   build_medium(&medium);
-  build_heavy(&heavy0, 0);
-  build_heavy(&heavy3, 5); /* requests +5 but shield path clamps to +3 */
+  build_heavy(&heavy);
 
-  struct ac_breakdown bl, bm, bh0, bh3;
+  struct ac_breakdown bl, bm, bh0;
   compute_ac_breakdown(&light,  &bl);
   compute_ac_breakdown(&medium, &bm);
-  compute_ac_breakdown(&heavy0, &bh0);
-  compute_ac_breakdown(&heavy3, &bh3);
+  compute_ac_breakdown(&heavy, &bh0);
 
   printf("Defender AC breakdowns:\n");
-  printf(" Light : total=%d (base=%d armor=%d magic=%d dexCap=%d dex=%+d shield=%d situ=%+d bulk=%d)\n",
+  printf(" Light : total=%d (base=%d armor=%d magic=%d dexCap=%d dex=%+d situ=%+d bulk=%d)\n",
          bl.total, bl.base, bl.armor_piece_sum, bl.armor_magic_sum, bl.dex_cap,
-         bl.dex_mod_applied, bl.shield_bonus, bl.situational, bl.total_bulk);
-  printf(" Medium: total=%d (base=%d armor=%d magic=%d dexCap=%d dex=%+d shield=%d situ=%+d bulk=%d)\n",
+         bl.dex_mod_applied, bl.situational, bl.total_bulk);
+  printf(" Medium: total=%d (base=%d armor=%d magic=%d dexCap=%d dex=%+d situ=%+d bulk=%d)\n",
          bm.total, bm.base, bm.armor_piece_sum, bm.armor_magic_sum, bm.dex_cap,
-         bm.dex_mod_applied, bm.shield_bonus, bm.situational, bm.total_bulk);
-  printf(" Heavy : total=%d (base=%d armor=%d magic=%d dexCap=%d dex=%+d shield=%d situ=%+d bulk=%d)\n",
+         bm.dex_mod_applied, bm.situational, bm.total_bulk);
+  printf(" Heavy : total=%d (base=%d armor=%d magic=%d dexCap=%d dex=%+d situ=%+d bulk=%d)\n",
          bh0.total, bh0.base, bh0.armor_piece_sum, bh0.armor_magic_sum, bh0.dex_cap,
-         bh0.dex_mod_applied, bh0.shield_bonus, bh0.situational, bh0.total_bulk);
-  printf(" Heavy+(sh+3 cap): total=%d (base=%d armor=%d magic=%d dexCap=%d dex=%+d shield=%d situ=%+d bulk=%d)\n\n",
-         bh3.total, bh3.base, bh3.armor_piece_sum, bh3.armor_magic_sum, bh3.dex_cap,
-         bh3.dex_mod_applied, bh3.shield_bonus, bh3.situational, bh3.total_bulk);
+         bh0.dex_mod_applied, bh0.situational, bh0.total_bulk);
 
   /* 3) Attacker profiles vs defenders (TTK & hit%, 1d8 weapon) */
   struct { int str; int skill; int wmag; const char *name; } atk[] = {
@@ -188,16 +190,15 @@ int main(void) {
   struct { struct char_data *def; const char *name; int hp; } def[] = {
     { &light,  "Light",  40 },
     { &medium, "Medium", 50 },
-    { &heavy0, "Heavy",  60 },
-    { &heavy3, "Heavy+Shield+3", 60 },
+    { &heavy, "Heavy",  60 },
   };
 
   printf("Matchups (trials=20000, 1d8 weapon):\n");
   for (size_t i=0;i<sizeof(atk)/sizeof(atk[0]);++i) {
-    int str_mod = ability_mod(atk[i].str);
+    int str_mod = GET_ABILITY_MOD(atk[i].str);
     int atk_mod = compute_attack_mod(atk[i].str, atk[i].skill, atk[i].wmag);
     printf(" Attacker: %-28s => attack_mod %+d (STRmod %+d, prof %+d, wm %+d)\n",
-           atk[i].name, atk_mod, str_mod, prof_from_skill(atk[i].skill), MIN(atk[i].wmag, MAX_WEAPON_MAGIC));
+           atk[i].name, atk_mod, str_mod, GET_PROFICIENCY(atk[i].skill), MIN(atk[i].wmag, MAX_WEAPON_MAGIC));
     for (size_t j=0;j<sizeof(def)/sizeof(def[0]);++j) {
       int ac = compute_ascending_ac(def[j].def);
       double p = hit_rate(atk_mod, ac, 20000);
