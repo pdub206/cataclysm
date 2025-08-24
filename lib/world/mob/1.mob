@@ -1,1 +1,38 @@
+#100
+tall burly human soldier guard~
+the tall, burly human soldier~
+A tall, burly human soldier stands here at the gate.
+~
+This man stands slightly taller than the average human, but not by much.  He has
+a thick, haggard looking brown beard that is flecked with dust and sand.  His
+eyes have a bluish-tint to them with a small amount of green.  One might call
+his stature bulky, as he has quite a bit of muscle.
+~
+2122 0 0 0 0 0 0 0 0 E
+1 20 1 3d20+40 1d1+0
+0 0
+8 8 1
+Str: 16
+Dex: 14
+Con: 14
+E
+#101
+slim lanky human soldier guard~
+a slim, lanky human soldier~
+A slim, lanky human soldier stands here eyeing passerbys.
+~
+This woman looks rather thin, with her darkly tanned skin hugging her frame
+tightly.  What muscle she does have is accentuated, though there is not much.  
+Her arms and legs are lanky, seeming to be longer than normal.  A ponytail of
+dark hair has been pulled back behind her head, intensifying the sharpness of
+her nose.
+~
+2122 0 0 0 0 0 0 0 0 E
+0 20 10 3d20+40 1d1+0
+0 0
+8 8 2
+Str: 14
+Dex: 18
+Con: 14
+E
 $
