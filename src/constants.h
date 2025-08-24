@@ -83,4 +83,7 @@ extern const char *armor_flag_bits[];
 /* We already set this earlier: */
 #define MAX_TOTAL_ARMOR_MAGIC       3
 
+extern const char *container_bits[];
+extern const int NUM_CONTAINER_FLAGS;
+
 #endif /* _CONSTANTS_H_ */

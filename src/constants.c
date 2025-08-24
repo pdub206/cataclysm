@@ -494,6 +494,9 @@ const char *container_bits[] = {
   "\n",
 };
 
+/* Number of container flags (excluding the sentinel "\n") */
+const int NUM_CONTAINER_FLAGS = (sizeof(container_bits) / sizeof(container_bits[0]) - 1);
+
 /** Describes the liquid description.
  * @pre Must be in the same order as the defines.
  * Must end array with a single newline. */
