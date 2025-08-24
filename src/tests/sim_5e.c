@@ -41,8 +41,10 @@ static struct obj_data *make_armor(int piece_ac, int bulk, int magic, int flags)
   GET_OBJ_VAL(o, VAL_ARMOR_BULK)        = bulk;
   GET_OBJ_VAL(o, VAL_ARMOR_MAGIC_BONUS) = magic;
   GET_OBJ_VAL(o, VAL_ARMOR_FLAGS)       = flags;
+  GET_OBJ_VAL(o, VAL_ARMOR_DURABILITY)  = 100;  /* start at full durability */
   return o;
 }
+
 static void equip_at(struct char_data *ch, int wear_pos, struct obj_data *o) {
   if (wear_pos < 0 || wear_pos >= NUM_WEARS) {
     fprintf(stderr, "equip_at: wear_pos %d out of bounds (NUM_WEARS=%d)\n", wear_pos, NUM_WEARS);

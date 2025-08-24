@@ -828,6 +828,7 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
 void hit(struct char_data *ch, struct char_data *victim, int type)
 {
   struct obj_data *wielded = GET_EQ(ch, WEAR_WIELD);
+  struct obj_data *shield  = GET_EQ(victim, WEAR_SHIELD);
   int w_type, d20, attack_mod = 0, target_ac, dam = 0;
   bool hit_success = FALSE;
 
@@ -842,7 +843,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
       w_type = ch->mob_specials.attack_type + TYPE_HIT;
     else
       w_type = TYPE_HIT;
-  } /* matches stock message mapping */ /*  */
+  } /* matches stock message mapping */
 
   /* Roll d20 */
   d20 = rand_number(1, 20);
@@ -853,7 +854,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
   /* Skill family & proficiency */
   {
     int  skillnum  = weapon_family_skill_num(ch, wielded, w_type);
-    const char *skillname = skill_name_for_gain(skillnum); /* maps to "unarmed", "piercing weapons", etc. */
+    const char *skillname = skill_name_for_gain(skillnum);
 
     /* proficiency from current % */
     attack_mod += GET_PROFICIENCY(GET_SKILL(ch, skillnum));
@@ -861,7 +862,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
     /* Weapon magic (cap +3) */
     if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {
       int wmag = GET_OBJ_VAL(wielded, VAL_ARMOR_MAGIC_BONUS);
-      if (wmag > MAX_WEAPON_MAGIC) wmag = MAX_WEAPON_MAGIC;  /* was hard-coded 3 */
+      if (wmag > MAX_WEAPON_MAGIC) wmag = MAX_WEAPON_MAGIC;
       attack_mod += wmag;
     }
 
@@ -882,14 +883,49 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
 
     /* Apply result */
     if (hit_success) {
+      /* Roll damage up front (needed for shield durability) */
       dam = roll_damage(ch, victim, wielded, w_type);
+
+      /* --- SHIELD BLOCK CHECK ---
+       * Only happens if an attack actually lands.
+       */
+      if (shield) {
+        int def_prof = GET_PROFICIENCY(GET_SKILL(victim, SKILL_SHIELD_USE));
+        int block_chance = def_prof * 10;   /* 0–60% total chance to block an attack */
+
+        if (block_chance > 0 && rand_number(1, 100) <= block_chance) {
+          /* Block succeeded! */
+          act("You block $N's attack with $p!", FALSE, victim, shield, ch, TO_CHAR);
+          act("$n blocks your attack with $s $p!", FALSE, victim, shield, ch, TO_VICT);
+          act("$n blocks $N's attack with $s $p!", TRUE, victim, shield, ch, TO_NOTVICT);
+
+          /* Durability reduction based on damage prevented */
+          int *dur = &GET_OBJ_VAL(shield, 3);
+          int loss = MAX(1, dam / 10);  /* at least 1% per block */
+          *dur -= loss;
+
+          if (*dur <= 0) {
+            act("Your $p shatters into pieces!", FALSE, victim, shield, 0, TO_CHAR);
+            act("$n's $p shatters into pieces!", TRUE, victim, shield, 0, TO_ROOM);
+            extract_obj(shield);
+          }
+
+          /* Train shield use skill on success */
+          if (!IS_NPC(victim)) {
+            gain_skill(victim, "shield use", TRUE);
+          }
+
+          return; /* Attack nullified entirely */
+        }
+      }
+
+      /* No block: apply normal damage */
       damage(ch, victim, dam, w_type);
     } else {
       damage(ch, victim, 0, w_type); /* miss messaging */
     }
 
-    /* --- Skill gains ---
-       You specified that both success and failure attempt a skill gain. */
+    /* --- Skill gains --- */
     if (!IS_NPC(ch) && skillname) {
       gain_skill(ch, (char *)skillname, hit_success);
     }
@@ -908,7 +944,6 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
       "\t1Attack:\tn d20=%d%s, mod=%+d \t1⇒\tn total=%d vs AC %d — %s\r\n",
       d20, crit, attack_mod, d20 + attack_mod, target_ac,
       hit_success ? "\t2HIT\tn" : "\t1MISS\tn");
-    /* Optional: show the same line to the victim if they are a player */
     if (!IS_NPC(victim)) {
       send_to_char(victim,
         "\t1Defense:\tn %s rolled total=%d vs your AC %d — %s%s\r\n",

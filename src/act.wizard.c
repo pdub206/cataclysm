@@ -1023,8 +1023,6 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
   send_to_char(ch, "In room: %d (%s), ", GET_ROOM_VNUM(IN_ROOM(j)),
 	IN_ROOM(j) == NOWHERE ? "Nowhere" : world[IN_ROOM(j)].name);
 
-  /* In order to make it this far, we must already be able to see the character
-   * holding the object. Therefore, we do not need CAN_SEE(). */
   send_to_char(ch, "In object: %s, ", j->in_obj ? j->in_obj->short_description : "None");
   send_to_char(ch, "Carried by: %s, ", j->carried_by ? GET_NAME(j->carried_by) : "Nobody");
   send_to_char(ch, "Worn by: %s\r\n", j->worn_by ? GET_NAME(j->worn_by) : "Nobody");
@@ -1050,7 +1048,9 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
     break;
   case ITEM_WEAPON:
     send_to_char(ch, "Todam: %dd%d, Avg Damage: %.1f. Message type: %s\r\n",
-	    GET_OBJ_VAL(j, 1), GET_OBJ_VAL(j, 2), ((GET_OBJ_VAL(j, 2) + 1) / 2.0) * GET_OBJ_VAL(j, 1),  attack_hit_text[GET_OBJ_VAL(j, 3)].singular);
+	    GET_OBJ_VAL(j, 1), GET_OBJ_VAL(j, 2),
+      ((GET_OBJ_VAL(j, 2) + 1) / 2.0) * GET_OBJ_VAL(j, 1),
+      attack_hit_text[GET_OBJ_VAL(j, 3)].singular);
     break;
   case ITEM_ARMOR:
     send_to_char(ch, "AC-apply: [%d]\r\n", GET_OBJ_VAL(j, 0));
@@ -1065,7 +1065,8 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
   case ITEM_FOUNTAIN:
     sprinttype(GET_OBJ_VAL(j, 2), drinks, buf, sizeof(buf));
     send_to_char(ch, "Capacity: %d, Contains: %d, Poisoned: %s, Liquid: %s\r\n",
-	    GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1), YESNO(GET_OBJ_VAL(j, 3)), buf);
+	    GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1),
+      YESNO(GET_OBJ_VAL(j, 3)), buf);
     break;
   case ITEM_NOTE:
     send_to_char(ch, "Tongue: %d\r\n", GET_OBJ_VAL(j, 0));
@@ -1073,30 +1074,35 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
   case ITEM_KEY: /* Nothing */
     break;
   case ITEM_FOOD:
-    send_to_char(ch, "Makes full: %d, Poisoned: %s\r\n", GET_OBJ_VAL(j, 0), YESNO(GET_OBJ_VAL(j, 3)));
+    send_to_char(ch, "Makes full: %d, Poisoned: %s\r\n",
+      GET_OBJ_VAL(j, 0), YESNO(GET_OBJ_VAL(j, 3)));
     break;
   case ITEM_MONEY:
     send_to_char(ch, "Coins: %d\r\n", GET_OBJ_VAL(j, 0));
     break;
   case ITEM_FURNITURE:
-    send_to_char(ch, "Can hold: [%d] Num. of People in: [%d]\r\n", GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1));
+    send_to_char(ch, "Can hold: [%d] Num. of People in: [%d]\r\n",
+      GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1));
     send_to_char(ch, "Holding : ");
     for (tempch = OBJ_SAT_IN_BY(j); tempch; tempch = NEXT_SITTING(tempch))
       send_to_char(ch, "%s ", GET_NAME(tempch));
     send_to_char(ch, "\r\n");
     break;
-  default:
-    send_to_char(ch, "Values 0-3: [%d] [%d] [%d] [%d]\r\n",
-	    GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1),
-	    GET_OBJ_VAL(j, 2), GET_OBJ_VAL(j, 3));
+  default: {
+    send_to_char(ch, "Values:");
+    for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
+      send_to_char(ch, " [%d]", GET_OBJ_VAL(j, i));
+    }
+    send_to_char(ch, "\r\n");
     break;
+  }
   }
 
   if (j->contains) {
     int column;
 
     send_to_char(ch, "\r\nContents:%s", CCGRN(ch, C_NRM));
-    column = 9;	/* ^^^ strlen ^^^ */
+    column = 9;
 
     for (found = 0, j2 = j->contains; j2; j2 = j2->next_content) {
       column += send_to_char(ch, "%s %s", found++ ? "," : "", j2->short_description);
@@ -1114,7 +1120,8 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
   for (i = 0; i < MAX_OBJ_AFFECT; i++)
     if (j->affected[i].modifier) {
       sprinttype(j->affected[i].location, apply_types, buf, sizeof(buf));
-      send_to_char(ch, "%s %+d to %s", found++ ? "," : "", j->affected[i].modifier, buf);
+      send_to_char(ch, "%s %+d to %s",
+        found++ ? "," : "", j->affected[i].modifier, buf);
     }
   if (!found)
     send_to_char(ch, " None");

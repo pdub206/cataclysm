@@ -672,8 +672,8 @@ struct extra_descr_data
 /* object-related structures */
 /**< Number of elements in the object value array. Raising this will provide
  * more configurability per object type, and shouldn't break anything.
- * DO NOT LOWER from the default value of 4. */
-#define NUM_OBJ_VAL_POSITIONS 4
+ * DO NOT LOWER from the default value of 8. */
+#define NUM_OBJ_VAL_POSITIONS 8
 
 /** object flags used in obj_data. These represent the instance values for
  * a real object, values that can change during gameplay. */
@@ -1291,6 +1291,7 @@ struct recent_player
 #define VAL_ARMOR_BULK          1
 #define VAL_ARMOR_MAGIC_BONUS   2
 #define VAL_ARMOR_FLAGS         3
+#define VAL_ARMOR_DURABILITY    4
 
 /* Armor flags (value[3]) */
 #define ARMF_STEALTH_DISADV   (1 << 0)  /* Disadvantage on Stealth */

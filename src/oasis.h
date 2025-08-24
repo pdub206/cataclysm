@@ -196,9 +196,11 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define OEDIT_EXTRADESC_DESCRIPTION 	23
 #define OEDIT_EXTRADESC_MENU        	24
 #define OEDIT_LEVEL                 	25
-#define OEDIT_PERM			26
-#define OEDIT_DELETE                    27
-#define OEDIT_COPY                      28
+#define OEDIT_PERM			            26
+#define OEDIT_DELETE                   27
+#define OEDIT_COPY                     28
+#define OEDIT_VALUES_MENU              29
+#define OEDIT_VALUE_X                  30
 
 /* Submodes of REDIT connectedness. */
 #define REDIT_MAIN_MENU 		1

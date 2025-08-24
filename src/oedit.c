@@ -401,6 +401,21 @@ static void oedit_disp_spells_menu(struct descriptor_data *d)
   write_to_output(d, "\r\n%sEnter spell choice (-1 for none) : ", nrm);
 }
 
+static void oedit_disp_values_menu(struct descriptor_data *d)
+{
+  int i;
+  struct obj_data *obj = OLC_OBJ(d);
+
+  write_to_output(d, "\r\n-- Object Values Menu --\r\n");
+  for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
+    write_to_output(d, "%d) Value[%d]: %d\r\n",
+        i+1, i, GET_OBJ_VAL(obj, i));
+  }
+  write_to_output(d, "Q) Quit to main menu\r\nEnter choice : ");
+
+  OLC_MODE(d) = OEDIT_VALUES_MENU;
+}
+
 /* Object value #1 */
 static void oedit_disp_val1_menu(struct descriptor_data *d)
 {
@@ -617,74 +632,67 @@ static void oedit_disp_wear_menu(struct descriptor_data *d)
 /* Display main menu. */
 static void oedit_disp_menu(struct descriptor_data *d)
 {
-  char buf1[MAX_STRING_LENGTH];
-  char buf2[MAX_STRING_LENGTH];
   struct obj_data *obj;
+  char buf[MAX_STRING_LENGTH], buf2[MAX_STRING_LENGTH];
 
   obj = OLC_OBJ(d);
+
   get_char_colors(d->character);
   clear_screen(d);
 
-  /* Build buffers for first part of menu. */
-  sprinttype(GET_OBJ_TYPE(obj), item_types, buf1, sizeof(buf1));
+  sprinttype(GET_OBJ_TYPE(obj), item_types, buf, sizeof(buf));
   sprintbitarray(GET_OBJ_EXTRA(obj), extra_bits, EF_ARRAY_MAX, buf2);
-
-  /* Build first half of menu. */
   write_to_output(d,
-	  "-- Item number : [%s%d%s]\r\n"
-	  "%s1%s) Keywords : %s%s\r\n"
-	  "%s2%s) S-Desc   : %s%s\r\n"
-	  "%s3%s) L-Desc   :-\r\n%s%s\r\n"
-	  "%s4%s) A-Desc   :-\r\n%s%s"
-	  "%s5%s) Type        : %s%s\r\n"
-	  "%s6%s) Extra flags : %s%s\r\n",
+    "-- Item Number: [%d]\r\n"
+    "1) Type        : %s\r\n"
+    "2) Extra flags : %s\r\n",
+    OLC_NUM(d), buf, buf2);
 
-	  cyn, OLC_NUM(d), nrm,
-	  grn, nrm, yel, (obj->name && *obj->name) ? obj->name : "undefined",
-	  grn, nrm, yel, (obj->short_description && *obj->short_description) ? obj->short_description : "undefined",
-	  grn, nrm, yel, (obj->description && *obj->description) ? obj->description : "undefined",
-	  grn, nrm, yel, (obj->action_description && *obj->action_description) ? obj->action_description : "Not Set.\r\n",
-	  grn, nrm, cyn, buf1,
-	  grn, nrm, cyn, buf2
-	  );
-  /* Send first half then build second half of menu. */
-  sprintbitarray(GET_OBJ_WEAR(OLC_OBJ(d)), wear_bits, EF_ARRAY_MAX, buf1);
-  sprintbitarray(GET_OBJ_AFFECT(OLC_OBJ(d)), affected_bits, EF_ARRAY_MAX, buf2);
+  sprintbitarray(GET_OBJ_WEAR(obj), wear_bits, TW_ARRAY_MAX, buf2);
+  write_to_output(d,
+    "3) Wear flags  : %s\r\n", buf2);
 
   write_to_output(d,
-	  "%s7%s) Wear flags  : %s%s\r\n"
-	  "%s8%s) Weight      : %s%d\r\n"
-	  "%s9%s) Cost        : %s%d\r\n"
-	  "%sA%s) Cost/Day    : %s%d\r\n"
-	  "%sB%s) Timer       : %s%d\r\n"
-	  "%sC%s) Values      : %s%d %d %d %d\r\n"
-	  "%sD%s) Applies menu\r\n"
-	  "%sE%s) Extra descriptions menu: %s%s%s\r\n"
-          "%sM%s) Min Level   : %s%d\r\n"
-          "%sP%s) Perm Affects: %s%s\r\n"
-	  "%sS%s) Script      : %s%s\r\n"
-          "%sW%s) Copy object\r\n"
-          "%sX%s) Delete object\r\n"
-	  "%sQ%s) Quit\r\n"
-	  "Enter choice : ",
+    "4) Weight      : %d\r\n"
+    "5) Cost        : %d\r\n"
+    "6) Rent        : %d\r\n"
+    "7) Timer       : %d\r\n"
+    "8) Min level   : %d\r\n",
+    GET_OBJ_WEIGHT(obj),
+    GET_OBJ_COST(obj),
+    GET_OBJ_RENT(obj),
+    GET_OBJ_TIMER(obj),
+    GET_OBJ_LEVEL(obj));
 
-	  grn, nrm, cyn, buf1,
-	  grn, nrm, cyn, GET_OBJ_WEIGHT(obj),
-	  grn, nrm, cyn, GET_OBJ_COST(obj),
-	  grn, nrm, cyn, GET_OBJ_RENT(obj),
-	  grn, nrm, cyn, GET_OBJ_TIMER(obj),
-	  grn, nrm, cyn, GET_OBJ_VAL(obj, 0),
-	  GET_OBJ_VAL(obj, 1),
-	  GET_OBJ_VAL(obj, 2),
-	  GET_OBJ_VAL(obj, 3),
-	  grn, nrm, grn, nrm, cyn, obj->ex_description ? "Set." : "Not Set.", grn,
-          grn, nrm, cyn, GET_OBJ_LEVEL(obj),
-          grn, nrm, cyn, buf2,
-          grn, nrm, cyn, OLC_SCRIPT(d) ? "Set." : "Not Set.",
-	  grn, nrm,
-	  grn, nrm,
-          grn, nrm
-  );
+  /* Old-style values (still shown for quick reference) */
+  write_to_output(d,
+    "9) Value[0]    : %d\r\n"
+    "A) Value[1]    : %d\r\n"
+    "B) Value[2]    : %d\r\n"
+    "C) Value[3]    : %d\r\n",
+    GET_OBJ_VAL(obj, 0),
+    GET_OBJ_VAL(obj, 1),
+    GET_OBJ_VAL(obj, 2),
+    GET_OBJ_VAL(obj, 3));
+
+  /* New dynamic values menu */
+  write_to_output(d,
+    "V) Edit object values (all %d slots)\r\n",
+    NUM_OBJ_VAL_POSITIONS);
+
+  /* Other menus (applies, descriptions, etc.) */
+  write_to_output(d,
+    "D) Extra descriptions menu\r\n"
+    "E) Apply menu\r\n"
+    "F) Affects (permanent bitvectors)\r\n"
+    "G) Action description : %s\r\n"
+    "H) Script menu\r\n",
+    obj->action_description ? obj->action_description : "<None>");
+
+  /* Quit */
+  write_to_output(d,
+    "Q) Quit\r\n"
+    "Enter choice : ");
   OLC_MODE(d) = OEDIT_MAIN_MENU;
 }
 
@@ -830,6 +838,10 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       OLC_SCRIPT_EDIT_MODE(d) = SCRIPT_MAIN_MENU;
       dg_script_menu(d);
       return;
+    case 'V':
+    case 'v':
+      oedit_disp_values_menu(d);
+      return;
     case 'w':
     case 'W':
       write_to_output(d, "Copy what object? ");
@@ -944,6 +956,32 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     }
     oedit_disp_perm_menu(d);
     return;
+
+  case OEDIT_VALUES_MENU:
+    if (*arg == 'Q' || *arg == 'q') {
+      oedit_disp_menu(d);
+      return;
+    }
+    {
+      int i = atoi(arg) - 1;
+      if (i >= 0 && i < NUM_OBJ_VAL_POSITIONS) {
+        OLC_VAL(d) = i;
+        write_to_output(d, "Enter new integer for Value[%d]: ", i);
+        OLC_MODE(d) = OEDIT_VALUE_X;
+      } else {
+        write_to_output(d, "Invalid choice.\r\n");
+        oedit_disp_values_menu(d);
+      }
+    }
+    break;
+
+  case OEDIT_VALUE_X:
+    {
+      int i = OLC_VAL(d);
+      GET_OBJ_VAL(OLC_OBJ(d), i) = atoi(arg);
+      oedit_disp_values_menu(d);
+    }
+    break;
 
   case OEDIT_VALUE_1:
     number = atoi(arg);
