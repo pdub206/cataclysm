@@ -873,26 +873,6 @@ attach obj 1480 sword   - Attaches obj trigger 1480 to a sword.
 
 See also: DETACH, TRIG-ATTACH, TRIG-DETACH, OLC, TRIGEDIT, TSTAT, STAT, ROOMFLAGS
 #31
-AUCTION GOSSIP GRATS CONGRATULATIONS CONGRATS
-Usage: auction <message>
-       gossip <message>
-       grats <message>
-
-These are channels reserved for specific purposes.  Messages on these
-channels reach everyone who is monitoring them.  You must be at least level
-three to use these channels.
-
-These channels should be used accordingly.
- 
-Examples:
-
-  > auction short sword -- minimum bid 100k
-  > gossip Hey, is that a short sword on your belt or are you happy to see me?
-  > grats GRATS Detta!!!!!!!!
-
-See also: TOGGLE, EMOTE, GSAY, NOREPEAT, SAY, SHOUT
-
-#0
 AUTOASSIST
 
 Usage: toggle autoassist
@@ -2061,17 +2041,15 @@ COMMUNICATION
    The following commands deal with communication - for more info, @RHELP KEYWORD@n 
 
 SAY ASK WHISPER                    - Talk to people in the room
-GSAY GTELL REPORT                  - Talk to a person in the group.
-TELL QSAY REPLY                    - Talk to a person in the game / the quest.
-SHOUT GOSSIP GRATS AUCTION         - Send a message on a public channel
+REPORT                             - Talk to a person in the group.
+TELL REPLY                         - Talk to a person in the game / the quest.
+SHOUT                              - Shout to nearby rooms
 MAIL RECEIVE CHECK                 - Used to communicate with a postman.
 WRITE READ REMOVE                  - Used to communicate via boards.
 DEPOSIT WITHDRAW BALANCE           - Used to communicate in banks.
 BUY SELL LIST VALUE                - Used to communicate in shops.
-PRACTICE                           - Used to communicate with guilds.
-EMOTE                              - Send a message to the room.
-NOTELL NOSHOUT NOGOSSIP QUEST
-NOGRATS NOAUCTION                  - Turn off the corresponding channels.
+EMOTE                              - Send a customizable message to the room.
+NOSHOUT QUEST                      - Turn off the corresponding channels.
 ORDER                              - Make charmed followers do things.
 #0
 COMPACT
@@ -3366,7 +3344,6 @@ flags are always in parentheses, not brackets or braces.
   (writing)   Player is writing on the board; do not disturb.
   (mailing)   Player is writing mail; do not disturb.
   (deaf)      Player has chosen not to hear shouts.
-  (nogos)     Player has chosen not to hear gossips or gemotes.
   (notell)    Player has chosen not to accept tells.
   (quest)     Player is participating in a quest currently being run by
               the Gods.
@@ -3539,7 +3516,7 @@ will display:
 Gossip: Manivo sporks Shamra ruthlessly.
 
 See also: SOCIALS, EMOTE
-#0
+#31
 GET TAKE-ALL-CORPSE LOOT
 
 "Get" and "take" are exactly the same and can be used interchangeably.
@@ -3732,7 +3709,7 @@ To edit the options in a group, use the GROUP option <option> commands.
 To kick someone from the group, use GROUP kick <player name>
   > group kick rumble
 
-See also: FOLLOW, EXPERIENCE, UNGROUP, GSAY, ASSIST, GROUPS, REPORT
+See also: FOLLOW, EXPERIENCE, UNGROUP, ASSIST, GROUPS, REPORT
 #0
 GROUP-ARMOR
 
@@ -3745,16 +3722,6 @@ The Group Armor spell will improve the AC of everyone in your group by 20
 points or up to 10%.
 
 See also: AC
-#0
-GSAY GTELL
-
-Usage: gsay <message>
-       gtell <message>
-
-Tell something to all the members of your group, even if they're not in the
-room.
-
-See also: GROUP, TELL, SAY
 #0
 HALLOWEEN
 
@@ -3951,7 +3918,7 @@ newbie-policy       newbies             news
 #0
 HISTORY
 
-Usage: history < all | say | gossip | wiznet | tell | shout | grats | auction >
+Usage: history < all | say | wiznet | tell | shout >
 
    This command displays what has been said over the channel you input along
 with a time stamp for when it was sent. History all will list the history of
@@ -5680,7 +5647,7 @@ NOREPEAT REPEAT
 Usage: norepeat
 
 This command toggles whether or not you see your communication echoed
-back to you (i.e., from commands such as SAY, SHOUT, GOSSIP, etc.)
+back to you (i.e., from commands such as SAY, SHOUT, etc.)
 Useful if you have a slow connection or if it just annoys you.
 
 See also: TOGGLE
@@ -5697,12 +5664,9 @@ Usage: north
    To travel in a given direction.
 
 #0
-NOTELL NOAUCTION NOGOSSIP NOGRATS NOSHOUT
+NOTELL NOSHOUT
 
 Usage: notell
-       nogossip
-       noauction
-       nograts
        noshout
 
 Use NO<channel> if you wish to stop using and seeing that channel. A 
@@ -6750,7 +6714,6 @@ MAILING    - Player is writing mail
 CSH        - Player needs to be crash-saved
 SITEOK     - Player has been site-cleared
 NOSHOUT    - Player in not on the shout channel
-NOGOS      - Player is not on the gossip channel
 NOTITLE    - Player not allowed to set title
 DELETED    - Player deleted - space reusable
 LOADRM     - Player uses nonstandard loadroom
@@ -7157,9 +7120,6 @@ NO_WIZ     - Builder can not see wiznet.
 L1         - Builder has syslog set to brief. 
 L2         - Builder has syslog set to normal.
              BOTH: Builder has syslog set to on and will see ALL logs (spammy).
-NO_AUC     - Player can not see auctions.
-NO_GOS     - Player can not see gossips. 
-NO_GTZ     - Player can not see grats.
 RMFLG      - Builder can see roomflags, mobflags, and objflags.
 D_AUTO     - Player stats auto displayed.
 CLS        - Player is due to be saved on next autosave.
@@ -7492,14 +7452,6 @@ Qlist gives you a list of the quests within the parameters.
    
 See also: QEDIT, OLC
 #31
-QSAY
-
-Usage: qsay <message>
-
-To tell something to everyone on the current Quest.
-
-See also: QUEST
-#0
 QUAFF POTIONS
 
 Usage: quaff <potion>
@@ -8039,7 +7991,7 @@ everyone in your group know the condition you are in.
   Example:
   report - Yields "Tink reports: 25/25H, 110/110M, 84/84V"
 
-See Also: FOLLOW, GROUP, UNGROUP, GSAY, ASSIST, SPLIT
+See Also: FOLLOW, GROUP, UNGROUP, ASSIST, SPLIT
 #0
 REPORT-EXAMPLE
 
@@ -8238,7 +8190,7 @@ You can use ' as a shorthand for say, as in:
 
 Shout broadcasts your message to everyone is your geographic zone.
 
-See also: AUCTION, GOSSIP, GSAY, WIZNET, NOREPEAT, QSAY, REPLY
+See also: WIZNET, NOREPEAT, REPLY
 #0
 SCAN
 
@@ -8801,7 +8753,7 @@ The following room flags can be selected:
 4)  INDOORS    - Weather messages will not be sent to room, always lighted. 
                  Call lightning will not work.
 5)  PEACEFUL   - No violence will work here. Use sparingly.
-6)  SOUNDPROOF - Tell, gossip, shout will not be heard here. This flag
+6)  SOUNDPROOF - Tell, shout will not be heard here. This flag
                  should be used sparingly also, it is very annoying IMHO.
 7)  NO_TRACK   - Track will never find a path through this room.
 8)  NO_MAGIC   - No magic will work here. 
@@ -10409,7 +10361,6 @@ Hit Pnt Display: OFF              Brief: OFF         Summonable: OFF
    Move Display: OFF            Compact: ON               Quest: OFF
    Mana Display: OFF             NoTell: OFF           NoRepeat: OFF
       AutoExits: OFF            NoShout: OFF              Wimpy: OFF
-       NoGossip: OFF          NoAuction: OFF            NoGrats: OFF
        AutoLoot: ON            AutoGold: ON           AutoSplit: ON 
         AutoSac: ON          AutoAssist: ON             AutoMap: ON
      Pagelength: 32         Screenwidth: 80                 AFK: OFF
@@ -10431,7 +10382,6 @@ Hit Pnt Display: OFF              Brief: OFF         Summonable: OFF
    Move Display: OFF            Compact: ON               Quest: OFF
    Mana Display: OFF             NoTell: OFF           NoRepeat: OFF
       AutoExits: OFF            NoShout: OFF              Wimpy: OFF
-       NoGossip: OFF          NoAuction: OFF            NoGrats: OFF
        AutoLoot: ON            AutoGold: ON           AutoSplit: ON 
         AutoSac: ON          AutoAssist: ON                 AFK: OFF
      Pagelength: 23               Color: off     
@@ -11251,7 +11201,7 @@ Examples: @RTSTAT 69, 38, 152@n
 TRIGEDIT-MOB-SPEECH TRIG-MOB-SPEECH TRIGEDIT-SPEECH TRIG-SPEECH
 
 Activates when matching text is spoken by a character in the same room as the 
-mobile. This does not work for tells, gossip, etc. 
+mobile. This does not work for tells, etc. 
  
 Numeric Arg : 0: argument is a substring that must be found in the speech to cause a
                  match. 

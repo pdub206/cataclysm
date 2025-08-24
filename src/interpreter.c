@@ -151,14 +151,12 @@ cpp_extern const struct command_info cmd_info[] = {
 
   { "get"      , "g"       , POS_RESTING , do_get      , 0, 0 },
   { "gecho"    , "gecho"   , POS_DEAD    , do_gecho    , LVL_GOD, 0 },
-  { "gemote"   , "gem"     , POS_SLEEPING, do_gen_comm , 0, SCMD_GEMOTE },
+  { "gemote"   , "gem"     , POS_SLEEPING, do_gen_comm , LVL_IMMORT, SCMD_GEMOTE },
   { "give"     , "giv"     , POS_RESTING , do_give     , 0, 0 },
   { "goto"     , "go"      , POS_SLEEPING, do_goto     , LVL_IMMORT, 0 },
   { "gold"     , "gol"     , POS_RESTING , do_gold     , 0, 0 },
   { "group"    , "gr"      , POS_RESTING , do_group    , 1, 0 },
   { "grab"     , "grab"    , POS_RESTING , do_grab     , 0, 0 },
-  { "gsay"     , "gsay"    , POS_SLEEPING, do_gsay     , 0, 0 },
-  { "gtell"    , "gt"      , POS_SLEEPING, do_gsay     , 0, 0 },
 
   { "help"     , "h"       , POS_DEAD    , do_help     , 0, 0 },
   { "hedit"    , "hedit"   , POS_DEAD    , do_oasis_hedit, LVL_GOD , 0 },

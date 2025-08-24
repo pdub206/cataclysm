@@ -105,30 +105,6 @@ ACMD(do_ooc)
   speech_wtrigger(ch, argument);
 }
 
-ACMD(do_gsay)
-{
-  skip_spaces(&argument);
-  
-  if (!GROUP(ch)) {
-    send_to_char(ch, "But you are not a member of a group!\r\n");
-    return;
-  }
-  if (!*argument)
-    send_to_char(ch, "Yes, but WHAT do you want to group-say?\r\n");
-  else {
-		
-    if (CONFIG_SPECIAL_IN_COMM && legal_communication(argument))
-      parse_at(argument);		
-		
-    send_to_group(ch, ch->group, "%s%s%s says, '%s'%s\r\n", CCGRN(ch, C_NRM), CCGRN(ch, C_NRM), GET_NAME(ch), argument, CCNRM(ch, C_NRM));
-	
-    if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_NOREPEAT))
-      send_to_char(ch, "%s", CONFIG_OK);
-    else
-      send_to_char(ch, "%sYou group-say, '%s'%s\r\n", CCGRN(ch, C_NRM), argument, CCNRM(ch, C_NRM));
-	}
-}
-
 static void perform_tell(struct char_data *ch, struct char_data *vict, char *arg)
 {
   char buf[MAX_STRING_LENGTH], *msg;
