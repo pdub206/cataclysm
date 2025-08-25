@@ -72,8 +72,8 @@ static const char *weapon_val_labels[NUM_OBJ_VAL_POSITIONS] = {
 
 /* Armor */
 static const char *armor_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "piece_ac", "bulk", "magic_bonus", "flags",
-  "durability", "Value[5]", "Value[6]", "Value[7]"
+  "piece_ac", "bulk", "magic_bonus", "stealth_disadv",
+  "durability", "str_requirement", "Value[6]", "Value[7]"
 };
 
 /* Container */
@@ -1041,51 +1041,80 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     break;
 
   case OEDIT_VALUE_X:
-    {
-      int i = OLC_VAL(d);
-      int number = atoi(arg);
+  {
+    int i = OLC_VAL(d);
+    int number = atoi(arg);
 
-      if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_WEAPON && i == 2) {
-        if (number < 0 || number >= NUM_ATTACK_TYPES) {
-          oedit_disp_weapon_menu(d);
-          return;
+    /* --- Armor-specific semantics --- */
+    if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_ARMOR) {
+      if (i == VAL_ARMOR_STEALTH_DISADV /* 3 */) {
+        /* clamp to 0/1 */
+        GET_OBJ_VAL(OLC_OBJ(d), i) = (number != 0) ? 1 : 0;
+        oedit_disp_values_menu(d);
+        return;
+      }
+      if (i == VAL_ARMOR_STR_REQ /* 5 */) {
+        /* 0 disables the requirement; otherwise accept a sane STR range */
+        if (number < 0 || number > 25) {
+          write_to_output(d, "Enter STR requirement (0 disables, 3..25 typical): ");
+          return; /* stay in OEDIT_VALUE_X for a valid number */
         }
         GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+        oedit_disp_values_menu(d);
+        return;
       }
-      else if ((GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_SCROLL ||
-                GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_POTION ||
-                GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_WAND   ||
-                GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_STAFF) &&
-               (i == 1 || i == 2 || i == 3)) {
-        if (number < 0 || number >= NUM_SPELLS) {
-          oedit_disp_spells_menu(d);
-          return;
-        }
-        GET_OBJ_VAL(OLC_OBJ(d), i) = number;
-      }
-      else if ((GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_DRINKCON ||
-                GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_FOUNTAIN) &&
-               i == 2) {
-        if (number < 0 || number >= NUM_LIQ_TYPES) {
-          oedit_liquid_type(d);
-          return;
-        }
-        GET_OBJ_VAL(OLC_OBJ(d), i) = number;
-      }
-      else if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_CONTAINER && i == 1) {
-        if (number < 0 || number >= NUM_CONTAINER_FLAGS) {
-          oedit_disp_container_flags_menu(d);
-          return;
-        }
-        TOGGLE_BIT(GET_OBJ_VAL(OLC_OBJ(d), i), 1 << number);
-      }
-      else {
-        GET_OBJ_VAL(OLC_OBJ(d), i) = number;
-      }
-
-      oedit_disp_values_menu(d);
     }
+
+    /* --- Existing special cases (weapon/liquid/spells/container) remain here --- */
+    if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_WEAPON && i == 2) {
+      if (number < 0 || number >= NUM_ATTACK_TYPES) {
+        oedit_disp_weapon_menu(d);
+        return;
+      }
+      GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+      oedit_disp_values_menu(d);
+      return;
+    }
+    else if ((GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_SCROLL ||
+              GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_POTION ||
+              GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_WAND   ||
+              GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_STAFF) &&
+            (i == 1 || i == 2 || i == 3)) {
+      if (number < 0 || number >= NUM_SPELLS) {
+        oedit_disp_spells_menu(d);
+        return;
+      }
+      GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+      oedit_disp_values_menu(d);
+      return;
+    }
+    else if ((GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_DRINKCON ||
+              GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_FOUNTAIN) &&
+            i == 2) {
+      if (number < 0 || number >= NUM_LIQ_TYPES) {
+        oedit_liquid_type(d);
+        return;
+      }
+      GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+      oedit_disp_values_menu(d);
+      return;
+    }
+    else if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_CONTAINER && i == 1) {
+      extern const int NUM_CONTAINER_FLAGS;
+      if (number < 0 || number >= NUM_CONTAINER_FLAGS) {
+        oedit_disp_container_flags_menu(d);
+        return;
+      }
+      TOGGLE_BIT(GET_OBJ_VAL(OLC_OBJ(d), i), 1 << number);
+      oedit_disp_values_menu(d);
+      return;
+    }
+
+    /* --- Default assignment for other slots/types --- */
+    GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+    oedit_disp_values_menu(d);
     return;
+  }
 
   /* === Apply editing === */
   case OEDIT_PROMPT_APPLY:

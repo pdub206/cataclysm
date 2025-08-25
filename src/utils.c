@@ -1597,37 +1597,25 @@ static int dex_cap_from_bulk(int total_bulk) {
 
 /* --- Stealth disadvantage detector ---
  * Returns TRUE if:
- *  - Any worn armor piece has ARMF_STEALTH_DISADV, or
- *  - Total bulk category is Heavy (Dex cap == 0).
+ *  - Any worn armor piece has VAL_ARMOR_STEALTH_DISADV set to 1
  */
-bool has_stealth_disadv(struct char_data *ch) {
+bool has_stealth_disadv(struct char_data *ch)
+{
+  int i;
+  struct obj_data *obj;
+
   if (!ch) return FALSE;
 
-  int total_bulk = 0;
-  bool piece_imposes = FALSE;
+  for (i = 0; i < NUM_WEARS; i++) {
+    obj = GET_EQ(ch, i);
+    if (!obj) continue;
+    if (GET_OBJ_TYPE(obj) != ITEM_ARMOR) continue;
 
-  for (int i = 0; i < NUM_ARMOR_SLOTS; i++) {
-    int wear_pos = ARMOR_WEAR_POSITIONS[i];
-    struct obj_data *obj = GET_EQ(ch, wear_pos);
-    if (!obj || GET_OBJ_TYPE(obj) != ITEM_ARMOR)
-      continue;
-
-    /* flags in value[3] */
-    int flags = GET_OBJ_VAL(obj, VAL_ARMOR_FLAGS);
-    if (flags & ARMF_STEALTH_DISADV)
-      piece_imposes = TRUE;
-
-    /* accumulate bulk */
-    int piece_bulk = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
-    if (piece_bulk < 0) piece_bulk = 0;
-    total_bulk += piece_bulk * armor_slots[i].bulk_weight;
+    /* new semantics: slot 3 is a 0/1 toggle */
+    if (GET_OBJ_VAL(obj, VAL_ARMOR_STEALTH_DISADV))
+      return TRUE;
   }
-
-  /* Heavy armor bulk ⇒ Dex cap 0 ⇒ stealth disadvantage */
-  int cap = dex_cap_from_bulk(total_bulk); /* Light<=5:5 / <=10:2 / else:0 */
-  if (cap == 0) return TRUE;
-
-  return piece_imposes;
+  return FALSE;
 }
 
 /* Returns the 5e-style ability modifier for a given ability score. */

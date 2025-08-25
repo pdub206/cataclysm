@@ -1285,20 +1285,16 @@ struct recent_player
  * value[0] = piece_ac (0–3)
  * value[1] = bulk (0–3), determines allowed dex bonus
  * value[2] = magic_bonus (0–3, most will be at most +1)
- * value[3] = armor flags (bitvector, see ARMF_*)
+ * value[3] = if an armor piece imposes stealth disadvantage for some reason
  * value[4] = durability, or how much damage an item can take before breaking (usually 100)
+ * value[5] = strength requirement to wear armor piece
  */
-#define VAL_ARMOR_PIECE_AC      0
-#define VAL_ARMOR_BULK          1
-#define VAL_ARMOR_MAGIC_BONUS   2
-#define VAL_ARMOR_FLAGS         3
-#define VAL_ARMOR_DURABILITY    4
-
-/* Armor-specific flags stored in obj->value[3] */
-#define ARMF_STEALTH_DISADV   (1 << 0)  /* Disadvantage on Stealth checks */
-#define ARMF_REQ_STR15        (1 << 1)  /* Requires STR 15 to wear */
-#define ARMF_RESERVED2        (1 << 2)  /* Reserved for future use */
-#define ARMF_RESERVED3        (1 << 3)  /* Reserved */
+#define VAL_ARMOR_PIECE_AC         0
+#define VAL_ARMOR_BULK             1
+#define VAL_ARMOR_MAGIC_BONUS      2
+#define VAL_ARMOR_STEALTH_DISADV   3
+#define VAL_ARMOR_DURABILITY       4
+#define VAL_ARMOR_STR_REQ          5
 
 /* Config structs */
 

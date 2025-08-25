@@ -984,8 +984,8 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
   struct char_data *tempch;
 
   send_to_char(ch, "Name: '%s%s%s', Keywords: %s\r\n", CCYEL(ch, C_NRM),
-	  j->short_description ? j->short_description : "<None>",
-	  CCNRM(ch, C_NRM), j->name);
+      j->short_description ? j->short_description : "<None>",
+      CCNRM(ch, C_NRM), j->name);
 
   vnum = GET_OBJ_VNUM(j);
   sprinttype(GET_OBJ_TYPE(j), item_types, buf, sizeof(buf));
@@ -994,12 +994,12 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
     GET_OBJ_SPEC(j) ? (get_spec_func_name(GET_OBJ_SPEC(j))) : "None");
 
   send_to_char(ch, "L-Desc: '%s%s%s'\r\n", CCYEL(ch, C_NRM),
-	  j->description ? j->description : "<None>",
-	  CCNRM(ch, C_NRM));
+      j->description ? j->description : "<None>",
+      CCNRM(ch, C_NRM));
 
   send_to_char(ch, "A-Desc: '%s%s%s'\r\n", CCYEL(ch, C_NRM),
-	  j->action_description ? j->action_description : "<None>",
-	  CCNRM(ch, C_NRM));
+      j->action_description ? j->action_description : "<None>",
+      CCNRM(ch, C_NRM));
 
   if (j->ex_description) {
     send_to_char(ch, "Extra descs:%s", CCCYN(ch, C_NRM));
@@ -1021,7 +1021,7 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
      GET_OBJ_WEIGHT(j), GET_OBJ_COST(j), GET_OBJ_RENT(j), GET_OBJ_TIMER(j), GET_OBJ_LEVEL(j));
 
   send_to_char(ch, "In room: %d (%s), ", GET_ROOM_VNUM(IN_ROOM(j)),
-	IN_ROOM(j) == NOWHERE ? "Nowhere" : world[IN_ROOM(j)].name);
+    IN_ROOM(j) == NOWHERE ? "Nowhere" : world[IN_ROOM(j)].name);
 
   send_to_char(ch, "In object: %s, ", j->in_obj ? j->in_obj->short_description : "None");
   send_to_char(ch, "Carried by: %s, ", j->carried_by ? GET_NAME(j->carried_by) : "Nobody");
@@ -1034,81 +1034,109 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
     else
       send_to_char(ch, "Hours left: [%d]\r\n", GET_OBJ_VAL(j, 2));
     break;
+
   case ITEM_SCROLL:
   case ITEM_POTION:
     send_to_char(ch, "Spells: (Level %d) %s, %s, %s\r\n", GET_OBJ_VAL(j, 0),
-	    skill_name(GET_OBJ_VAL(j, 1)), skill_name(GET_OBJ_VAL(j, 2)),
-	    skill_name(GET_OBJ_VAL(j, 3)));
+        skill_name(GET_OBJ_VAL(j, 1)), skill_name(GET_OBJ_VAL(j, 2)),
+        skill_name(GET_OBJ_VAL(j, 3)));
     break;
+
   case ITEM_WAND:
   case ITEM_STAFF:
     send_to_char(ch, "Spell: %s at level %d, %d (of %d) charges remaining\r\n",
-	    skill_name(GET_OBJ_VAL(j, 3)), GET_OBJ_VAL(j, 0),
-	    GET_OBJ_VAL(j, 2), GET_OBJ_VAL(j, 1));
+        skill_name(GET_OBJ_VAL(j, 3)), GET_OBJ_VAL(j, 0),
+        GET_OBJ_VAL(j, 2), GET_OBJ_VAL(j, 1));
     break;
+
   case ITEM_WEAPON:
     send_to_char(ch, "Todam: %dd%d, Avg Damage: %.1f. Message type: %s\r\n",
-	    GET_OBJ_VAL(j, 1), GET_OBJ_VAL(j, 2),
-      ((GET_OBJ_VAL(j, 2) + 1) / 2.0) * GET_OBJ_VAL(j, 1),
-      attack_hit_text[GET_OBJ_VAL(j, 3)].singular);
+        GET_OBJ_VAL(j, 1), GET_OBJ_VAL(j, 2),
+        ((GET_OBJ_VAL(j, 2) + 1) / 2.0) * GET_OBJ_VAL(j, 1),
+        attack_hit_text[GET_OBJ_VAL(j, 3)].singular);
     break;
-  case ITEM_ARMOR:
-    send_to_char(ch, "AC-apply: [%d]\r\n", GET_OBJ_VAL(j, 0));
+
+  case ITEM_ARMOR: {
+    /* New: show armor-specific semantic fields */
+    int piece_ac   = GET_OBJ_VAL(j, VAL_ARMOR_PIECE_AC);
+    int bulk       = GET_OBJ_VAL(j, VAL_ARMOR_BULK);
+    int magic_bonus= GET_OBJ_VAL(j, VAL_ARMOR_MAGIC_BONUS);
+    int stealth    = GET_OBJ_VAL(j, VAL_ARMOR_STEALTH_DISADV);
+    int durability = GET_OBJ_VAL(j, VAL_ARMOR_DURABILITY);
+    int str_req    = GET_OBJ_VAL(j, VAL_ARMOR_STR_REQ);
+
+    send_to_char(ch,
+      "Armor:\r\n"
+      "  piece_ac       : %d\r\n"
+      "  bulk           : %d\r\n"
+      "  magic_bonus    : %d\r\n"
+      "  stealth_disadv : %s\r\n"
+      "  durability     : %d\r\n"
+      "  str_requirement: %d\r\n",
+      piece_ac, bulk, magic_bonus,
+      YESNO(stealth), durability, str_req);
     break;
-  case ITEM_CONTAINER:
+  }
+
+  case ITEM_CONTAINER: {
     sprintbit(GET_OBJ_VAL(j, 1), container_bits, buf, sizeof(buf));
     send_to_char(ch, "Weight capacity: %d, Lock Type: %s, Key Num: %d, Corpse: %s\r\n",
-	    GET_OBJ_VAL(j, 0), buf, GET_OBJ_VAL(j, 2),
-	    YESNO(GET_OBJ_VAL(j, 3)));
+        GET_OBJ_VAL(j, 0), buf, GET_OBJ_VAL(j, 2),
+        YESNO(GET_OBJ_VAL(j, 3)));
     break;
+  }
+
   case ITEM_DRINKCON:
-  case ITEM_FOUNTAIN:
+  case ITEM_FOUNTAIN: {
     sprinttype(GET_OBJ_VAL(j, 2), drinks, buf, sizeof(buf));
     send_to_char(ch, "Capacity: %d, Contains: %d, Poisoned: %s, Liquid: %s\r\n",
-	    GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1),
-      YESNO(GET_OBJ_VAL(j, 3)), buf);
+        GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1), YESNO(GET_OBJ_VAL(j, 3)), buf);
     break;
+  }
+
   case ITEM_NOTE:
     send_to_char(ch, "Tongue: %d\r\n", GET_OBJ_VAL(j, 0));
     break;
+
   case ITEM_KEY: /* Nothing */
     break;
+
   case ITEM_FOOD:
-    send_to_char(ch, "Makes full: %d, Poisoned: %s\r\n",
-      GET_OBJ_VAL(j, 0), YESNO(GET_OBJ_VAL(j, 3)));
+    send_to_char(ch, "Makes full: %d, Poisoned: %s\r\n", GET_OBJ_VAL(j, 0), YESNO(GET_OBJ_VAL(j, 3)));
     break;
+
   case ITEM_MONEY:
     send_to_char(ch, "Coins: %d\r\n", GET_OBJ_VAL(j, 0));
     break;
+
   case ITEM_FURNITURE:
-    send_to_char(ch, "Can hold: [%d] Num. of People in: [%d]\r\n",
-      GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1));
+    send_to_char(ch, "Can hold: [%d] Num. of People in: [%d]\r\n", GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1));
     send_to_char(ch, "Holding : ");
     for (tempch = OBJ_SAT_IN_BY(j); tempch; tempch = NEXT_SITTING(tempch))
       send_to_char(ch, "%s ", GET_NAME(tempch));
     send_to_char(ch, "\r\n");
     break;
-  default: {
-    send_to_char(ch, "Values:");
-    for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
-      send_to_char(ch, " [%d]", GET_OBJ_VAL(j, i));
-    }
-    send_to_char(ch, "\r\n");
+
+  default:
+    /* No special pretty-print */
     break;
   }
-  }
+
+  /* Always show raw values dynamically for debugging/visibility */
+  send_to_char(ch, "Values 0..%d:", NUM_OBJ_VAL_POSITIONS - 1);
+  for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
+    send_to_char(ch, " [%d]", GET_OBJ_VAL(j, i));
+  send_to_char(ch, "\r\n");
 
   if (j->contains) {
     int column;
-
     send_to_char(ch, "\r\nContents:%s", CCGRN(ch, C_NRM));
     column = 9;
-
     for (found = 0, j2 = j->contains; j2; j2 = j2->next_content) {
       column += send_to_char(ch, "%s %s", found++ ? "," : "", j2->short_description);
       if (column >= 62) {
-	send_to_char(ch, "%s\r\n", j2->next_content ? "," : "");
-	found = FALSE;
+        send_to_char(ch, "%s\r\n", j2->next_content ? "," : "");
+        found = FALSE;
         column = 0;
       }
     }
@@ -1120,8 +1148,7 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
   for (i = 0; i < MAX_OBJ_AFFECT; i++)
     if (j->affected[i].modifier) {
       sprinttype(j->affected[i].location, apply_types, buf, sizeof(buf));
-      send_to_char(ch, "%s %+d to %s",
-        found++ ? "," : "", j->affected[i].modifier, buf);
+      send_to_char(ch, "%s %+d to %s", found++ ? "," : "", j->affected[i].modifier, buf);
     }
   if (!found)
     send_to_char(ch, " None");
@@ -5618,7 +5645,7 @@ ACMD(do_acaudit)
   for (obj_rnum r = 0; r <= top_of_objt; r++) {
     struct obj_data *obj = &obj_proto[r];
     char namebuf[128] = {0};
-    int idx, vnum, piece_ac, bulk, magic, flags;
+    int idx, vnum, piece_ac, bulk, magic, stealth, strreq;
 
     if (GET_OBJ_TYPE(obj) != ITEM_ARMOR)
       continue;
@@ -5632,7 +5659,8 @@ ACMD(do_acaudit)
     piece_ac = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
     bulk     = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
     magic    = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
-    flags    = GET_OBJ_VAL(obj, VAL_ARMOR_FLAGS);
+    stealth  = GET_OBJ_VAL(obj, VAL_ARMOR_STEALTH_DISADV); /* 1/0, yes or no */
+    strreq   = GET_OBJ_VAL(obj, VAL_ARMOR_STR_REQ);        /* 0 or 13/15/16 typically */
 
     /* Display name (trim to keep line width < ~78 cols) */
     if (obj->short_description)
@@ -5656,14 +5684,14 @@ ACMD(do_acaudit)
     found++;
 
     /* Compact, non-wrapping row (~70 cols worst case) */
-    APPEND_FMT("\tc[#%5d]\tn %-24.24s sl=%-5.5s ac=%2d%s b=%d%s m=%+d%s f=%d%s\r\n",
+    APPEND_FMT("\tc[#%5d]\tn %-24.24s sl=%-5.5s ac=%2d%s b=%d%s m=%+d%s sd=%d str=%d\r\n",
       vnum,
       namebuf,
       slot_name_from_index(idx),
       piece_ac,  over_ac    ? " \tR!\tn" : (bad_ac   ? " \tY?\tn" : ""),
       bulk,      bad_bulk   ? " \tY?\tn" : "",
       magic,     over_magic ? " \tR!\tn" : (bad_magic? " \tY?\tn" : ""),
-      flags,     (flags & ARMF_STEALTH_DISADV) ? " S" : "");
+      stealth, strreq);
 
     if (over_ac || over_magic || bad_ac || bad_bulk || bad_magic)
       warned++;
