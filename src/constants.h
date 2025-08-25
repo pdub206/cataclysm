@@ -86,4 +86,7 @@ extern const char *armor_flag_bits[];
 extern const char *container_bits[];
 extern const int NUM_CONTAINER_FLAGS;
 
+extern const char *extra_bits[];
+extern const int NUM_EXTRA_FLAGS;
+
 #endif /* _CONSTANTS_H_ */

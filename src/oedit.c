@@ -548,20 +548,25 @@ static void oedit_disp_type_menu(struct descriptor_data *d)
 /* Object extra flags. */
 static void oedit_disp_extra_menu(struct descriptor_data *d)
 {
-  char bits[MAX_STRING_LENGTH];
-  int counter, columns = 0;
+  char buf[MAX_STRING_LENGTH];
+  int i, columns = 0;
 
-  get_char_colors(d->character);
   clear_screen(d);
+  write_to_output(d, "-- Extra Flags Menu --\r\n");
 
-  for (counter = 0; counter < NUM_ITEM_FLAGS; counter++) {
-    write_to_output(d, "%s%2d%s) %-20.20s %s", grn, counter + 1, nrm,
-		extra_bits[counter], !(++columns % 2) ? "\r\n" : "");
+  for (i = 0; i < NUM_EXTRA_FLAGS; i++) {
+    /* Menu is 1-based for builders */
+    write_to_output(d, "%2d) %-20s%s", i + 1, extra_bits[i],
+                    (++columns % 2 ? "" : "\r\n"));
   }
-  sprintbitarray(GET_OBJ_EXTRA(OLC_OBJ(d)), extra_bits, EF_ARRAY_MAX, bits);
-  write_to_output(d, "\r\nObject flags: %s%s%s\r\n"
-	  "Enter object extra flag (0 to quit) : ",
-	  cyn, bits, nrm);
+  if (columns % 2)
+    write_to_output(d, "\r\n");
+
+  /* Show current flags nicely */
+  sprintbitarray(GET_OBJ_EXTRA(OLC_OBJ(d)), extra_bits, EF_ARRAY_MAX, buf);
+  write_to_output(d, "\r\nObject flags: %s\r\n", buf);
+
+  write_to_output(d, "Enter object extra flag (0 to quit) : ");
 }
 
 /* Object perm flags. */
@@ -796,13 +801,14 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       break;
     case 's': case 'S':
       OLC_SCRIPT_EDIT_MODE(d) = SCRIPT_MAIN_MENU;
+      OLC_MODE(d) = OLC_SCRIPT_EDIT;
       dg_script_menu(d);
       return;
     case 'V': case 'v':
       oedit_disp_values_menu(d);
       return;
     case 'w': case 'W':
-      write_to_output(d, "Copy what object? ");
+      write_to_output(d, "Copy what object (vnum or 0 to cancel): ");
       OLC_MODE(d) = OEDIT_COPY;
       break;
     case 'x': case 'X':
@@ -816,46 +822,105 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     return;
 
   case OLC_SCRIPT_EDIT:
-    if (dg_script_edit_parse(d, arg)) return;
-    break;
+  {
+    /* Optional: clean, immediate quit without extra DG reprint */
+    if (arg && (arg[0] == 'q' || arg[0] == 'Q') && arg[1] == '\0') {
+      OLC_MODE(d) = OEDIT_MAIN_MENU;
+      oedit_disp_menu(d);
+      return;
+    }
+
+    /* Let DG handle input first. It returns non-zero to STAY in editor. */
+    if (dg_script_edit_parse(d, arg)) {
+      /* Still inside DG’s triggers UI (possibly mid-prompt like “pos, vnum”) */
+      return;
+    }
+
+    /* Return value 0 means DG editor is finished -> go back to OEDIT menu */
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
+  }
 
   case OEDIT_KEYWORD:
-    if (!genolc_checkstring(d, arg)) break;
-    if (OLC_OBJ(d)->name) free(OLC_OBJ(d)->name);
+    if (!genolc_checkstring(d, arg)) {
+      write_to_output(d, "Invalid keywords. Try again: ");
+      return; /* stay in OEDIT_KEYWORD waiting for a valid line */
+    }
+    if (OLC_OBJ(d)->name)
+      free(OLC_OBJ(d)->name);
     OLC_OBJ(d)->name = str_udup(arg);
-    break;
+    OLC_VAL(d) = 1;
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
 
   case OEDIT_SHORTDESC:
-    if (!genolc_checkstring(d, arg)) break;
-    if (OLC_OBJ(d)->short_description) free(OLC_OBJ(d)->short_description);
+    if (!genolc_checkstring(d, arg)) {
+      write_to_output(d, "Invalid short desc. Try again: ");
+      return; /* stay in OEDIT_SHORTDESC */
+    }
+    if (OLC_OBJ(d)->short_description)
+      free(OLC_OBJ(d)->short_description);
     OLC_OBJ(d)->short_description = str_udup(arg);
-    break;
+    OLC_VAL(d) = 1;
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
 
   case OEDIT_LONGDESC:
-    if (!genolc_checkstring(d, arg)) break;
-    if (OLC_OBJ(d)->description) free(OLC_OBJ(d)->description);
+    if (!genolc_checkstring(d, arg)) {
+      write_to_output(d, "Invalid long desc. Try again: ");
+      return; /* stay in OEDIT_LONGDESC */
+    }
+    if (OLC_OBJ(d)->description)
+      free(OLC_OBJ(d)->description);
     OLC_OBJ(d)->description = str_udup(arg);
-    break;
+    OLC_VAL(d) = 1;
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
+
+  case OEDIT_ACTDESC:
+    /* Multi-line editor is correct here, requires '@' to finish */
+    send_editor_help(d);
+    write_to_output(d, "Enter action description:\r\n\r\n");
+    if (OLC_OBJ(d)->action_description) {
+      write_to_output(d, "%s", OLC_OBJ(d)->action_description);
+      oldtext = strdup(OLC_OBJ(d)->action_description);
+    }
+    string_write(d, &OLC_OBJ(d)->action_description, MAX_MESSAGE_LENGTH, 0, oldtext);
+    OLC_VAL(d) = 1;
+    return;
 
   case OEDIT_TYPE:
     number = atoi(arg);
     if (number < 0 || number >= NUM_ITEM_TYPES) {
       write_to_output(d, "Invalid choice, try again : ");
       return;
-    } else
-      GET_OBJ_TYPE(OLC_OBJ(d)) = number;
+    }
+    GET_OBJ_TYPE(OLC_OBJ(d)) = number;
+    /* Reset values when type changes */
     for (int i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
       GET_OBJ_VAL(OLC_OBJ(d), i) = 0;
-    break;
+
+    OLC_VAL(d) = 1;
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
 
   case OEDIT_EXTRAS:
     number = atoi(arg);
-    if (number < 0 || number > NUM_ITEM_FLAGS) {
+    if (number < 0 || number > NUM_EXTRA_FLAGS) {
       oedit_disp_extra_menu(d);
       return;
-    } else if (number == 0)
-      break;
-    else {
+    } else if (number == 0) {
+      /* exit extras submenu */
+      OLC_MODE(d) = OEDIT_MAIN_MENU;
+      oedit_disp_menu(d);
+      return;
+    } else {
+      /* Toggle: user picks 1..N, bit index is 0..N-1 */
       TOGGLE_BIT_AR(GET_OBJ_EXTRA(OLC_OBJ(d)), (number - 1));
       oedit_disp_extra_menu(d);
       return;
@@ -867,9 +932,12 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       write_to_output(d, "That's not a valid choice!\r\n");
       oedit_disp_wear_menu(d);
       return;
-    } else if (number == 0)
-      break;
-    else {
+    } else if (number == 0) {
+      /* exit wear submenu */
+      OLC_MODE(d) = OEDIT_MAIN_MENU;
+      oedit_disp_menu(d);
+      return;
+    } else {
       TOGGLE_BIT_AR(GET_OBJ_WEAR(OLC_OBJ(d)), (number - 1));
       oedit_disp_wear_menu(d);
       return;
@@ -877,26 +945,46 @@ void oedit_parse(struct descriptor_data *d, char *arg)
 
   case OEDIT_WEIGHT:
     GET_OBJ_WEIGHT(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_WEIGHT);
-    break;
+    OLC_VAL(d) = 1;
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
 
   case OEDIT_COST:
     GET_OBJ_COST(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_COST);
-    break;
+    OLC_VAL(d) = 1;
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
 
   case OEDIT_COSTPERDAY:
     GET_OBJ_RENT(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_RENT);
-    break;
+    OLC_VAL(d) = 1;
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
 
   case OEDIT_TIMER:
     GET_OBJ_TIMER(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_TIMER);
-    break;
+    OLC_VAL(d) = 1;
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
 
   case OEDIT_LEVEL:
     GET_OBJ_LEVEL(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, LVL_IMPL);
-    break;
+    OLC_VAL(d) = 1;
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
 
   case OEDIT_PERM:
-    if ((number = atoi(arg)) == 0) break;
+    if ((number = atoi(arg)) == 0) {
+      /* exit perm affects submenu */
+      OLC_MODE(d) = OEDIT_MAIN_MENU;
+      oedit_disp_menu(d);
+      return;
+    }
     if (number > 0 && number < NUM_AFF_FLAGS) {
       if (number != AFF_CHARM) {
         TOGGLE_BIT_AR(GET_OBJ_AFFECT(OLC_OBJ(d)), number);
@@ -1094,11 +1182,54 @@ void oedit_parse(struct descriptor_data *d, char *arg)
 
   /* === Copy object === */
   case OEDIT_COPY:
-    if ((number = real_object(atoi(arg))) != NOTHING) {
-      oedit_setup_existing(d, number);
-    } else
-      write_to_output(d, "That object does not exist.\r\n");
-    break;
+  {
+    /* Trim leading spaces if you have a helper; otherwise simple checks below handle it */
+    /* skip_spaces(&arg); */
+
+    /* Treat empty input as cancel */
+    if (!arg || *arg == '\0') {
+      write_to_output(d, "Copy cancelled.\r\n");
+      OLC_MODE(d) = OEDIT_MAIN_MENU;
+      oedit_disp_menu(d);
+      return;
+    }
+
+    /* Allow 0 or q/Q to cancel */
+    if ((arg[0] == '0' && arg[1] == '\0') ||
+        (arg[0] == 'q' && arg[1] == '\0') ||
+        (arg[0] == 'Q' && arg[1] == '\0')) {
+      write_to_output(d, "Copy cancelled.\r\n");
+      OLC_MODE(d) = OEDIT_MAIN_MENU;
+      oedit_disp_menu(d);
+      return;
+    }
+
+    /* Require a number */
+    if (!is_number(arg)) {
+      write_to_output(d, "Please enter a vnum or 0 to cancel: ");
+      return; /* stay in OEDIT_COPY */
+    }
+
+    int vnum = atoi(arg);
+    if (vnum <= 0) {
+      write_to_output(d, "Copy cancelled.\r\n");
+      OLC_MODE(d) = OEDIT_MAIN_MENU;
+      oedit_disp_menu(d);
+      return;
+    }
+
+    int rnum = real_object(vnum);
+    if (rnum == NOTHING) {
+      write_to_output(d, "That object does not exist. Enter vnum or 0 to cancel: ");
+      return; /* stay in OEDIT_COPY */
+    }
+
+    /* Success: clone into editor */
+    oedit_setup_existing(d, rnum);
+    OLC_MODE(d) = OEDIT_MAIN_MENU;
+    oedit_disp_menu(d);
+    return;
+  }
 
   /* === Delete object === */
   case OEDIT_DELETE:

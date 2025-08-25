@@ -451,6 +451,9 @@ const char *extra_bits[] = {
   "\n"
 };
 
+/* Number of extra flags (excluding the sentinel "\n") */
+const int NUM_EXTRA_FLAGS = (sizeof(extra_bits) / sizeof(extra_bits[0]) - 1);
+
 /** Describes the apply types.
  * @pre Must be in the same order as the defines.
  * Must end array with a single newline. */
@@ -1002,4 +1005,3 @@ const char *armor_flag_bits[] = {
 	extra_bits_count = sizeof(extra_bits) / sizeof(extra_bits[0]) - 1,
 	/** Number of defined wear bit descriptions. */
 	wear_bits_count = sizeof(wear_bits) / sizeof(wear_bits[0]) - 1;
-
