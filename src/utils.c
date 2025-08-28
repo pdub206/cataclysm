@@ -1638,7 +1638,7 @@ int GET_PROFICIENCY(int pct) {
 }
 
 /* Forward declaration */
-int situational_ac_mods(struct char_data *ch);
+int GET_SITUATIONAL_AC(struct char_data *ch);
 
 void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out)
 {
@@ -1688,7 +1688,7 @@ void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out)
   }
 
   /* Situational */
-  out->situational = situational_ac_mods(ch);
+  out->situational = GET_SITUATIONAL_AC(ch);
 
   /* Total */
   out->total = out->base
@@ -1707,7 +1707,8 @@ int compute_ascending_ac(struct char_data *ch)
 }
 
 /* Stub: situational AC mods */
-int situational_ac_mods(struct char_data *ch)
+/* Placeholder for future skill/spell enhancements such as Haste */
+int GET_SITUATIONAL_AC(struct char_data *ch)
 {
   int mod = 0;
 

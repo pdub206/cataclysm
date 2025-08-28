@@ -3480,6 +3480,8 @@ void clear_char(struct char_data *ch)
   GET_AC(ch) = 100;		/* Basic Armor */
   if (ch->points.max_mana < 100)
     ch->points.max_mana = 100;
+  
+  SET_STEALTH_CHECK(ch, 0);
 }
 
 void clear_object(struct obj_data *obj)
@@ -3567,6 +3569,8 @@ void init_char(struct char_data *ch)
   ch->real_abils.str_add = 100;
   ch->real_abils.con = 25;
   ch->real_abils.cha = 25;
+
+  SET_STEALTH_CHECK(ch, 0);
 
   for (i = 0; i < 3; i++)
     GET_COND(ch, i) = (GET_LEVEL(ch) == LVL_IMPL ? -1 : 24);

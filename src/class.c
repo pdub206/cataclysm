@@ -893,6 +893,7 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_UNARMED, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
     break;
 
   case CLASS_WARRIOR:
@@ -905,6 +906,7 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_BLUDGEONING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
     break;
 
   case CLASS_BARBARIAN:
@@ -915,6 +917,7 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_UNARMED, 5);
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_BLUDGEONING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
     break;
 
   case CLASS_RANGER:
@@ -927,6 +930,7 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_SLASHING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
     break;
 
   case CLASS_BARD:
@@ -938,6 +942,7 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_UNARMED, 5);
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
     break;
 
   case CLASS_DRUID:
@@ -949,6 +954,7 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_UNARMED, 5);
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
     break;
   }
 
@@ -1165,6 +1171,7 @@ void init_spell_levels(void)
   spell_level(SKILL_UNARMED, CLASS_THIEF, 1);
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_THIEF, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_THIEF, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_THIEF, 1);
 
   /* WARRIORS */
   spell_level(SKILL_KICK, CLASS_WARRIOR, 1);
@@ -1176,6 +1183,7 @@ void init_spell_levels(void)
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_WARRIOR, 1);
   spell_level(SKILL_BLUDGEONING_WEAPONS, CLASS_WARRIOR, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_WARRIOR, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_WARRIOR, 1);
 
   /* BARBARIANS */
   spell_level(SKILL_KICK, CLASS_BARBARIAN, 1);
@@ -1185,6 +1193,7 @@ void init_spell_levels(void)
   spell_level(SKILL_UNARMED, CLASS_BARBARIAN, 1);
   spell_level(SKILL_SLASHING_WEAPONS, CLASS_BARBARIAN, 1);
   spell_level(SKILL_BLUDGEONING_WEAPONS, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_BARBARIAN, 1);
 
   /* RANGERS */
   spell_level(SKILL_SNEAK, CLASS_RANGER, 1);
@@ -1196,6 +1205,7 @@ void init_spell_levels(void)
   spell_level(SKILL_SLASHING_WEAPONS, CLASS_RANGER, 1);
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_RANGER, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_RANGER, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_RANGER, 1);
 
   /* BARDS */
   spell_level(SPELL_ARMOR, CLASS_BARD, 1);
@@ -1206,6 +1216,7 @@ void init_spell_levels(void)
   spell_level(SKILL_UNARMED, CLASS_BARD, 1);
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_BARD, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_BARD, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_BARD, 1);
 
   /* DRUIDS */
   spell_level(SPELL_DETECT_INVIS, CLASS_DRUID, 1);
@@ -1216,6 +1227,7 @@ void init_spell_levels(void)
   spell_level(SKILL_UNARMED, CLASS_DRUID, 1);
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_DRUID, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_DRUID, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_DRUID, 1);
 }
 
 /* This is the exp given to implementors -- it must always be greater than the

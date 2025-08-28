@@ -226,6 +226,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "pick"     , "pi"      , POS_STANDING, do_gen_door , 1, SCMD_PICK },
   { "page"     , "pag"     , POS_DEAD    , do_page     , 1, 0 },
   { "pardon"   , "pardon"  , POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_PARDON },
+  { "perception","per"     , POS_RESTING , do_perception, 0, 0 },
   { "plist"    , "plist"   , POS_DEAD    , do_plist    , LVL_GOD, 0 },
   { "policy"   , "pol"     , POS_DEAD    , do_gen_ps   , 0, SCMD_POLICIES },
   { "pour"     , "pour"    , POS_STANDING, do_pour     , 0, SCMD_POUR },

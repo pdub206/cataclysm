@@ -90,7 +90,7 @@ struct ac_breakdown {
 int GET_ABILITY_MOD(int score);
 int GET_PROFICIENCY(int pct);
 int compute_ascending_ac(struct char_data *ch);
-int situational_ac_mods(struct char_data *ch);
+int GET_SITUATIONAL_AC(struct char_data *ch);
 int compute_armor_class_asc(struct char_data *ch);
 void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out);
 

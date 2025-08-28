@@ -290,8 +290,9 @@
 #define AFF_HIDE           20   /**< Char is hidden */
 #define AFF_FREE           21   /**< Room for future expansion */
 #define AFF_CHARM          22   /**< Char is charmed */
+#define AFF_BANDAGED       23   /**< Character was bandaged recently */
 /** Total number of affect flags */
-#define NUM_AFF_FLAGS   23
+#define NUM_AFF_FLAGS   24
 
 /* Modes of connectedness: used by descriptor_data.state 		*/
 #define CON_PLAYING       0 /**< Playing - Nominal state 		*/
@@ -936,6 +937,7 @@ struct char_special_data
   int carry_weight; /**< Carried weight */
   byte carry_items; /**< Number of items carried */
   int timer;        /**< Timer for update */
+  int stealth_check;  /* last rolled Stealth value for Hide; 0 = not hiding/opposed */
 
   struct char_special_data_saved saved; /**< Constants saved for PCs. */
 };
@@ -1295,6 +1297,10 @@ struct recent_player
 #define VAL_ARMOR_STEALTH_DISADV   3
 #define VAL_ARMOR_DURABILITY       4
 #define VAL_ARMOR_STR_REQ          5
+
+/* Helper macros */
+#define GET_STEALTH_CHECK(ch)   ((ch)->char_specials.stealth_check)
+#define SET_STEALTH_CHECK(ch,v) ((ch)->char_specials.stealth_check = (v))
 
 /* Config structs */
 

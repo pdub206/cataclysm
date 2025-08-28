@@ -133,7 +133,6 @@ static const char *skill_name_for_gain(int skillnum) {
   }
 }
 
-
 #define IS_WEAPON(type) (((type) >= TYPE_HIT) && ((type) < TYPE_SUFFERING))
 /* The Fight related routines */
 void appear(struct char_data *ch)

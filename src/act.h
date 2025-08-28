@@ -234,6 +234,7 @@ ACMD(do_report);
 ACMD(do_save);
 ACMD(do_skills);
 ACMD(do_sneak);
+ACMD(do_perception);
 ACMD(do_split);
 ACMD(do_steal);
 ACMD(do_title);

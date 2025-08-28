@@ -116,6 +116,7 @@
 #define SKILL_PIERCING_WEAPONS      144 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_SLASHING_WEAPONS      145 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_BLUDGEONING_WEAPONS   146 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_PERCEPTION            147 /* Reserved Skill[] DO NOT CHANGE */
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 

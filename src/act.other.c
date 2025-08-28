@@ -99,49 +99,72 @@ ACMD(do_not_here)
 ACMD(do_sneak)
 {
   struct affected_type af;
-  int chance;
-  bool ok;
+  int rolla, rollb, roll, bonus, total, dc;
+  bool disadv = FALSE;
 
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_SNEAK)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
 
+  if (FIGHTING(ch)){
+    send_to_char(ch, "While fighting!?\r\n");
+    return; 
+  }    /* you can't sneak while in active melee */
+
   send_to_char(ch, "Okay, you'll try to move silently for a while.\r\n");
 
+  /* Remove prior sneak affect if present (refresh logic) */
   if (AFF_FLAGGED(ch, AFF_SNEAK))
     affect_from_char(ch, SKILL_SNEAK);
 
-  /* Base chance: skill % + Dex-based adjustment */
-  chance = GET_SKILL(ch, SKILL_SNEAK) + dex_app_skill[GET_DEX(ch)].sneak;
-  if (chance < 0)   chance = 0;
-  if (chance > 100) chance = 100;
+  /* --- 5e-style Stealth check (DEX + proficiency) --- */
+  bonus = GET_ABILITY_MOD(GET_DEX(ch)) +
+          GET_PROFICIENCY(GET_SKILL(ch, SKILL_SNEAK));
 
-  /* Apply disadvantage if heavy/bulky armor or flagged pieces */
-  if (has_stealth_disadv(ch))
-    ok = percent_success_disadv(chance);
-  else
-    ok = percent_success(chance);
+  dc = 10;
 
-  if (!ok) {
+  disadv = has_stealth_disadv(ch) ? TRUE : FALSE;
+
+  rolla = rand_number(1, 20);
+  if (disadv) {
+    rollb = rand_number(1, 20);
+    roll  = MIN(rolla, rollb);                  /* disadvantage: take lower roll */
+  } else {
+    roll  = rolla;
+  }
+
+  total = roll + bonus;
+
+  if (total < dc) {
     gain_skill(ch, "sneak", FALSE);
+    WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+    GET_MOVE(ch) -= 10;
     return;
   }
 
   /* Success: apply Sneak affect */
   new_affect(&af);
-  af.spell = SKILL_SNEAK;
-  af.duration = GET_LEVEL(ch);
+  af.spell    = SKILL_SNEAK;
+  af.location = APPLY_NONE;
+  af.modifier = 0;
+  af.duration = GET_LEVEL(ch);               /* keep stock duration; adjust if desired */
+  memset(af.bitvector, 0, sizeof(af.bitvector));
   SET_BIT_AR(af.bitvector, AFF_SNEAK);
   affect_to_char(ch, &af);
 
+  /* Store a stealth check value for movement contests (reuse Hide’s field) */
+  /* If you’ve already hidden with a higher roll, keep the stronger value. */
+  SET_STEALTH_CHECK(ch, MAX(GET_STEALTH_CHECK(ch), total));
+
   gain_skill(ch, "sneak", TRUE);
+  GET_MOVE(ch) -= 10;
 }
 
 ACMD(do_hide)
 {
-  int chance;
-  bool ok;
+  int rolla, rollb, roll, bonus, total, dc;
+  bool disadv = FALSE;
 
   if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_HIDE)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
@@ -150,29 +173,135 @@ ACMD(do_hide)
 
   send_to_char(ch, "You attempt to hide yourself.\r\n");
 
-  if (AFF_FLAGGED(ch, AFF_HIDE))
+  /* If already hidden, drop it before re-attempting */
+  if (AFF_FLAGGED(ch, AFF_HIDE)) {
     REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
+    GET_STEALTH_CHECK(ch) = 0;
+  }
 
-  /* Base chance: skill % + Dex-based adjustment */
-  chance = GET_SKILL(ch, SKILL_HIDE) + dex_app_skill[GET_DEX(ch)].hide;
-  if (chance < 0)   chance = 0;
-  if (chance > 100) chance = 100;
+  if (FIGHTING(ch)){
+    send_to_char(ch, "While fighting!?\r\n");
+    return; 
+  }    /* you can't hide while in active melee */
 
-  /* Apply disadvantage if heavy/bulky armor or flagged pieces */
-  if (has_stealth_disadv(ch))
-    ok = percent_success_disadv(chance);
-  else
-    ok = percent_success(chance);
+  /* --- 5e Stealth (DEX) ability check --- */
+  bonus = GET_ABILITY_MOD(GET_DEX(ch)) + GET_PROFICIENCY(GET_SKILL(ch, SKILL_HIDE));
 
-  if (!ok) {
+  /* Baseline difficulty: hiding in general */
+  /* TODO: Maybe change dc based on terrain/populated rooms in the future */
+  dc = 10;
+
+  /* Armor/gear can impose disadvantage */
+  disadv = has_stealth_disadv(ch) ? TRUE : FALSE;
+
+  rolla = rand_number(1, 20);
+  if (disadv) {
+    rollb = rand_number(1, 20);
+    roll  = MIN(rolla, rollb);      /* disadvantage: take the lower */
+  } else {
+    roll  = rolla;
+  }
+
+  total = roll + bonus;
+
+  if (total < dc) {
+    /* Failure */
     gain_skill(ch, "hide", FALSE);
+    WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+    GET_MOVE(ch) -= 10;
     return;
   }
 
-  /* Success */
+  /* Success: set flag and store this specific Stealth result */
   SET_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
+  GET_STEALTH_CHECK(ch) = total;
+
   send_to_char(ch, "You hide yourself as best you can.\r\n");
   gain_skill(ch, "hide", TRUE);
+  WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+  GET_MOVE(ch) -= 10;
+}
+
+/* Perception: scan the room for hidden creatures and objects */
+ACMD(do_perception)
+{
+  struct char_data *tch;
+  struct obj_data  *obj, *next_obj;
+  int roll, bonus, total;
+  int found_chars = 0, found_objs = 0;
+
+  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_PERCEPTION)) {
+    send_to_char(ch, "You have no idea how to do that.\r\n");
+    return;
+  }
+
+  /* Roll once for this scan (active check) */
+  bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
+          GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
+
+  roll   = rand_number(1, 20);
+  total = roll + bonus;
+
+  /* Optional: it’s harder to actively scan while in melee */
+  if (FIGHTING(ch))
+    total -= 4;
+
+  /* --- Scan characters in the room (PCs & NPCs) --- */
+  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room) {
+    if (tch == ch)
+      continue;
+    if (!AFF_FLAGGED(tch, AFF_HIDE))
+      continue;
+
+    /* Safety default if some legacy code set AFF_HIDE without a stored check */
+    if (GET_STEALTH_CHECK(tch) <= 0)
+      SET_STEALTH_CHECK(tch, 5);
+
+    if (total >= GET_STEALTH_CHECK(tch)) {
+      /* Spotted! Reveal them. */
+      REMOVE_BIT_AR(AFF_FLAGS(tch), AFF_HIDE);
+      SET_STEALTH_CHECK(tch, 0);
+      ++found_chars;
+
+      act("You spot $N hiding!", FALSE, ch, 0, tch, TO_CHAR);
+      act("$n seems to look right at you — you've been spotted!", FALSE, ch, 0, tch, TO_VICT);
+      act("$n spots $N hiding nearby!", FALSE, ch, 0, tch, TO_NOTVICT);
+    }
+  }
+
+  /* --- Scan objects in the room (requires an ITEM_HIDDEN extra flag) --- */
+  for (obj = world[IN_ROOM(ch)].contents; obj; obj = next_obj) {
+    next_obj = obj->next_content;
+
+    /* If you don't have ITEM_HIDDEN yet, add it to your extra flags table and OBJ flag names. */
+#ifdef ITEM_HIDDEN
+    if (OBJ_FLAGGED(obj, ITEM_HIDDEN)) {
+      /* Simple baseline DC for hidden objects; tune as desired or add per-object difficulty. */
+      int obj_dc = 12;
+      if (FIGHTING(ch)) obj_dc += 2;
+
+      if (total >= obj_dc) {
+        /* Reveal the object. */
+        REMOVE_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_HIDDEN);
+        ++found_objs;
+
+        act("You spot $p tucked out of sight.", FALSE, ch, obj, 0, TO_CHAR);
+        act("$n notices $p tucked out of sight.", FALSE, ch, obj, 0, TO_ROOM);
+      }
+    }
+#endif
+  }
+
+  if (!found_chars && !found_objs) {
+    send_to_char(ch, "You search carefully but don’t uncover anything hidden.\r\n");
+    gain_skill(ch, "perception", FALSE);
+  } else {
+    gain_skill(ch, "perception", TRUE);
+  }
+
+  /* Small action taxes do disincline players from spamming perception */
+  WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+  GET_MOVE(ch) -= 10;
 }
 
 ACMD(do_steal)
