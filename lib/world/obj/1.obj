@@ -246,4 +246,12 @@ A long piece of bones with a sharpened edge has been left here.~
 5 0 0 0 0 an 0 0 0 0 0 0 0
 1 6 11 0
 3 50 0 0 0
+#131
+backpack pack hide~
+a hide backpack~
+A backpack made of thick hide is lying here.~
+~
+15 0 0 0 0 ad 0 0 0 0 0 0 0
+75 0 0 0
+5 50 0 0 0
 $~

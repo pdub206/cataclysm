@@ -346,26 +346,27 @@
  which control the valid places you can wear a piece of equipment.
  For example, there are two neck positions on the player, and items
  only get the generic neck type. */
-#define WEAR_LIGHT      0  /**< Equipment Location Light */
-#define WEAR_FINGER_R   1  /**< Equipment Location Right Finger */
-#define WEAR_FINGER_L   2  /**< Equipment Location Left Finger */
-#define WEAR_NECK_1     3  /**< Equipment Location Neck #1 */
-#define WEAR_NECK_2     4  /**< Equipment Location Neck #2 */
-#define WEAR_BODY       5  /**< Equipment Location Body */
-#define WEAR_HEAD       6  /**< Equipment Location Head */
-#define WEAR_LEGS       7  /**< Equipment Location Legs */
-#define WEAR_FEET       8  /**< Equipment Location Feet */
-#define WEAR_HANDS      9  /**< Equipment Location Hands */
-#define WEAR_ARMS      10  /**< Equipment Location Arms */
-#define WEAR_SHIELD    11  /**< Equipment Location Shield */
-#define WEAR_ABOUT     12  /**< Equipment Location about body (like a cape)*/
-#define WEAR_WAIST     13  /**< Equipment Location Waist */
-#define WEAR_WRIST_R   14  /**< Equipment Location Right Wrist */
-#define WEAR_WRIST_L   15  /**< Equipment Location Left Wrist */
-#define WEAR_WIELD     16  /**< Equipment Location Weapon */
-#define WEAR_HOLD      17  /**< Equipment Location held in offhand */
+#define WEAR_LIGHT      0   /**< Equipment Location Light */
+#define WEAR_FINGER_R   1   /**< Equipment Location Right Finger */
+#define WEAR_FINGER_L   2   /**< Equipment Location Left Finger */
+#define WEAR_NECK_1     3   /**< Equipment Location Neck #1 */
+#define WEAR_NECK_2     4   /**< Equipment Location Neck #2 */
+#define WEAR_BACK       5   /**< Equipment Location back */
+#define WEAR_BODY       6   /**< Equipment Location Body */
+#define WEAR_HEAD       7   /**< Equipment Location Head */
+#define WEAR_LEGS       8   /**< Equipment Location Legs */
+#define WEAR_FEET       9   /**< Equipment Location Feet */
+#define WEAR_HANDS      10  /**< Equipment Location Hands */
+#define WEAR_ARMS       11  /**< Equipment Location Arms */
+#define WEAR_SHIELD     12  /**< Equipment Location Shield */
+#define WEAR_ABOUT      13  /**< Equipment Location about body (like a cape or cloak)*/
+#define WEAR_WAIST      14  /**< Equipment Location Waist */
+#define WEAR_WRIST_R    15  /**< Equipment Location Right Wrist */
+#define WEAR_WRIST_L    16  /**< Equipment Location Left Wrist */
+#define WEAR_WIELD      17  /**< Equipment Location Weapon */
+#define WEAR_HOLD       18  /**< Equipment Location held in offhand */
 /** Total number of available equipment lcoations */
-#define NUM_WEARS      18
+#define NUM_WEARS       19
 
 /* object-related defines */
 /* Item types: used by obj_data.obj_flags.type_flag */
@@ -396,23 +397,24 @@
 #define NUM_ITEM_TYPES    24
 
 /* Take/Wear flags: used by obj_data.obj_flags.wear_flags */
-#define ITEM_WEAR_TAKE      0   /**< Item can be taken */
-#define ITEM_WEAR_FINGER    1   /**< Item can be worn on finger */
-#define ITEM_WEAR_NECK      2   /**< Item can be worn around neck */
-#define ITEM_WEAR_BODY      3   /**< Item can be worn on body */
-#define ITEM_WEAR_HEAD      4   /**< Item can be worn on head */
-#define ITEM_WEAR_LEGS      5   /**< Item can be worn on legs */
-#define ITEM_WEAR_FEET      6   /**< Item can be worn on feet */
-#define ITEM_WEAR_HANDS	    7   /**< Item can be worn on hands	*/
-#define ITEM_WEAR_ARMS      8   /**< Item can be worn on arms */
-#define ITEM_WEAR_SHIELD    9   /**< Item can be used as a shield */
-#define ITEM_WEAR_ABOUT	   10   /**< Item can be worn about body */
-#define ITEM_WEAR_WAIST    11   /**< Item can be worn around waist */
-#define ITEM_WEAR_WRIST	   12   /**< Item can be worn on wrist */
-#define ITEM_WEAR_WIELD	   13   /**< Item can be wielded */
-#define ITEM_WEAR_HOLD     14   /**< Item can be held */
+#define ITEM_WEAR_TAKE      0    /**< Item can be taken */
+#define ITEM_WEAR_FINGER    1    /**< Item can be worn on finger */
+#define ITEM_WEAR_NECK      2    /**< Item can be worn around neck */
+#define ITEM_WEAR_BACK      3    /**< Item can be worn on back */
+#define ITEM_WEAR_BODY      4    /**< Item can be worn on body */
+#define ITEM_WEAR_HEAD      5    /**< Item can be worn on head */
+#define ITEM_WEAR_LEGS      6    /**< Item can be worn on legs */
+#define ITEM_WEAR_FEET      7    /**< Item can be worn on feet */
+#define ITEM_WEAR_HANDS	    8    /**< Item can be worn on hands	*/
+#define ITEM_WEAR_ARMS      9    /**< Item can be worn on arms */
+#define ITEM_WEAR_SHIELD    10   /**< Item can be used as a shield */
+#define ITEM_WEAR_ABOUT	    11   /**< Item can be worn about body */
+#define ITEM_WEAR_WAIST     12   /**< Item can be worn around waist */
+#define ITEM_WEAR_WRIST	    13   /**< Item can be worn on wrist */
+#define ITEM_WEAR_WIELD	    14   /**< Item can be wielded */
+#define ITEM_WEAR_HOLD      15   /**< Item can be held */
 /** Total number of item wears */
-#define NUM_ITEM_WEARS    15
+#define NUM_ITEM_WEARS    16
 
 /* Extra object flags: used by obj_data.obj_flags.extra_flags */
 #define ITEM_GLOW              0   /**< Item is glowing */

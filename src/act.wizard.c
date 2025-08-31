@@ -3978,6 +3978,7 @@ static struct zcheck_armor {
 } zarmor[] = {
   {ITEM_WEAR_FINGER, 10, "Ring"},
   {ITEM_WEAR_NECK,   10, "Necklace"},
+  {ITEM_WEAR_BACK,   10, "Backpack"},
   {ITEM_WEAR_BODY,   10, "Body armor"},
   {ITEM_WEAR_HEAD,   10, "Head gear"},
   {ITEM_WEAR_LEGS,   10, "Legwear"},
