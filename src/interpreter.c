@@ -297,6 +297,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "teleport" , "tele"    , POS_DEAD    , do_teleport , LVL_BUILDER, 0 },
   { "tedit"    , "tedit"   , POS_DEAD    , do_tedit    , LVL_GOD, 0 },  /* XXX: Oasisify */
   { "thaw"     , "thaw"    , POS_DEAD    , do_wizutil  , LVL_GRGOD, SCMD_THAW },
+  { "think"    , "thin"    , POS_RESTING , do_think    , 0, 0 },
   { "title"    , "title"   , POS_DEAD    , do_title    , LVL_IMMORT, 0 },
   { "time"     , "time"    , POS_DEAD    , do_time     , 0, 0 },
   { "toggle"   , "toggle"  , POS_DEAD    , do_toggle   , 0, 0 },

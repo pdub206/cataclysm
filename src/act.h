@@ -39,6 +39,7 @@ ACMD(do_spec_comm);
 ACMD(do_say);
 ACMD(do_ooc);
 ACMD(do_feel);
+ACMD(do_think);
 ACMD(do_page);
 ACMD(do_reply);
 ACMD(do_tell);

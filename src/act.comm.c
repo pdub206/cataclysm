@@ -198,6 +198,56 @@ ACMD(do_feel)
   send_to_char(ch, "You feel %s\r\n", rendered);
 }
 
+ACMD(do_think)
+{
+  char thought[MAX_INPUT_LENGTH];
+  char feeling[MAX_INPUT_LENGTH];
+  char *p = argument;          /* must be mutable for skip_spaces */
+  char *close;
+
+  thought[0] = '\0';
+  feeling[0] = '\0';
+
+  skip_spaces(&p);
+
+  if (!*p) {
+    send_to_char(ch, "Think what?\r\n");
+    return;
+  }
+
+  /* Optional leading "(...)" becomes the feeling block. */
+  if (*p == '(') {
+    close = strchr(p + 1, ')');
+    if (close) {
+      size_t len = (size_t)(close - (p + 1));
+      if (len >= sizeof(feeling)) len = sizeof(feeling) - 1;
+      strncpy(feeling, p + 1, len);
+      feeling[len] = '\0';
+
+      p = close + 1; /* move past ')' */
+      while (*p && isspace((unsigned char)*p)) p++; /* skip spaces after ) */
+    }
+    /* If there's no closing ')', we ignore and treat entire line as thought. */
+  }
+
+  if (!*p) {
+    send_to_char(ch, "Think what?\r\n");
+    return;
+  }
+
+  /* The rest is the thought text */
+  strlcpy(thought, p, sizeof(thought));
+  delete_doubledollar(thought);
+  if (*feeling) delete_doubledollar(feeling);
+
+  /* Output (two lines; second indented two spaces) */
+  if (*feeling) {
+    send_to_char(ch, "You think, feeling %s,\r\n  \"%s\"\r\n", feeling, thought);
+  } else {
+    send_to_char(ch, "You think,\r\n  \"%s\"\r\n", thought);
+  }
+}
+
 static void perform_tell(struct char_data *ch, struct char_data *vict, char *arg)
 {
   char buf[MAX_STRING_LENGTH], *msg;
