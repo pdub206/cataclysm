@@ -29,6 +29,10 @@ D1
 ~
 ~
 0 0 100
+D2
+~
+~
+0 0 136
 D3
 ~
 ~
@@ -555,6 +559,10 @@ Messenger's Mount~
 This unfinished room was created by Kinther.
 ~
 1 0 0 0 0 0
+D0
+~
+~
+0 0 101
 D1
 ~
 ~
@@ -673,8 +681,8 @@ D2
 0 0 143
 D3
 ~
-~
-0 0 159
+door~
+1 0 159
 S
 #145
 Side Street~
@@ -761,8 +769,8 @@ D1
 0 0 149
 D2
 ~
-~
-0 0 157
+door~
+1 0 157
 D3
 ~
 ~
@@ -793,8 +801,8 @@ D1
 0 0 151
 D2
 ~
-~
-0 0 156
+door~
+2 0 156
 D3
 ~
 ~
@@ -829,8 +837,8 @@ D2
 0 0 155
 D3
 ~
-~
-0 0 158
+door~
+2 0 158
 S
 #155
 Side Street~
@@ -853,8 +861,8 @@ This unfinished room was created by Kinther.
 1 0 0 0 0 0
 D0
 ~
-~
-0 0 152
+door~
+2 0 152
 S
 #157
 A Large Domicile~
@@ -863,8 +871,8 @@ This unfinished room was created by Kinther.
 1 0 0 0 0 0
 D0
 ~
-~
-0 0 150
+door~
+1 0 150
 S
 #158
 A Small Hovel~
@@ -873,8 +881,8 @@ This unfinished room was created by Kinther.
 1 0 0 0 0 0
 D1
 ~
-~
-0 0 154
+door~
+2 0 154
 S
 #159
 A Small Hovel~
@@ -883,8 +891,8 @@ This unfinished room was created by Kinther.
 1 0 0 0 0 0
 D1
 ~
-~
-0 0 144
+door~
+1 0 144
 S
 #160
 House Inika~

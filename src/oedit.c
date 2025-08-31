@@ -275,6 +275,8 @@ static void oedit_setup_new(struct descriptor_data *d)
   OLC_OBJ(d)->short_description = strdup("an unfinished object");
   SET_BIT_AR(GET_OBJ_WEAR(OLC_OBJ(d)), ITEM_WEAR_TAKE);
   OLC_VAL(d) = 0;
+  OLC_DIRTY(d) = 0;
+  OLC_VAL_SLOT(d) = -1;
   OLC_ITEM_TYPE(d) = OBJ_TRIGGER;
 
   SCRIPT(OLC_OBJ(d)) = NULL;
@@ -292,6 +294,8 @@ void oedit_setup_existing(struct descriptor_data *d, int real_num)
   /* Attach new object to player's descriptor. */
   OLC_OBJ(d) = obj;
   OLC_VAL(d) = 0;
+  OLC_DIRTY(d) = 0;
+  OLC_VAL_SLOT(d) = -1;
   OLC_ITEM_TYPE(d) = OBJ_TRIGGER;
   dg_olc_script_copy(d);
   /* The edited obj must not have a script. It will be assigned to the updated
@@ -722,7 +726,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
   case OEDIT_MAIN_MENU:
     switch (*arg) {
     case 'q': case 'Q':
-      if (OLC_VAL(d)) {
+      if (OLC_DIRTY(d)) {
         write_to_output(d, "Do you wish to save your changes? : ");
         OLC_MODE(d) = OEDIT_CONFIRM_SAVESTRING;
       } else
@@ -750,7 +754,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       }
       string_write(d, &OLC_OBJ(d)->action_description,
                    MAX_MESSAGE_LENGTH, 0, oldtext);
-      OLC_VAL(d) = 1;
+      OLC_DIRTY(d) = 1;
       break;
     case '5':
       oedit_disp_type_menu(d);
@@ -850,7 +854,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     if (OLC_OBJ(d)->name)
       free(OLC_OBJ(d)->name);
     OLC_OBJ(d)->name = str_udup(arg);
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);
     return;
@@ -863,7 +867,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     if (OLC_OBJ(d)->short_description)
       free(OLC_OBJ(d)->short_description);
     OLC_OBJ(d)->short_description = str_udup(arg);
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);
     return;
@@ -876,7 +880,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     if (OLC_OBJ(d)->description)
       free(OLC_OBJ(d)->description);
     OLC_OBJ(d)->description = str_udup(arg);
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);
     return;
@@ -890,7 +894,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       oldtext = strdup(OLC_OBJ(d)->action_description);
     }
     string_write(d, &OLC_OBJ(d)->action_description, MAX_MESSAGE_LENGTH, 0, oldtext);
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     return;
 
   case OEDIT_TYPE:
@@ -904,7 +908,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     for (int i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
       GET_OBJ_VAL(OLC_OBJ(d), i) = 0;
 
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);
     return;
@@ -922,6 +926,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     } else {
       /* Toggle: user picks 1..N, bit index is 0..N-1 */
       TOGGLE_BIT_AR(GET_OBJ_EXTRA(OLC_OBJ(d)), (number - 1));
+      OLC_DIRTY(d) = 1;
       oedit_disp_extra_menu(d);
       return;
     }
@@ -939,41 +944,42 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       return;
     } else {
       TOGGLE_BIT_AR(GET_OBJ_WEAR(OLC_OBJ(d)), (number - 1));
+      OLC_DIRTY(d) = 1;
       oedit_disp_wear_menu(d);
       return;
     }
 
   case OEDIT_WEIGHT:
     GET_OBJ_WEIGHT(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_WEIGHT);
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);
     return;
 
   case OEDIT_COST:
     GET_OBJ_COST(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_COST);
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);
     return;
 
   case OEDIT_COSTPERDAY:
     GET_OBJ_RENT(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_RENT);
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);
     return;
 
   case OEDIT_TIMER:
     GET_OBJ_TIMER(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_TIMER);
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);
     return;
 
   case OEDIT_LEVEL:
     GET_OBJ_LEVEL(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, LVL_IMPL);
-    OLC_VAL(d) = 1;
+    OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);
     return;
@@ -989,6 +995,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       if (number != AFF_CHARM) {
         TOGGLE_BIT_AR(GET_OBJ_AFFECT(OLC_OBJ(d)), number);
       }
+      OLC_DIRTY(d) = 1;
     }
     oedit_disp_perm_menu(d);
     return;
@@ -1001,7 +1008,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     } else {
       int i = atoi(arg) - 1;
       if (i >= 0 && i < NUM_OBJ_VAL_POSITIONS) {
-        OLC_VAL(d) = i;
+        OLC_VAL_SLOT(d) = i;
         const char **labels = get_val_labels(OLC_OBJ(d));
 
         if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_WEAPON && i == 2) {
@@ -1042,14 +1049,14 @@ void oedit_parse(struct descriptor_data *d, char *arg)
 
   case OEDIT_VALUE_X:
   {
-    int i = OLC_VAL(d);
+    int i = OLC_VAL_SLOT(d);
     int number = atoi(arg);
 
     /* --- Armor-specific semantics --- */
     if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_ARMOR) {
       if (i == VAL_ARMOR_STEALTH_DISADV /* 3 */) {
-        /* clamp to 0/1 */
         GET_OBJ_VAL(OLC_OBJ(d), i) = (number != 0) ? 1 : 0;
+        OLC_DIRTY(d) = 1;
         oedit_disp_values_menu(d);
         return;
       }
@@ -1060,6 +1067,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
           return; /* stay in OEDIT_VALUE_X for a valid number */
         }
         GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+        OLC_DIRTY(d) = 1;
         oedit_disp_values_menu(d);
         return;
       }
@@ -1072,6 +1080,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
         return;
       }
       GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+      OLC_DIRTY(d) = 1;
       oedit_disp_values_menu(d);
       return;
     }
@@ -1085,6 +1094,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
         return;
       }
       GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+      OLC_DIRTY(d) = 1;
       oedit_disp_values_menu(d);
       return;
     }
@@ -1096,6 +1106,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
         return;
       }
       GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+      OLC_DIRTY(d) = 1;
       oedit_disp_values_menu(d);
       return;
     }
@@ -1106,12 +1117,14 @@ void oedit_parse(struct descriptor_data *d, char *arg)
         return;
       }
       TOGGLE_BIT(GET_OBJ_VAL(OLC_OBJ(d), i), 1 << number);
+      OLC_DIRTY(d) = 1;
       oedit_disp_values_menu(d);
       return;
     }
 
     /* --- Default assignment for other slots/types --- */
     GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+    OLC_DIRTY(d) = 1;
     oedit_disp_values_menu(d);
     return;
   }
@@ -1147,12 +1160,14 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       }
       OLC_OBJ(d)->affected[OLC_VAL(d)].location = number - 1;
       write_to_output(d, "Modifier : ");
+      OLC_DIRTY(d) = 1;
       OLC_MODE(d) = OEDIT_APPLYMOD;
     }
     return;
 
   case OEDIT_APPLYMOD:
     OLC_OBJ(d)->affected[OLC_VAL(d)].modifier = atoi(arg);
+    OLC_DIRTY(d) = 1;
     oedit_disp_prompt_apply_menu(d);
     return;
 
@@ -1175,6 +1190,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
         REMOVE_FROM_LIST(OLC_DESC(d), OLC_OBJ(d)->ex_description, next);
         free(OLC_DESC(d));
         OLC_DESC(d) = NULL;
+        OLC_DIRTY(d) = 1;
       }
       break;
     case 1:
@@ -1190,7 +1206,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
         oldtext = strdup(OLC_DESC(d)->description);
       }
       string_write(d, &OLC_DESC(d)->description, MAX_MESSAGE_LENGTH, 0, oldtext);
-      OLC_VAL(d) = 1;
+      OLC_DIRTY(d) = 1;
       return;
     case 3:
       if (OLC_DESC(d)->keyword && OLC_DESC(d)->description) {
@@ -1284,7 +1300,6 @@ void oedit_parse(struct descriptor_data *d, char *arg)
 
   /* Only redisplay main menu if we are in main menu mode */
   if (OLC_MODE(d) == OEDIT_MAIN_MENU) {
-    OLC_VAL(d) = 1;
     oedit_disp_menu(d);
   }
 }
@@ -1293,9 +1308,11 @@ void oedit_string_cleanup(struct descriptor_data *d, int terminator)
 {
   switch (OLC_MODE(d)) {
   case OEDIT_ACTDESC:
+    OLC_DIRTY(d) = 1;
     oedit_disp_menu(d);
     break;
   case OEDIT_EXTRADESC_DESCRIPTION:
+    OLC_DIRTY(d) = 1;
     oedit_disp_extradesc_menu(d);
     break;
   }

@@ -167,11 +167,83 @@ A belt made of black cloth lies here.~
 10 0 0 0
 1 25 0 0 0
 #121
-unfinished object~
+small bag~
 a small bag~
-An unfinished object is lying here.~
+A small bag made of cloth lies here.~
 ~
-0 0 0 0 0 a 0 0 0 0 0 0 0
-0 0 0 0
-0 0 0 0 0
+15 0 0 0 0 a 0 0 0 0 0 0 0
+15 0 0 0
+1 25 0 0 0
+#122
+large bag~
+a large bag~
+A large bag made of cloth is lying here.~
+~
+15 0 0 0 0 a 0 0 0 0 0 0 0
+50 0 0 0
+1 50 0 0 0
+#123
+pair boots~
+a pair of boots~
+A pair of simple leather boots are here.~
+~
+9 0 0 0 0 ag 0 0 0 0 0 0 0
+1 1 0 0
+1 25 0 0 0
+#124
+pair thick leather boots~
+a pair of thick leather boots~
+Boots made of thick leather have been left here.~
+~
+9 0 0 0 0 ag 0 0 0 0 0 0 0
+2 2 0 0
+5 50 0 0 0
+#125
+bone shortsword sword~
+a bone shortsword~
+Made of bone, a shortsword has been left here.~
+~
+5 0 0 0 0 ano 0 0 0 0 0 0 0
+1 6 11 0
+5 50 0 0 0
+#126
+bone dagger~
+a bone dagger~
+A dagger made of bone lies here abandoned.~
+~
+5 0 0 0 0 ano 0 0 0 0 0 0 0
+1 4 11 0
+2 25 0 0 0
+#127
+bone longsword sword~
+a bone longsword~
+Long and slender, a sword lies here.~
+~
+5 0 0 0 0 an 0 0 0 0 0 0 0
+1 8 3 0
+8 100 0 0 0
+#128
+bone club~
+a bone club~
+Made of bone, a club is lying here.~
+~
+5 0 0 0 0 ano 0 0 0 0 0 0 0
+1 4 5 0
+5 50 0 0 0
+#129
+bone javelin~
+a bone javelin~
+A long, bone javelin has been left here.~
+~
+5 0 0 0 0 an 0 0 0 0 0 0 0
+1 6 11 0
+5 50 0 0 0
+#130
+bone spear~
+a bone spear~
+A long piece of bones with a sharpened edge has been left here.~
+~
+5 0 0 0 0 an 0 0 0 0 0 0 0
+1 6 11 0
+3 50 0 0 0
 $~
