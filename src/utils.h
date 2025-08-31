@@ -1101,4 +1101,52 @@ do                                                              \
 /** What is the minimum level character to put on the wizlist? */
 #define CONFIG_MIN_WIZLIST_LEV  config_info.autowiz.min_wizlist_lev
 
+/* Safe skill fetch that never touches CHECK_PLAYER_SPECIAL */
+static inline int GET_SKILL_SAFE(struct char_data *ch, int i) {
+  if (IS_NPC(ch) || !ch->player_specials) return 0;
+  return ch->player_specials->saved.skills[i];
+}
+
+/* PCs: use spell skill % -> proficiency ladder.
+   NPCs: temporary flat +2 (single mortal level); revisit when NPC skills land. */
+static inline int GET_CASTER_PROF_FOR_SPELL(struct char_data *ch, int spellnum) {
+  if (IS_NPC(ch))
+    return 2;  /* TODO: replace with NPC skill-based proficiency later */
+  return GET_PROFICIENCY(GET_SKILL_SAFE(ch, spellnum));
+}
+
+/* Similar to 5e mods */
+static inline int GET_SPELL_ABILITY_MOD(struct char_data *ch) {
+  switch (GET_CLASS(ch)) {
+    case CLASS_MAGIC_USER:
+      return GET_ABILITY_MOD(GET_INT(ch));
+    case CLASS_CLERIC:
+      return GET_ABILITY_MOD(GET_WIS(ch));
+    case CLASS_DRUID:
+      return GET_ABILITY_MOD(GET_WIS(ch));
+    case CLASS_RANGER:   
+      return GET_ABILITY_MOD(GET_WIS(ch));
+    case CLASS_BARD:
+      return GET_ABILITY_MOD(GET_CHA(ch));
+    default:
+      return GET_ABILITY_MOD(GET_INT(ch));
+  }
+}
+
+/* Can expand on this later with any bonuses from items eg. rings/amulets */
+static inline int GET_SPELL_BONUS_MOD(struct char_data *ch, int spellnum) {
+  (void)ch; (void)spellnum;
+  return 0;
+}
+
+/* Spell Save DC helper */
+static inline int GET_SPELL_SAVE_DC(struct char_data *ch, int spellnum, int misc_dc_bonus)
+{
+  int prof = GET_CASTER_PROF_FOR_SPELL(ch, spellnum);
+  int abil = GET_SPELL_ABILITY_MOD(ch);
+  int dc   = 8 + prof + abil + misc_dc_bonus + GET_SPELL_BONUS_MOD(ch, spellnum);
+  if (dc < 1) dc = 1;
+  return dc;
+}
+
 #endif /* _UTILS_H_ */
