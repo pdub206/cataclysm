@@ -21,6 +21,9 @@
 #include "dg_scripts.h"
 #include "act.h"
 #include "modify.h"
+#include <ctype.h>
+#include <string.h>
+#include <strings.h> /* for strncasecmp on POSIX */
 
 static bool legal_communication(char * arg);
 
@@ -35,6 +38,76 @@ static bool legal_communication(char * arg)
     arg++;
   }
   return TRUE;
+}
+
+static int is_boundary_char(char c) {
+  return c == '\0' || isspace((unsigned char)c) || ispunct((unsigned char)c);
+}
+
+/* Convert first-person phrases to second-person for self-facing messages. */
+static void to_second_person_self(const char *in, char *out, size_t outlen) {
+  struct { const char *from; const char *to; } map[] = {
+    /* Longer patterns first to avoid partial matches */
+    {"i'm",   "you're"},
+    {"i’ve",  "you’ve"},
+    {"i've",  "you've"},
+    {"i’d",   "you’d"},
+    {"i'd",   "you'd"},
+    {"i’ll",  "you’ll"},
+    {"i'll",  "you'll"},
+    {"myself","yourself"},
+    {"mine",  "yours"},
+    {"my",    "your"},
+    {"me",    "you"},
+    {"i",     "you"}
+  };
+  const size_t nmap = sizeof(map)/sizeof(map[0]);
+
+  size_t i = 0, o = 0;
+  out[0] = '\0';
+
+  while (in[i] && o + 1 < outlen) {
+    int replaced = 0;
+
+    if (i == 0 || is_boundary_char(in[i - 1])) {
+      for (size_t k = 0; k < nmap; k++) {
+        size_t lf = strlen(map[k].from);
+        if (strncasecmp(in + i, map[k].from, lf) == 0 && is_boundary_char(in[i + lf])) {
+          /* write replacement */
+          size_t lt = strlen(map[k].to);
+          if (o + lt < outlen) {
+            memcpy(out + o, map[k].to, lt);
+            o += lt;
+            i += lf;
+            replaced = 1;
+          }
+          break;
+        }
+      }
+    }
+
+    if (!replaced) {
+      out[o++] = in[i++];
+    }
+  }
+
+  /* NUL-terminate */
+  if (o >= outlen) o = outlen - 1;
+  out[o] = '\0';
+
+  /* Trim trailing spaces */
+  while (o && isspace((unsigned char)out[o - 1])) out[--o] = '\0';
+
+  /* Ensure trailing sentence punctuation */
+  if (o) {
+    char last = out[o - 1];
+    if (!(last == '.' || last == '!' || last == '?')) {
+      if (o + 1 < outlen) {
+        out[o++] = '.';
+        out[o] = '\0';
+      }
+    }
+  }
 }
 
 ACMD(do_say)
@@ -103,6 +176,26 @@ ACMD(do_ooc)
   /* Trigger check. */
   speech_mtrigger(ch, argument);
   speech_wtrigger(ch, argument);
+}
+
+ACMD(do_feel)
+{
+  char raw[MAX_INPUT_LENGTH];
+  char rendered[MAX_INPUT_LENGTH * 2];
+
+  skip_spaces(&argument);
+
+  if (!*argument) {
+    send_to_char(ch, "Feel what?\r\n");
+    return;
+  }
+
+  /* Keep user casing; just copy and convert perspective */
+  strlcpy(raw, argument, sizeof(raw));
+  to_second_person_self(raw, rendered, sizeof(rendered));
+
+  /* Self-only echo */
+  send_to_char(ch, "You feel %s\r\n", rendered);
 }
 
 static void perform_tell(struct char_data *ch, struct char_data *vict, char *arg)

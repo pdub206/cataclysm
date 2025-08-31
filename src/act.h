@@ -38,6 +38,7 @@ ACMD(do_spec_comm);
 /* functions without subcommands */
 ACMD(do_say);
 ACMD(do_ooc);
+ACMD(do_feel);
 ACMD(do_page);
 ACMD(do_reply);
 ACMD(do_tell);

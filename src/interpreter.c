@@ -142,6 +142,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "examine"  , "exa"     , POS_SITTING , do_examine  , 0, 0 },
   { "export"   , "export"  , POS_DEAD    , do_export_zone, LVL_IMPL, 0 },
 
+  { "feel"     , "fee"     , POS_SLEEPING, do_feel    , 0, 0 },
   { "force"    , "force"   , POS_SLEEPING, do_force    , LVL_GOD, 0 },
   { "fill"     , "fil"     , POS_STANDING, do_pour     , 0, SCMD_FILL },
   { "file"     , "file"    , POS_SLEEPING, do_file     , LVL_GOD, 0 },
