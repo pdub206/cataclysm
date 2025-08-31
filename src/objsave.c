@@ -55,9 +55,10 @@ static int objsave_write_rentcode(FILE *fl, int rentcode, int cost_per_day, stru
 int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
 {
   int i;
-  char buf1[MAX_STRING_LENGTH +1];
+  char buf1[MAX_STRING_LENGTH + 1];
   struct obj_data *temp = NULL;
 
+  /* Build a prototype baseline to diff against so we only emit changed fields */
   if (GET_OBJ_VNUM(obj) != NOTHING)
     temp = read_object(GET_OBJ_VNUM(obj), VIRTUAL);
   else {
@@ -71,11 +72,22 @@ int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
   } else
     *buf1 = 0;
 
+  /* Header and placement */
   fprintf(fp, "#%d\n", GET_OBJ_VNUM(obj));
-  if (locate)
+
+  /* Top-level worn slots are positive (1..NUM_WEARS); inventory is 0.
+   * Children use negative numbers from Crash_save recursion (…,-1,-2,…) — we map that to Nest. */
+  if (locate > 0)
     fprintf(fp, "Loc : %d\n", locate);
 
-  /* Save all object values */
+  if (locate < 0) {
+    int nest = -locate;            /* e.g. -1 => Nest:1, -2 => Nest:2, etc. */
+    fprintf(fp, "Nest: %d\n", nest);
+  } else {
+    fprintf(fp, "Nest: %d\n", 0);  /* top-level object (inventory or worn) */
+  }
+
+  /* Save all object values (diffed against proto) */
   {
     bool diff = FALSE;
     for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
@@ -92,11 +104,13 @@ int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
     }
   }
 
+  /* Extra flags (array words) */
   if (GET_OBJ_EXTRA(obj) != GET_OBJ_EXTRA(temp))
     fprintf(fp, "Flag: %d %d %d %d\n",
             GET_OBJ_EXTRA(obj)[0], GET_OBJ_EXTRA(obj)[1],
             GET_OBJ_EXTRA(obj)[2], GET_OBJ_EXTRA(obj)[3]);
 
+  /* Names/descriptions */
   if (obj->name && (!temp->name || strcmp(obj->name, temp->name)))
     fprintf(fp, "Name: %s\n", obj->name);
   if (obj->short_description && (!temp->short_description ||
@@ -109,6 +123,7 @@ int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
       strcmp(obj->action_description, temp->action_description)))
     fprintf(fp, "ADes:\n%s~\n", buf1);
 
+  /* Core fields */
   if (GET_OBJ_TYPE(obj) != GET_OBJ_TYPE(temp))
     fprintf(fp, "Type: %d\n", GET_OBJ_TYPE(obj));
   if (GET_OBJ_WEIGHT(obj) != GET_OBJ_WEIGHT(temp))
@@ -117,6 +132,8 @@ int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
     fprintf(fp, "Cost: %d\n", GET_OBJ_COST(obj));
   if (GET_OBJ_RENT(obj) != GET_OBJ_RENT(temp))
     fprintf(fp, "Rent: %d\n", GET_OBJ_RENT(obj));
+
+  /* Permanent affects (array words) */
   if (GET_OBJ_AFFECT(obj)[0] != GET_OBJ_AFFECT(temp)[0] ||
       GET_OBJ_AFFECT(obj)[1] != GET_OBJ_AFFECT(temp)[1] ||
       GET_OBJ_AFFECT(obj)[2] != GET_OBJ_AFFECT(temp)[2] ||
@@ -124,6 +141,8 @@ int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
     fprintf(fp, "Perm: %d %d %d %d\n",
             GET_OBJ_AFFECT(obj)[0], GET_OBJ_AFFECT(obj)[1],
             GET_OBJ_AFFECT(obj)[2], GET_OBJ_AFFECT(obj)[3]);
+
+  /* Wear flags (array words) */
   if (GET_OBJ_WEAR(obj)[0] != GET_OBJ_WEAR(temp)[0] ||
       GET_OBJ_WEAR(obj)[1] != GET_OBJ_WEAR(temp)[1] ||
       GET_OBJ_WEAR(obj)[2] != GET_OBJ_WEAR(temp)[2] ||
@@ -132,7 +151,7 @@ int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
             GET_OBJ_WEAR(obj)[0], GET_OBJ_WEAR(obj)[1],
             GET_OBJ_WEAR(obj)[2], GET_OBJ_WEAR(obj)[3]);
 
-  /* save extra descs, applies, scripts, etc. unchanged… */
+  /* (If you also persist applies, extra descs, scripts, etc., keep that code here unchanged) */
 
   return 1;
 }
@@ -958,40 +977,211 @@ void Crash_save_all(void)
 /* Load all objects from file into memory. Updated to load NUM_OBJ_VAL_POSITIONS values. */
 obj_save_data *objsave_parse_objects(FILE *fl)
 {
-  char line[MAX_STRING_LENGTH], tag[6];
-  int num, i;
+  char line[MAX_STRING_LENGTH];
+
+  obj_save_data *head = NULL, *tail = NULL;
+
+  /* State for the object we’re currently assembling */
   struct obj_data *temp = NULL;
-  obj_save_data *head = NULL;
+  int pending_locate = 0;  /* 0 = inventory, 1..NUM_WEARS = worn slot */
+  int pending_nest   = 0;  /* 0 = top-level; >0 = inside container at level-1 */
+
+  /* --- helpers (GCC nested functions OK in tbaMUD build) ---------------- */
+
+  /* append current object to the result list with proper locate */
+  void commit_current(void) {
+    if (!temp) return;
+
+    /* sanitize top-level locate range only; children will be negative later */
+    int loc = pending_locate;
+    if (pending_nest <= 0) {
+      if (loc < 0 || loc > NUM_WEARS) {
+        mudlog(NRM, LVL_IMMORT, TRUE,
+               "RENT-LOAD: bad locate %d for vnum %d; defaulting to inventory.",
+               loc, GET_OBJ_VNUM(temp));
+        loc = 0;
+      }
+    }
+
+    /* convert Nest>0 into negative locate for handle_obj()/cont_row */
+    int effective_loc = (pending_nest > 0) ? -pending_nest : loc;
+
+    obj_save_data *node = NULL;
+    CREATE(node, obj_save_data, 1);
+    node->obj    = temp;
+    node->locate = effective_loc;
+    node->next   = NULL;
+
+    if (!head) head = node, tail = node;
+    else tail->next = node, tail = node;
+
+    temp = NULL;
+    pending_locate = 0;
+    pending_nest   = 0;
+  }
+
+  /* split a line into normalized tag (no colon) and payload pointer */
+  void split_tag_line(const char *src, char tag_out[6], const char **payload_out) {
+    const char *s = src;
+
+    while (*s && isspace((unsigned char)*s)) s++;        /* skip leading ws */
+
+    const char *te = s;
+    while (*te && !isspace((unsigned char)*te) && *te != ':') te++;
+
+    size_t tlen = (size_t)(te - s);
+    if (tlen > 5) tlen = 5;
+    memcpy(tag_out, s, tlen);
+    tag_out[tlen] = '\0';
+
+    const char *p = te;
+    while (*p && isspace((unsigned char)*p)) p++;
+    if (*p == ':') {
+      p++;
+      while (*p && isspace((unsigned char)*p)) p++;
+    }
+    *payload_out = p;
+  }
+
+  /* ---------------------------------------------------------------------- */
 
   while (get_line(fl, line)) {
+    if (!*line) continue;
+
+    /* New object header: "#<vnum>" (commit any previous one first) */
     if (*line == '#') {
-      /* handle vnum… */
+      if (temp) commit_current();
+
+      long vnum = -1L;
+      vnum = strtol(line + 1, NULL, 10);
+
+      if (vnum <= 0) {
+        mudlog(NRM, LVL_IMMORT, TRUE, "RENT-LOAD: bad vnum header: '%s'", line);
+        temp = NULL;
+        pending_locate = 0;
+        pending_nest   = 0;
+        continue;
+      }
+
+      /* Instantiate from prototype if available, else create a blank */
+      int rnum = real_object((obj_vnum)vnum);
+      if (rnum >= 0) {
+        temp = read_object(rnum, REAL);
+      } else {
+        temp = create_obj();
+        /* Do NOT assign GET_OBJ_VNUM(temp); item_number derives vnum. */
+        if (!temp->name)              temp->name = strdup("object");
+        if (!temp->short_description) temp->short_description = strdup("an object");
+        if (!temp->description)       temp->description = strdup("An object lies here.");
+      }
+
+      pending_locate = 0;
+      pending_nest   = 0;
       continue;
     }
 
-    sscanf(line, "%s %d", tag, &num);
+    /* Normal data line: TAG [ : ] payload */
+    char tag[6];
+    const char *payload = NULL;
+    split_tag_line(line, tag, &payload);
 
-    switch (*tag) {
-      case 'V':
-        if (!strcmp(tag, "Vals")) {
-          char *p = line;
-          while (!isspace(*p) && *p) p++; /* skip "Vals" */
-          for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
-            if (*p)
-              GET_OBJ_VAL(temp, i) = strtol(p, &p, 10);
-            else
-              GET_OBJ_VAL(temp, i) = 0;
-          }
-        }
-        break;
+    if (!*tag) continue;
+    if (!temp) {
+      mudlog(NRM, LVL_IMMORT, TRUE, "RENT-LOAD: data before header ignored: '%s'", line);
+      continue;
+    }
 
-      /* handle other tags (Wght, Cost, Name, etc.) same as before */
+    if (!strcmp(tag, "Loc")) {
+      pending_locate = (int)strtol(payload, NULL, 10);
+    }
+    else if (!strcmp(tag, "Nest")) {
+      pending_nest = (int)strtol(payload, NULL, 10);
+      if (pending_nest < 0) pending_nest = 0;
+      if (pending_nest > MAX_BAG_ROWS) {
+        mudlog(NRM, LVL_IMMORT, TRUE,
+               "RENT-LOAD: nest level %d too deep; clamping to %d.",
+               pending_nest, MAX_BAG_ROWS);
+        pending_nest = MAX_BAG_ROWS;
+      }
+    }
+    else if (!strcmp(tag, "Vals")) {
+      const char *p = payload;
+      for (int i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
+        if (!*p) { GET_OBJ_VAL(temp, i) = 0; continue; }
+        GET_OBJ_VAL(temp, i) = (int)strtol(p, (char **)&p, 10);
+      }
+    }
+    else if (!strcmp(tag, "Wght")) {
+      GET_OBJ_WEIGHT(temp) = (int)strtol(payload, NULL, 10);
+    }
+    else if (!strcmp(tag, "Cost")) {
+      GET_OBJ_COST(temp) = (int)strtol(payload, NULL, 10);
+    }
+    else if (!strcmp(tag, "Rent")) {
+      GET_OBJ_RENT(temp) = (int)strtol(payload, NULL, 10);
+    }
+    else if (!strcmp(tag, "Type")) {
+      GET_OBJ_TYPE(temp) = (int)strtol(payload, NULL, 10);
+    }
+    else if (!strcmp(tag, "Wear")) {
+      unsigned long words[4] = {0,0,0,0};
+      const char *p = payload;
+      for (int i = 0; i < 4 && *p; i++) words[i] = strtoul(p, (char **)&p, 10);
 
-      default:
-        log("Unknown tag in rentfile: %s", tag);
-        break;
+#if defined(TW_ARRAY_MAX) && defined(GET_OBJ_WEAR_AR)
+      for (int i = 0; i < 4; i++) {
+        if (i < TW_ARRAY_MAX) GET_OBJ_WEAR_AR(temp, i) = (bitvector_t)words[i];
+        else if (words[i])
+          mudlog(NRM, LVL_IMMORT, TRUE,
+                 "RENT-LOAD: Wear word %d (%lu) truncated (TW_ARRAY_MAX=%d).",
+                 i, words[i], TW_ARRAY_MAX);
+      }
+#elif defined(GET_OBJ_WEAR_AR)
+      for (int i = 0; i < 4; i++) GET_OBJ_WEAR_AR(temp, i) = (bitvector_t)words[i];
+#endif
+    }
+    else if (!strcmp(tag, "Flag")) {
+      unsigned long words[4] = {0,0,0,0};
+      const char *p = payload;
+      for (int i = 0; i < 4 && *p; i++) words[i] = strtoul(p, (char **)&p, 10);
+
+#if defined(EF_ARRAY_MAX) && defined(GET_OBJ_EXTRA_AR)
+      for (int i = 0; i < 4; i++) {
+        if (i < EF_ARRAY_MAX) GET_OBJ_EXTRA_AR(temp, i) = (bitvector_t)words[i];
+        else if (words[i])
+          mudlog(NRM, LVL_IMMORT, TRUE,
+                 "RENT-LOAD: Extra word %d (%lu) truncated (EF_ARRAY_MAX=%d).",
+                 i, words[i], EF_ARRAY_MAX);
+      }
+#elif defined(GET_OBJ_EXTRA_AR)
+      for (int i = 0; i < 4; i++) GET_OBJ_EXTRA_AR(temp, i) = (bitvector_t)words[i];
+#endif
+    }
+    else if (!strcmp(tag, "Name")) {
+      if (temp->name) free(temp->name);
+      temp->name = *payload ? strdup(payload) : strdup("object");
+    }
+    else if (!strcmp(tag, "Shrt")) {
+      if (temp->short_description) free(temp->short_description);
+      temp->short_description = *payload ? strdup(payload) : strdup("an object");
+    }
+    else if (!strcmp(tag, "Desc")) {
+      if (temp->description) free(temp->description);
+      temp->description = *payload ? strdup(payload) : strdup("An object lies here.");
+    }
+    else if (!strcmp(tag, "ADes")) {
+      if (temp->action_description) free(temp->action_description);
+      temp->action_description = *payload ? strdup(payload) : NULL;
+    }
+    else if (!strcmp(tag, "End")) {
+      commit_current();
+    }
+    else {
+      mudlog(NRM, LVL_IMMORT, TRUE, "RENT-LOAD: unknown tag '%s'", tag);
     }
   }
+
+  if (temp) commit_current();
 
   return head;
 }
