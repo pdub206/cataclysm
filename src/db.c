@@ -1862,14 +1862,53 @@ void parse_mobile(FILE *mob_f, int nr)
     exit(1);
   }
 
-  /* DG triggers -- script info follows mob S/E section */
   letter = fread_letter(mob_f);
+  while (letter == 'L') {
+    int wpos = -1, vnum = -1, qty = 1;
+    /* read rest of the line AFTER the leading 'L' */
+    if (!get_line(mob_f, line)) {
+      log("SYSERR: Unexpected EOF while reading 'L' line in mob #%d.", nr);
+      break;
+    }
+    /* parse "<wear_pos> <obj_vnum> [qty]" from the line buffer */
+    int nread = sscanf(line, "%d %d %d", &wpos, &vnum, &qty);
+    if (nread < 2) {
+      log("SYSERR: Bad 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
+    } else {
+      if (qty < 1) qty = 1;
+      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (sh_int)wpos, qty);
+    }
+    /* look ahead to see if there is another 'L' */
+    letter = fread_letter(mob_f);
+  }
   ungetc(letter, mob_f);
-  while (letter=='T') {
+
+  /* ---- DG triggers: script info follows mob S/E section ---- */
+  letter = fread_letter(mob_f);
+  while (letter == 'T') {
     dg_read_trigger(mob_f, &mob_proto[i], MOB_TRIGGER);
     letter = fread_letter(mob_f);
-    ungetc(letter, mob_f);
   }
+  ungetc(letter, mob_f);
+
+  /* ---- And allow loadout lines AFTER triggers, too ---- */
+  letter = fread_letter(mob_f);
+  while (letter == 'L') {
+    int wpos = -1, vnum = -1, qty = 1;
+    if (!get_line(mob_f, line)) {
+      log("SYSERR: Unexpected EOF while reading post-trigger 'L' line in mob #%d.", nr);
+      break;
+    }
+    int nread = sscanf(line, "%d %d %d", &wpos, &vnum, &qty);
+    if (nread < 2) {
+      log("SYSERR: Bad post-trigger 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
+    } else {
+      if (qty < 1) qty = 1;
+      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (sh_int)wpos, qty);
+    }
+    letter = fread_letter(mob_f);
+  }
+  ungetc(letter, mob_f);
 
   mob_proto[i].aff_abils = mob_proto[i].real_abils;
 
@@ -2419,6 +2458,88 @@ void new_mobile_data(struct char_data *ch)
   ch->group    = NULL;
 }
 
+/* ========== Mob Loadout Auto-Equip ========== */
+static int find_alt_slot_same_family(struct char_data *ch, int intended_pos);
+
+/* Equip items the prototype says to wear, in those exact slots when possible. */
+void equip_mob_from_loadout(struct char_data *mob)
+{
+  if (!mob || !IS_NPC(mob)) return;
+
+  mob_rnum rnum = GET_MOB_RNUM(mob);
+  if (rnum < 0) return;
+
+  const struct mob_loadout *e = mob_proto[rnum].proto_loadout;
+  if (!e) return;
+
+  for (; e; e = e->next) {
+    int qty = (e->quantity > 0) ? e->quantity : 1;
+
+    for (int n = 0; n < qty; n++) {
+      struct obj_data *obj = read_object(e->vnum, VIRTUAL);
+      if (!obj) {
+        log("SYSERR: equip_mob_from_loadout: bad obj vnum %d on mob %d",
+            e->vnum, GET_MOB_VNUM(mob));
+        continue;
+      }
+
+      /* Inventory-only request */
+      if (e->wear_pos < 0) {
+        obj_to_char(obj, mob);
+        continue;
+      }
+
+      /* If the intended slot is free, place it there. We trust the saved slot. */
+      if (e->wear_pos >= 0 && e->wear_pos < NUM_WEARS && GET_EQ(mob, e->wear_pos) == NULL) {
+
+#ifdef STRICT_WEAR_CHECK
+        /* Optional strict flag check (may be mismatched in customized codebases). */
+        if (!invalid_align(mob, obj) /* example gate, add yours as needed */) {
+          equip_char(mob, obj, e->wear_pos);
+          continue;
+        }
+        /* If strict check fails, try alt or inventory below. */
+#else
+        equip_char(mob, obj, e->wear_pos);
+        continue;
+#endif
+      }
+
+      /* Try the mirrored slot for finger/neck/wrist pairs if intended is occupied. */
+      {
+        int alt = find_alt_slot_same_family(mob, e->wear_pos);
+        if (alt >= 0 && GET_EQ(mob, alt) == NULL) {
+#ifdef STRICT_WEAR_CHECK
+          if (!invalid_align(mob, obj)) {
+            equip_char(mob, obj, alt);
+            continue;
+          }
+#else
+          equip_char(mob, obj, alt);
+          continue;
+#endif
+        }
+      }
+
+      /* Couldn’t place it — keep in inventory. */
+      obj_to_char(obj, mob);
+    }
+  }
+}
+
+/* Minimal “same family” alternates for symmetrical pairs. Extend if you have more. */
+static int find_alt_slot_same_family(struct char_data *ch, int intended_pos)
+{
+  switch (intended_pos) {
+    case WEAR_FINGER_R: return WEAR_FINGER_L;
+    case WEAR_FINGER_L: return WEAR_FINGER_R;
+    case WEAR_NECK_1:   return WEAR_NECK_2;
+    case WEAR_NECK_2:   return WEAR_NECK_1;
+    case WEAR_WRIST_R:  return WEAR_WRIST_L;
+    case WEAR_WRIST_L:  return WEAR_WRIST_R;
+    default:            return -1;
+  }
+}
 
 /* create a new mobile from a prototype */
 struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
@@ -2438,6 +2559,7 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   clear_char(mob);
  
   *mob = mob_proto[i];
+  mob->proto_loadout = NULL; /* Instances should not directly point at prototype’s loadout list */
   mob->next = character_list;
   character_list = mob;
   
@@ -2460,6 +2582,9 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   mob_index[i].number++;
 
   mob->script_id = 0;	// this is set later by char_script_id
+
+  /* Equip/load items from prototype loadout before scripts fire */
+  equip_mob_from_loadout(mob);
 
   copy_proto_script(&mob_proto[i], mob, MOB_TRIGGER);
   assign_triggers(mob, MOB_TRIGGER);

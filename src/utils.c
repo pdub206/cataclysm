@@ -1754,3 +1754,38 @@ int GET_SITUATIONAL_AC(struct char_data *ch)
 int compute_armor_class_asc(struct char_data *ch) {
   return compute_ascending_ac(ch);
 }
+
+/* NPC loadout helpers */
+void loadout_free_list(struct mob_loadout **head) {
+  struct mob_loadout *n, *p = *head;
+  while (p) { n = p->next; free(p); p = n; }
+  *head = NULL;
+}
+
+void loadout_add_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty) {
+  struct mob_loadout *e = NULL;
+  if (qty < 1) qty = 1;
+  CREATE(e, struct mob_loadout, 1);
+  e->vnum = vnum;
+  e->wear_pos = wear_pos;
+  e->quantity = qty;
+  e->next = NULL;
+  /* push-front for O(1); order doesn’t matter yet */
+  e->next = *head;
+  *head = e;
+}
+
+struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src) {
+  struct mob_loadout *head = NULL, *tail = NULL;
+  for (const struct mob_loadout *p = src; p; p = p->next) {
+    struct mob_loadout *n;
+    CREATE(n, struct mob_loadout, 1);
+    n->vnum = p->vnum;
+    n->wear_pos = p->wear_pos;
+    n->quantity = p->quantity;
+    n->next = NULL;
+    if (!head) head = tail = n;
+    else { tail->next = n; tail = n; }
+  }
+  return head;
+}

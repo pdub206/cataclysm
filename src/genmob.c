@@ -380,9 +380,9 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
 	ddesc, STRING_TERMINATOR
   );
 
-  if(n < MAX_STRING_LENGTH) {
+  if (n < MAX_STRING_LENGTH) {
     fprintf(fd, "%s", convert_from_tabs(buf));
-  
+
     fprintf(fd, "%d %d %d %d %d %d %d %d %d E\n"
         "%d %d %d %dd%d+%d %dd%d+%d\n",
         MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
@@ -393,29 +393,38 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
         GET_LEVEL(mob), 20 - GET_HITROLL(mob), GET_AC(mob) / 10, GET_HIT(mob),
         GET_MANA(mob), GET_MOVE(mob), GET_NDD(mob), GET_SDD(mob),
         GET_DAMROLL(mob));
-  
-    fprintf(fd, 	"%d %d\n"
+
+    fprintf(fd, "%d %d\n"
       "%d %d %d\n",
       GET_GOLD(mob), GET_EXP(mob),
       GET_POS(mob), GET_DEFAULT_POS(mob), GET_SEX(mob)
     );
-  
+
+    /* Write any E-specs */
     if (write_mobile_espec(mvnum, mob, fd) < 0)
       log("SYSERR: GenOLC: Error writing E-specs for mobile #%d.", mvnum);
-  
+
+    /* --- Persist prototype loadout lines (one per entry) --- */
+    for (struct mob_loadout *e = mob->proto_loadout; e; e = e->next) {
+      fprintf(fd, "L %d %d %d\n",
+              (int)e->wear_pos,
+              (int)e->vnum,
+              MAX(1, e->quantity));
+    }
+
+    /* DG scripts after loadout lines */
     script_save_to_disk(fd, mob, MOB_TRIGGER);
-  
-  
-  #if CONFIG_GENOLC_MOBPROG
+
+#if CONFIG_GENOLC_MOBPROG
     if (write_mobile_mobprog(mvnum, mob, fd) < 0)
       log("SYSERR: GenOLC: Error writing MobProgs for mobile #%d.", mvnum);
-  #endif
+#endif
   } else {
-    mudlog(BRF,LVL_BUILDER,TRUE,
+    mudlog(BRF, LVL_BUILDER, TRUE,
            "SYSERR: Could not save mobile #%d due to size (%d > maximum of %d)",
            mvnum, n, MAX_STRING_LENGTH);
   }
-  
+
   return TRUE;
 }
 

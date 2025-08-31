@@ -3,7 +3,7 @@ padded armor~
 some padded armor~
 Some padded armor has been discarded here.~
 ~
-9 0 0 0 0 ad 0 0 0 0 0 0 0
+9 0 0 0 0 ae 0 0 0 0 0 0 0
 1 1 0 0
 10 4 0 0 0
 #101
@@ -11,7 +11,7 @@ erdlu leather armor~
 some erdlu leather armor~
 An unfinished object is lying here.~
 ~
-9 0 0 0 0 ad 0 0 0 0 0 0 0
+9 0 0 0 0 ae 0 0 0 0 0 0 0
 1 1 0 0
 5 5 0 0 0
 #102
@@ -19,7 +19,7 @@ studded leather jacket~
 a studded leather jacket~
 A jacket made from studded leather lies here.~
 ~
-9 0 0 0 0 ad 0 0 0 0 0 0 0
+9 0 0 0 0 ae 0 0 0 0 0 0 0
 2 1 0 0
 13 10 0 0 0
 #103
@@ -27,7 +27,7 @@ bone chitin armor~
 some bone and chitin armor~
 A piece of armor made from bone and chitin lies here.~
 ~
-9 0 0 0 0 ad 0 0 0 0 0 0 0
+9 0 0 0 0 ae 0 0 0 0 0 0 0
 1 1 0 0
 20 12 0 0 0
 #104
@@ -35,7 +35,7 @@ pair padded sleeves~
 a pair of padded sleeves~
 A pair of padded cloth sleeves lie here abandoned.~
 ~
-9 0 0 0 0 ai 0 0 0 0 0 0 0
+9 0 0 0 0 aj 0 0 0 0 0 0 0
 1 1 0 0
 5 10 0 0 0
 #105
@@ -43,7 +43,7 @@ pair padded leggings~
 a pair of padded leggings~
 A pair of padded leggings lie here in the dust.~
 ~
-9 0 0 0 0 af 0 0 0 0 0 0 0
+9 0 0 0 0 ag 0 0 0 0 0 0 0
 1 1 0 0
 5 10 0 0 0
 #106
@@ -51,7 +51,7 @@ pair cloth gloves~
 a pair of cloth gloves~
 A pair of yellowed cloth gloves lie here.~
 ~
-11 0 0 0 0 ah 0 0 0 0 0 0 0
+11 0 0 0 0 ai 0 0 0 0 0 0 0
 0 0 0 0
 2 10 0 0 0
 #107
@@ -59,7 +59,7 @@ pair leather gloves~
 a pair of leather gloves~
 A pair of thick leather gloves have been left here.~
 ~
-9 0 0 0 0 ah 0 0 0 0 0 0 0
+9 0 0 0 0 ai 0 0 0 0 0 0 0
 1 1 0 0
 6 10 0 0 0
 #108
@@ -67,7 +67,7 @@ bone helmet~
 a bone helmet~
 A helmet made of bone has been discarded here.~
 ~
-9 0 0 0 0 ae 0 0 0 0 0 0 0
+9 0 0 0 0 af 0 0 0 0 0 0 0
 1 1 0 0
 12 18 0 0 0
 #109
@@ -75,7 +75,7 @@ padded cloth helmet~
 a padded cloth helmet~
 A padded cloth helmet has been left here.~
 ~
-9 0 0 0 0 ae 0 0 0 0 0 0 0
+9 0 0 0 0 af 0 0 0 0 0 0 0
 1 1 0 0
 4 11 0 0 0
 #110
@@ -83,7 +83,7 @@ braxat hide jacket~
 a braxat hide jacket~
 A thick jacket made of braxat hide has been abandoned here.~
 ~
-9 0 0 0 0 ad 0 0 0 0 0 0 0
+9 0 0 0 0 ae 0 0 0 0 0 0 0
 3 3 0 1
 30 250 0 0 0
 #111
@@ -91,7 +91,7 @@ pair thick leather sleeves~
 a pair of thick leather sleeves~
 Cured and stitched tight, a pair of thick leather sleeves are here.~
 ~
-9 0 0 0 0 ai 0 0 0 0 0 0 0
+9 0 0 0 0 aj 0 0 0 0 0 0 0
 1 1 0 0
 14 30 0 0 0
 #112
@@ -99,7 +99,7 @@ pair sandals~
 a pair of sandals~
 Some cheap looking sandals have been left in the dust here.~
 ~
-11 0 0 0 0 ag 0 0 0 0 0 0 0
+11 0 0 0 0 ah 0 0 0 0 0 0 0
 0 0 0 0
 1 8 0 0 0
 #113
@@ -107,7 +107,7 @@ loincloth~
 a loincloth~
 A scrap of cloth with a string attached has been left here.~
 ~
-11 0 0 0 0 al 0 0 0 0 0 0 0
+11 0 0 0 0 am 0 0 0 0 0 0 0
 0 0 0 0
 1 1 0 0 0
 #114
@@ -115,7 +115,7 @@ erdlu scale shield~
 an erdlu scale shield~
 A shield made from erdlu scales lies here, collecting dust.~
 ~
-9 0 0 0 0 aj 0 0 0 0 0 0 0
+9 0 0 0 0 ak 0 0 0 0 0 0 0
 0 0 0 0
 5 50 0 0 0
 #115
@@ -123,7 +123,7 @@ pair thick leather leggings~
 a pair of thick leather leggings~
 A pair of leggings made from thick, dark leather are here.~
 ~
-9 0 0 0 0 af 0 0 0 0 0 0 0
+9 0 0 0 0 ag 0 0 0 0 0 0 0
 1 1 0 0
 12 50 0 0 0
 #116
@@ -131,7 +131,7 @@ hide wrist wrap wrist-wrap~
 a hide wrist-wrap~
 A simple hide wrist-wrap gathers dust and sand here.~
 ~
-9 0 0 0 0 am 0 0 0 0 0 0 0
+9 0 0 0 0 an 0 0 0 0 0 0 0
 1 1 0 0
 2 25 0 0 0
 #117
@@ -139,7 +139,7 @@ studded hide wrist wrap wrist-wrap~
 a studded hide wrist-wrap~
 A hide wrist-wrap with studded bone bits has been left here.~
 ~
-9 0 0 0 0 am 0 0 0 0 0 0 0
+9 0 0 0 0 an 0 0 0 0 0 0 0
 1 1 0 0
 8 40 0 0 0
 #118
@@ -155,7 +155,7 @@ pair padded shoes~
 a pair of padded shoes~
 An assuming pair of padded cloth shoes are here.~
 ~
-9 0 0 0 0 ag 0 0 0 0 0 0 0
+9 0 0 0 0 ah 0 0 0 0 0 0 0
 1 1 0 0
 8 25 0 0 0
 #120
@@ -163,7 +163,7 @@ black belt~
 a black belt~
 A belt made of black cloth lies here.~
 ~
-15 0 0 0 0 al 0 0 0 0 0 0 0
+15 0 0 0 0 am 0 0 0 0 0 0 0
 10 0 0 0
 1 25 0 0 0
 #121
@@ -187,7 +187,7 @@ pair boots~
 a pair of boots~
 A pair of simple leather boots are here.~
 ~
-9 0 0 0 0 ag 0 0 0 0 0 0 0
+9 0 0 0 0 ah 0 0 0 0 0 0 0
 1 1 0 0
 1 25 0 0 0
 #124
@@ -195,7 +195,7 @@ pair thick leather boots~
 a pair of thick leather boots~
 Boots made of thick leather have been left here.~
 ~
-9 0 0 0 0 ag 0 0 0 0 0 0 0
+9 0 0 0 0 ah 0 0 0 0 0 0 0
 2 2 0 0
 5 50 0 0 0
 #125
@@ -203,7 +203,7 @@ bone shortsword sword~
 a bone shortsword~
 Made of bone, a shortsword has been left here.~
 ~
-5 0 0 0 0 ano 0 0 0 0 0 0 0
+5 0 0 0 0 aop 0 0 0 0 0 0 0
 1 6 11 0
 5 50 0 0 0
 #126
@@ -211,7 +211,7 @@ bone dagger~
 a bone dagger~
 A dagger made of bone lies here abandoned.~
 ~
-5 0 0 0 0 ano 0 0 0 0 0 0 0
+5 0 0 0 0 aop 0 0 0 0 0 0 0
 1 4 11 0
 2 25 0 0 0
 #127
@@ -219,7 +219,7 @@ bone longsword sword~
 a bone longsword~
 Long and slender, a sword lies here.~
 ~
-5 0 0 0 0 an 0 0 0 0 0 0 0
+5 0 0 0 0 ao 0 0 0 0 0 0 0
 1 8 3 0
 8 100 0 0 0
 #128
@@ -227,7 +227,7 @@ bone club~
 a bone club~
 Made of bone, a club is lying here.~
 ~
-5 0 0 0 0 ano 0 0 0 0 0 0 0
+5 0 0 0 0 aop 0 0 0 0 0 0 0
 1 4 5 0
 5 50 0 0 0
 #129
@@ -235,7 +235,7 @@ bone javelin~
 a bone javelin~
 A long, bone javelin has been left here.~
 ~
-5 0 0 0 0 an 0 0 0 0 0 0 0
+5 0 0 0 0 ao 0 0 0 0 0 0 0
 1 6 11 0
 5 50 0 0 0
 #130
@@ -243,7 +243,7 @@ bone spear~
 a bone spear~
 A long piece of bones with a sharpened edge has been left here.~
 ~
-5 0 0 0 0 an 0 0 0 0 0 0 0
+5 0 0 0 0 ao 0 0 0 0 0 0 0
 1 6 11 0
 3 50 0 0 0
 #131

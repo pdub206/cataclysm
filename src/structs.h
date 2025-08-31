@@ -1025,6 +1025,14 @@ struct follow_type
   struct follow_type *next;   /**< Next character following. */
 };
 
+/* Handles items that NPC's are loaded with ahead of time */
+struct mob_loadout {
+  obj_vnum vnum;      /* item to clone */
+  sh_int wear_pos;    /* WEAR_* slot (or -1 for inventory) */
+  int     quantity;   /* default 1; >1 for stackables or multiple clones */
+  struct mob_loadout *next;
+};
+
 /** Master structure for PCs and NPCs. */
 struct char_data
 {
@@ -1041,6 +1049,7 @@ struct char_data
   struct char_special_data char_specials; /**< PC/NPC specials	  */
   struct player_special_data *player_specials; /**< PC specials		  */
   struct mob_special_data mob_specials; /**< NPC specials		  */
+  struct mob_loadout *proto_loadout; /* NPC objects equipped before loading NULL if none */
 
   struct affected_type *affected;        /**< affected by what spells    */
   struct obj_data *equipment[NUM_WEARS]; /**< Equipment array            */
@@ -1311,6 +1320,16 @@ struct recent_player
 /* Helper macros */
 #define GET_STEALTH_CHECK(ch)   ((ch)->char_specials.stealth_check)
 #define SET_STEALTH_CHECK(ch,v) ((ch)->char_specials.stealth_check = (v))
+
+/* NPC loadout macros */
+#define MOB_PROTO(ch)           (&mob_proto[GET_MOB_RNUM(ch)]) /* Resolve proto from instance */
+#define MOB_LOADOUT_PROTO(m)    ((m)->proto_loadout) /* Accessors, only prototypes should have a non-NULL list */
+#define MOB_HAS_LOADOUT(ch)     (IS_NPC(ch) && (MOB_LOADOUT_PROTO(MOB_PROTO(ch)) != NULL)) /* */
+
+/* NPC loadout helpers */
+void loadout_free_list(struct mob_loadout **head);
+void loadout_add_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty);
+struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src);
 
 /* Config structs */
 
