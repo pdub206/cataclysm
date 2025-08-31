@@ -28,13 +28,15 @@ static int tests_run = 0, tests_failed = 0;
 /* ---------- Helpers for test setup ---------- */
 
 /* Make a simple armor object with given per-piece fields. */
-static struct obj_data *make_armor(int piece_ac, int bulk, int magic, int flags) {
+static struct obj_data *make_armor(int piece_ac, int bulk, int magic, int stealth_disadv, int durability, int str_req) {
   struct obj_data *o = calloc(1, sizeof(*o));
   GET_OBJ_TYPE(o) = ITEM_ARMOR;
-  GET_OBJ_VAL(o, VAL_ARMOR_PIECE_AC)    = piece_ac;
-  GET_OBJ_VAL(o, VAL_ARMOR_BULK)        = bulk;
-  GET_OBJ_VAL(o, VAL_ARMOR_MAGIC_BONUS) = magic;
-  GET_OBJ_VAL(o, VAL_ARMOR_FLAGS)       = flags;
+  GET_OBJ_VAL(o, VAL_ARMOR_PIECE_AC)             = piece_ac;
+  GET_OBJ_VAL(o, VAL_ARMOR_BULK)                 = bulk;
+  GET_OBJ_VAL(o, VAL_ARMOR_MAGIC_BONUS)          = magic;
+  GET_OBJ_VAL(o, VAL_ARMOR_STEALTH_DISADV)       = stealth_disadv;
+  GET_OBJ_VAL(o, VAL_ARMOR_DURABILITY)           = durability;
+  GET_OBJ_VAL(o, VAL_ARMOR_STR_REQ)              = str_req;
   return o;
 }
 
@@ -124,10 +126,10 @@ static void test_ac_light_medium_heavy(void) {
    * Expect: base 10 + piece 2 + magic 0 + dex 4 = 16
    */
   set_ability_scores(&ch, 10, 18, 10, 10, 10, 10);
-  equip_at(&ch, WEAR_HEAD,   make_armor(1,1,0,0));
-  equip_at(&ch, WEAR_BODY,   make_armor(1,1,0,0));
-  equip_at(&ch, WEAR_LEGS,   make_armor(1,2,0,0));
-  equip_at(&ch, WEAR_FEET,   make_armor(1,1,0,0));
+  equip_at(&ch, WEAR_HEAD,   make_armor(1,1,0,0,0,0));
+  equip_at(&ch, WEAR_BODY,   make_armor(1,1,0,0,0,0));
+  equip_at(&ch, WEAR_LEGS,   make_armor(1,2,0,0,0,0));
+  equip_at(&ch, WEAR_FEET,   make_armor(1,1,0,0,0,0));
 
   struct ac_breakdown b1; compute_ac_breakdown(&ch, &b1);
   /* Sanity checks */
@@ -147,11 +149,11 @@ static void test_ac_light_medium_heavy(void) {
    * Expect: base 10 + piece 4 + magic 2 + dex 2 = 18.
    */
   memset(ch.equipment, 0, sizeof(ch.equipment));
-  equip_at(&ch, WEAR_HEAD,   make_armor(2,1,0,0));
-  equip_at(&ch, WEAR_BODY,   make_armor(2,2,1,0));
-  equip_at(&ch, WEAR_LEGS,   make_armor(2,2,0,0));
-  equip_at(&ch, WEAR_HANDS,  make_armor(1,1,0,0));
-  equip_at(&ch, WEAR_FEET,   make_armor(1,1,0,0));
+  equip_at(&ch, WEAR_HEAD,   make_armor(2,1,0,0,0,0));
+  equip_at(&ch, WEAR_BODY,   make_armor(2,2,1,0,0,0));
+  equip_at(&ch, WEAR_LEGS,   make_armor(2,2,0,0,0,0));
+  equip_at(&ch, WEAR_HANDS,  make_armor(1,1,0,0,0,0));
+  equip_at(&ch, WEAR_FEET,   make_armor(1,1,0,0,0,0));
 
   struct ac_breakdown b2; compute_ac_breakdown(&ch, &b2);
   if (b2.total != 21) dbg_dump_ac("MEDIUM", &b2);
@@ -171,14 +173,14 @@ static void test_ac_light_medium_heavy(void) {
    * Expect: base 10 + piece 5 + armorMagic 3 + Dex 0 + shield 5 = 23
    */
   memset(ch.equipment, 0, sizeof(ch.equipment));
-  equip_at(&ch, WEAR_HEAD,        make_armor(2,1,1,0));
-  equip_at(&ch, WEAR_BODY,        make_armor(3,3,1,0));
-  equip_at(&ch, WEAR_LEGS,        make_armor(2,1,1,0));
-  equip_at(&ch, WEAR_ARMS,        make_armor(1,1,0,0));
-  equip_at(&ch, WEAR_HANDS,       make_armor(1,1,0,0));
-  equip_at(&ch, WEAR_FEET,        make_armor(1,1,0,0));
-  equip_at(&ch, WEAR_WRIST_L,     make_armor(1,1,0,0));
-  equip_at(&ch, WEAR_WRIST_R,     make_armor(1,1,0,0));
+  equip_at(&ch, WEAR_HEAD,        make_armor(2,1,1,0,0,0));
+  equip_at(&ch, WEAR_BODY,        make_armor(3,3,1,0,0,0));
+  equip_at(&ch, WEAR_LEGS,        make_armor(2,1,1,0,0,0));
+  equip_at(&ch, WEAR_ARMS,        make_armor(1,1,0,0,0,0));
+  equip_at(&ch, WEAR_HANDS,       make_armor(1,1,0,0,0,0));
+  equip_at(&ch, WEAR_FEET,        make_armor(1,1,0,0,0,0));
+  equip_at(&ch, WEAR_WRIST_L,     make_armor(1,1,0,0,0,0));
+  equip_at(&ch, WEAR_WRIST_R,     make_armor(1,1,0,0,0,0));
 
   struct ac_breakdown b3; compute_ac_breakdown(&ch, &b3);
   if (b3.total != 25) dbg_dump_ac("HEAVY", &b3);

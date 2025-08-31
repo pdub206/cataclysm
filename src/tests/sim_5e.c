@@ -34,14 +34,15 @@ static void init_test_char(struct char_data *ch) {
   ch->in_room = 0; /* park them in room #0 (we'll make a stub room below) */
 }
 
-static struct obj_data *make_armor(int piece_ac, int bulk, int magic, int flags) {
+static struct obj_data *make_armor(int piece_ac, int bulk, int magic, int stealth_disadv, int durability, int str_req) {
   struct obj_data *o = calloc(1, sizeof(*o));
   GET_OBJ_TYPE(o) = ITEM_ARMOR;
-  GET_OBJ_VAL(o, VAL_ARMOR_PIECE_AC)    = piece_ac;
-  GET_OBJ_VAL(o, VAL_ARMOR_BULK)        = bulk;
-  GET_OBJ_VAL(o, VAL_ARMOR_MAGIC_BONUS) = magic;
-  GET_OBJ_VAL(o, VAL_ARMOR_FLAGS)       = flags;
-  GET_OBJ_VAL(o, VAL_ARMOR_DURABILITY)  = 100;  /* start at full durability */
+  GET_OBJ_VAL(o, VAL_ARMOR_PIECE_AC)             = piece_ac;
+  GET_OBJ_VAL(o, VAL_ARMOR_BULK)                 = bulk;
+  GET_OBJ_VAL(o, VAL_ARMOR_MAGIC_BONUS)          = magic;
+  GET_OBJ_VAL(o, VAL_ARMOR_STEALTH_DISADV)       = stealth_disadv;
+  GET_OBJ_VAL(o, VAL_ARMOR_DURABILITY)           = durability;
+  GET_OBJ_VAL(o, VAL_ARMOR_STR_REQ)              = str_req;
   return o;
 }
 
@@ -104,33 +105,33 @@ static int duel_rounds(int atk_mod, int ndice, int sdice, int att_str_mod,
 static void build_light(struct char_data *ch) {
   init_test_char(ch);
   set_ability_scores(ch, 10, 18, 10, 10, 10, 10);
-  equip_at(ch, WEAR_HEAD,   make_armor(1,1,0,0));
-  equip_at(ch, WEAR_BODY,   make_armor(1,1,0,0));
-  equip_at(ch, WEAR_LEGS,   make_armor(1,2,0,0));
-  equip_at(ch, WEAR_FEET,   make_armor(1,1,0,0));
+  equip_at(ch, WEAR_HEAD,   make_armor(1,1,0,0,0,0));
+  equip_at(ch, WEAR_BODY,   make_armor(1,1,0,0,0,0));
+  equip_at(ch, WEAR_LEGS,   make_armor(1,2,0,0,0,0));
+  equip_at(ch, WEAR_FEET,   make_armor(1,1,0,0,0,0));
 }
 
 static void build_medium(struct char_data *ch) {
   init_test_char(ch);
   set_ability_scores(ch, 10, 18, 10, 10, 10, 10);
-  equip_at(ch, WEAR_HEAD,   make_armor(2,1,0,0));
-  equip_at(ch, WEAR_BODY,   make_armor(2,2,1,0));
-  equip_at(ch, WEAR_LEGS,   make_armor(2,2,0,0));
-  equip_at(ch, WEAR_HANDS,  make_armor(1,1,0,0));
-  equip_at(ch, WEAR_FEET,   make_armor(1,1,0,0));
+  equip_at(ch, WEAR_HEAD,   make_armor(2,1,0,0,0,0));
+  equip_at(ch, WEAR_BODY,   make_armor(2,2,1,0,0,0));
+  equip_at(ch, WEAR_LEGS,   make_armor(2,2,0,0,0,0));
+  equip_at(ch, WEAR_HANDS,  make_armor(1,1,0,0,0,0));
+  equip_at(ch, WEAR_FEET,   make_armor(1,1,0,0,0,0));
 }
 
 static void build_heavy(struct char_data *ch) {
   init_test_char(ch);
   set_ability_scores(ch, 10, 18, 10, 10, 10, 10);
-  equip_at(ch, WEAR_HEAD,        make_armor(2,1,1,0));
-  equip_at(ch, WEAR_BODY,        make_armor(3,3,1,0));
-  equip_at(ch, WEAR_LEGS,        make_armor(2,1,1,0));
-  equip_at(ch, WEAR_ARMS,        make_armor(1,1,0,0));
-  equip_at(ch, WEAR_HANDS,       make_armor(1,1,0,0));
-  equip_at(ch, WEAR_FEET,        make_armor(1,1,0,0));
-  equip_at(ch, WEAR_WRIST_L,     make_armor(1,1,0,0));
-  equip_at(ch, WEAR_WRIST_R,     make_armor(1,1,0,0));
+  equip_at(ch, WEAR_HEAD,        make_armor(2,1,1,0,0,0));
+  equip_at(ch, WEAR_BODY,        make_armor(3,3,1,0,0,0));
+  equip_at(ch, WEAR_LEGS,        make_armor(2,1,1,0,0,0));
+  equip_at(ch, WEAR_ARMS,        make_armor(1,1,0,0,0,0));
+  equip_at(ch, WEAR_HANDS,       make_armor(1,1,0,0,0,0));
+  equip_at(ch, WEAR_FEET,        make_armor(1,1,0,0,0,0));
+  equip_at(ch, WEAR_WRIST_L,     make_armor(1,1,0,0,0,0));
+  equip_at(ch, WEAR_WRIST_R,     make_armor(1,1,0,0,0,0));
 }
 
 /* attacker profiles: compute attack_mod = STRmod + prof(skill%) + weapon_magic */
