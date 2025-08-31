@@ -850,6 +850,9 @@ int room_is_dark(room_rnum room)
   if (SECT(room) == SECT_INSIDE || SECT(room) == SECT_CITY)
     return (FALSE);
 
+  if (SECT(room) == SECT_UNDERGROUND)
+    return (TRUE);
+
   if (weather_info.sunlight == SUN_SET || weather_info.sunlight == SUN_DARK)
     return (TRUE);
 

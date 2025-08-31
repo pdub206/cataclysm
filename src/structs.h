@@ -118,10 +118,18 @@
 #define SECT_MOUNTAIN        5		/**< On a mountain		*/
 #define SECT_WATER_SWIM      6		/**< Swimmable water		*/
 #define SECT_WATER_NOSWIM    7		/**< Water - need a boat	*/
-#define SECT_FLYING	         8		/**< Flying			*/
-#define SECT_UNDERWATER	     9		/**< Underwater		*/
+#define SECT_UNDERWATER      8		/**< Flying			*/
+#define SECT_FLYING	         9		/**< Flying			*/
+#define SECT_SCRUBLAND	     10		/**< Scrublands		*/
+#define SECT_SAND     	     11		/**< Sandy Wastes		*/
+#define SECT_ROCKY    	     12		/**< Rocky Badlands		*/
+#define SECT_ROAD     	     13		/**< Roads (for movement changes)		*/
+#define SECT_UNDERGROUND     14		/**< Underground		*/
+#define SECT_SILT_SEA 	     15		/**< Silt Sea/Edges		*/
+#define SECT_ASHLAND  	     16		/**< Ashlands defiled by magic		*/
+#define SECT_TABLELANDS	     17		/**< Tablelands		*/
 /** The total number of room Sector Types */
-#define NUM_ROOM_SECTORS  10
+#define NUM_ROOM_SECTORS  18
 
 /* char and mob-related defines */
 
