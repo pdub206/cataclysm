@@ -85,7 +85,7 @@ static void perform_put(struct char_data *ch, struct obj_data *obj, struct obj_d
      1) put <object> <container>
      2) put all.<object> <container>
      3) put all <container>
-   The <container> must be in inventory or on ground. All objects to be put
+   The <container> must be in inventory, worn/equipped, or on ground. All objects to be put
    into container must be in inventory. */
 ACMD(do_put)
 {
@@ -117,7 +117,7 @@ ACMD(do_put)
   else if (!*thecont) {
     send_to_char(ch, "What do you want to put %s in?\r\n", obj_dotmode == FIND_INDIV ? "it" : "them");
   } else {
-    generic_find(thecont, FIND_OBJ_INV | FIND_OBJ_ROOM, ch, &tmp_char, &cont);
+    generic_find(thecont, FIND_OBJ_INV | FIND_OBJ_ROOM | FIND_OBJ_EQUIP, ch, &tmp_char, &cont);
     if (!cont)
       send_to_char(ch, "You don't see %s %s here.\r\n", AN(thecont), thecont);
     else if (GET_OBJ_TYPE(cont) != ITEM_CONTAINER)
@@ -353,7 +353,7 @@ ACMD(do_get)
     }
     cont_dotmode = find_all_dots(arg2);
     if (cont_dotmode == FIND_INDIV) {
-      mode = generic_find(arg2, FIND_OBJ_INV | FIND_OBJ_ROOM, ch, &tmp_char, &cont);
+      mode = generic_find(arg2, FIND_OBJ_INV | FIND_OBJ_ROOM | FIND_OBJ_EQUIP, ch, &tmp_char, &cont);
       if (!cont)
 	send_to_char(ch, "You don't have %s %s.\r\n", AN(arg2), arg2);
       else if (GET_OBJ_TYPE(cont) != ITEM_CONTAINER)
@@ -366,16 +366,35 @@ ACMD(do_get)
 	return;
       }
       for (cont = ch->carrying; cont; cont = cont->next_content)
-	if (CAN_SEE_OBJ(ch, cont) &&
-	    (cont_dotmode == FIND_ALL || isname(arg2, cont->name))) {
-	  if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER) {
-	    found = 1;
-	    get_from_container(ch, cont, arg1, FIND_OBJ_INV, amount);
-	  } else if (cont_dotmode == FIND_ALLDOT) {
-	    found = 1;
-	    act("$p is not a container.", FALSE, ch, cont, 0, TO_CHAR);
-	  }
-	}
+        if (CAN_SEE_OBJ(ch, cont) && (cont_dotmode == FIND_ALL || isname(arg2, cont->name))) {
+          if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER) {
+            found = 1;
+            get_from_container(ch, cont, arg1, FIND_OBJ_INV, amount);
+          } else if (cont_dotmode == FIND_ALLDOT) {
+            found = 1;
+            act("$p is not a container.", FALSE, ch, cont, 0, TO_CHAR);
+          }
+        }
+      {
+        int i;
+        struct obj_data *eq;
+        for (i = 0; i < NUM_WEARS; i++) {
+          eq = GET_EQ(ch, i);
+          if (!eq)
+            continue;
+
+          if (CAN_SEE_OBJ(ch, eq) &&
+              (cont_dotmode == FIND_ALL || isname(arg2, eq->name))) {
+            if (GET_OBJ_TYPE(eq) == ITEM_CONTAINER) {
+              found = 1;
+              get_from_container(ch, eq, arg1, FIND_OBJ_EQUIP, amount);
+            } else if (cont_dotmode == FIND_ALLDOT) {
+              found = 1;
+              act("$p is not a container.", FALSE, ch, eq, 0, TO_CHAR);
+            }
+          }
+        }
+      }
       for (cont = world[IN_ROOM(ch)].contents; cont; cont = cont->next_content)
 	if (CAN_SEE_OBJ(ch, cont) &&
 	    (cont_dotmode == FIND_ALL || isname(arg2, cont->name))) {
