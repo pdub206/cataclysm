@@ -2794,7 +2794,7 @@ ACMD(do_wizutil)
       act("A sudden fireball conjured from nowhere thaws $n!", FALSE, vict, 0, 0, TO_ROOM);
       break;
     case SCMD_UNAFFECT:
-      if (vict->affected || AFF_FLAGS(vict)) {
+      if (vict->affected || ANY_AFF_FLAGS(vict)) {
 	while (vict->affected)
 	  affect_remove(vict, vict->affected);
     for(taeller=0; taeller < AF_ARRAY_MAX; taeller++)

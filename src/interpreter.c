@@ -36,6 +36,7 @@
 #include "prefedit.h"
 #include "ibt.h"
 #include "mud_event.h"
+#include "modify.h" /* to ensure page_string is available */
 
 /* local (file scope) functions */
 static int perform_dupe_check(struct descriptor_data *d);

@@ -15,6 +15,8 @@
 * functions, move functions, char_from_furniture) out of utils and declare /
 * define elsewhere.
 */
+#include <stdbool.h>
+
 #ifndef _UTILS_H_ /* Begin header file protection */
 #define _UTILS_H_
 
@@ -1147,6 +1149,13 @@ static inline int GET_SPELL_SAVE_DC(struct char_data *ch, int spellnum, int misc
   int dc   = 8 + prof + abil + misc_dc_bonus + GET_SPELL_BONUS_MOD(ch, spellnum);
   if (dc < 1) dc = 1;
   return dc;
+}
+
+/* Quick check for any affect flag out of the array */
+static inline bool ANY_AFF_FLAGS(const struct char_data *ch) {
+  for (int i = 0; i < AF_ARRAY_MAX; ++i)
+    if (AFF_FLAGS(ch)[i] != 0) return true;
+  return false;
 }
 
 #endif /* _UTILS_H_ */
