@@ -65,8 +65,6 @@ void assign_mobiles(void)
 {
   assign_kings_castle();
 
-  ASSIGNMOB(3095, cryogenicist);
-
   ASSIGNMOB(3105, mayor);
 
   ASSIGNMOB(110, postmaster);
@@ -78,12 +76,6 @@ void assign_mobiles(void)
   ASSIGNMOB(27164, postmaster);
   ASSIGNMOB(30128, postmaster);
   ASSIGNMOB(31510, postmaster);
-
-  ASSIGNMOB(1200, receptionist);
-  ASSIGNMOB(3005, receptionist);
-  ASSIGNMOB(5404, receptionist);
-  ASSIGNMOB(27713, receptionist);
-  ASSIGNMOB(27730, receptionist);
 }
 
 /* assign special procedures to objects */
@@ -142,8 +134,6 @@ static struct spec_func_data spec_func_list[] = {
   {"Janitor",        janitor }, 
   {"Cityguard",      cityguard }, 
   {"Postmaster",     postmaster }, 
-  {"Receptionist",   receptionist }, 
-  {"Cryogenicist",   cryogenicist}, 
   {"Bulletin Board", gen_board }, 
   {"Bank",           bank }, 
   {"Pet Shop",       pet_shops }, 
