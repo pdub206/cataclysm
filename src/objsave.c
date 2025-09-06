@@ -963,14 +963,34 @@ SPECIAL(cryogenicist)
 void Crash_save_all(void)
 {
   struct descriptor_data *d;
+
+  /* Respect config: if autosave is off, do nothing. */
+  if (!CONFIG_AUTO_SAVE)
+    return;
+
   for (d = descriptor_list; d; d = d->next) {
-    if ((STATE(d) == CON_PLAYING) && !IS_NPC(d->character)) {
-      if (PLR_FLAGGED(d->character, PLR_CRASH)) {
-        Crash_crashsave(d->character);
-        save_char(d->character);
-        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_CRASH);
-      }
-    }
+    if (STATE(d) != CON_PLAYING)
+      continue;
+    if (!d->character || IS_NPC(d->character))
+      continue;
+
+    /* Skip characters not fully placed yet (prevents clobbering Room to 65535). */
+    if (IN_ROOM(d->character) == NOWHERE)
+      continue;
+
+    /* Optional hardening: if spawn vnum is not yet established, skip this tick. */
+    if (GET_LOADROOM(d->character) == NOWHERE)
+      continue;
+
+    /* IMPORTANT: Do NOT modify GET_LOADROOM here.
+       Autosave should not change the player's spawn point. */
+
+    /* Persist character and object file. */
+    save_char(d->character);
+    Crash_crashsave(d->character);
+
+    if (PLR_FLAGGED(d->character, PLR_CRASH))
+      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_CRASH);
   }
 }
 

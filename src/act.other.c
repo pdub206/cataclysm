@@ -37,19 +37,74 @@ static void display_group_list(struct char_data * ch);
 
 ACMD(do_quit)
 {
+  char first[MAX_INPUT_LENGTH];
+  char *rest;
+
   if (IS_NPC(ch) || !ch->desc)
     return;
 
-  if (subcmd != SCMD_QUIT && GET_LEVEL(ch) < LVL_IMMORT)
+  /* Parse optional "ooc" sub-arg: quit ooc <message> */
+  rest = (char *)argument;
+  skip_spaces(&rest);
+  rest = one_argument(rest, first);
+  bool quit_ooc = (*first && is_abbrev(first, "ooc")) ? TRUE : FALSE;
+
+  /* Keep original safety controls */
+  if (!quit_ooc && subcmd != SCMD_QUIT && GET_LEVEL(ch) < LVL_IMMORT)
     send_to_char(ch, "You have to type quit--no less, to quit!\r\n");
   else if (GET_POS(ch) == POS_FIGHTING)
     send_to_char(ch, "No way!  You're fighting for your life!\r\n");
   else if (GET_POS(ch) < POS_STUNNED) {
     send_to_char(ch, "You die before your time...\r\n");
     die(ch, NULL);
-  } else {
+  }
+  /* New: normal quit must be in a QUIT room (mortals only). */
+  else if (!quit_ooc && GET_LEVEL(ch) < LVL_IMMORT &&
+           !ROOM_FLAGGED(IN_ROOM(ch), ROOM_QUIT)) {
+    send_to_char(ch, "You cannot quit here. Find a room marked [Quit].\r\n");
+  }
+  /* For quit ooc, require a message for staff context. */
+  else if (quit_ooc) {
+    skip_spaces(&rest);
+    if (!*rest) {
+      send_to_char(ch, "Usage must include a reason to quit ooc: quit ooc <message>\r\n");
+      return;
+    }
+
     act("$n has left the game.", TRUE, ch, 0, 0, TO_ROOM);
-    mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE, "%s has quit the game.", GET_NAME(ch));
+    mudlog(CMP, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE,
+           "%s used QUIT OOC in room %d: %s",
+           GET_NAME(ch), GET_ROOM_VNUM(IN_ROOM(ch)), rest);
+
+    if (GET_QUEST_TIME(ch) != -1)
+      quest_timeout(ch);
+
+    send_to_char(ch, "You step out-of-character and leave the world...\r\n");
+
+    /* We used to check here for duping attempts, but we may as well do it right
+     * in extract_char(), since there is no check if a player rents out and it
+     * can leave them in an equally screwy situation. */
+
+    if (CONFIG_FREE_RENT)
+      Crash_rentsave(ch, 0);
+
+    /* Requirement: respawn in the same (possibly non-QUIT) room. */
+    GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
+
+    /* Stop snooping so you can't see passwords during deletion or change. */
+    if (ch->desc->snoop_by) {
+      write_to_output(ch->desc->snoop_by, "Your victim is no longer among us.\r\n");
+      ch->desc->snoop_by->snooping = NULL;
+      ch->desc->snoop_by = NULL;
+    }
+
+    extract_char(ch);   /* Char is saved before extracting. */
+  }
+  else {
+    /* Normal quit (in a QUIT room, or immortal bypass) */
+    act("$n has left the game.", TRUE, ch, 0, 0, TO_ROOM);
+    mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE,
+           "%s has quit the game.", GET_NAME(ch));
 
     if (GET_QUEST_TIME(ch) != -1)
       quest_timeout(ch);
@@ -63,6 +118,7 @@ ACMD(do_quit)
     if (CONFIG_FREE_RENT)
       Crash_rentsave(ch, 0);
 
+    /* Requirement: respawn in the same QUIT room they logged out in. */
     GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
 
     /* Stop snooping so you can't see passwords during deletion or change. */
@@ -72,7 +128,7 @@ ACMD(do_quit)
       ch->desc->snoop_by = NULL;
     }
 
-    extract_char(ch);		/* Char is saved before extracting. */
+    extract_char(ch);   /* Char is saved before extracting. */
   }
 }
 
@@ -82,11 +138,16 @@ ACMD(do_save)
     return;
 
   send_to_char(ch, "Saving %s.\r\n", GET_NAME(ch));
+
+  /* Stamp the spawn room first so it's included in this save. */
+  if (IN_ROOM(ch) != NOWHERE)
+    GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
+
   save_char(ch);
   Crash_crashsave(ch);
+
   if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_HOUSE_CRASH))
     House_crashsave(GET_ROOM_VNUM(IN_ROOM(ch)));
-  GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
 }
 
 /* Generic function for commands which are normally overridden by special

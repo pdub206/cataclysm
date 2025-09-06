@@ -215,7 +215,6 @@ cpp_extern const struct command_info cmd_info[] = {
 
   { "open"     , "o"       , POS_SITTING , do_gen_door , 0, SCMD_OPEN },
   { "order"    , "ord"     , POS_RESTING , do_order    , 1, 0 },
-  { "offer"    , "off"     , POS_STANDING, do_not_here , 1, 0 },
   { "olc"      , "olc"     , POS_DEAD    , do_show_save_list, LVL_BUILDER, 0 },
   { "olist"    , "olist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_OLIST },
   { "oedit"    , "oedit"   , POS_DEAD    , do_oasis_oedit, LVL_BUILDER, 0 },
@@ -253,7 +252,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "receive"  , "rece"    , POS_STANDING, do_not_here , 1, 0 },
   { "recent"   , "recent"  , POS_DEAD    , do_recent   , LVL_IMMORT, 0 },
   { "remove"   , "rem"     , POS_RESTING , do_remove   , 0, 0 },
-  { "rent"     , "rent"    , POS_STANDING, do_not_here , 1, 0 },
   { "report"   , "repo"    , POS_RESTING , do_report   , 0, 0 },
   { "reroll"   , "rero"    , POS_DEAD    , do_wizutil  , LVL_GRGOD, SCMD_REROLL },
   { "rescue"   , "resc"    , POS_FIGHTING, do_rescue   , 1, 0 },
@@ -1220,50 +1218,50 @@ static bool perform_new_char_dupe_check(struct descriptor_data *d)
 int enter_player_game (struct descriptor_data *d)
 {
   int load_result;
-  room_vnum load_room;
+  room_vnum saved_vnum;         /* cache pfile value BEFORE any mutations */
+  room_rnum start_r = NOWHERE;
+
+  if (!d || !d->character)
+    return 0;
+
+  /* Cache the pfile's saved load room FIRST. */
+  saved_vnum = GET_LOADROOM(d->character);
 
   reset_char(d->character);
 
   if (PLR_FLAGGED(d->character, PLR_INVSTART))
     GET_INVIS_LEV(d->character) = GET_LEVEL(d->character);
 
-  /* We have to place the character in a room before equipping them
-   * or equip_char() will gripe about the person in NOWHERE. */
-  if ((load_room = GET_LOADROOM(d->character)) != NOWHERE)
-    load_room = real_room(load_room);
+  /* Resolve the room to enter (use cached vnum -> rnum). */
+  if (saved_vnum != NOWHERE)
+    start_r = real_room(saved_vnum);
 
-  /* If char was saved with NOWHERE, or real_room above failed... */
-  if (load_room == NOWHERE) {
-    if (GET_LEVEL(d->character) >= LVL_IMMORT)
-      load_room = r_immort_start_room;
+  /* Fallbacks if invalid/missing. */
+  if (start_r == NOWHERE) {
+    if (PLR_FLAGGED(d->character, PLR_FROZEN))
+      start_r = r_frozen_start_room;
+    else if (GET_LEVEL(d->character) >= LVL_IMMORT)
+      start_r = r_immort_start_room;
     else
-      load_room = r_mortal_start_room;
+      start_r = r_mortal_start_room;
   }
 
-  if (PLR_FLAGGED(d->character, PLR_FROZEN))
-    load_room = r_frozen_start_room;
-
-  /* copyover */
+  /* DG Scripts setup */
   d->character->script_id = GET_IDNUM(d->character);
-  /* find_char helper */
   add_to_lookup_table(d->character->script_id, (void *)d->character);
-
-  /* After moving saving of variables to the player file, this should only
-   * be called in case nothing was found in the pfile. If something was
-   * found, SCRIPT(ch) will be set. */
   if (!SCRIPT(d->character))
     read_saved_vars(d->character);
 
+  /* Link character and place before equipping. */
   d->character->next = character_list;
   character_list = d->character;
-  char_to_room(d->character, load_room);
-  load_result = Crash_load(d->character);
-  
-  /* Save the character and their object file */
-  save_char(d->character);
-  Crash_crashsave(d->character);
+  char_to_room(d->character, start_r);
 
-  /* Check for a login trigger in the players' start room */
+  /* Load inventory/equipment */
+  load_result = Crash_load(d->character);
+
+  /* DO NOT save here — avoids clobbering Room with NOWHERE on login. */
+  /* login_wtrigger can remain. */
   login_wtrigger(&world[IN_ROOM(d->character)], d->character);
 
   return load_result;
@@ -1649,9 +1647,6 @@ void nanny(struct descriptor_data *d, char *arg)
       load_result = enter_player_game(d);
       send_to_char(d->character, "%s", CONFIG_WELC_MESSG);
 
-      /* Clear their load room if it's not persistant. */
-      if (!PLR_FLAGGED(d->character, PLR_LOADROOM))
-        GET_LOADROOM(d->character) = NOWHERE;
       save_char(d->character);
 
       greet_mtrigger(d->character, -1);

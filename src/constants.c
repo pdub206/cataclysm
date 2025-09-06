@@ -83,6 +83,7 @@ const char *room_bits[] = {
   "OLC",
   "*",				/* The BFS Mark. */
   "WORLDMAP",
+  "QUIT",
   "\n"
 };
 

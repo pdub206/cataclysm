@@ -495,7 +495,7 @@ void look_at_room(struct char_data *ch, int ignore_brief)
   if (!ch->desc)
     return;
 
-  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch)){
+  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch)) {
     send_to_char(ch, "It is pitch black...\r\n");
     return;
   }
@@ -510,7 +510,12 @@ void look_at_room(struct char_data *ch, int ignore_brief)
 
     sprintbitarray(ROOM_FLAGS(IN_ROOM(ch)), room_bits, RF_ARRAY_MAX, buf);
     send_to_char(ch, "[%5d] ", GET_ROOM_VNUM(IN_ROOM(ch)));
-    send_to_char(ch, "%s[ %s][ %s ]", world[IN_ROOM(ch)].name, buf, sector_types[world[IN_ROOM(ch)].sector_type]);
+    send_to_char(ch, "%s[ %s][ %s ]",
+                 world[IN_ROOM(ch)].name,
+                 buf,
+                 sector_types[world[IN_ROOM(ch)].sector_type]);
+
+    /* Do NOT append [Quit] here; QUITSAFE already shows in the flags list */
 
     if (SCRIPT(rm)) {
       send_to_char(ch, "[T");
@@ -519,25 +524,28 @@ void look_at_room(struct char_data *ch, int ignore_brief)
       send_to_char(ch, "]");
     }
   }
-  else
-    send_to_char(ch, "%s", world[IN_ROOM(ch)].name);
+  else {
+    /* For normal players (no PRF_SHOWVNUMS), append [Quit] to the title line */
+    send_to_char(ch, "%s%s",
+                 world[IN_ROOM(ch)].name,
+                 ROOM_FLAGGED(IN_ROOM(ch), ROOM_QUIT) ? " [Quit]" : "");
+  }
 
   send_to_char(ch, "%s\r\n", CCNRM(ch, C_NRM));
 
   if ((!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_BRIEF)) || ignore_brief ||
-    ROOM_FLAGGED(IN_ROOM(ch), ROOM_DEATH)) {
+      ROOM_FLAGGED(IN_ROOM(ch), ROOM_DEATH)) {
     if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_AUTOMAP) && can_see_map(ch))
       str_and_map(world[target_room].description, ch, target_room);
     else
-       send_to_char(ch, "%s", world[IN_ROOM(ch)].description);
+      send_to_char(ch, "%s", world[IN_ROOM(ch)].description);
   }
 
-
-  /*autoexits */
+  /* autoexits */
   if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_AUTOEXIT))
     do_auto_exits(ch);
 
-  /*now list characters &objects */
+  /* now list characters & objects */
   list_obj_to_char(world[IN_ROOM(ch)].contents, ch, SHOW_OBJ_LONG, FALSE);
   list_char_to_char(world[IN_ROOM(ch)].people, ch);
 }

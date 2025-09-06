@@ -477,10 +477,6 @@ void copyover_recover()
     
       enter_player_game(d);
 
-      /* Clear their load room if it's not persistant. */
-      if (!PLR_FLAGGED(d->character, PLR_LOADROOM))
-        GET_LOADROOM(d->character) = NOWHERE;
-
       d->connected = CON_PLAYING;
       look_at_room(d->character, 0);
 
