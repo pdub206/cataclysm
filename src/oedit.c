@@ -629,7 +629,7 @@ static void oedit_disp_menu(struct descriptor_data *d)
     "%s1%s) Keywords : %s%s\r\n"
     "%s2%s) S-Desc   : %s%s\r\n"
     "%s3%s) L-Desc   :-\r\n%s%s\r\n"
-    "%s4%s) A-Desc   :-\r\n%s%s"
+    "%s4%s) M-Desc   :-\r\n%s%s"
     "%s5%s) Type        : %s%s\r\n"
     "%s6%s) Extra flags : %s%s\r\n",
 
@@ -637,7 +637,7 @@ static void oedit_disp_menu(struct descriptor_data *d)
     grn, nrm, yel, (obj->name && *obj->name) ? obj->name : "undefined",
     grn, nrm, yel, (obj->short_description && *obj->short_description) ? obj->short_description : "undefined",
     grn, nrm, yel, (obj->description && *obj->description) ? obj->description : "undefined",
-    grn, nrm, yel, (obj->action_description && *obj->action_description) ? obj->action_description : "Not Set.\r\n",
+    grn, nrm, yel, (obj->main_description && *obj->main_description) ? obj->main_description : "Not Set.\r\n",
     grn, nrm, cyn, buf1,
     grn, nrm, cyn, buf2
   );
@@ -748,11 +748,11 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       OLC_MODE(d) = OEDIT_ACTDESC;
       send_editor_help(d);
       write_to_output(d, "Enter action description:\r\n\r\n");
-      if (OLC_OBJ(d)->action_description) {
-        write_to_output(d, "%s", OLC_OBJ(d)->action_description);
-        oldtext = strdup(OLC_OBJ(d)->action_description);
+      if (OLC_OBJ(d)->main_description) {
+        write_to_output(d, "%s", OLC_OBJ(d)->main_description);
+        oldtext = strdup(OLC_OBJ(d)->main_description);
       }
-      string_write(d, &OLC_OBJ(d)->action_description,
+      string_write(d, &OLC_OBJ(d)->main_description,
                    MAX_MESSAGE_LENGTH, 0, oldtext);
       OLC_DIRTY(d) = 1;
       break;
@@ -889,11 +889,11 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     /* Multi-line editor is correct here, requires '@' to finish */
     send_editor_help(d);
     write_to_output(d, "Enter action description:\r\n\r\n");
-    if (OLC_OBJ(d)->action_description) {
-      write_to_output(d, "%s", OLC_OBJ(d)->action_description);
-      oldtext = strdup(OLC_OBJ(d)->action_description);
+    if (OLC_OBJ(d)->main_description) {
+      write_to_output(d, "%s", OLC_OBJ(d)->main_description);
+      oldtext = strdup(OLC_OBJ(d)->main_description);
     }
-    string_write(d, &OLC_OBJ(d)->action_description, MAX_MESSAGE_LENGTH, 0, oldtext);
+    string_write(d, &OLC_OBJ(d)->main_description, MAX_MESSAGE_LENGTH, 0, oldtext);
     OLC_DIRTY(d) = 1;
     return;
 

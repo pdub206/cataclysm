@@ -351,10 +351,10 @@ static void postmaster_receive_mail(struct char_data *ch, struct char_data *mail
     GET_OBJ_WEIGHT(obj) = 1;
     GET_OBJ_COST(obj) = 30;
     GET_OBJ_RENT(obj) = 10;
-    obj->action_description = read_delete(GET_IDNUM(ch));
+    obj->main_description = read_delete(GET_IDNUM(ch));
 
-    if (obj->action_description == NULL)
-      obj->action_description =
+    if (obj->main_description == NULL)
+      obj->main_description =
 	strdup("Mail system error - please report.  Error #11.\r\n");
 
     obj_to_char(obj, ch);

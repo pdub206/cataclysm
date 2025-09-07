@@ -54,8 +54,8 @@ int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
     temp->item_number = NOWHERE;
   }
 
-  if (obj->action_description) {
-    strcpy(buf1, obj->action_description);
+  if (obj->main_description) {
+    strcpy(buf1, obj->main_description);
     strip_cr(buf1);
   } else
     *buf1 = 0;
@@ -107,8 +107,8 @@ int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
   if (obj->description && (!temp->description ||
       strcmp(obj->description, temp->description)))
     fprintf(fp, "Desc: %s\n", obj->description);
-  if (obj->action_description && (!temp->action_description ||
-      strcmp(obj->action_description, temp->action_description)))
+  if (obj->main_description && (!temp->main_description ||
+      strcmp(obj->main_description, temp->main_description)))
     fprintf(fp, "ADes:\n%s~\n", buf1);
 
   /* Core fields */
@@ -774,8 +774,8 @@ obj_save_data *objsave_parse_objects(FILE *fl)
       temp->description = *payload ? strdup(payload) : strdup("An object lies here.");
     }
     else if (!strcmp(tag, "ADes")) {
-      if (temp->action_description) free(temp->action_description);
-      temp->action_description = *payload ? strdup(payload) : NULL;
+      if (temp->main_description) free(temp->main_description);
+      temp->main_description = *payload ? strdup(payload) : NULL;
     }
     else if (!strcmp(tag, "End")) {
       commit_current();

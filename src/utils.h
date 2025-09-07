@@ -775,6 +775,8 @@ do                                                              \
 #define CAN_WEAR(obj, part)	OBJWEAR_FLAGGED((obj), (part))
 /** Return short description of obj. */
 #define GET_OBJ_SHORT(obj)      ((obj)->short_description)
+/* Return main description of obj. */
+#define GET_OBJ_MAIN(obj)   ((obj)->main_description)
 
 /* Compound utilities and other macros. */
 /** Used to compute version. To see if the code running is newer than 3.0pl13,

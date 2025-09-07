@@ -724,7 +724,7 @@ struct obj_data
   char *name;        /**< Keyword reference(s) for object. */
   char *description; /**< Shown when the object is lying in a room. */
   char *short_description;  /**< Shown when worn, carried, in a container */
-  char *action_description; /**< Displays when (if) the object is used */
+  char *main_description; /**< Displays when looking/examining an item */
   struct extra_descr_data *ex_description; /**< List of extra descriptions */
   struct char_data *carried_by; /**< Points to PC/NPC carrying, or NULL */
   struct char_data *worn_by; /**< Points to PC/NPC wearing, or NULL */

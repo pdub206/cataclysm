@@ -54,7 +54,7 @@ static size_t print_object_location(int num, const obj_data *obj, const char_dat
 /* For show_obj_to_char 'mode'.    /-- arbitrary */
 #define SHOW_OBJ_LONG     0
 #define SHOW_OBJ_SHORT    1
-#define SHOW_OBJ_ACTION   2
+#define SHOW_OBJ_MAIN   2
 
 static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mode)
 {
@@ -116,16 +116,24 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
     send_to_char(ch, "%s", obj->short_description);
     break;
 
-  case SHOW_OBJ_ACTION:
+  case SHOW_OBJ_MAIN:
+    /* Prefer builder-authored look/inspect text (M-Desc) for ANY item type. */
+    if (GET_OBJ_MAIN(obj) && *GET_OBJ_MAIN(obj)) {
+      /* Use the pager so multi-line M-Descs display nicely. */
+      page_string(ch->desc, GET_OBJ_MAIN(obj), TRUE);
+      return;
+    }
+
     switch (GET_OBJ_TYPE(obj)) {
     case ITEM_NOTE:
-      if (obj->action_description) {
+      if (obj->main_description) {
         char notebuf[MAX_NOTE_LENGTH + 64];
-
-        snprintf(notebuf, sizeof(notebuf), "There is something written on it:\r\n\r\n%s", obj->action_description);
+        snprintf(notebuf, sizeof(notebuf),
+                "There is something written on it:\r\n\r\n%s",
+                obj->main_description);
         page_string(ch->desc, notebuf, TRUE);
       } else
-    send_to_char(ch, "It's blank.\r\n");
+        send_to_char(ch, "It's blank.\r\n");
       return;
 
     case ITEM_DRINKCON:
@@ -133,7 +141,11 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
       break;
 
     default:
-      send_to_char(ch, "You see nothing special..");
+      /* Optional: friendlier fallback that names the item. */
+      if (obj->short_description && *obj->short_description)
+        send_to_char(ch, "You see nothing special about %s.", obj->short_description);
+      else
+        send_to_char(ch, "You see nothing special..");
       break;
     }
     break;
@@ -709,7 +721,7 @@ static void look_at_target(struct char_data *ch, char *arg)
   /* If an object was found back in generic_find */
   if (bits) {
     if (!found)
-      show_obj_to_char(found_obj, ch, SHOW_OBJ_ACTION);
+      show_obj_to_char(found_obj, ch, SHOW_OBJ_MAIN);
     else {
       show_obj_modifiers(found_obj, ch);
       send_to_char(ch, "\r\n");

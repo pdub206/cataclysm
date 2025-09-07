@@ -204,8 +204,8 @@ int save_objects(zone_rnum zone_num)
   /* Start running through all objects in this zone. */
   for (counter = genolc_zone_bottom(zone_num); counter <= zone_table[zone_num].top; counter++) {
     if ((realcounter = real_object(counter)) != NOTHING) {
-      if ((obj = &obj_proto[realcounter])->action_description) {
-        strncpy(buf, obj->action_description, sizeof(buf) - 1);
+      if ((obj = &obj_proto[realcounter])->main_description) {
+        strncpy(buf, obj->main_description, sizeof(buf) - 1);
         strip_cr(buf);
       } else
         *buf = '\0';
@@ -307,8 +307,8 @@ void free_object_strings(struct obj_data *obj)
     free(obj->description);
   if (obj->short_description)
     free(obj->short_description);
-  if (obj->action_description)
-    free(obj->action_description);
+  if (obj->main_description)
+    free(obj->main_description);
   if (obj->ex_description)
     free_ex_descriptions(obj->ex_description);
 }
@@ -324,8 +324,8 @@ void free_object_strings_proto(struct obj_data *obj)
     free(obj->description);
   if (obj->short_description && obj->short_description != obj_proto[robj_num].short_description)
     free(obj->short_description);
-  if (obj->action_description && obj->action_description != obj_proto[robj_num].action_description)
-    free(obj->action_description);
+  if (obj->main_description && obj->main_description != obj_proto[robj_num].main_description)
+    free(obj->main_description);
   if (obj->ex_description) {
     struct extra_descr_data *thised, *plist, *next_one; /* O(horrible) */
     int ok_key, ok_desc, ok_item;
@@ -354,7 +354,7 @@ static void copy_object_strings(struct obj_data *to, struct obj_data *from)
   to->name = from->name ? strdup(from->name) : NULL;
   to->description = from->description ? strdup(from->description) : NULL;
   to->short_description = from->short_description ? strdup(from->short_description) : NULL;
-  to->action_description = from->action_description ? strdup(from->action_description) : NULL;
+  to->main_description = from->main_description ? strdup(from->main_description) : NULL;
 
   if (from->ex_description)
     copy_ex_descriptions(&to->ex_description, from->ex_description);

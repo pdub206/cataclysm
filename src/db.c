@@ -573,8 +573,8 @@ void destroy_db(void)
       free(obj_proto[cnt].description);
     if (obj_proto[cnt].short_description)
       free(obj_proto[cnt].short_description);
-    if (obj_proto[cnt].action_description)
-      free(obj_proto[cnt].action_description);
+    if (obj_proto[cnt].main_description)
+      free(obj_proto[cnt].main_description);
     free_extra_descriptions(obj_proto[cnt].ex_description);
 
     /* free script proto list */
@@ -1961,7 +1961,7 @@ char *parse_object(FILE *obj_f, int nr)
   tmpptr = obj_proto[i].description = fread_string(obj_f, buf2);
   if (tmpptr && *tmpptr)
     CAP(tmpptr);
-  obj_proto[i].action_description = fread_string(obj_f, buf2);
+  obj_proto[i].main_description = fread_string(obj_f, buf2);
 
   /* numeric data */
   if (!get_line(obj_f, line)) {

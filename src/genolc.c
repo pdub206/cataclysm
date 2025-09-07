@@ -784,8 +784,8 @@ static int export_save_objects(zone_rnum zrnum)
   /* Start running through all objects in this zone. */
   for (ovnum = genolc_zone_bottom(zrnum); ovnum <= zone_table[zrnum].top; ovnum++) {
     if ((ornum = real_object(ovnum)) != NOTHING) {
-      if ((obj = &obj_proto[ornum])->action_description) {
-	strncpy(buf, obj->action_description, sizeof(buf) - 1);
+      if ((obj = &obj_proto[ornum])->main_description) {
+	strncpy(buf, obj->main_description, sizeof(buf) - 1);
 	strip_cr(buf);
       } else
 	*buf = '\0';

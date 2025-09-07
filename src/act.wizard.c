@@ -999,7 +999,7 @@ static void do_stat_object(struct char_data *ch, struct obj_data *j)
       CCNRM(ch, C_NRM));
 
   send_to_char(ch, "A-Desc: '%s%s%s'\r\n", CCYEL(ch, C_NRM),
-      j->action_description ? j->action_description : "<None>",
+      j->main_description ? j->main_description : "<None>",
       CCNRM(ch, C_NRM));
 
   if (j->ex_description) {
@@ -4233,13 +4233,13 @@ ACMD (do_zcheck)
                           "- has min level set to %d (max %d).\r\n",
                           GET_OBJ_LEVEL(obj), LVL_IMMORT-1);
 
-      if (obj->action_description && *obj->action_description &&
+      if (obj->main_description && *obj->main_description &&
           GET_OBJ_TYPE(obj) != ITEM_STAFF &&
           GET_OBJ_TYPE(obj) != ITEM_WAND &&
           GET_OBJ_TYPE(obj) != ITEM_SCROLL &&
           GET_OBJ_TYPE(obj) != ITEM_NOTE && (found=1))
         len += snprintf(buf + len, sizeof(buf) - len,
-                          "- has action_description set, but is inappropriate type.\r\n");
+                          "- has main_description set, but is inappropriate type.\r\n");
 
       /*first check for over-all affections*/
       for (affs=0, j = 0; j < MAX_OBJ_AFFECT; j++)

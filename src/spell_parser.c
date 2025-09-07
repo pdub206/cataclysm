@@ -318,8 +318,8 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
   switch (GET_OBJ_TYPE(obj)) {
   case ITEM_STAFF:
     act("You tap $p three times on the ground.", FALSE, ch, obj, 0, TO_CHAR);
-    if (obj->action_description)
-      act(obj->action_description, FALSE, ch, obj, 0, TO_ROOM);
+    if (obj->main_description)
+      act(obj->main_description, FALSE, ch, obj, 0, TO_ROOM);
     else
       act("$n taps $p three times on the ground.", FALSE, ch, obj, 0, TO_ROOM);
 
@@ -356,15 +356,15 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
         act("$n points $p at $mself.", FALSE, ch, obj, 0, TO_ROOM);
       } else {
         act("You point $p at $N.", FALSE, ch, obj, tch, TO_CHAR);
-        if (obj->action_description)
-          act(obj->action_description, FALSE, ch, obj, tch, TO_ROOM);
+        if (obj->main_description)
+          act(obj->main_description, FALSE, ch, obj, tch, TO_ROOM);
         else
           act("$n points $p at $N.", TRUE, ch, obj, tch, TO_ROOM);
       }
     } else if (tobj != NULL) {
       act("You point $p at $P.", FALSE, ch, obj, tobj, TO_CHAR);
-      if (obj->action_description)
-        act(obj->action_description, FALSE, ch, obj, tobj, TO_ROOM);
+      if (obj->main_description)
+        act(obj->main_description, FALSE, ch, obj, tobj, TO_ROOM);
       else
         act("$n points $p at $P.", TRUE, ch, obj, tobj, TO_ROOM);
     } else if (IS_SET(spell_info[GET_OBJ_VAL(obj, 3)].routines,
@@ -402,8 +402,8 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
       tch = ch;
 
     act("You recite $p which dissolves.", TRUE, ch, obj, 0, TO_CHAR);
-    if (obj->action_description)
-      act(obj->action_description, FALSE, ch, obj, tch, TO_ROOM);
+    if (obj->main_description)
+      act(obj->main_description, FALSE, ch, obj, tch, TO_ROOM);
     else
       act("$n recites $p.", FALSE, ch, obj, NULL, TO_ROOM);
 
@@ -423,8 +423,8 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
       return;
 
     act("You quaff $p.", FALSE, ch, obj, NULL, TO_CHAR);
-    if (obj->action_description)
-      act(obj->action_description, FALSE, ch, obj, NULL, TO_ROOM);
+    if (obj->main_description)
+      act(obj->main_description, FALSE, ch, obj, NULL, TO_ROOM);
     else
       act("$n quaffs $p.", TRUE, ch, obj, NULL, TO_ROOM);
 

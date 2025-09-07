@@ -462,16 +462,16 @@ ACMD(do_write)
     char *backstr = NULL;
 
     /* Something on it, display it as that's in input buffer. */
-    if (paper->action_description) {
-      backstr = strdup(paper->action_description);
+    if (paper->main_description) {
+      backstr = strdup(paper->main_description);
       send_to_char(ch, "There's something written on it already:\r\n");
-      send_to_char(ch, "%s", paper->action_description);
+      send_to_char(ch, "%s", paper->main_description);
     }
 
     /* We can write. */
     act("$n begins to jot down a note.", TRUE, ch, 0, 0, TO_ROOM);
     send_editor_help(ch->desc);
-    string_write(ch->desc, &paper->action_description, MAX_NOTE_LENGTH, 0, backstr);
+    string_write(ch->desc, &paper->main_description, MAX_NOTE_LENGTH, 0, backstr);
   }
 }
 
