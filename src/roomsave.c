@@ -13,6 +13,7 @@
 #include "conf.h"
 #include "sysdep.h"
 
+#include <stdlib.h>
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
@@ -35,6 +36,28 @@
 #ifndef ROOMSAVE_EXT
 #define ROOMSAVE_EXT     ".rsv"
 #endif
+
+static unsigned char *roomsave_dirty = NULL;
+
+void RoomSave_init_dirty(void) {
+  free(roomsave_dirty);
+  roomsave_dirty = calloc((size_t)top_of_world + 1, 1);
+}
+
+void RoomSave_mark_dirty_room(room_rnum rnum) {
+  if (!roomsave_dirty) return;
+  if (rnum != NOWHERE && rnum >= 0 && rnum <= top_of_world)
+    roomsave_dirty[rnum] = 1;
+}
+
+/* Where does an object “live” (topmost location -> room)? */
+room_rnum RoomSave_room_of_obj(struct obj_data *o) {
+  if (!o) return NOWHERE;
+  while (o->in_obj) o = o->in_obj;
+  if (o->carried_by) return IN_ROOM(o->carried_by);
+  if (o->worn_by)    return IN_ROOM(o->worn_by);
+  return o->in_room;
+}
 
 /* --- helper: read a list of objects until '.' or 'E' and return the head --- */
 static struct obj_data *roomsave_read_list(FILE *fl) {
@@ -397,8 +420,9 @@ void RoomSave_boot(void) {
 /* Save all rooms flagged ROOM_SAVE. Called from point_update() on a cadence. */
 void RoomSave_autosave_tick(void) {
   for (room_rnum rnum = 0; rnum <= top_of_world; rnum++) {
-    if (ROOM_FLAGGED(rnum, ROOM_SAVE)) {
-      RoomSave_now(rnum);
-    }
+    if (!ROOM_FLAGGED(rnum, ROOM_SAVE)) continue;
+    if (!roomsave_dirty || !roomsave_dirty[rnum]) continue;
+    if (RoomSave_now(rnum))
+      roomsave_dirty[rnum] = 0;
   }
 }

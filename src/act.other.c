@@ -137,12 +137,12 @@ ACMD(do_save)
 {
   char a1[MAX_INPUT_LENGTH], a2[MAX_INPUT_LENGTH];
 
-  /* Parse up to two words so we can accept "save room" or "room save". */
+  /* Accept both orders: "save room" or "room save" */
   two_arguments(argument, a1, a2);
 
-  /* Does either token equal "room"? (order-agnostic) */
-  const bool wants_room = ((*a1 && !str_cmp(a1, "room")) ||
-                           (*a2 && !str_cmp(a2, "room")));
+  /* order-agnostic check */
+  int wants_room = ((*a1 && !str_cmp(a1, "room")) ||
+                    (*a2 && !str_cmp(a2, "room")));
 
   if (wants_room) {
     room_rnum rnum = IN_ROOM(ch);
@@ -163,8 +163,20 @@ ACMD(do_save)
     /* Room is flagged SAVE → persist its contents */
     if (RoomSave_now(rnum)) {
       send_to_char(ch, "Saving room.\r\n");
+      mudlog(NRM, LVL_IMMORT, FALSE,
+             "RoomSave: manual save of room %d by %s.",
+             world[rnum].number, GET_NAME(ch));
+      /* If you added a dirty-save API and want to clear the bit on manual save,
+         you can optionally call it here (guard with a macro if desired):
+         #ifdef ROOMSAVE_HAVE_DIRTY_API
+         RoomSave_clear_dirty(rnum);
+         #endif
+      */
     } else {
       send_to_char(ch, "Room save failed; see logs.\r\n");
+      mudlog(NRM, LVL_IMMORT, TRUE,
+             "SYSERR: RoomSave: manual save FAILED for room %d by %s.",
+             world[rnum].number, GET_NAME(ch));
     }
     return;
   }

@@ -25,4 +25,10 @@ int  RoomSave_now(room_rnum rnum);
 /* Autosave pass for all rooms flagged ROOM_SAVE. */
 void RoomSave_autosave_tick(void);
 
+/* Only save rooms when modified */
+void RoomSave_init_dirty(void);
+void RoomSave_mark_dirty_room(room_rnum rnum);
+/* For container edits: find the room an object ultimately lives in */
+room_rnum RoomSave_room_of_obj(struct obj_data *obj);
+
 #endif /* ROOMSAVE_H_ */

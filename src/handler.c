@@ -24,6 +24,7 @@
 #include "fight.h"
 #include "quest.h"
 #include "mud_event.h"
+#include "roomsave.h"
 
 /* local file scope variables */
 static int extractions_pending = 0;
@@ -419,11 +420,15 @@ void char_to_room(struct char_data *ch, room_rnum room)
 /* Give an object to a char. */
 void obj_to_char(struct obj_data *object, struct char_data *ch)
 {
+  room_rnum __rs_room = RoomSave_room_of_obj(object);  /* where the item currently lives */
+
   if (object && ch) {
     object->next_content = ch->carrying;
     ch->carrying = object;
     object->carried_by = ch;
     IN_ROOM(object) = NOWHERE;
+    if (__rs_room != NOWHERE)
+      RoomSave_mark_dirty_room(__rs_room);
     IS_CARRYING_W(ch) += GET_OBJ_WEIGHT(object);
     IS_CARRYING_N(ch)++;
 
@@ -440,6 +445,7 @@ void obj_to_char(struct obj_data *object, struct char_data *ch)
 void obj_from_char(struct obj_data *object)
 {
   struct obj_data *temp;
+  room_rnum __rs_room = IN_ROOM(object->carried_by);
 
   if (object == NULL) {
     log("SYSERR: NULL object passed to obj_from_char.");
@@ -455,6 +461,8 @@ void obj_from_char(struct obj_data *object)
   IS_CARRYING_N(object->carried_by)--;
   object->carried_by = NULL;
   object->next_content = NULL;
+  if (__rs_room != NOWHERE)
+    RoomSave_mark_dirty_room(__rs_room);
 }
 
 /* Return the effect of a piece of armor in position eq_pos */
@@ -689,6 +697,8 @@ void obj_to_room(struct obj_data *object, room_rnum room)
     object->carried_by = NULL;
     if (ROOM_FLAGGED(room, ROOM_HOUSE))
       SET_BIT_AR(ROOM_FLAGS(room), ROOM_HOUSE_CRASH);
+    /* RoomSave: this room’s contents changed */
+    RoomSave_mark_dirty_room(room);
   }
 }
 
@@ -697,6 +707,7 @@ void obj_from_room(struct obj_data *object)
 {
   struct obj_data *temp;
   struct char_data *t, *tempch;
+  room_rnum __rs_was_room = IN_ROOM(object);
 
   if (!object || IN_ROOM(object) == NOWHERE) {
     log("SYSERR: NULL object (%p) or obj not in a room (%d) passed to obj_from_room",
@@ -719,6 +730,8 @@ void obj_from_room(struct obj_data *object)
     SET_BIT_AR(ROOM_FLAGS(IN_ROOM(object)), ROOM_HOUSE_CRASH);
   IN_ROOM(object) = NOWHERE;
   object->next_content = NULL;
+  /* RoomSave: room lost an object */
+  RoomSave_mark_dirty_room(__rs_was_room);
 }
 
 /* put an object in an object (quaint)  */
@@ -735,6 +748,8 @@ void obj_to_obj(struct obj_data *obj, struct obj_data *obj_to)
   obj->next_content = obj_to->contains;
   obj_to->contains = obj;
   obj->in_obj = obj_to;
+  /* RoomSave: container changed; mark the room the container ultimately lives in */
+  RoomSave_mark_dirty_room(RoomSave_room_of_obj(obj_to));
 
   /* Add weight to container, unless unlimited. */
   if (GET_OBJ_VAL(obj->in_obj, 0) > 0) {
@@ -752,6 +767,7 @@ void obj_to_obj(struct obj_data *obj, struct obj_data *obj_to)
 void obj_from_obj(struct obj_data *obj)
 {
   struct obj_data *temp, *obj_from;
+  struct obj_data *__rs_container = obj->in_obj;  /* capture before unlink */
 
   if (obj->in_obj == NULL) {
     log("SYSERR: (%s): trying to illegally extract obj from obj.", __FILE__);
@@ -772,6 +788,8 @@ void obj_from_obj(struct obj_data *obj)
   }
   obj->in_obj = NULL;
   obj->next_content = NULL;
+  /* RoomSave: container changed; mark the room the container ultimately lives in */
+  RoomSave_mark_dirty_room(RoomSave_room_of_obj(__rs_container));
 }
 
 /* Set all carried_by to point to new owner */
@@ -789,6 +807,7 @@ void extract_obj(struct obj_data *obj)
 {
   struct char_data *ch, *next = NULL;
   struct obj_data *temp;
+  room_rnum __rs_room = RoomSave_room_of_obj(obj);
 
   if (obj->worn_by != NULL)
     if (unequip_char(obj->worn_by, obj->worn_on) != obj)
@@ -837,6 +856,9 @@ void extract_obj(struct obj_data *obj)
   if (GET_OBJ_RNUM(obj) == NOTHING || obj->proto_script != obj_proto[GET_OBJ_RNUM(obj)].proto_script)
     free_proto_script(obj, OBJ_TRIGGER);
 
+  if (__rs_room != NOWHERE)
+    RoomSave_mark_dirty_room(__rs_room);
+    
   free_obj(obj);
 }
 

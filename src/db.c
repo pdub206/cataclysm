@@ -784,7 +784,8 @@ void boot_db(void)
   }
 
   /* Restore persistent room contents last so they take precedence. */
-  log("Loading Room Contents.");  
+  log("Loading Room Contents.");
+  RoomSave_init_dirty();
   RoomSave_boot();
 
   log("Cleaning up last log.");
