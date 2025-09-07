@@ -23,6 +23,7 @@
 #include "fight.h"
 #include "screen.h"
 #include "mud_event.h"
+#include "roomsave.h"
 #include <time.h>
 
 /* local file scope function prototypes */
@@ -440,6 +441,8 @@ void point_update(void)
 {
   struct char_data *i, *next_char;
   struct obj_data *j, *next_thing, *jj, *next_thing2;
+  /* Room-save autosave pulse counter (static so it persists across calls) */
+  static int roomsave_pulse = 0;
 
   /* characters */
   for (i = character_list; i; i = next_char) {
@@ -454,59 +457,59 @@ void point_update(void)
       GET_MANA(i) = MIN(GET_MANA(i) + mana_gain(i), GET_MAX_MANA(i));
       GET_MOVE(i) = MIN(GET_MOVE(i) + move_gain(i), GET_MAX_MOVE(i));
       if (AFF_FLAGGED(i, AFF_POISON))
-	if (damage(i, i, 2, SPELL_POISON) == -1)
-	  continue;	/* Oops, they died. -gg 6/24/98 */
+        if (damage(i, i, 2, SPELL_POISON) == -1)
+          continue; /* Oops, they died. -gg 6/24/98 */
       if (GET_POS(i) <= POS_STUNNED)
-	update_pos(i);
+        update_pos(i);
     } else if (GET_POS(i) == POS_INCAP) {
       if (damage(i, i, 1, TYPE_SUFFERING) == -1)
-	continue;
+        continue;
     } else if (GET_POS(i) == POS_MORTALLYW) {
       if (damage(i, i, 2, TYPE_SUFFERING) == -1)
-	continue;
+        continue;
     }
     if (!IS_NPC(i)) {
       update_char_objects(i);
       (i->char_specials.timer)++;
       if (GET_LEVEL(i) < CONFIG_IDLE_MAX_LEVEL)
-	check_idling(i);
+        check_idling(i);
     }
   }
 
   /* objects */
   for (j = object_list; j; j = next_thing) {
-    next_thing = j->next;	/* Next in object list */
+    next_thing = j->next; /* Next in object list */
 
     /* If this is a corpse */
     if (IS_CORPSE(j)) {
       /* timer count down */
       if (GET_OBJ_TIMER(j) > 0)
-	GET_OBJ_TIMER(j)--;
+        GET_OBJ_TIMER(j)--;
 
       if (!GET_OBJ_TIMER(j)) {
 
-	if (j->carried_by)
-	  act("$p decays in your hands.", FALSE, j->carried_by, j, 0, TO_CHAR);
-	else if ((IN_ROOM(j) != NOWHERE) && (world[IN_ROOM(j)].people)) {
-	  act("A quivering horde of maggots consumes $p.",
-	      TRUE, world[IN_ROOM(j)].people, j, 0, TO_ROOM);
-	  act("A quivering horde of maggots consumes $p.",
-	      TRUE, world[IN_ROOM(j)].people, j, 0, TO_CHAR);
-	}
-	for (jj = j->contains; jj; jj = next_thing2) {
-	  next_thing2 = jj->next_content;	/* Next in inventory */
-	  obj_from_obj(jj);
+        if (j->carried_by)
+          act("$p decays in your hands.", FALSE, j->carried_by, j, 0, TO_CHAR);
+        else if ((IN_ROOM(j) != NOWHERE) && (world[IN_ROOM(j)].people)) {
+          act("A quivering horde of maggots consumes $p.",
+              TRUE, world[IN_ROOM(j)].people, j, 0, TO_ROOM);
+          act("A quivering horde of maggots consumes $p.",
+              TRUE, world[IN_ROOM(j)].people, j, 0, TO_CHAR);
+        }
+        for (jj = j->contains; jj; jj = next_thing2) {
+          next_thing2 = jj->next_content; /* Next in inventory */
+          obj_from_obj(jj);
 
-	  if (j->in_obj)
-	    obj_to_obj(jj, j->in_obj);
-	  else if (j->carried_by)
-	    obj_to_room(jj, IN_ROOM(j->carried_by));
-	  else if (IN_ROOM(j) != NOWHERE)
-	    obj_to_room(jj, IN_ROOM(j));
-	  else
-	    core_dump();
-	}
-	extract_obj(j);
+          if (j->in_obj)
+            obj_to_obj(jj, j->in_obj);
+          else if (j->carried_by)
+            obj_to_room(jj, IN_ROOM(j->carried_by));
+          else if (IN_ROOM(j) != NOWHERE)
+            obj_to_room(jj, IN_ROOM(j));
+          else
+            core_dump();
+        }
+        extract_obj(j);
       }
     }
     /* If the timer is set, count it down and at 0, try the trigger
@@ -516,6 +519,15 @@ void point_update(void)
       if (!GET_OBJ_TIMER(j))
         timer_otrigger(j);
     }
+  }
+
+  /* ---- Room SAVE autosave (every 10 minutes; adjust the 600 as desired) ----
+   * Requires: #include "roomsave.h" at the top of this file.
+   * Saves all rooms flagged ROOM_SAVE via roomsave.c.
+   */
+  if (++roomsave_pulse >= (PASSES_PER_SEC * 600)) {
+    roomsave_pulse = 0;
+    RoomSave_autosave_tick();
   }
 }
 

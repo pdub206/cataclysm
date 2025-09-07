@@ -84,6 +84,7 @@ const char *room_bits[] = {
   "*",				/* The BFS Mark. */
   "WORLDMAP",
   "QUIT",
+  "SAVE",
   "\n"
 };
 
@@ -124,8 +125,16 @@ const char *sector_types[] = {
   "Mountains",
   "Water (Swim)",
   "Water (No Swim)",
-  "In Flight",
   "Underwater",
+  "In Flight",
+  "Scrublands",
+  "Sands",
+  "Rocky Terrain",
+  "Roads",
+  "Underground",
+  "Silt Sea",
+  "Ashlands",
+  "Tablelands",
   "\n"
 };
 

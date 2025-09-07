@@ -38,6 +38,7 @@
 #include "mud_event.h"
 #include "msgedit.h"
 #include "screen.h"
+#include "roomsave.h"
 #include <sys/stat.h>
 
 /*  declarations of most of the 'global' variables */
@@ -781,6 +782,10 @@ void boot_db(void)
     log("Booting houses.");
     House_boot();
   }
+
+  /* Restore persistent room contents last so they take precedence. */
+  log("Loading Room Contents.");  
+  RoomSave_boot();
 
   log("Cleaning up last log.");
   clean_llog_entries();

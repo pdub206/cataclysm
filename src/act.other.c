@@ -29,6 +29,7 @@
 #include "shop.h"
 #include "quest.h"
 #include "modify.h"
+#include "roomsave.h"
 
 /* Local defined utility functions */
 /* do_group utility functions */
@@ -134,20 +135,44 @@ ACMD(do_quit)
 
 ACMD(do_save)
 {
-  if (IS_NPC(ch) || !ch->desc)
+  char a1[MAX_INPUT_LENGTH], a2[MAX_INPUT_LENGTH];
+
+  /* Parse up to two words so we can accept "save room" or "room save". */
+  two_arguments(argument, a1, a2);
+
+  /* Does either token equal "room"? (order-agnostic) */
+  const bool wants_room = ((*a1 && !str_cmp(a1, "room")) ||
+                           (*a2 && !str_cmp(a2, "room")));
+
+  if (wants_room) {
+    room_rnum rnum = IN_ROOM(ch);
+
+    if (rnum == NOWHERE) {
+      send_to_char(ch, "You're not in a valid room.\r\n");
+      return;
+    }
+
+    /* Not a SAVE room? Fall back to normal character save semantics. */
+    if (!ROOM_FLAGGED(rnum, ROOM_SAVE)) {
+      send_to_char(ch, "Saving %s.\r\n", GET_NAME(ch));
+      save_char(ch);
+      Crash_crashsave(ch);   /* keep whatever your tree normally calls */
+      return;
+    }
+
+    /* Room is flagged SAVE → persist its contents */
+    if (RoomSave_now(rnum)) {
+      send_to_char(ch, "Saving room.\r\n");
+    } else {
+      send_to_char(ch, "Room save failed; see logs.\r\n");
+    }
     return;
+  }
 
+  /* No "room" token present → normal character save */
   send_to_char(ch, "Saving %s.\r\n", GET_NAME(ch));
-
-  /* Stamp the spawn room first so it's included in this save. */
-  if (IN_ROOM(ch) != NOWHERE)
-    GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
-
   save_char(ch);
   Crash_crashsave(ch);
-
-  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_HOUSE_CRASH))
-    House_crashsave(GET_ROOM_VNUM(IN_ROOM(ch)));
 }
 
 /* Generic function for commands which are normally overridden by special

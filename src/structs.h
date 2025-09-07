@@ -89,8 +89,9 @@
 #define ROOM_BFS_MARK      15   /**< (R) breath-first srch mrk */
 #define ROOM_WORLDMAP      16   /**< World-map style maps here */
 #define ROOM_QUIT          17   /**< Room allows players to quit in it */
+#define ROOM_SAVE          18   /**< Room saves object contents to it periodically */
 /** The total number of Room Flags */
-#define NUM_ROOM_FLAGS     18
+#define NUM_ROOM_FLAGS     19
 
 /* Zone info: Used in zone_data.zone_flags */
 #define ZONE_CLOSED       0  /**< Zone is closed - players cannot enter */
