@@ -179,7 +179,7 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define OEDIT_KEYWORD            	   2
 #define OEDIT_SHORTDESC              	3
 #define OEDIT_LONGDESC               	4
-#define OEDIT_ACTDESC                	5
+#define OEDIT_MAINDESC                	5
 #define OEDIT_TYPE                   	6
 #define OEDIT_EXTRAS                 	7
 #define OEDIT_WEAR                  	8

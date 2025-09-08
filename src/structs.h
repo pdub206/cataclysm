@@ -120,7 +120,7 @@
 #define SECT_MOUNTAIN        5		/**< On a mountain		*/
 #define SECT_WATER_SWIM      6		/**< Swimmable water		*/
 #define SECT_WATER_NOSWIM    7		/**< Water - need a boat	*/
-#define SECT_UNDERWATER      8		/**< Flying			*/
+#define SECT_UNDERWATER      8		/**< Underwater			*/
 #define SECT_FLYING	         9		/**< Flying			*/
 #define SECT_SCRUBLAND	     10		/**< Scrublands		*/
 #define SECT_SAND     	     11		/**< Sandy Wastes		*/
@@ -1304,7 +1304,7 @@ struct recent_player
 
 /* 5e system helpers */
 
-/* Armor item values (for ITEM_ARMOR objects)
+/* Armor item object values (for ITEM_ARMOR objects)
  * value[0] = piece_ac (0–3)
  * value[1] = bulk (0–3), determines allowed dex bonus
  * value[2] = magic_bonus (0–3, most will be at most +1)
@@ -1332,6 +1332,18 @@ struct recent_player
 void loadout_free_list(struct mob_loadout **head);
 void loadout_add_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty);
 struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src);
+
+
+/* Furniture defines for object values */
+/* Furniture object values (obj_flags.value[x]) */
+#define VAL_FURN_CAPACITY      0  /* how much it can hold / support */
+#define VAL_FURN_MAX_OCC       1  /* max occupants */
+#define VAL_FURN_POSITIONS     2  /* allowed positions (bitvector) */
+#define VAL_FURN_FLAGS         3  /* behavior flags (bitvector) */
+#define VAL_FURN_COMFORT       4  /* comfort/healing bonus */
+#define VAL_FURN_ENTRY_DC      5  /* difficulty to climb onto */
+#define VAL_FURN_SCRIPT        6  /* script hook */
+#define VAL_FURN_RESERVED      7  /* reserved */
 
 /* Config structs */
 

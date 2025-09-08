@@ -102,8 +102,8 @@ static const char *money_val_labels[NUM_OBJ_VAL_POSITIONS] = {
 
 /* Furniture */
 static const char *furniture_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "capacity", "num_people", "unused2", "unused3",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+  "capacity", "max_people", "allowed_pos", "furn_flags",
+  "comfy_bonus", "climb_dc", "script_hook", "reserved"
 };
 
 /* Generic fallback */
@@ -396,7 +396,6 @@ static void oedit_disp_container_flags_menu(struct descriptor_data *d)
   write_to_output(d, "Enter container flag number (toggles on/off): ");
 }
 
-
 /* For extra descriptions. */
 static void oedit_disp_extradesc_menu(struct descriptor_data *d)
 {
@@ -519,6 +518,7 @@ static void oedit_disp_values_menu(struct descriptor_data *d)
     case ITEM_DRINKCON:
     case ITEM_FOUNTAIN:   labels = drink_val_labels; break;
     case ITEM_CONTAINER:  labels = container_val_labels; break;
+    case ITEM_FURNITURE:  labels = furniture_val_labels; break;
     default:              labels = generic_val_labels; break;
   }
 
@@ -745,7 +745,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       OLC_MODE(d) = OEDIT_LONGDESC;
       break;
     case '4':
-      OLC_MODE(d) = OEDIT_ACTDESC;
+      OLC_MODE(d) = OEDIT_MAINDESC;
       send_editor_help(d);
       write_to_output(d, "Enter action description:\r\n\r\n");
       if (OLC_OBJ(d)->main_description) {
@@ -885,7 +885,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     oedit_disp_menu(d);
     return;
 
-  case OEDIT_ACTDESC:
+  case OEDIT_MAINDESC:
     /* Multi-line editor is correct here, requires '@' to finish */
     send_editor_help(d);
     write_to_output(d, "Enter action description:\r\n\r\n");
@@ -1307,7 +1307,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
 void oedit_string_cleanup(struct descriptor_data *d, int terminator)
 {
   switch (OLC_MODE(d)) {
-  case OEDIT_ACTDESC:
+  case OEDIT_MAINDESC:
     OLC_DIRTY(d) = 1;
     oedit_disp_menu(d);
     break;

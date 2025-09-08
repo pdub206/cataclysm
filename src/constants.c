@@ -113,6 +113,27 @@ const char *exit_bits[] = {
   "\n"
 };
 
+/* Furniture: which body positions are supported on this piece */
+const char *furniture_position_bits[] = {
+  "STAND",   /* can stand on it */
+  "SIT",     /* can sit on it */
+  "REST",    /* can rest on it */
+  "SLEEP",   /* can sleep on it */
+  "KNEEL",   /* can kneel at/on it */
+  "\n"
+};
+
+/* Furniture flags: behavior & semantics */
+const char *furniture_flag_bits[] = {
+  "ON",            /* interact 'on' it (table, stage, dais) */
+  "IN",            /* interact 'in' it (bed with canopy, tub) */
+  "AT",            /* interact 'at' it (altar, bar, desk) */
+  "BLOCKS_PASSAGE",/* occupies/blocks movement in room */
+  "MOUNT_POINT",   /* anchor for ropes, mounts, etc. */
+  "NO_DRAG",       /* cannot be dragged */
+  "\n"
+};
+
 /** Description of the room sector type.
  * @pre Must be in the same order as the defines.
  * Must end array with a single newline. */
@@ -835,8 +856,16 @@ int movement_loss[] =
   6,	/* Mountains  */
   4,	/* Swimming   */
   1,	/* Unswimable */
-  1,	/* Flying     */
-  5   /* Underwater */
+  5,	/* Underwater */
+  1,  /* Flying */
+  3,  /* Scrubland */
+  3,  /* Sand */
+  5,  /* Rocky Hill */
+  1,  /* Road */
+  2,  /* Underground */
+  4,  /* Silt */
+  2,  /* Ashland */
+  2   /* Tableland */
 };
 
 /** The names of the days of the mud week. Not used in sprinttype(). */
