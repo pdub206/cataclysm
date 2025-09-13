@@ -146,21 +146,21 @@ static void test_ac_light_medium_heavy(void) {
    * Bulk: legs=2, hands=2, feet=2, total=6
    * Magic: legs=1, hands=1, total=2
    * Dex +4, but cap at +2
-   * Expect: base 10 + piece 4 + magic 2 + dex 2 = 18.
+   * Expect: base 10 + piece 6 + magic 0 + dex 2 = 18.
    */
   memset(ch.equipment, 0, sizeof(ch.equipment));
-  equip_at(&ch, WEAR_HEAD,   make_armor(2,1,0,0,0,0));
-  equip_at(&ch, WEAR_BODY,   make_armor(2,2,1,0,0,0));
-  equip_at(&ch, WEAR_LEGS,   make_armor(2,2,0,0,0,0));
+  equip_at(&ch, WEAR_HEAD,   make_armor(1,1,0,0,0,0));
+  equip_at(&ch, WEAR_BODY,   make_armor(2,2,0,0,0,0));
+  equip_at(&ch, WEAR_LEGS,   make_armor(1,2,0,0,0,0));
   equip_at(&ch, WEAR_HANDS,  make_armor(1,1,0,0,0,0));
   equip_at(&ch, WEAR_FEET,   make_armor(1,1,0,0,0,0));
 
   struct ac_breakdown b2; compute_ac_breakdown(&ch, &b2);
-  if (b2.total != 21) dbg_dump_ac("MEDIUM", &b2);
+  if (b2.total != 18) dbg_dump_ac("MEDIUM", &b2);
   T_EQI(b2.dex_cap, 2, "Medium dex cap 2");
   T_EQI(b2.dex_mod_applied, 2, "Medium dex +2 applied");
   T_EQI(b2.total_bulk, 7, "Medium bulk score 7");
-  T_EQI(b2.total, 21, "Medium total AC");
+  T_EQI(b2.total, 18, "Medium total AC");
 
   /* HEAVY SETUP:
    * Bulk target: Heavy (>=11)
@@ -169,27 +169,24 @@ static void test_ac_light_medium_heavy(void) {
    * Bulk: body=3, legs=2, total=13
    * Magic: body=3, legs=3, total=6 (max cap of 3, so total=3)
    * Dex +4 but cap 0 due to bulk
-   * Shield: base 2 + magic +5 (clamped to +3) + prof 0 => +5 total
-   * Expect: base 10 + piece 5 + armorMagic 3 + Dex 0 + shield 5 = 23
+   * Expect: base 10 + piece 7 + armorMagic 0 + Dex 0 = 20
    */
   memset(ch.equipment, 0, sizeof(ch.equipment));
-  equip_at(&ch, WEAR_HEAD,        make_armor(2,1,1,0,0,0));
-  equip_at(&ch, WEAR_BODY,        make_armor(3,3,1,0,0,0));
-  equip_at(&ch, WEAR_LEGS,        make_armor(2,1,1,0,0,0));
-  equip_at(&ch, WEAR_ARMS,        make_armor(1,1,0,0,0,0));
+  equip_at(&ch, WEAR_HEAD,        make_armor(1,1,1,0,0,0));
+  equip_at(&ch, WEAR_BODY,        make_armor(2,3,1,0,0,0));
+  equip_at(&ch, WEAR_LEGS,        make_armor(1,2,1,0,0,0));
+  equip_at(&ch, WEAR_ARMS,        make_armor(1,2,0,0,0,0));
   equip_at(&ch, WEAR_HANDS,       make_armor(1,1,0,0,0,0));
   equip_at(&ch, WEAR_FEET,        make_armor(1,1,0,0,0,0));
-  equip_at(&ch, WEAR_WRIST_L,     make_armor(1,1,0,0,0,0));
-  equip_at(&ch, WEAR_WRIST_R,     make_armor(1,1,0,0,0,0));
 
   struct ac_breakdown b3; compute_ac_breakdown(&ch, &b3);
-  if (b3.total != 25) dbg_dump_ac("HEAVY", &b3);
+  if (b3.total != 20) dbg_dump_ac("HEAVY", &b3);
   T_EQI(b3.dex_cap, 0, "Heavy dex cap 0");
   T_EQI(b3.dex_mod_applied, 0, "Heavy dex applied 0");
   T_EQI(b3.total_bulk, 10, "Heavy bulk score 10");
-  T_EQI(b3.armor_piece_sum, 12, "Heavy piece sum 12");
+  T_EQI(b3.armor_piece_sum, 7, "Heavy piece sum 7");
   T_EQI(b3.armor_magic_sum, 3, "Heavy armor magic at global cap 3");
-  T_EQI(b3.total, 25, "Heavy total AC");
+  T_EQI(b3.total, 20, "Heavy total AC");
 }
 
 static void test_hit_probability_sanity(void) {

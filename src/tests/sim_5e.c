@@ -9,6 +9,7 @@
 
 #include "structs.h"
 #include "utils.h"
+#include "handler.h"
 #include "constants.h"
 
 /* ---------- local RNG for the sim (do NOT use MUD's rand_number here) ---------- */
@@ -107,16 +108,14 @@ static void build_light(struct char_data *ch) {
   set_ability_scores(ch, 10, 18, 10, 10, 10, 10);
   equip_at(ch, WEAR_HEAD,   make_armor(1,1,0,0,0,0));
   equip_at(ch, WEAR_BODY,   make_armor(1,1,0,0,0,0));
-  equip_at(ch, WEAR_LEGS,   make_armor(1,2,0,0,0,0));
-  equip_at(ch, WEAR_FEET,   make_armor(1,1,0,0,0,0));
 }
 
 static void build_medium(struct char_data *ch) {
   init_test_char(ch);
   set_ability_scores(ch, 10, 18, 10, 10, 10, 10);
-  equip_at(ch, WEAR_HEAD,   make_armor(2,1,0,0,0,0));
-  equip_at(ch, WEAR_BODY,   make_armor(2,2,1,0,0,0));
-  equip_at(ch, WEAR_LEGS,   make_armor(2,2,0,0,0,0));
+  equip_at(ch, WEAR_HEAD,   make_armor(1,1,0,0,0,0));
+  equip_at(ch, WEAR_BODY,   make_armor(1,2,1,0,0,0));
+  equip_at(ch, WEAR_LEGS,   make_armor(1,2,0,0,0,0));
   equip_at(ch, WEAR_HANDS,  make_armor(1,1,0,0,0,0));
   equip_at(ch, WEAR_FEET,   make_armor(1,1,0,0,0,0));
 }
@@ -124,9 +123,9 @@ static void build_medium(struct char_data *ch) {
 static void build_heavy(struct char_data *ch) {
   init_test_char(ch);
   set_ability_scores(ch, 10, 18, 10, 10, 10, 10);
-  equip_at(ch, WEAR_HEAD,        make_armor(2,1,1,0,0,0));
-  equip_at(ch, WEAR_BODY,        make_armor(3,3,1,0,0,0));
-  equip_at(ch, WEAR_LEGS,        make_armor(2,1,1,0,0,0));
+  equip_at(ch, WEAR_HEAD,        make_armor(1,1,1,0,0,0));
+  equip_at(ch, WEAR_BODY,        make_armor(1,3,1,0,0,0));
+  equip_at(ch, WEAR_LEGS,        make_armor(1,1,0,0,0,0));
   equip_at(ch, WEAR_ARMS,        make_armor(1,1,0,0,0,0));
   equip_at(ch, WEAR_HANDS,       make_armor(1,1,0,0,0,0));
   equip_at(ch, WEAR_FEET,        make_armor(1,1,0,0,0,0));
@@ -191,9 +190,9 @@ int main(void) {
     {18, 90, 3, "Expert  (STR18, skill90, wm+3)"},
   };
   struct { struct char_data *def; const char *name; int hp; } def[] = {
-    { &light,  "Light",  40 },
-    { &medium, "Medium", 50 },
-    { &heavy, "Heavy",  60 },
+    { &light,  "Light",  90 },
+    { &medium, "Medium", 100 },
+    { &heavy, "Heavy",  110 },
   };
 
   printf("Matchups (trials=20000, 1d8 weapon):\n");
