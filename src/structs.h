@@ -1336,14 +1336,9 @@ struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src);
 
 /* Furniture defines for object values */
 /* Furniture object values (obj_flags.value[x]) */
-#define VAL_FURN_CAPACITY      0  /* how much it can hold / support */
-#define VAL_FURN_MAX_OCC       1  /* max occupants */
-#define VAL_FURN_POSITIONS     2  /* allowed positions (bitvector) */
-#define VAL_FURN_FLAGS         3  /* behavior flags (bitvector) */
-#define VAL_FURN_COMFORT       4  /* comfort/healing bonus */
-#define VAL_FURN_ENTRY_DC      5  /* difficulty to climb onto */
-#define VAL_FURN_SCRIPT        6  /* script hook */
-#define VAL_FURN_RESERVED      7  /* reserved */
+#define VAL_FURN_CAPACITY      0  /* maximum number of people who can use furniture */
+#define VAL_FURN_MAX_OCC       1  /* current number of people using furniture (runtime only, managed by game engine) */
+#define VAL_FURN_POSITIONS     2  /* allowed positions bitvector: bit 0=STAND(1), bit 1=SIT(2), bit 2=REST(4), bit 3=SLEEP(8) */
 
 /* Config structs */
 

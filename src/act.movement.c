@@ -803,6 +803,13 @@ ACMD(do_sit)
         act("There is no where left to sit upon $p.", TRUE, ch, furniture, 0, TO_CHAR);
         return;
       } else {
+        /* Check if furniture allows sitting position */
+        int allowed_positions = GET_OBJ_VAL(furniture, 2); /* VAL_FURN_POSITIONS */
+        if (allowed_positions > 0 && !(allowed_positions & (1 << 1))) { /* Check SIT bit (bit 1) */
+          act("$p doesn't look comfortable for sitting.", TRUE, ch, furniture, 0, TO_CHAR);
+          return;
+        }
+        
         if (OBJ_SAT_IN_BY(furniture) == NULL)
           OBJ_SAT_IN_BY(furniture) = ch;
         for (tempch = OBJ_SAT_IN_BY(furniture); tempch != ch ; tempch = NEXT_SITTING(tempch)) {
@@ -850,6 +857,14 @@ ACMD(do_rest)
     GET_POS(ch) = POS_RESTING;
     break;
   case POS_SITTING:
+    /* Check if sitting on furniture that allows resting */
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE) {
+      int allowed_positions = GET_OBJ_VAL(SITTING(ch), 2); /* VAL_FURN_POSITIONS */
+      if (allowed_positions > 0 && !(allowed_positions & (1 << 2))) { /* Check REST bit (bit 2) */
+        act("$p doesn't look comfortable for resting.", TRUE, ch, SITTING(ch), 0, TO_CHAR);
+        return;
+      }
+    }
     send_to_char(ch, "You rest your tired bones.\r\n");
     act("$n rests.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_RESTING;
@@ -877,6 +892,14 @@ ACMD(do_sleep)
   case POS_STANDING:
   case POS_SITTING:
   case POS_RESTING:
+    /* Check if sitting/resting on furniture that allows sleeping */
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE) {
+      int allowed_positions = GET_OBJ_VAL(SITTING(ch), 2); /* VAL_FURN_POSITIONS */
+      if (allowed_positions > 0 && !(allowed_positions & (1 << 3))) { /* Check SLEEP bit (bit 3) */
+        act("$p doesn't look comfortable for sleeping.", TRUE, ch, SITTING(ch), 0, TO_CHAR);
+        return;
+      }
+    }
     send_to_char(ch, "You go to sleep.\r\n");
     act("$n lies down and falls asleep.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SLEEPING;

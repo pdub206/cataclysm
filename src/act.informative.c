@@ -84,6 +84,7 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
     }
   }
 
+
   switch (mode) {
   case SHOW_OBJ_LONG:
     /* Hide objects starting with . from non-holylighted people. - Elaseth */
@@ -121,6 +122,34 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
     if (GET_OBJ_MAIN(obj) && *GET_OBJ_MAIN(obj)) {
       /* Use the pager so multi-line M-Descs display nicely. */
       page_string(ch->desc, GET_OBJ_MAIN(obj), TRUE);
+      
+      /* For furniture, also show items on it after the main description */
+      if (GET_OBJ_TYPE(obj) == ITEM_FURNITURE) {
+        /* Show seat availability */
+        if (GET_OBJ_VAL(obj, 0) > 0) {
+          int current_occupants = GET_OBJ_VAL(obj, 1);
+          int max_occupants = GET_OBJ_VAL(obj, 0);
+          int available_seats = max_occupants - current_occupants;
+          
+          if (available_seats > 0) {
+            send_to_char(ch, "\r\n%s(%d seat%s available)%s", 
+                         CCYEL(ch, C_NRM), available_seats, 
+                         available_seats == 1 ? "" : "s", 
+                         CCNRM(ch, C_NRM));
+          } else {
+            send_to_char(ch, "\r\n%s(no seats available)%s", 
+                         CCRED(ch, C_NRM), CCNRM(ch, C_NRM));
+          }
+        }
+        
+        /* Show items on furniture */
+        if (obj->contains) {
+          send_to_char(ch, "\r\nOn %s you see:\r\n", obj->short_description);
+          list_obj_to_char(obj->contains, ch, SHOW_OBJ_SHORT, TRUE);
+        } else {
+          send_to_char(ch, "\r\nYou see nothing on %s.", obj->short_description);
+        }
+      }
       return;
     }
 
@@ -138,6 +167,33 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
 
     case ITEM_DRINKCON:
       send_to_char(ch, "It looks like a drink container.");
+      break;
+
+    case ITEM_FURNITURE:
+      /* Show seat availability */
+      if (GET_OBJ_VAL(obj, 0) > 0) {
+        int current_occupants = GET_OBJ_VAL(obj, 1);
+        int max_occupants = GET_OBJ_VAL(obj, 0);
+        int available_seats = max_occupants - current_occupants;
+        
+        if (available_seats > 0) {
+          send_to_char(ch, "%s(%d seat%s available)%s ", 
+                       CCYEL(ch, C_NRM), available_seats, 
+                       available_seats == 1 ? "" : "s", 
+                       CCNRM(ch, C_NRM));
+        } else {
+          send_to_char(ch, "%s(no seats available)%s ", 
+                       CCRED(ch, C_NRM), CCNRM(ch, C_NRM));
+        }
+      }
+      
+      /* Show items on furniture */
+      if (obj->contains) {
+        send_to_char(ch, "On %s you see:\r\n", obj->short_description);
+        list_obj_to_char(obj->contains, ch, SHOW_OBJ_SHORT, TRUE);
+      } else {
+        send_to_char(ch, "You see nothing on %s.", obj->short_description);
+      }
       break;
 
     default:

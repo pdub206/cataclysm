@@ -81,12 +81,37 @@ static void perform_put(struct char_data *ch, struct obj_data *obj, struct obj_d
   }
 }
 
+/* Put an item on furniture (like a table, bar, etc.) */
+static void perform_put_on_furniture(struct char_data *ch, struct obj_data *obj, struct obj_data *furniture)
+{
+  long object_id = obj_script_id(obj);
+
+  if (!drop_otrigger(obj, ch))
+    return;
+
+  if (!has_obj_by_uid_in_lookup_table(object_id)) /* object might be extracted by drop_otrigger */
+    return;
+
+  if (OBJ_FLAGGED(obj, ITEM_NODROP) && IN_ROOM(furniture) != NOWHERE)
+    act("You can't get $p out of your hand.", FALSE, ch, obj, NULL, TO_CHAR);
+  else {
+    obj_from_char(obj);
+    obj_to_obj(obj, furniture);
+
+    act("$n puts $p on $P.", TRUE, ch, obj, furniture, TO_ROOM);
+    act("You put $p on $P.", FALSE, ch, obj, furniture, TO_CHAR);
+  }
+}
+
 /* The following put modes are supported:
      1) put <object> <container>
      2) put all.<object> <container>
      3) put all <container>
-   The <container> must be in inventory, worn/equipped, or on ground. All objects to be put
-   into container must be in inventory. */
+     4) put <object> on <furniture>
+     5) put all.<object> on <furniture>
+     6) put all on <furniture>
+   The <container> or <furniture> must be in inventory, worn/equipped, or on ground. 
+   All objects to be put into container or on furniture must be in inventory. */
 ACMD(do_put)
 {
   char arg1[MAX_INPUT_LENGTH];
@@ -120,42 +145,74 @@ ACMD(do_put)
     generic_find(thecont, FIND_OBJ_INV | FIND_OBJ_ROOM | FIND_OBJ_EQUIP, ch, &tmp_char, &cont);
     if (!cont)
       send_to_char(ch, "You don't see %s %s here.\r\n", AN(thecont), thecont);
-    else if (GET_OBJ_TYPE(cont) != ITEM_CONTAINER)
-      act("$p is not a container.", FALSE, ch, cont, 0, TO_CHAR);
-    else if (OBJVAL_FLAGGED(cont, CONT_CLOSED) && (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE)))
-      send_to_char(ch, "You'd better open it first!\r\n");
-    else {
-      if (obj_dotmode == FIND_INDIV) {	/* put <obj> <container> */
-	if (!(obj = get_obj_in_list_vis(ch, theobj, NULL, ch->carrying)))
-	  send_to_char(ch, "You aren't carrying %s %s.\r\n", AN(theobj), theobj);
-	else if (obj == cont && howmany == 1)
-	  send_to_char(ch, "You attempt to fold it into itself, but fail.\r\n");
-	else {
-	  while (obj && howmany) {
-	    next_obj = obj->next_content;
+    else if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER) {
+      /* Handle container logic */
+      if (OBJVAL_FLAGGED(cont, CONT_CLOSED) && (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE)))
+        send_to_char(ch, "You'd better open it first!\r\n");
+      else {
+        if (obj_dotmode == FIND_INDIV) {	/* put <obj> <container> */
+          if (!(obj = get_obj_in_list_vis(ch, theobj, NULL, ch->carrying)))
+            send_to_char(ch, "You aren't carrying %s %s.\r\n", AN(theobj), theobj);
+          else if (obj == cont && howmany == 1)
+            send_to_char(ch, "You attempt to fold it into itself, but fail.\r\n");
+          else {
+            while (obj && howmany) {
+              next_obj = obj->next_content;
+              if (obj != cont) {
+                howmany--;
+                perform_put(ch, obj, cont);
+              }
+              obj = get_obj_in_list_vis(ch, theobj, NULL, next_obj);
+            }
+          }
+        } else {
+          for (obj = ch->carrying; obj; obj = next_obj) {
+            next_obj = obj->next_content;
+            if (obj != cont && CAN_SEE_OBJ(ch, obj) &&
+                (obj_dotmode == FIND_ALL || isname(theobj, obj->name))) {
+              found = 1;
+              perform_put(ch, obj, cont);
+            }
+          }
+          if (!found)
+            send_to_char(ch, "You don't seem to have %s %s.\r\n", 
+                         obj_dotmode == FIND_ALL ? "any" : "any", 
+                         obj_dotmode == FIND_ALL ? "items" : theobj);
+        }
+      }
+    } else if (GET_OBJ_TYPE(cont) == ITEM_FURNITURE) {
+      /* Handle furniture logic - put items ON furniture */
+      if (obj_dotmode == FIND_INDIV) {	/* put <obj> on <furniture> */
+        if (!(obj = get_obj_in_list_vis(ch, theobj, NULL, ch->carrying)))
+          send_to_char(ch, "You aren't carrying %s %s.\r\n", AN(theobj), theobj);
+        else if (obj == cont && howmany == 1)
+          send_to_char(ch, "You can't put something on itself.\r\n");
+        else {
+          while (obj && howmany) {
+            next_obj = obj->next_content;
             if (obj != cont) {
               howmany--;
-	      perform_put(ch, obj, cont);
+              perform_put_on_furniture(ch, obj, cont);
             }
-	    obj = get_obj_in_list_vis(ch, theobj, NULL, next_obj);
-	  }
-	}
+            obj = get_obj_in_list_vis(ch, theobj, NULL, next_obj);
+          }
+        }
       } else {
-	for (obj = ch->carrying; obj; obj = next_obj) {
-	  next_obj = obj->next_content;
-	  if (obj != cont && CAN_SEE_OBJ(ch, obj) &&
-	      (obj_dotmode == FIND_ALL || isname(theobj, obj->name))) {
-	    found = 1;
-	    perform_put(ch, obj, cont);
-	  }
-	}
-	if (!found) {
-	  if (obj_dotmode == FIND_ALL)
-	    send_to_char(ch, "You don't seem to have anything to put in it.\r\n");
-	  else
-	    send_to_char(ch, "You don't seem to have any %ss.\r\n", theobj);
-	}
+        for (obj = ch->carrying; obj; obj = next_obj) {
+          next_obj = obj->next_content;
+          if (obj != cont && CAN_SEE_OBJ(ch, obj) &&
+              (obj_dotmode == FIND_ALL || isname(theobj, obj->name))) {
+            found = 1;
+            perform_put_on_furniture(ch, obj, cont);
+          }
+        }
+        if (!found)
+          send_to_char(ch, "You don't seem to have %s %s.\r\n", 
+                       obj_dotmode == FIND_ALL ? "any" : "any", 
+                       obj_dotmode == FIND_ALL ? "items" : theobj);
       }
+    } else {
+      act("$p is not a container or furniture.", FALSE, ch, cont, 0, TO_CHAR);
     }
   }
 }
@@ -356,8 +413,8 @@ ACMD(do_get)
       mode = generic_find(arg2, FIND_OBJ_INV | FIND_OBJ_ROOM | FIND_OBJ_EQUIP, ch, &tmp_char, &cont);
       if (!cont)
 	send_to_char(ch, "You don't have %s %s.\r\n", AN(arg2), arg2);
-      else if (GET_OBJ_TYPE(cont) != ITEM_CONTAINER)
-	act("$p is not a container.", FALSE, ch, cont, 0, TO_CHAR);
+      else if (GET_OBJ_TYPE(cont) != ITEM_CONTAINER && GET_OBJ_TYPE(cont) != ITEM_FURNITURE)
+	act("$p is not a container or furniture.", FALSE, ch, cont, 0, TO_CHAR);
       else
 	get_from_container(ch, cont, arg1, mode, amount);
     } else {
@@ -367,12 +424,12 @@ ACMD(do_get)
       }
       for (cont = ch->carrying; cont; cont = cont->next_content)
         if (CAN_SEE_OBJ(ch, cont) && (cont_dotmode == FIND_ALL || isname(arg2, cont->name))) {
-          if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER) {
+          if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER || GET_OBJ_TYPE(cont) == ITEM_FURNITURE) {
             found = 1;
             get_from_container(ch, cont, arg1, FIND_OBJ_INV, amount);
           } else if (cont_dotmode == FIND_ALLDOT) {
             found = 1;
-            act("$p is not a container.", FALSE, ch, cont, 0, TO_CHAR);
+            act("$p is not a container or furniture.", FALSE, ch, cont, 0, TO_CHAR);
           }
         }
       {
@@ -385,12 +442,12 @@ ACMD(do_get)
 
           if (CAN_SEE_OBJ(ch, eq) &&
               (cont_dotmode == FIND_ALL || isname(arg2, eq->name))) {
-            if (GET_OBJ_TYPE(eq) == ITEM_CONTAINER) {
+            if (GET_OBJ_TYPE(eq) == ITEM_CONTAINER || GET_OBJ_TYPE(eq) == ITEM_FURNITURE) {
               found = 1;
               get_from_container(ch, eq, arg1, FIND_OBJ_EQUIP, amount);
             } else if (cont_dotmode == FIND_ALLDOT) {
               found = 1;
-              act("$p is not a container.", FALSE, ch, eq, 0, TO_CHAR);
+              act("$p is not a container or furniture.", FALSE, ch, eq, 0, TO_CHAR);
             }
           }
         }
@@ -398,17 +455,17 @@ ACMD(do_get)
       for (cont = world[IN_ROOM(ch)].contents; cont; cont = cont->next_content)
 	if (CAN_SEE_OBJ(ch, cont) &&
 	    (cont_dotmode == FIND_ALL || isname(arg2, cont->name))) {
-	  if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER) {
+	  if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER || GET_OBJ_TYPE(cont) == ITEM_FURNITURE) {
 	    get_from_container(ch, cont, arg1, FIND_OBJ_ROOM, amount);
 	    found = 1;
 	  } else if (cont_dotmode == FIND_ALLDOT) {
-	    act("$p is not a container.", FALSE, ch, cont, 0, TO_CHAR);
+	    act("$p is not a container or furniture.", FALSE, ch, cont, 0, TO_CHAR);
 	    found = 1;
 	  }
 	}
       if (!found) {
 	if (cont_dotmode == FIND_ALL)
-	  send_to_char(ch, "You can't seem to find any containers.\r\n");
+	  send_to_char(ch, "You can't seem to find any containers or furniture.\r\n");
 	else
 	  send_to_char(ch, "You can't seem to find any %ss here.\r\n", arg2);
       }

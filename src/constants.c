@@ -119,7 +119,6 @@ const char *furniture_position_bits[] = {
   "SIT",     /* can sit on it */
   "REST",    /* can rest on it */
   "SLEEP",   /* can sleep on it */
-  "KNEEL",   /* can kneel at/on it */
   "\n"
 };
 

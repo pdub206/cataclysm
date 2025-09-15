@@ -102,8 +102,8 @@ static const char *money_val_labels[NUM_OBJ_VAL_POSITIONS] = {
 
 /* Furniture */
 static const char *furniture_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "capacity", "max_people", "allowed_pos", "furn_flags",
-  "comfy_bonus", "climb_dc", "script_hook", "reserved"
+  "max_seats", "current_occupants", "allowed_pos", "Value[3]",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
 };
 
 /* Generic fallback */
@@ -525,8 +525,14 @@ static void oedit_disp_values_menu(struct descriptor_data *d)
   write_to_output(d, "\r\n-- Object Values Menu --\r\n");
 
   for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
-    write_to_output(d, "%2d) %-12s : %d\r\n",
-        i+1, labels[i], GET_OBJ_VAL(obj, i));
+    /* Hide current_occupants field for furniture - it's managed by the game engine */
+    if (GET_OBJ_TYPE(obj) == ITEM_FURNITURE && i == 1) {
+      write_to_output(d, "%2d) %-12s : %d (managed by game engine)\r\n",
+          i+1, labels[i], GET_OBJ_VAL(obj, i));
+    } else {
+      write_to_output(d, "%2d) %-12s : %d\r\n",
+          i+1, labels[i], GET_OBJ_VAL(obj, i));
+    }
   }
 
   write_to_output(d, "Q) Quit to main menu\r\nEnter choice : ");
@@ -1008,6 +1014,13 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     } else {
       int i = atoi(arg) - 1;
       if (i >= 0 && i < NUM_OBJ_VAL_POSITIONS) {
+        /* Prevent editing current_occupants for furniture - it's managed by the game engine */
+        if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_FURNITURE && i == 1) {
+          write_to_output(d, "The current_occupants field is managed by the game engine and cannot be edited manually.\r\n");
+          oedit_disp_values_menu(d);
+          return;
+        }
+        
         OLC_VAL_SLOT(d) = i;
         const char **labels = get_val_labels(OLC_OBJ(d));
 
