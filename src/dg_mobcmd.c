@@ -377,6 +377,7 @@ ACMD(do_mload)
         return;
       }
       char_to_room(mob, rnum);
+      equip_mob_from_loadout(mob);
       if (SCRIPT(ch)) { /* It _should_ have, but it might be detached. */
         char buf[MAX_INPUT_LENGTH];
         sprintf(buf, "%c%ld", UID_CHAR, char_script_id(mob));

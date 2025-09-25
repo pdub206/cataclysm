@@ -1726,6 +1726,7 @@ ACMD(do_load)
     for (i=0; i < n; i++) {
       mob = read_mobile(r_num, REAL);
       char_to_room(mob, IN_ROOM(ch));
+      equip_mob_from_loadout(mob);
 
       act("$n makes a quaint, magical gesture with one hand.", TRUE, ch, 0, 0, TO_ROOM);
       act("$n has created $N!", FALSE, ch, 0, mob, TO_ROOM);

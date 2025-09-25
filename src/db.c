@@ -2472,6 +2472,10 @@ void equip_mob_from_loadout(struct char_data *mob)
 {
   if (!mob || !IS_NPC(mob)) return;
 
+  /* If called too early (e.g., from some future path), just do nothing. */
+  if (IN_ROOM(mob) == NOWHERE)
+    return;
+
   mob_rnum rnum = GET_MOB_RNUM(mob);
   if (rnum < 0) return;
 
@@ -2588,9 +2592,6 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   mob_index[i].number++;
 
   mob->script_id = 0;	// this is set later by char_script_id
-
-  /* Equip/load items from prototype loadout before scripts fire */
-  equip_mob_from_loadout(mob);
 
   copy_proto_script(&mob_proto[i], mob, MOB_TRIGGER);
   assign_triggers(mob, MOB_TRIGGER);
@@ -2754,13 +2755,15 @@ void reset_zone(zone_rnum zone)
 
     case 'M':			/* read a mobile */
       if (mob_index[ZCMD.arg1].number < ZCMD.arg2) {
-	mob = read_mobile(ZCMD.arg1, REAL);
-	char_to_room(mob, ZCMD.arg3);
+	      mob = read_mobile(ZCMD.arg1, REAL);
+	      char_to_room(mob, ZCMD.arg3);
+        /* NEW: equip from prototype loadout now that the mob is in a room */
+        equip_mob_from_loadout(mob);
         load_mtrigger(mob);
         tmob = mob;
-	last_cmd = 1;
+	      last_cmd = 1;
       } else
-	last_cmd = 0;
+	    last_cmd = 0;
       tobj = NULL;
       break;
 
