@@ -327,6 +327,7 @@ ACMD(do_recent);
 ACMD(do_restore);
 void return_to_char(struct char_data * ch);
 ACMD(do_return);
+ACMD(do_rsave);
 ACMD(do_saveall);
 ACMD(do_send);
 ACMD(do_set);

@@ -35,6 +35,7 @@
 #include "quest.h"
 #include "ban.h"
 #include "screen.h"
+#include "roomsave.h"
 
 /* local utility functions with file scope */
 static int perform_set(struct char_data *ch, struct char_data *vict, int mode, char *val_arg);
@@ -5876,4 +5877,43 @@ ACMD(do_msave)
   }
 
   inv_free_all(&inv);
+}
+
+ACMD(do_rsave)
+{
+  room_rnum rnum = IN_ROOM(ch);
+
+  if (IS_NPC(ch)) {
+    send_to_char(ch, "Mobiles can’t use this.\r\n");
+    return;
+  }
+  if (rnum == NOWHERE || rnum < 0 || rnum >= top_of_world) {
+    send_to_char(ch, "You are not in a valid room.\r\n");
+    return;
+  }
+
+  zone_rnum znum = world[rnum].zone;
+  if (znum < 0 || znum > top_of_zone_table) {
+    send_to_char(ch, "This room is not attached to a valid zone.\r\n");
+    return;
+  }
+
+  /* Builder permission: reuse your standard zone edit check */
+  if (!can_edit_zone(ch, znum)) {
+    send_to_char(ch, "You don’t have permission to modify zone %d.\r\n",
+                 zone_table[znum].number);
+    return;
+  }
+
+  /* Save immediately, regardless of ROOM_SAVE flag */
+  if (RoomSave_now(rnum)) {
+    send_to_char(ch, "rsave: room %d saved to roomsave file for zone %d.\r\n",
+                 GET_ROOM_VNUM(rnum), zone_table[znum].number);
+    mudlog(CMP, GET_LEVEL(ch), TRUE, "RSAVE OK: %s saved room %d (zone %d).",
+           GET_NAME(ch), GET_ROOM_VNUM(rnum), zone_table[znum].number);
+  } else {
+    send_to_char(ch, "rsave: failed to save room %d.\r\n", GET_ROOM_VNUM(rnum));
+    mudlog(BRF, GET_LEVEL(ch), TRUE, "RSAVE FAIL: %s room %d (zone %d).",
+           GET_NAME(ch), GET_ROOM_VNUM(rnum), zone_table[znum].number);
+  }
 }
