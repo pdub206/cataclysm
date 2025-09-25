@@ -391,7 +391,7 @@ a yellow potion of see invisible~
 A small yellow potion has carelessly been left here.~
 ~
 10 g 0 0 0 ao 0 0 0 0 0 0 0
-12 19 -1 -1
+1 19 -1 -1
 1 400 10 0 0
 E
 potion yellow~
@@ -403,7 +403,7 @@ a scroll of recall~
 A scroll has carelessly been left here.~
 ~
 2 g 0 0 0 ao 0 0 0 0 0 0 0
-12 42 -1 -1
+1 42 -1 -1
 4 200 10 0 0
 E
 scroll recall~
@@ -415,7 +415,7 @@ a gray wand of invisibility~
 A gray wand has carelessly been left here.~
 ~
 3 g 0 0 0 ao 0 0 0 0 0 0 0
-12 2 2 29
+1 2 2 29
 2 400 10 0 0
 E
 wand gray~
@@ -431,7 +431,7 @@ a gnarled staff~
 A gnarled staff has carelessly been left here.~
 ~
 4 g 0 0 0 ao 0 0 0 0 0 0 0
-12 1 1 38
+1 1 1 38
 17 700 50 0 0
 E
 staff gnarled~
@@ -452,7 +452,7 @@ a metal staff~
 A metal staff has carelessly been left here.~
 ~
 4 g 0 0 0 ao 0 0 0 0 0 0 0
-10 8 8 15
+1 8 8 15
 7 850 30 0 0
 E
 staff metal~

@@ -170,7 +170,6 @@ hard times and need a little boost.
 300 90000
 8 8 2
 E
-T 3016
 #3013
 newbie tour guide~
 the newbie tour guide~
@@ -259,7 +258,6 @@ well as defensive spells make him a deadly opponent.
 330 108900
 8 8 1
 E
-T 3000
 #3025
 knight templar guildguard~
 the knight templar~
@@ -275,7 +273,6 @@ opponent.
 330 108900
 8 8 1
 E
-T 3001
 #3026
 assassin guildguard~
 the assassin~
@@ -291,7 +288,6 @@ to use them combined with his extraordinary stealth makes him a deadly opponent.
 330 108900
 8 8 1
 E
-T 3002
 #3027
 knight guildguard~
 the knight~
@@ -306,7 +302,6 @@ skill combined with his experience in warfare makes him a deadly opponent.
 330 108900
 8 8 1
 E
-T 3003
 #3040
 bartender~
 the bartender~
@@ -408,7 +403,6 @@ A Peacekeeper is standing here, ready to jump in at the first sign of trouble.
 8 8 1
 BareHandAttack: 10
 E
-T 3009
 #3060
 cityguard guard~
 the cityguard~
@@ -421,7 +415,6 @@ A cityguard stands here.
 100 10000
 8 8 1
 E
-T 3009
 #3061
 janitor~
 the janitor~
@@ -434,7 +427,6 @@ A janitor is walking around, cleaning up.
 10 100
 8 8 1
 E
-T 3011
 #3062
 fido dog~
 the beastly fido~
@@ -449,7 +441,6 @@ hanging around his teeth.
 8 8 1
 BareHandAttack: 4
 E
-T 3010
 #3063
 mercenary~
 the mercenary~
@@ -499,7 +490,6 @@ An odif yltsaeb is here, walking backwards.
 8 8 1
 BareHandAttack: 4
 E
-T 3010
 #3067
 cityguard guard~
 the cityguard~
@@ -512,7 +502,6 @@ A cityguard is here, guarding the gate.
 100 10000
 8 8 1
 E
-T 3009
 #3068
 green gelatinous blob oozing~
 the green gelatinous blob~
@@ -526,7 +515,6 @@ An oozing green gelatinous blob is here, sucking in bits of debris.
 8 8 0
 BareHandAttack: 6
 E
-T 3011
 #3089
 petshops shop boy~
 the Pet Shop Boy~

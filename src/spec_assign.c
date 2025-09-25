@@ -63,41 +63,19 @@ static void ASSIGNROOM(room_vnum room, SPECIAL(fname))
  * puff, fido, janitor, and cityguards are now implemented via triggers. */
 void assign_mobiles(void)
 {
-  assign_kings_castle();
-
-  ASSIGNMOB(3105, mayor);
-
-  ASSIGNMOB(110, postmaster);
-  ASSIGNMOB(1201, postmaster);
   ASSIGNMOB(3010, postmaster);
-  ASSIGNMOB(10412, postmaster);
-  ASSIGNMOB(10719, postmaster);
-  ASSIGNMOB(25710, postmaster);
-  ASSIGNMOB(27164, postmaster);
-  ASSIGNMOB(30128, postmaster);
-  ASSIGNMOB(31510, postmaster);
 }
 
 /* assign special procedures to objects */
 void assign_objects(void)
 {
-  ASSIGNOBJ(1226, gen_board);   /* builder's board */
-  ASSIGNOBJ(1227, gen_board);   /* staff board */
-  ASSIGNOBJ(1228, gen_board);   /* advertising board */
   ASSIGNOBJ(3096, gen_board);	/* social board */
   ASSIGNOBJ(3097, gen_board);	/* freeze board */
   ASSIGNOBJ(3098, gen_board);	/* immortal board */
   ASSIGNOBJ(3099, gen_board);	/* mortal board */
 
-  ASSIGNOBJ(115, bank);
-  ASSIGNOBJ(334, bank);	        /* atm */
-  ASSIGNOBJ(336, bank);	        /* cashcard */
   ASSIGNOBJ(3034, bank);        /* atm */
   ASSIGNOBJ(3036, bank);        /* cashcard */
-  ASSIGNOBJ(3907, bank);
-  ASSIGNOBJ(10640, bank);
-  ASSIGNOBJ(10751, bank);
-  ASSIGNOBJ(25758, bank);
 }
 
 /* assign special procedures to rooms */
@@ -106,12 +84,6 @@ void assign_rooms(void)
   room_rnum i;
 
   ASSIGNROOM(3031, pet_shops);
-  ASSIGNROOM(10738, pet_shops);
-  ASSIGNROOM(23281, pet_shops);
-  ASSIGNROOM(25722, pet_shops);
-  ASSIGNROOM(27155, pet_shops);
-  ASSIGNROOM(27616, pet_shops);
-  ASSIGNROOM(31523, pet_shops);
 
   if (CONFIG_DTS_ARE_DUMPS)
     for (i = 0; i <= top_of_world; i++)

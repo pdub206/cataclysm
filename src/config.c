@@ -173,13 +173,13 @@ room_vnum mortal_start_room = 131;
 room_vnum immort_start_room = 1;
 
 /* Virtual number of room that frozen players should enter at. */
-room_vnum frozen_start_room = 1202;
+room_vnum frozen_start_room = 1;
 
 /* Virtual numbers of donation rooms.  note: you must change code in do_drop of
  * act.item.c if you change the number of non-NOWHERE donation rooms. */
-room_vnum donation_room_1 = 3063;
-room_vnum donation_room_2 = 5510;
-room_vnum donation_room_3 = 235;
+room_vnum donation_room_1 = 1;
+room_vnum donation_room_2 = 1;
+room_vnum donation_room_3 = 1;
 
 /* GAME OPERATION OPTIONS */
 
