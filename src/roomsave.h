@@ -20,6 +20,7 @@
 void RoomSave_boot(void);
 
 /* Immediate save for a single room (room_rnum). Safe to call anytime. */
+/* saves ground objs AND NPCs (+their E/G/P trees) in rsv. */
 int  RoomSave_now(room_rnum rnum);
 
 /* Autosave pass for all rooms flagged ROOM_SAVE. */
