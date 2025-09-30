@@ -153,10 +153,10 @@
 
 /* PC classes */
 #define CLASS_UNDEFINED	  (-1) /**< PC Class undefined */
-#define CLASS_MAGIC_USER  0    /**< PC Class Magic User */
+#define CLASS_SORCEROR    0    /**< PC Class Sorceror */
 #define CLASS_CLERIC      1    /**< PC Class Cleric */
 #define CLASS_THIEF       2    /**< PC Class Thief */
-#define CLASS_WARRIOR     3    /**< PC Class Warrior */
+#define CLASS_FIGHTER     3    /**< PC Class Fighter */
 #define CLASS_BARBARIAN   4    /**< PC Class Barbarian */
 #define CLASS_RANGER      5    /**< PC Class Ranger */
 #define CLASS_BARD        6    /**< PC Class Bard */
@@ -431,10 +431,10 @@
 #define ITEM_ANTI_GOOD         9   /**< Not usable by good people	*/
 #define ITEM_ANTI_EVIL        10   /**< Not usable by evil people	*/
 #define ITEM_ANTI_NEUTRAL     11   /**< Not usable by neutral people */
-#define ITEM_ANTI_MAGIC_USER  12   /**< Not usable by mages */
+#define ITEM_ANTI_SORCEROR    12   /**< Not usable by sorcerors */
 #define ITEM_ANTI_CLERIC      13   /**< Not usable by clerics */
 #define ITEM_ANTI_THIEF	      14   /**< Not usable by thieves */
-#define ITEM_ANTI_WARRIOR     15   /**< Not usable by warriors */
+#define ITEM_ANTI_FIGHTER     15   /**< Not usable by fighters */
 #define ITEM_ANTI_BARBARIAN   16   /**< Not usable by barbarians */
 #define ITEM_ANTI_RANGER      17   /**< Not usable by rangers */
 #define ITEM_ANTI_BARD        18   /**< Not usable by bards */

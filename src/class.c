@@ -38,10 +38,10 @@ const char *class_abbrevs[] = {
 };
 
 const char *pc_class_types[] = {
-  "Magic User",
+  "Sorceror",
   "Cleric",
   "Thief",
-  "Warrior",
+  "Fighter",
   "Barbarian",
   "Ranger",
   "Bard",
@@ -55,8 +55,8 @@ const char *class_menu =
 "Select a class:\r\n"
 "  [\t(C\t)]leric\r\n"
 "  [\t(T\t)]hief\r\n"
-"  [\t(W\t)]arrior\r\n"
-"  [\t(M\t)]agic-user\r\n"
+"  [\t(F\t)]ighter\r\n"
+"  [\t(S\t)]orceror\r\n"
 "  [\t(B\t)]arbarian\r\n"
 "  [\t(R\t)]anger\r\n"
 "  B[\t(A\t)]rd\r\n"
@@ -69,9 +69,9 @@ int parse_class(char arg)
   arg = LOWER(arg);
 
   switch (arg) {
-  case 'm': return CLASS_MAGIC_USER;
+  case 's': return CLASS_SORCEROR;
   case 'c': return CLASS_CLERIC;
-  case 'w': return CLASS_WARRIOR;
+  case 'f': return CLASS_FIGHTER;
   case 't': return CLASS_THIEF;
   case 'b': return CLASS_BARBARIAN;
   case 'r': return CLASS_RANGER;
@@ -122,7 +122,7 @@ bitvector_t find_class_bitvector(const char *arg)
 /* #define PRAC_TYPE		3  should it say 'spell' or 'skill'?	*/
 
 int prac_params[4][NUM_CLASSES] = {
-  /* MAG	CLE	THE	WAR BAR RAN BARD DRU */
+  /* SOR	CLE	THE	FIG BAR RAN BARD DRU */
   { 95,		95,	85,	80, 75, 85, 85, 95	},	/* learned level */
   { 100,	100,	12,	12, 11, 12, 13, 90	},	/* max per practice */
   { 25,		25,	0,	0, 0, 0, 25, 25	},	/* min per practice */
@@ -131,7 +131,7 @@ int prac_params[4][NUM_CLASSES] = {
 
 /* The appropriate rooms for each guildmaster/guildguard; controls which types
  * of people the various guildguards let through.  i.e., the first line shows
- * that from room 3017, only MAGIC_USERS are allowed to go south. Don't forget
+ * that from room 3017, only SORCERORS are allowed to go south. Don't forget
  * to visit spec_assign.c if you create any new mobiles that should be a guild
  * master or guard so they can act appropriately. If you "recycle" the
  * existing mobs that are used in other guilds for your new guild, then you
@@ -141,10 +141,10 @@ int prac_params[4][NUM_CLASSES] = {
 struct guild_info_type guild_info[] = {
 
 /* Midgaard */
- { CLASS_MAGIC_USER,    3017,    SOUTH   },
+ { CLASS_SORCEROR,    3017,    SOUTH   },
  { CLASS_CLERIC,        3004,    NORTH   },
  { CLASS_THIEF,         3027,    EAST   },
- { CLASS_WARRIOR,       3021,    EAST   },
+ { CLASS_FIGHTER,       3021,    EAST   },
  { CLASS_BARBARIAN,     3021,    EAST   },
  { CLASS_RANGER,        3021,    EAST   },
  { CLASS_BARD,          3021,    EAST   },
@@ -162,7 +162,7 @@ struct guild_info_type guild_info[] = {
 byte saving_throws(int class_num, int type, int level)
 {
   switch (class_num) {
-  case CLASS_MAGIC_USER:
+  case CLASS_SORCEROR:
     switch (type) {
     case SAVING_PARA:	/* Paralyzation */
       switch (level) {
@@ -363,7 +363,7 @@ byte saving_throws(int class_num, int type, int level)
       break;
     }
     break;
-  case CLASS_WARRIOR:
+  case CLASS_FIGHTER:
     switch (type) {
     case SAVING_PARA:	/* Paralyzation */
       switch (level) {
@@ -374,7 +374,7 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-        log("SYSERR: Missing level for warrior paralyzation saving throw.");
+        log("SYSERR: Missing level for fighter paralyzation saving throw.");
         break;
       }
     case SAVING_ROD:	/* Rods */
@@ -386,7 +386,7 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-        log("SYSERR: Missing level for warrior rod saving throw.");
+        log("SYSERR: Missing level for fighter rod saving throw.");
         break;
       }
     case SAVING_PETRI:	/* Petrification */
@@ -398,7 +398,7 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-        log("SYSERR: Missing level for warrior petrification saving throw.");
+        log("SYSERR: Missing level for fighter petrification saving throw.");
         break;
       }
     case SAVING_BREATH:	/* Breath weapons */
@@ -410,7 +410,7 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-        log("SYSERR: Missing level for warrior breath saving throw.");
+        log("SYSERR: Missing level for fighter breath saving throw.");
         break;
       }
     case SAVING_SPELL:	/* Generic spells */
@@ -422,7 +422,7 @@ byte saving_throws(int class_num, int type, int level)
       case  4: return 0;
       case  5: return 0;
       default:
-        log("SYSERR: Missing level for warrior spell saving throw.");
+        log("SYSERR: Missing level for fighter spell saving throw.");
         break;
       }
     default:
@@ -734,7 +734,7 @@ void roll_real_abils(struct char_data *ch)
   ch->real_abils.str_add = 0;
 
   switch (GET_CLASS(ch)) {
-  case CLASS_MAGIC_USER:
+  case CLASS_SORCEROR:
     ch->real_abils.intel = table[0];
     ch->real_abils.wis = table[1];
     ch->real_abils.dex = table[2];
@@ -758,7 +758,7 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.wis = table[4];
     ch->real_abils.cha = table[5];
     break;
-  case CLASS_WARRIOR:
+  case CLASS_FIGHTER:
     ch->real_abils.str = table[0];
     ch->real_abils.dex = table[1];
     ch->real_abils.con = table[2];
@@ -819,7 +819,7 @@ void do_start(struct char_data *ch)
 
   switch (GET_CLASS(ch)) {
 
-  case CLASS_MAGIC_USER:
+  case CLASS_SORCEROR:
     SET_SKILL(ch, SPELL_MAGIC_MISSILE, 5);
     SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
     SET_SKILL(ch, SPELL_DETECT_MAGIC, 5);
@@ -896,7 +896,7 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_PERCEPTION, 5);
     break;
 
-  case CLASS_WARRIOR:
+  case CLASS_FIGHTER:
     SET_SKILL(ch, SKILL_KICK, 5);
     SET_SKILL(ch, SKILL_RESCUE, 5);
     SET_SKILL(ch, SKILL_BANDAGE, 5);
@@ -982,7 +982,7 @@ void advance_level(struct char_data *ch)
 
   switch (GET_CLASS(ch)) {
 
-  case CLASS_MAGIC_USER:
+  case CLASS_SORCEROR:
     add_hp += rand_number(3, 8);
     add_mana = rand_number(GET_LEVEL(ch), (int)(1.5 * GET_LEVEL(ch)));
     add_mana = MIN(add_mana, 10);
@@ -1002,7 +1002,7 @@ void advance_level(struct char_data *ch)
     add_move = rand_number(1, 3);
     break;
 
-  case CLASS_WARRIOR:
+  case CLASS_FIGHTER:
     add_hp += rand_number(10, 15);
     add_mana = 0;
     add_move = rand_number(1, 3);
@@ -1067,13 +1067,13 @@ int backstab_mult(int level)
  * usable by a particular class, based on the ITEM_ANTI_{class} bitvectors. */
 int invalid_class(struct char_data *ch, struct obj_data *obj)
 {
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_MAGIC_USER) && IS_MAGIC_USER(ch))
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_SORCEROR) && IS_SORCEROR(ch))
     return TRUE;
 
   if (OBJ_FLAGGED(obj, ITEM_ANTI_CLERIC) && IS_CLERIC(ch))
     return TRUE;
 
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_WARRIOR) && IS_WARRIOR(ch))
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_FIGHTER) && IS_FIGHTER(ch))
     return TRUE;
 
   if (OBJ_FLAGGED(obj, ITEM_ANTI_THIEF) && IS_THIEF(ch))
@@ -1099,33 +1099,33 @@ int invalid_class(struct char_data *ch, struct obj_data *obj)
  * skill. */
 void init_spell_levels(void)
 {
-  /* MAGES */
-  spell_level(SPELL_MAGIC_MISSILE, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_DETECT_INVIS, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_DETECT_MAGIC, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_CHILL_TOUCH, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_INFRAVISION, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_INVISIBLE, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_ARMOR, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_BURNING_HANDS, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_LOCATE_OBJECT, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_STRENGTH, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_SHOCKING_GRASP, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_SLEEP, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_LIGHTNING_BOLT, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_BLINDNESS, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_DETECT_POISON, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_COLOR_SPRAY, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_ENERGY_DRAIN, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_CURSE, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_POISON, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_FIREBALL, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_CHARM, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_IDENTIFY, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_FLY, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_ENCHANT_WEAPON, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_CLONE, CLASS_MAGIC_USER, 1);
-  spell_level(SKILL_UNARMED, CLASS_MAGIC_USER, 1);
+  /* SORCERORS */
+  spell_level(SPELL_MAGIC_MISSILE, CLASS_SORCEROR, 1);
+  spell_level(SPELL_DETECT_INVIS, CLASS_SORCEROR, 1);
+  spell_level(SPELL_DETECT_MAGIC, CLASS_SORCEROR, 1);
+  spell_level(SPELL_CHILL_TOUCH, CLASS_SORCEROR, 1);
+  spell_level(SPELL_INFRAVISION, CLASS_SORCEROR, 1);
+  spell_level(SPELL_INVISIBLE, CLASS_SORCEROR, 1);
+  spell_level(SPELL_ARMOR, CLASS_SORCEROR, 1);
+  spell_level(SPELL_BURNING_HANDS, CLASS_SORCEROR, 1);
+  spell_level(SPELL_LOCATE_OBJECT, CLASS_SORCEROR, 1);
+  spell_level(SPELL_STRENGTH, CLASS_SORCEROR, 1);
+  spell_level(SPELL_SHOCKING_GRASP, CLASS_SORCEROR, 1);
+  spell_level(SPELL_SLEEP, CLASS_SORCEROR, 1);
+  spell_level(SPELL_LIGHTNING_BOLT, CLASS_SORCEROR, 1);
+  spell_level(SPELL_BLINDNESS, CLASS_SORCEROR, 1);
+  spell_level(SPELL_DETECT_POISON, CLASS_SORCEROR, 1);
+  spell_level(SPELL_COLOR_SPRAY, CLASS_SORCEROR, 1);
+  spell_level(SPELL_ENERGY_DRAIN, CLASS_SORCEROR, 1);
+  spell_level(SPELL_CURSE, CLASS_SORCEROR, 1);
+  spell_level(SPELL_POISON, CLASS_SORCEROR, 1);
+  spell_level(SPELL_FIREBALL, CLASS_SORCEROR, 1);
+  spell_level(SPELL_CHARM, CLASS_SORCEROR, 1);
+  spell_level(SPELL_IDENTIFY, CLASS_SORCEROR, 1);
+  spell_level(SPELL_FLY, CLASS_SORCEROR, 1);
+  spell_level(SPELL_ENCHANT_WEAPON, CLASS_SORCEROR, 1);
+  spell_level(SPELL_CLONE, CLASS_SORCEROR, 1);
+  spell_level(SKILL_UNARMED, CLASS_SORCEROR, 1);
 
   /* CLERICS */
   spell_level(SPELL_CURE_LIGHT, CLASS_CLERIC, 1);
@@ -1173,17 +1173,17 @@ void init_spell_levels(void)
   spell_level(SKILL_SHIELD_USE, CLASS_THIEF, 1);
   spell_level(SKILL_PERCEPTION, CLASS_THIEF, 1);
 
-  /* WARRIORS */
-  spell_level(SKILL_KICK, CLASS_WARRIOR, 1);
-  spell_level(SKILL_RESCUE, CLASS_WARRIOR, 1);
-  spell_level(SKILL_BANDAGE, CLASS_WARRIOR, 1);
-  spell_level(SKILL_BASH, CLASS_WARRIOR, 1);
-  spell_level(SKILL_UNARMED, CLASS_WARRIOR, 1);
-  spell_level(SKILL_SLASHING_WEAPONS, CLASS_WARRIOR, 1);
-  spell_level(SKILL_PIERCING_WEAPONS, CLASS_WARRIOR, 1);
-  spell_level(SKILL_BLUDGEONING_WEAPONS, CLASS_WARRIOR, 1);
-  spell_level(SKILL_SHIELD_USE, CLASS_WARRIOR, 1);
-  spell_level(SKILL_PERCEPTION, CLASS_WARRIOR, 1);
+  /* FIGHTERS */
+  spell_level(SKILL_KICK, CLASS_FIGHTER, 1);
+  spell_level(SKILL_RESCUE, CLASS_FIGHTER, 1);
+  spell_level(SKILL_BANDAGE, CLASS_FIGHTER, 1);
+  spell_level(SKILL_BASH, CLASS_FIGHTER, 1);
+  spell_level(SKILL_UNARMED, CLASS_FIGHTER, 1);
+  spell_level(SKILL_SLASHING_WEAPONS, CLASS_FIGHTER, 1);
+  spell_level(SKILL_PIERCING_WEAPONS, CLASS_FIGHTER, 1);
+  spell_level(SKILL_BLUDGEONING_WEAPONS, CLASS_FIGHTER, 1);
+  spell_level(SKILL_SHIELD_USE, CLASS_FIGHTER, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_FIGHTER, 1);
 
   /* BARBARIANS */
   spell_level(SKILL_KICK, CLASS_BARBARIAN, 1);
@@ -1251,7 +1251,7 @@ int level_exp(int chclass, int level)
   /* Exp required for normal mortals is below */
   switch (chclass) {
 
-    case CLASS_MAGIC_USER:
+    case CLASS_SORCEROR:
     switch (level) {
       case  0: return 0;
       case  1: return 1;
@@ -1275,7 +1275,7 @@ int level_exp(int chclass, int level)
     }
     break;
 
-    case CLASS_WARRIOR:
+    case CLASS_FIGHTER:
     switch (level) {
       case  0: return 0;
       case  1: return 1;
@@ -1333,13 +1333,13 @@ const char *title_male(int chclass, int level)
 
   switch (chclass) {
 
-    case CLASS_MAGIC_USER:
+    case CLASS_SORCEROR:
     switch (level) {
       case  1: return "the Apprentice of Magic";
       case LVL_IMMORT: return "the Immortal Warlock";
       case LVL_GOD: return "the Avatar of Magic";
       case LVL_GRGOD: return "the God of Magic";
-      default: return "the Mage";
+      default: return "the Sorceror";
     }
 
     case CLASS_CLERIC:
@@ -1360,13 +1360,13 @@ const char *title_male(int chclass, int level)
       default: return "the Thief";
     }
 
-    case CLASS_WARRIOR:
+    case CLASS_FIGHTER:
     switch(level) {
       case  1: return "the Swordpupil";
       case LVL_IMMORT: return "the Immortal Warlord";
       case LVL_GOD: return "the Extirpator";
       case LVL_GRGOD: return "the God of War";
-      default: return "the Warrior";
+      default: return "the Fighter";
     }
 
     case CLASS_BARBARIAN:
@@ -1420,7 +1420,7 @@ const char *title_female(int chclass, int level)
 
   switch (chclass) {
 
-    case CLASS_MAGIC_USER:
+    case CLASS_SORCEROR:
     switch (level) {
       case  1: return "the Apprentice of Magic";
       case LVL_IMMORT: return "the Immortal Enchantress";
@@ -1447,13 +1447,13 @@ const char *title_female(int chclass, int level)
       default: return "the Thief";
     }
 
-    case CLASS_WARRIOR:
+    case CLASS_FIGHTER:
     switch(level) {
       case  1: return "the Swordpupil";
       case LVL_IMMORT: return "the Immortal Lady of War";
       case LVL_GOD: return "the Queen of Destruction";
       case LVL_GRGOD: return "the Goddess of War";
-      default: return "the Warrior";
+      default: return "the Fighter";
     }
 
     case CLASS_BARBARIAN:

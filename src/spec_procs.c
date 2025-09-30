@@ -293,7 +293,7 @@ SPECIAL(thief)
   return (FALSE);
 }
 
-SPECIAL(magic_user)
+SPECIAL(sorceror)
 {
   struct char_data *vict;
 

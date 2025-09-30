@@ -890,28 +890,28 @@ do                                                              \
 /** Return the class abbreviation for ch. */
 #define CLASS_ABBR(ch) (IS_NPC(ch) ? "--" : class_abbrevs[(int)GET_CLASS(ch)])
 
-/** 1 if ch is magic user class, 0 if not. */
-#define IS_MAGIC_USER(ch)	(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_MAGIC_USER))
+/** 1 if ch is sorceror class, 0 if not. */
+#define IS_SORCEROR(ch)	(!IS_NPC(ch) && \
+        (GET_CLASS(ch) == CLASS_SORCEROR))
 /** 1 if ch is cleric class, 0 if not. */
 #define IS_CLERIC(ch)		(!IS_NPC(ch) && \
         (GET_CLASS(ch) == CLASS_CLERIC))
 /** 1 if ch is thief class, 0 if not. */
 #define IS_THIEF(ch)		(!IS_NPC(ch) && \
         (GET_CLASS(ch) == CLASS_THIEF))
-/** 1 if ch is warrior class, 0 if not. */
-#define IS_WARRIOR(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_WARRIOR))
-/** 1 if ch is warrior class, 0 if not. */
+/** 1 if ch is fighter class, 0 if not. */
+#define IS_FIGHTER(ch)		(!IS_NPC(ch) && \
+        (GET_CLASS(ch) == CLASS_FIGHTER))
+/** 1 if ch is barbarian class, 0 if not. */
 #define IS_BARBARIAN(ch)		(!IS_NPC(ch) && \
         (GET_CLASS(ch) == CLASS_BARBARIAN))
-/** 1 if ch is warrior class, 0 if not. */
+/** 1 if ch is ranger class, 0 if not. */
 #define IS_RANGER(ch)		(!IS_NPC(ch) && \
         (GET_CLASS(ch) == CLASS_RANGER))
-/** 1 if ch is warrior class, 0 if not. */
+/** 1 if ch is bard class, 0 if not. */
 #define IS_BARD(ch)		(!IS_NPC(ch) && \
         (GET_CLASS(ch) == CLASS_BARD))
-/** 1 if ch is warrior class, 0 if not. */
+/** 1 if ch is druid class, 0 if not. */
 #define IS_DRUID(ch)		(!IS_NPC(ch) && \
         (GET_CLASS(ch) == CLASS_DRUID))
 
@@ -1120,7 +1120,7 @@ static inline int GET_CASTER_PROF_FOR_SPELL(struct char_data *ch, int spellnum) 
 /* Similar to 5e mods */
 static inline int GET_SPELL_ABILITY_MOD(struct char_data *ch) {
   switch (GET_CLASS(ch)) {
-    case CLASS_MAGIC_USER:
+    case CLASS_SORCEROR:
       return GET_ABILITY_MOD(GET_INT(ch));
     case CLASS_CLERIC:
       return GET_ABILITY_MOD(GET_WIS(ch));

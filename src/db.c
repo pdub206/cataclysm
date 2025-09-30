@@ -1594,7 +1594,7 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
   GET_HEIGHT(mob_proto + i) = 198;
 
   /* These are now save applies; base save numbers for MOBs are now from the
-   * warrior save table. */
+   * fighter save table. */
   for (j = 0; j < NUM_OF_SAVING_THROWS; j++)
     GET_SAVE(mob_proto + i, j) = 0;
 }

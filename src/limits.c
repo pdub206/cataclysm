@@ -88,7 +88,7 @@ int mana_gain(struct char_data *ch)
       break;
     }
 
-    if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
+    if (IS_SORCEROR(ch) || IS_CLERIC(ch))
       gain *= 2;
 
     if ((GET_COND(ch, HUNGER) == 0) || (GET_COND(ch, THIRST) == 0))
@@ -129,7 +129,7 @@ int hit_gain(struct char_data *ch)
       break;
     }
 
-    if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
+    if (IS_SORCEROR(ch) || IS_CLERIC(ch))
       gain /= 2;	/* Ouch. */
 
     if ((GET_COND(ch, HUNGER) == 0) || (GET_COND(ch, THIRST) == 0))

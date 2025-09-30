@@ -59,7 +59,7 @@ static void ASSIGNROOM(room_vnum room, SPECIAL(fname))
 }
 
 /* Assignments */
-/* assign special procedures to mobiles. Guildguards, snake, thief, magic user,
+/* assign special procedures to mobiles. Guildguards, snake, thief, sorceror,
  * puff, fido, janitor, and cityguards are now implemented via triggers. */
 void assign_mobiles(void)
 {
@@ -100,7 +100,7 @@ static struct spec_func_data spec_func_list[] = {
   {"Mayor",          mayor }, 
   {"Snake",          snake }, 
   {"Thief",          thief }, 
-  {"Magic User",     magic_user }, 
+  {"Sorceror",       sorceror }, 
   {"Puff",           puff }, 
   {"Fido",           fido }, 
   {"Janitor",        janitor }, 
