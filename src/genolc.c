@@ -613,19 +613,16 @@ static int export_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
   );
 
   fprintf(fd, "%d %d %d %d %d %d %d %d %d E\n"
-      "%d %d %d %dd%d+%d %dd%d+%d\n",
+      "%d %dd%d+%d %dd%d\n",
       MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
       MOB_FLAGS(mob)[2], MOB_FLAGS(mob)[3],
       AFF_FLAGS(mob)[0], AFF_FLAGS(mob)[1],
       AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3],
       GET_ALIGNMENT(mob),
-      GET_LEVEL(mob), 20 - GET_HITROLL(mob), GET_AC(mob) / 10, GET_HIT(mob),
-      GET_MANA(mob), GET_MOVE(mob), GET_NDD(mob), GET_SDD(mob),
-      GET_DAMROLL(mob));
+      GET_LEVEL(mob), GET_HIT(mob),
+      GET_MANA(mob), GET_MOVE(mob), GET_NDD(mob), GET_SDD(mob));
 
-  fprintf(fd, 	"%d %d\n"
-		"%d %d %d\n",
-		GET_GOLD(mob), GET_EXP(mob),
+  fprintf(fd, 	"%d %d %d\n",
 		GET_POS(mob), GET_DEFAULT_POS(mob), GET_SEX(mob)
   );
 

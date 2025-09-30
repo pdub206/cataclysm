@@ -372,7 +372,7 @@ ASPELL(spell_identify)
 	      age(victim)->day, age(victim)->hours);
     send_to_char(ch, "Height %d cm, Weight %d pounds\r\n", GET_HEIGHT(victim), GET_WEIGHT(victim));
     send_to_char(ch, "Level: %d, Hits: %d, Mana: %d\r\n", GET_LEVEL(victim), GET_HIT(victim), GET_MANA(victim));
-    send_to_char(ch, "AC: %d, Hitroll: %d, Damroll: %d\r\n", compute_armor_class(victim), GET_HITROLL(victim), GET_DAMROLL(victim));
+    send_to_char(ch, "AC: %d\r\n", compute_armor_class(victim));
     send_to_char(ch, "Str: %d/%d, Int: %d, Wis: %d, Dex: %d, Con: %d, Cha: %d\r\n",
 	GET_STR(victim), GET_ADD(victim), GET_INT(victim),
 	GET_WIS(victim), GET_DEX(victim), GET_CON(victim), GET_CHA(victim));
@@ -399,10 +399,10 @@ ASPELL(spell_enchant_weapon)
 
   SET_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_MAGIC);
 
-  obj->affected[0].location = APPLY_HITROLL;
+  obj->affected[0].location = APPLY_PROFICIENCY;
   obj->affected[0].modifier = 1 + (level >= 18);
 
-  obj->affected[1].location = APPLY_DAMROLL;
+  obj->affected[1].location = APPLY_PROFICIENCY;
   obj->affected[1].modifier = 1 + (level >= 20);
 
   if (IS_GOOD(ch)) {

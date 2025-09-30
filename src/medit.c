@@ -479,26 +479,13 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
   "Hit Points  (xdy+z):        Bare Hand Damage (xdy+z): \r\n"
   "(%s3%s) HP NumDice:  %s[%s%5d%s]%s    (%s6%s) BHD NumDice:  %s[%s%5d%s]%s\r\n"
   "(%s4%s) HP SizeDice: %s[%s%5d%s]%s    (%s7%s) BHD SizeDice: %s[%s%5d%s]%s\r\n"
-  "(%s5%s) HP Addition: %s[%s%5d%s]%s    (%s8%s) DamRoll:      %s[%s%5d%s]%s\r\n"
-  "%-*s(range %s%d%s to %s%d%s)\r\n\r\n"
-
-  "(%sA%s) Armor Class: %s[%s%4d%s]%s        (%sD%s) Hitroll:   %s[%s%5d%s]%s\r\n"
-  "(%sB%s) Exp Points:  %s[%s%10d%s]%s  (%sE%s) Alignment: %s[%s%5d%s]%s\r\n"
-  "(%sC%s) Gold:        %s[%s%10d%s]%s\r\n\r\n",
+  "(%s5%s) HP Addition: %s[%s%5d%s]%s    (%s8%s) Alignment: %s[%s%5d%s]%s\r\n\r\n",
       cyn, yel, OLC_NUM(d), cyn, nrm,
       cyn, nrm, cyn, yel, GET_LEVEL(mob), cyn, nrm,
       cyn, nrm, cyn, nrm,
       cyn, nrm, cyn, yel, GET_HIT(mob), cyn, nrm,   cyn, nrm, cyn, yel, GET_NDD(mob), cyn, nrm,
       cyn, nrm, cyn, yel, GET_MANA(mob), cyn, nrm,  cyn, nrm, cyn, yel, GET_SDD(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_MOVE(mob), cyn, nrm,  cyn, nrm, cyn, yel, GET_DAMROLL(mob), cyn, nrm,
-
-      count_color_chars(buf)+28, buf,
-      yel, GET_NDD(mob) + GET_DAMROLL(mob), nrm,
-      yel, (GET_NDD(mob) * GET_SDD(mob)) + GET_DAMROLL(mob), nrm,
-
-      cyn, nrm, cyn, yel, GET_AC(mob), cyn, nrm,   cyn, nrm, cyn, yel, GET_HITROLL(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_EXP(mob), cyn, nrm,  cyn, nrm, cyn, yel, GET_ALIGNMENT(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_GOLD(mob), cyn, nrm
+      cyn, nrm, cyn, yel, GET_MOVE(mob), cyn, nrm,  cyn, nrm, cyn, yel, GET_ALIGNMENT(mob), cyn, nrm
       );
 
   if (CONFIG_MEDIT_ADVANCED) {
@@ -701,31 +688,6 @@ void medit_parse(struct descriptor_data *d, char *arg)
       i++;
       break;
     case '8':
-      OLC_MODE(d) = MEDIT_DAMROLL;
-      i++;
-      break;
-    case 'a':
-    case 'A':
-      OLC_MODE(d) = MEDIT_AC;
-      i++;
-      break;
-    case 'b':
-    case 'B':
-      OLC_MODE(d) = MEDIT_EXP;
-      i++;
-      break;
-    case 'c':
-    case 'C':
-      OLC_MODE(d) = MEDIT_GOLD;
-      i++;
-      break;
-    case 'd':
-    case 'D':
-      OLC_MODE(d) = MEDIT_HITROLL;
-      i++;
-      break;
-    case 'e':
-    case 'E':
       OLC_MODE(d) = MEDIT_ALIGNMENT;
       i++;
       break;
@@ -914,18 +876,6 @@ void medit_parse(struct descriptor_data *d, char *arg)
     GET_SEX(OLC_MOB(d)) = LIMIT(i - 1, 0, NUM_GENDERS - 1);
     break;
 
-  case MEDIT_HITROLL:
-    GET_HITROLL(OLC_MOB(d)) = LIMIT(i, 0, 50);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
-
-  case MEDIT_DAMROLL:
-    GET_DAMROLL(OLC_MOB(d)) = LIMIT(i, 0, 50);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
-
   case MEDIT_NDD:
     GET_NDD(OLC_MOB(d)) = LIMIT(i, 0, 30);
     OLC_VAL(d) = TRUE;
@@ -952,24 +902,6 @@ void medit_parse(struct descriptor_data *d, char *arg)
 
   case MEDIT_ADD_HP:
     GET_MOVE(OLC_MOB(d)) = LIMIT(i, 0, 30000);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
-
-  case MEDIT_AC:
-    GET_AC(OLC_MOB(d)) = LIMIT(i, -200, 200);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
-
-  case MEDIT_EXP:
-    GET_EXP(OLC_MOB(d)) = LIMIT(i, 0, MAX_MOB_EXP);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
-
-  case MEDIT_GOLD:
-    GET_GOLD(OLC_MOB(d)) = LIMIT(i, 0, MAX_MOB_GOLD);
     OLC_VAL(d) = TRUE;
     medit_disp_stats_menu(d);
     return;
@@ -1127,12 +1059,6 @@ void medit_autoroll_stats(struct descriptor_data *d)
 
   GET_NDD(OLC_MOB(d))     = MAX(1, mob_lev/6);   /* number damage dice 1-5  */
   GET_SDD(OLC_MOB(d))     = MAX(2, mob_lev/6);   /* size of damage dice 2-5 */
-  GET_DAMROLL(OLC_MOB(d)) = mob_lev/6;           /* damroll (dam bonus) 0-5 */
-
-  GET_HITROLL(OLC_MOB(d)) = mob_lev/3;           /* hitroll 0-10            */
-  GET_EXP(OLC_MOB(d))     = (mob_lev*mob_lev*100);
-  GET_GOLD(OLC_MOB(d))    = (mob_lev*10);
-  GET_AC(OLC_MOB(d))      = (100-(mob_lev*6));   /* AC 94 to -80            */
 
   /* 'Advanced' stats are only rolled if advanced options are enabled */
   if (CONFIG_MEDIT_ADVANCED) {

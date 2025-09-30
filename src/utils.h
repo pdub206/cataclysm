@@ -550,6 +550,8 @@ do                                                              \
 #define GET_EXP(ch)	  ((ch)->points.exp)
 /** Armor class of ch. */
 #define GET_AC(ch)        ((ch)->points.armor)
+/** Proficiency bonus of ch. */
+#define GET_PROF_MOD(ch)  ((ch)->points.prof_mod)
 /** Current hit points (health) of ch. */
 #define GET_HIT(ch)	  ((ch)->points.hit)
 /** Maximum hit points of ch. */
@@ -566,10 +568,6 @@ do                                                              \
 #define GET_GOLD(ch)	  ((ch)->points.gold)
 /** Gold in bank of ch. */
 #define GET_BANK_GOLD(ch) ((ch)->points.bank_gold)
-/** Current to-hit roll modifier for ch. */
-#define GET_HITROLL(ch)	  ((ch)->points.hitroll)
-/** Current damage roll modifier for ch. */
-#define GET_DAMROLL(ch)   ((ch)->points.damroll)
 
 /** Current position (standing, sitting) of ch. */
 #define GET_POS(ch)	  ((ch)->char_specials.position)

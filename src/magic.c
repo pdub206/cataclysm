@@ -339,7 +339,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_BLESS:
-    af[0].location = APPLY_HITROLL;
+    af[0].location = GET_SPELL_ABILITY_MOD(ch);
     af[0].modifier = 2;
     af[0].duration = 6;
 
@@ -357,7 +357,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
       return;
     }
 
-    af[0].location = APPLY_HITROLL;
+    af[0].location = GET_SPELL_ABILITY_MOD(ch);
     af[0].modifier = -4;
     af[0].duration = 2;
     SET_BIT_AR(af[0].bitvector, AFF_BLIND);
@@ -377,12 +377,12 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
       return;
     }
 
-    af[0].location = APPLY_HITROLL;
+    af[0].location = GET_SPELL_ABILITY_MOD(ch);
     af[0].duration = 1 + (GET_LEVEL(ch) / 2);
     af[0].modifier = -1;
     SET_BIT_AR(af[0].bitvector, AFF_CURSE);
 
-    af[1].location = APPLY_DAMROLL;
+    af[1].location = GET_SPELL_ABILITY_MOD(ch);
     af[1].duration = 1 + (GET_LEVEL(ch) / 2);
     af[1].modifier = -1;
     SET_BIT_AR(af[1].bitvector, AFF_CURSE);

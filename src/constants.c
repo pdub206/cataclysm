@@ -509,8 +509,6 @@ const char *apply_types[] = {
   "GOLD",
   "EXP",
   "ARMOR",
-  "HITROLL",
-  "DAMROLL",
   "SAVING_PARA",
   "SAVING_ROD",
   "SAVING_PETRI",

@@ -113,8 +113,6 @@ typedef enum
    eMSDP_MONEY, 
    eMSDP_MOVEMENT, 
    eMSDP_MOVEMENT_MAX, 
-   eMSDP_HITROLL, 
-   eMSDP_DAMROLL, 
    eMSDP_AC, 
    eMSDP_STR, 
    eMSDP_INT, 

@@ -49,8 +49,6 @@ struct char_point_data_plrtoascii {
    int	bank_gold;	/* Gold the char has in a bank account	   */
    int	exp;            /* The experience of the player            */
 
-   sbyte hitroll;       /* Any bonus or penalty to the hit roll    */
-   sbyte damroll;       /* Any bonus or penalty to the damage roll */
 };
 
 
@@ -303,10 +301,6 @@ void convert(char *filename)
       fprintf(outfile, "Bank: %d\n", cpd->bank_gold);
     if (cpd->exp != PFDEF_EXP)
       fprintf(outfile, "Exp : %d\n", cpd->exp);
-    if (cpd->hitroll != PFDEF_HITROLL)
-      fprintf(outfile, "Hrol: %d\n", cpd->hitroll);
-    if (cpd->damroll != PFDEF_DAMROLL)
-      fprintf(outfile, "Drol: %d\n", cpd->damroll);
 
 /* affected_type */
     fprintf(outfile, "Affs:\n");

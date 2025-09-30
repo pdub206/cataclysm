@@ -654,13 +654,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           }
           break;
         case 'd':
-          if (!str_cmp(field, "damroll")) {
-            if (subfield && *subfield) {
-              int addition = atoi(subfield);
-              GET_DAMROLL(c) = MAX(1, GET_DAMROLL(c) + addition);
-            }
-            snprintf(str, slen, "%d", GET_DAMROLL(c));
-            } else if (!str_cmp(field, "dex")) {
+          if (!str_cmp(field, "dex")) {
               if (subfield && *subfield) {
                 int addition = atoi(subfield);
                 int max = (IS_NPC(c) || GET_LEVEL(c) >= LVL_GRGOD) ? 25 : 18;
@@ -759,13 +753,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
               update_pos(c);
             }
             snprintf(str, slen, "%d", GET_HIT(c));
-          }
-          else if (!str_cmp(field, "hitroll")) {
-            if (subfield && *subfield) {
-              int addition = atoi(subfield);
-              GET_HITROLL(c) = MAX(1, GET_HITROLL(c) + addition);
-            }
-            snprintf(str, slen, "%d", GET_HITROLL(c));
           }
           else if (!str_cmp(field, "hunger")) {
             if (subfield && *subfield) {

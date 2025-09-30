@@ -463,15 +463,14 @@
 #define APPLY_GOLD             15	/**< Reserved			*/
 #define APPLY_EXP              16	/**< Reserved			*/
 #define APPLY_AC               17	/**< Apply to Armor Class		*/
-#define APPLY_HITROLL          18	/**< Apply to hitroll		*/
-#define APPLY_DAMROLL          19	/**< Apply to damage roll		*/
-#define APPLY_SAVING_PARA      20	/**< Apply to save throw: paralysis	*/
-#define APPLY_SAVING_ROD       21	/**< Apply to save throw: rods	*/
-#define APPLY_SAVING_PETRI     22	/**< Apply to save throw: petrif	*/
-#define APPLY_SAVING_BREATH    23	/**< Apply to save throw: breath	*/
-#define APPLY_SAVING_SPELL     24	/**< Apply to save throw: spells	*/
+#define APPLY_PROFICIENCY      18 /**< Apply to Proficiency Bonus */
+#define APPLY_SAVING_PARA      19	/**< Apply to save throw: paralysis	*/
+#define APPLY_SAVING_ROD       20	/**< Apply to save throw: rods	*/
+#define APPLY_SAVING_PETRI     21	/**< Apply to save throw: petrif	*/
+#define APPLY_SAVING_BREATH    22	/**< Apply to save throw: breath	*/
+#define APPLY_SAVING_SPELL     23	/**< Apply to save throw: spells	*/
 /** Total number of applies */
-#define NUM_APPLIES   25
+#define NUM_APPLIES   24
 
 /* Equals the total number of SAVING_* defines in spells.h */
 #define NUM_OF_SAVING_THROWS  5
@@ -917,12 +916,11 @@ struct char_point_data
    * Dungeons and Dragons method of dealing with character defense, or
    * Armor class. */
   sh_int armor;
+  sh_int prof_mod; /**< Equipment/affect delta to proficiency bonus */
   int gold;        /**< Current gold carried on character */
   int bank_gold;   /**< Gold the char has in a bank account	*/
   int exp;         /**< The experience points, or value, of the character. */
 
-  sbyte hitroll;   /**< Any bonus or penalty to the hit roll */
-  sbyte damroll;   /**< Any bonus or penalty to the damage roll */
 };
 
 /** char_special_data_saved: specials which both a PC and an NPC have in

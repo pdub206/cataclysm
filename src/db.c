@@ -1552,44 +1552,26 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
     exit(1);
   }
 
-  if (sscanf(line, " %d %d %d %dd%d+%d %dd%d+%d ",
-	  t, t + 1, t + 2, t + 3, t + 4, t + 5, t + 6, t + 7, t + 8) != 9) {
+  if (sscanf(line, " %d %dd%d+%d %dd%d ",
+	  t, t + 1, t + 2, t + 3, t + 4, t + 5) != 6) {
     log("SYSERR: Format error in mob #%d, first line after S flag\n"
-	"...expecting line of form '# # # #d#+# #d#+#'", nr);
+	"...expecting line of form '# #d#+# #d#'", nr);
     exit(1);
   }
 
   GET_LEVEL(mob_proto + i) = t[0];
-  GET_HITROLL(mob_proto + i) = 20 - t[1];
-  GET_AC(mob_proto + i) = 10 * t[2];
 
   /* max hit = 0 is a flag that H, M, V is xdy+z */
   GET_MAX_HIT(mob_proto + i) = 0;
-  GET_HIT(mob_proto + i) = t[3];
-  GET_MANA(mob_proto + i) = t[4];
-  GET_MOVE(mob_proto + i) = t[5];
+  GET_HIT(mob_proto + i) = t[1];
+  GET_MANA(mob_proto + i) = t[2];
+  GET_MOVE(mob_proto + i) = t[3];
 
   GET_MAX_MANA(mob_proto + i) = 10;
   GET_MAX_MOVE(mob_proto + i) = 50;
 
-  mob_proto[i].mob_specials.damnodice = t[6];
-  mob_proto[i].mob_specials.damsizedice = t[7];
-  GET_DAMROLL(mob_proto + i) = t[8];
-
-  if (!get_line(mob_f, line)) {
-      log("SYSERR: Format error in mob #%d, second line after S flag\n"
-	  "...expecting line of form '# #', but file ended!", nr);
-      exit(1);
-    }
-
-  if (sscanf(line, " %d %d ", t, t + 1) != 2) {
-    log("SYSERR: Format error in mob #%d, second line after S flag\n"
-	"...expecting line of form '# #'", nr);
-    exit(1);
-  }
-
-  GET_GOLD(mob_proto + i) = t[0];
-  GET_EXP(mob_proto + i) = t[1];
+  mob_proto[i].mob_specials.damnodice = t[4];
+  mob_proto[i].mob_specials.damsizedice = t[5];
 
   if (!get_line(mob_f, line)) {
     log("SYSERR: Format error in last line of mob #%d\n"
@@ -3610,6 +3592,7 @@ void clear_char(struct char_data *ch)
   GET_POS(ch) = POS_STANDING;
   ch->mob_specials.default_pos = POS_STANDING;
   ch->events = NULL;
+  ch->points.prof_mod = 0;
   
   GET_AC(ch) = 100;		/* Basic Armor */
   if (ch->points.max_mana < 100)

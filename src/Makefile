@@ -47,6 +47,7 @@ $%.o: %.c
 
 clean:
 	rm -f *.o depend
+	rm -f ./tests/*.o depend
 
 # Dependencies for the object files (automagically generated with
 # gcc -MM)

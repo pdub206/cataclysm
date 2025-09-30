@@ -171,12 +171,8 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
     GET_AC(ch) += mod;
     break;
 
-  case APPLY_HITROLL:
-    GET_HITROLL(ch) += mod;
-    break;
-
-  case APPLY_DAMROLL:
-    GET_DAMROLL(ch) += mod;
+  case APPLY_PROFICIENCY:
+    GET_PROF_MOD(ch) += mod;
     break;
 
   case APPLY_SAVING_PARA:
@@ -233,27 +229,37 @@ void affect_total(struct char_data *ch)
   struct affected_type *af;
   int i, j;
 
+  /* First, remove all object-based modifiers. */
   for (i = 0; i < NUM_WEARS; i++) {
     if (GET_EQ(ch, i))
       for (j = 0; j < MAX_OBJ_AFFECT; j++)
-	affect_modify_ar(ch, GET_EQ(ch, i)->affected[j].location,
-		      GET_EQ(ch, i)->affected[j].modifier,
-		      GET_OBJ_AFFECT(GET_EQ(ch, i)), FALSE);
+        affect_modify_ar(ch,
+                         GET_EQ(ch, i)->affected[j].location,
+                         GET_EQ(ch, i)->affected[j].modifier,
+                         GET_OBJ_AFFECT(GET_EQ(ch, i)), FALSE);
   }
 
+  /* Then remove all spell/affect modifiers. */
   for (af = ch->affected; af; af = af->next)
     affect_modify_ar(ch, af->location, af->modifier, af->bitvector, FALSE);
 
+  /* Reset derived abilities to real abilities. */
   ch->aff_abils = ch->real_abils;
 
+  /* Reset transient modifiers that are re-applied below. */
+  GET_PROF_MOD(ch) = 0;  /* Proficiency delta (from APPLY_PROFICIENCY) */
+
+  /* Re-apply object-based modifiers. */
   for (i = 0; i < NUM_WEARS; i++) {
     if (GET_EQ(ch, i))
       for (j = 0; j < MAX_OBJ_AFFECT; j++)
-	affect_modify_ar(ch, GET_EQ(ch, i)->affected[j].location,
-		      GET_EQ(ch, i)->affected[j].modifier,
-		      GET_OBJ_AFFECT(GET_EQ(ch, i)), TRUE);
+        affect_modify_ar(ch,
+                         GET_EQ(ch, i)->affected[j].location,
+                         GET_EQ(ch, i)->affected[j].modifier,
+                         GET_OBJ_AFFECT(GET_EQ(ch, i)), TRUE);
   }
 
+  /* Re-apply spell/affect modifiers. */
   for (af = ch->affected; af; af = af->next)
     affect_modify_ar(ch, af->location, af->modifier, af->bitvector, TRUE);
 

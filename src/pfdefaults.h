@@ -33,8 +33,6 @@
 #define PFDEF_GOLD		0
 #define PFDEF_BANK		0
 #define PFDEF_EXP	        0
-#define PFDEF_HITROLL		0
-#define PFDEF_DAMROLL		0
 #define PFDEF_AC		0
 #define PFDEF_STR		0
 #define PFDEF_STRADD		0

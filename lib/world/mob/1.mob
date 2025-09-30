@@ -9,8 +9,7 @@ eyes have a bluish-tint to them with a small amount of green.  One might call
 his stature bulky, as he has quite a bit of muscle.
 ~
 2122 0 0 0 0 0 0 0 0 E
-1 20 1 3d20+40 1d1+0
-0 0
+1 3d20+40 1d1
 8 8 1
 Str: 16
 Dex: 14
@@ -39,8 +38,7 @@ dark hair has been pulled back behind her head, intensifying the sharpness of
 her nose.
 ~
 2122 0 0 0 0 0 0 0 0 E
-0 20 10 3d20+40 1d1+0
-0 0
+0 3d20+40 1d1
 8 8 2
 Str: 14
 Dex: 18
@@ -69,8 +67,7 @@ hands are marred with minor cuts and scars from years of working in service to
 others.
 ~
 10 0 0 0 0 0 0 0 0 E
-1 20 10 3d12+60 1d1+0
-0 0
+1 3d12+60 1d1
 8 8 1
 Str: 18
 Int: 12
