@@ -497,20 +497,20 @@ void command_interpreter(struct char_data *ch, char *argument)
   }
 
   /* Allow IMPLs to switch into mobs to test the commands. */
-   if (IS_NPC(ch) && ch->desc && GET_LEVEL(ch->desc->original) >= LVL_IMPL) {
-     if (script_command_interpreter(ch, argument))
-       return;
-   }
+  if (IS_NPC(ch) && ch->desc && GET_LEVEL(ch->desc->original) >= LVL_IMPL) {
+    if (script_command_interpreter(ch, argument))
+      return;
+  }
 
   for (length = strlen(arg), cmd = 0; *complete_cmd_info[cmd].command != '\n'; cmd++)
-    if(complete_cmd_info[cmd].command_pointer != do_action &&
-       !strncmp(complete_cmd_info[cmd].command, arg, length))
+    if (complete_cmd_info[cmd].command_pointer != do_action &&
+        !strncmp(complete_cmd_info[cmd].command, arg, length))
       if (GET_LEVEL(ch) >= complete_cmd_info[cmd].minimum_level)
         break;
 
   /* it's not a 'real' command, so it's a social */
 
-  if(*complete_cmd_info[cmd].command == '\n')
+  if (*complete_cmd_info[cmd].command == '\n')
     for (length = strlen(arg), cmd = 0; *complete_cmd_info[cmd].command != '\n'; cmd++)
       if (complete_cmd_info[cmd].command_pointer == do_action &&
           !strncmp(complete_cmd_info[cmd].command, arg, length))
@@ -521,17 +521,14 @@ void command_interpreter(struct char_data *ch, char *argument)
     int found = 0;
     send_to_char(ch, "%s", CONFIG_HUH);
 
-    for (cmd = 0; *cmd_info[cmd].command != '\n'; cmd++)
-    {
+    for (cmd = 0; *cmd_info[cmd].command != '\n'; cmd++) {
       if (*arg != *cmd_info[cmd].command || cmd_info[cmd].minimum_level > GET_LEVEL(ch))
         continue;
 
       /* Only apply levenshtein counts if the command is not a trigger command. */
-      if ( (levenshtein_distance(arg, cmd_info[cmd].command) <= 2) &&
-           (cmd_info[cmd].minimum_level >= 0) )
-      {
-        if (!found)
-        {
+      if ((levenshtein_distance(arg, cmd_info[cmd].command) <= 2) &&
+          (cmd_info[cmd].minimum_level >= 0)) {
+        if (!found) {
           send_to_char(ch, "\r\nDid you mean:\r\n");
           found = 1;
         }
@@ -547,30 +544,47 @@ void command_interpreter(struct char_data *ch, char *argument)
     send_to_char(ch, "You can't use immortal commands while switched.\r\n");
   else if (GET_POS(ch) < complete_cmd_info[cmd].minimum_position)
     switch (GET_POS(ch)) {
-    case POS_DEAD:
-      send_to_char(ch, "Lie still; you are DEAD!!! :-(\r\n");
-      break;
-    case POS_INCAP:
-    case POS_MORTALLYW:
-      send_to_char(ch, "You are in a pretty bad shape, unable to do anything!\r\n");
-      break;
-    case POS_STUNNED:
-      send_to_char(ch, "All you can do right now is think about the stars!\r\n");
-      break;
-    case POS_SLEEPING:
-      send_to_char(ch, "In your dreams, or what?\r\n");
-      break;
-    case POS_RESTING:
-      send_to_char(ch, "Nah... You feel too relaxed to do that..\r\n");
-      break;
-    case POS_SITTING:
-      send_to_char(ch, "Maybe you should get on your feet first?\r\n");
-      break;
-    case POS_FIGHTING:
-      send_to_char(ch, "No way!  You're fighting for your life!\r\n");
-      break;
-  } else if (no_specials || !special(ch, cmd, line))
-    ((*complete_cmd_info[cmd].command_pointer) (ch, line, cmd, complete_cmd_info[cmd].subcmd));
+      case POS_DEAD:
+        send_to_char(ch, "Lie still; you are DEAD!!! :-(\r\n");
+        break;
+      case POS_INCAP:
+      case POS_MORTALLYW:
+        send_to_char(ch, "You are in a pretty bad shape, unable to do anything!\r\n");
+        break;
+      case POS_STUNNED:
+        send_to_char(ch, "All you can do right now is think about the stars!\r\n");
+        break;
+      case POS_SLEEPING:
+        send_to_char(ch, "In your dreams, or what?\r\n");
+        break;
+      case POS_RESTING:
+        send_to_char(ch, "Nah... You feel too relaxed to do that..\r\n");
+        break;
+      case POS_SITTING:
+        send_to_char(ch, "Maybe you should get on your feet first?\r\n");
+        break;
+      case POS_FIGHTING:
+        send_to_char(ch, "No way!  You're fighting for your life!\r\n");
+        break;
+    }
+  else if (no_specials || !special(ch, cmd, line)) {
+    /* Execute the command */
+    ((*complete_cmd_info[cmd].command_pointer)(ch, line, cmd, complete_cmd_info[cmd].subcmd));
+
+    /* After successful execution, log any immortal command to log/godcmds. */
+    if (!IS_NPC(ch) && GET_LEVEL(ch) >= LVL_IMMORT) {
+      int rvnum = (IN_ROOM(ch) != NOWHERE) ? world[IN_ROOM(ch)].number : -1;
+      const char *line_safe = (line && *line) ? line : "";
+      godcmd_log("%s (lev %d, invis %d) in room %d: %s%s%s",
+                 GET_NAME(ch),
+                 GET_LEVEL(ch),
+                 GET_INVIS_LEV(ch),
+                 rvnum,
+                 complete_cmd_info[cmd].command,
+                 *line_safe ? " " : "",
+                 line_safe);
+    }
+  }
 }
 
 /* Routines to handle aliasing. */

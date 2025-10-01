@@ -24,6 +24,17 @@
 #include "class.h"
 #include "constants.h"
 
+/* Log immortal commands */
+void godcmd_log(const char *fmt, ...)
+{
+  FILE *fp = fopen(GODCMDS_FILE, "a");
+  if (!fp) { perror("godcmds"); return; }
+  va_list ap; va_start(ap, fmt);
+  vfprintf(fp, fmt, ap); fputc('\n', fp);
+  va_end(ap);
+  fclose(fp);
+}
+
 /** Aportable random number function.
  * @param from The lower bounds of the random number.
  * @param to The upper bounds of the random number. */

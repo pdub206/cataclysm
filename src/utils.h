@@ -33,6 +33,9 @@
 /** direct all log() references to basic_mud_log() function. */
 #define log			basic_mud_log
 
+/* Immortal command log */
+#define GODCMDS_FILE "../log/godcmds"
+
 /** Standard line size, used for many string limits. */
 #define READ_SIZE	256
 
@@ -40,6 +43,7 @@
  * are made available with the function definition. */
 void basic_mud_log(const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 void basic_mud_vlog(const char *format, va_list args);
+void godcmd_log(const char *fmt, ...) __attribute__((format(printf,1,2)));
 int touch(const char *path);
 void mudlog(int type, int level, int file, const char *str, ...) __attribute__ ((format (printf, 4, 5)));
 int	rand_number(int from, int to);

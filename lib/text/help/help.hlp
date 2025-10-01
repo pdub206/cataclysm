@@ -3926,16 +3926,6 @@ all channels.
 
 See also: CHANNELS, MUD-HISTORY
 #0
-HITROLL
-
-   A bonus added to your armor and weapons that increases your chances of 
-hitting a creature while in battle. This does not affect how hard you hit, 
-just how often.
-   A player at level fifteen with a Hitroll of +25 will hit a creature more
-often than a level fifteen player would with a Hitroll of +10.
-
-See also: DAMROLL, AC, STATS, DAMAGE
-#0
 HOLYLIGHT LIGHTING LIGHTS TORCHES HOLY-LIGHTING 
 
 Usage: holylight
@@ -4623,7 +4613,6 @@ OBJECT STANDARDS:
 |Experience                    |   Do not use.    |
 |Armor Class Values            |   10   |   -10   |
 |Armor Class Applies^          |   10   |   -10   |  
-|Hitroll & Damroll             |    5   |   -5    |
 |Saving_throws^                |    2   |   -2    |
 |Weapon Damage                 |   50   |    1    |
 |==================================================
@@ -4995,13 +4984,7 @@ objects and quests.
 
 See also: AUTOROLL
 #31
-MEDIT-HITROLL MEDIT-DAMROLL MEDIT-NUMDAMDICE MEDIT-SIZEDAMDICE MEDIT-BHD
-
-(8) DamRoll:      [    5]
-   Damroll determines how much damage a mob does per hit when fighting.
-   
-(D) Hitroll:   [   11]
-   Hitroll determines how often a mob lands a direct hit when fighting.
+MEDIT-NUMDAMDICE MEDIT-SIZEDAMDICE MEDIT-BHD
  
 Bare Hand Damage (xdy+z): 
 (6) BHD NumDice:  [    5]
@@ -5066,8 +5049,6 @@ Here is our autoroll standard, entering mob level will calculate the following:
       GET_BONUS(OLC_MOB(d))   = mob_lev*10;          /* hit point bonus         */
       GET_HIT(OLC_MOB(d))     = mob_lev/5;           /* number of hitpoint dice */
       GET_MANA(OLC_MOB(d))    = mob_lev/5;           /* size of hitpoint dice   */
-      GET_HITROLL(OLC_MOB(d)) = mob_lev/3;           /* hitroll 0-10            */
-      GET_DAMROLL(OLC_MOB(d)) = mob_lev/6;           /* damroll 0-5             */
       GET_AC(OLC_MOB(d))      = (100-(mob_lev*6));   /* AC 94 to -80            */
       GET_NDD(OLC_MOB(d))     = MAX(1, mob_lev/6);   /* number damage dice 1-5  */
       GET_SDD(OLC_MOB(d))     = MAX(2, mob_lev/6);   /* size of damage dice 2-5 */
@@ -5896,13 +5877,11 @@ applies. Suggested object standards are displayed at the end of each apply
 16)  GOLD               Unimplemented.  Do not use.
 17)  EXP                Unimplemented.  Do not use.
 18)  ARMOR              Apply to armor class (AC). negative is better.
-19)  HITROLL            Apply to hitroll. 
-20)  DAMROLL            Apply to damage roll bonus. 
-21)  SAVING_PARA        Apply to save throw: paralysis. negative is better.
-22)  SAVING_ROD         Apply to save throw: rods. negative is better.
-23)  SAVING_PETRI       Apply to save throw: petrify. negative is better.
-24)  SAVING_BREATH      Apply to save throw: breathe. negative is better.
-25)  SAVING_SPELL       Apply to save throw: spells. negative is better.
+19)  SAVING_PARA        Apply to save throw: paralysis. negative is better.
+20)  SAVING_ROD         Apply to save throw: rods. negative is better.
+21)  SAVING_PETRI       Apply to save throw: petrify. negative is better.
+22)  SAVING_BREATH      Apply to save throw: breathe. negative is better.
+23)  SAVING_SPELL       Apply to save throw: spells. negative is better.
 
 See also: STANDARDS
 #31
@@ -8574,7 +8553,6 @@ cha                 Imm    BOTH  NUMBER
 class               Imm    BOTH  MISC  
 color               God    PC    BINARY
 con                 Imm    BOTH  NUMBER
-damroll             Imm    BOTH  NUMBER
 deleted             IMP    PC    BINARY
 dex                 Imm    BOTH  NUMBER
 drunk               Imm    BOTH  MISC  
@@ -8583,7 +8561,6 @@ frozen              GrGod  PC    BINARY
 gold                Imm    BOTH  NUMBER
 height              Imm    BOTH  NUMBER
 hitpoints           Imm    BOTH  NUMBER
-hitroll             Imm    BOTH  NUMBER
 hunger              Imm    BOTH  MISC  
 int                 Imm    BOTH  NUMBER
 invis               God    PC    NUMBER
@@ -9261,7 +9238,7 @@ Intelligence - How smart you are. Determines how much mana you gain per level,
                opponent and hit him more often, and if you're undead, helps 
                control your followers.
    
-See also: HITROLL, DAMROLL, AC
+See also: AC
 #0
 STEAL
 
