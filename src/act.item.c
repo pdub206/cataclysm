@@ -914,16 +914,21 @@ ACMD(do_drink)
       const char *base = proto_sd ? proto_sd : temp->short_description;
       const char *noun = base ? base : "container";
 
-      /* Strip leading article from the base noun phrase. */
-      if (!strn_cmp(noun, "a ", 2))       noun += 2;
-      else if (!strn_cmp(noun, "an ", 3)) noun += 3;
+      /* Strip leading article from base noun phrase. */
+      if (!strn_cmp(noun, "a ", 2))        noun += 2;
+      else if (!strn_cmp(noun, "an ", 3))  noun += 3;
       else if (!strn_cmp(noun, "the ", 4)) noun += 4;
 
-      char sbuf[MAX_STRING_LENGTH];
-      /* "empty" starts with vowel -> "an" */
-      snprintf(sbuf, sizeof(sbuf), "an empty %s", noun);
+      /* Find " of " if present to drop the tail when empty. */
+      const char *ofp = strstr(noun, " of ");
+      size_t noun_len = ofp ? (size_t)(ofp - noun) : strlen(noun);
 
-      /* Only free if this instance already owns a unique string. */
+      char sbuf[MAX_STRING_LENGTH];
+      /* Max noun we can print after "an empty " and a space is bounded by precision */
+      /* "an empty " is 9 characters plus the space already included -> total prefix 9 */
+      /* Use precision to avoid overrun: */
+      snprintf(sbuf, sizeof(sbuf), "an empty %.*s", (int)MIN(noun_len, sizeof(sbuf) - 10), noun);
+
       if (temp->short_description && temp->short_description != proto_sd)
         free(temp->short_description);
       temp->short_description = strdup(sbuf);
@@ -999,33 +1004,47 @@ ACMD(do_drink)
       const char *base = proto_sd ? proto_sd : temp->short_description;
       const char *noun = base ? base : "container";
 
-      /* Strip leading article from the base noun phrase. */
-      if (!strn_cmp(noun, "a ", 2))       noun += 2;
-      else if (!strn_cmp(noun, "an ", 3)) noun += 3;
+      /* Strip leading article. */
+      if (!strn_cmp(noun, "a ", 2))        noun += 2;
+      else if (!strn_cmp(noun, "an ", 3))  noun += 3;
       else if (!strn_cmp(noun, "the ", 4)) noun += 4;
 
-      const char *status = "empty";
-      if (cap > 0 && rem > 0) {
-        int pct = (rem * 100) / cap;
-        if (pct >= 75)
-          status = "partially filled";
-        else if (pct >= 50) /* 50..74 */
-          status = "half-filled";
-        else /* 1..49 */
-          status = "nearly empty";
-      }
-
-      /* Choose article a/an from status' first letter. */
-      bool use_an = FALSE;
-      if (status && *status) {
-        char first = LOWER((unsigned char)status[0]);
-        use_an = (first == 'a' || first == 'e' || first == 'i' || first == 'o' || first == 'u');
-      }
-
       char sbuf[MAX_STRING_LENGTH];
-      snprintf(sbuf, sizeof(sbuf), "%s %s %s", use_an ? "an" : "a", status, noun);
 
-      /* Only free if this instance already owns a unique string. */
+      if (rem <= 0) {
+        /* Empty: hide previous liquid, use container base before " of ". */
+        const char *ofp = strstr(noun, " of ");
+        size_t noun_len = ofp ? (size_t)(ofp - noun) : strlen(noun);
+        /* "an empty " (9 chars) + noun_len (bounded by precision) */
+        snprintf(sbuf, sizeof(sbuf), "an empty %.*s", (int)MIN(noun_len, sizeof(sbuf) - 10), noun);
+      } else {
+        /* Non-empty: banded status + full noun (including " of <liquid>"). */
+        const char *status = "partially filled";
+        if (cap > 0) {
+          int pct = (rem * 100) / cap;
+          if (pct >= 75)
+            status = "partially filled";
+          else if (pct >= 50)
+            status = "half-filled";
+          else
+            status = "nearly empty";
+        }
+
+        /* Choose article from status' first letter. */
+        bool use_an = FALSE;
+        if (status && *status) {
+          char first = LOWER((unsigned char)status[0]);
+          use_an = (first == 'a' || first == 'e' || first == 'i' || first == 'o' || first == 'u');
+        }
+
+        /* Format safely: "<a/an> <status> <noun>" */
+        const char *article = use_an ? "an" : "a";
+        /* Compute remaining space for noun using precision to cap it */
+        size_t prefix_len = strlen(article) + 1 /* space */ + strlen(status) + 1 /* space */;
+        size_t max_noun = (sizeof(sbuf) > (prefix_len + 1)) ? (sizeof(sbuf) - prefix_len - 1) : 0;
+        snprintf(sbuf, sizeof(sbuf), "%s %s %.*s", article, status, (int)max_noun, noun);
+      }
+
       if (temp->short_description && temp->short_description != proto_sd)
         free(temp->short_description);
       temp->short_description = strdup(sbuf);
