@@ -2690,24 +2690,35 @@ ACMD(do_zreset)
     if (GET_LEVEL(ch) < LVL_GOD){
       send_to_char(ch, "You do not have permission to reset the entire world.\r\n");
       return;
-   } else {
+    } else {
       for (i = 0; i <= top_of_zone_table; i++)
-      reset_zone(i);
-    send_to_char(ch, "Reset world.\r\n");
-    mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s reset entire world.", GET_NAME(ch));
-    return; }
+        reset_zone(i);
+
+      /* NEW: re-apply persistent room contents across the world */
+      RoomSave_boot();
+
+      send_to_char(ch, "Reset world.\r\n");
+      mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s reset entire world.", GET_NAME(ch));
+      return;
+    }
   } else if (*arg == '.' || !*arg)
     i = world[IN_ROOM(ch)].zone;
   else {
     j = atoi(arg);
     for (i = 0; i <= top_of_zone_table; i++)
       if (zone_table[i].number == j)
-	break;
+        break;
   }
+
   if (i <= top_of_zone_table && (can_edit_zone(ch, i) || GET_LEVEL(ch) > LVL_IMMORT)) {
     reset_zone(i);
+
+    /* NEW: re-apply persistent room contents for the zone that was reset */
+    RoomSave_boot();  /* If you later add a zone-scoped loader, call that here instead */
+
     send_to_char(ch, "Reset zone #%d: %s.\r\n", zone_table[i].number, zone_table[i].name);
-    mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s reset zone %d (%s)", GET_NAME(ch), zone_table[i].number, zone_table[i].name);
+    mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
+           "(GC) %s reset zone %d (%s)", GET_NAME(ch), zone_table[i].number, zone_table[i].name);
   } else
     send_to_char(ch, "You do not have permission to reset this zone. Try %d.\r\n", GET_OLC_ZONE(ch));
 }
