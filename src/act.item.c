@@ -47,9 +47,6 @@ static void perform_remove(struct char_data *ch, int pos);
 static void perform_wear(struct char_data *ch, struct obj_data *obj, int where);
 static void wear_message(struct char_data *ch, struct obj_data *obj, int where);
 
-
-
-
 static void perform_put(struct char_data *ch, struct obj_data *obj, struct obj_data *cont)
 {
   long object_id = obj_script_id(obj);
@@ -871,10 +868,11 @@ ACMD(do_drink)
           send_to_char(ch, "You don't feel thirsty any more.\r\n");
         return;
       default:
-    send_to_char(ch, "Drink from what?\r\n");
-    return;
+        send_to_char(ch, "Drink from what?\r\n");
+        return;
     }
   }
+
   if (!(temp = get_obj_in_list_vis(ch, arg, NULL, ch->carrying))) {
     if (!(temp = get_obj_in_list_vis(ch, arg, NULL, world[IN_ROOM(ch)].contents))) {
       send_to_char(ch, "You can't find it!\r\n");
@@ -882,27 +880,54 @@ ACMD(do_drink)
     } else
       on_ground = 1;
   }
+
   if ((GET_OBJ_TYPE(temp) != ITEM_DRINKCON) &&
       (GET_OBJ_TYPE(temp) != ITEM_FOUNTAIN)) {
     send_to_char(ch, "You can't drink from that!\r\n");
     return;
   }
+
   if (on_ground && (GET_OBJ_TYPE(temp) == ITEM_DRINKCON)) {
     send_to_char(ch, "You have to be holding that to drink from it.\r\n");
     return;
   }
+
   if ((GET_COND(ch, DRUNK) > 10) && (GET_COND(ch, THIRST) > 0)) {
     /* The pig is drunk */
     send_to_char(ch, "You can't seem to get close enough to your mouth.\r\n");
     act("$n tries to drink but misses $s mouth!", TRUE, ch, 0, 0, TO_ROOM);
     return;
   }
+
   if ((GET_COND(ch, HUNGER) > 20) && (GET_COND(ch, THIRST) > 0)) {
     send_to_char(ch, "Your stomach can't contain anymore!\r\n");
     return;
   }
+
+  /* Already empty? Update sdesc safely and report. */
   if (GET_OBJ_VAL(temp, 1) < 1) {
     send_to_char(ch, "It is empty.\r\n");
+
+    if (GET_OBJ_TYPE(temp) == ITEM_DRINKCON) {
+      obj_rnum rnum = GET_OBJ_RNUM(temp);
+      const char *proto_sd = (rnum != NOTHING) ? obj_proto[rnum].short_description : NULL;
+      const char *base = proto_sd ? proto_sd : temp->short_description;
+      const char *noun = base ? base : "container";
+
+      /* Strip leading article from the base noun phrase. */
+      if (!strn_cmp(noun, "a ", 2))       noun += 2;
+      else if (!strn_cmp(noun, "an ", 3)) noun += 3;
+      else if (!strn_cmp(noun, "the ", 4)) noun += 4;
+
+      char sbuf[MAX_STRING_LENGTH];
+      /* "empty" starts with vowel -> "an" */
+      snprintf(sbuf, sizeof(sbuf), "an empty %s", noun);
+
+      /* Only free if this instance already owns a unique string. */
+      if (temp->short_description && temp->short_description != proto_sd)
+        free(temp->short_description);
+      temp->short_description = strdup(sbuf);
+    }
     return;
   }
 
@@ -937,7 +962,7 @@ ACMD(do_drink)
   }
 
   gain_condition(ch, DRUNK,  drink_aff[GET_OBJ_VAL(temp, 2)][DRUNK]  * amount / 4);
-  gain_condition(ch, HUNGER,   drink_aff[GET_OBJ_VAL(temp, 2)][HUNGER]   * amount / 4);
+  gain_condition(ch, HUNGER, drink_aff[GET_OBJ_VAL(temp, 2)][HUNGER] * amount / 4);
   gain_condition(ch, THIRST, drink_aff[GET_OBJ_VAL(temp, 2)][THIRST] * amount / 4);
 
   if (GET_COND(ch, DRUNK) > 10)
@@ -959,9 +984,53 @@ ACMD(do_drink)
     SET_BIT_AR(af.bitvector, AFF_POISON);
     affect_join(ch, &af, FALSE, FALSE, FALSE, FALSE);
   }
+
   /* Empty the container (unless unlimited), and no longer poison. */
   if (GET_OBJ_VAL(temp, 0) > 0) {
     GET_OBJ_VAL(temp, 1) -= amount;
+
+    /* Rebuild short description to match remaining percentage (safe). */
+    if (GET_OBJ_TYPE(temp) == ITEM_DRINKCON) {
+      int cap = GET_OBJ_VAL(temp, 0);
+      int rem = GET_OBJ_VAL(temp, 1);
+
+      obj_rnum rnum = GET_OBJ_RNUM(temp);
+      const char *proto_sd = (rnum != NOTHING) ? obj_proto[rnum].short_description : NULL;
+      const char *base = proto_sd ? proto_sd : temp->short_description;
+      const char *noun = base ? base : "container";
+
+      /* Strip leading article from the base noun phrase. */
+      if (!strn_cmp(noun, "a ", 2))       noun += 2;
+      else if (!strn_cmp(noun, "an ", 3)) noun += 3;
+      else if (!strn_cmp(noun, "the ", 4)) noun += 4;
+
+      const char *status = "empty";
+      if (cap > 0 && rem > 0) {
+        int pct = (rem * 100) / cap;
+        if (pct >= 75)
+          status = "partially filled";
+        else if (pct >= 50) /* 50..74 */
+          status = "half-filled";
+        else /* 1..49 */
+          status = "nearly empty";
+      }
+
+      /* Choose article a/an from status' first letter. */
+      bool use_an = FALSE;
+      if (status && *status) {
+        char first = LOWER((unsigned char)status[0]);
+        use_an = (first == 'a' || first == 'e' || first == 'i' || first == 'o' || first == 'u');
+      }
+
+      char sbuf[MAX_STRING_LENGTH];
+      snprintf(sbuf, sizeof(sbuf), "%s %s %s", use_an ? "an" : "a", status, noun);
+
+      /* Only free if this instance already owns a unique string. */
+      if (temp->short_description && temp->short_description != proto_sd)
+        free(temp->short_description);
+      temp->short_description = strdup(sbuf);
+    }
+
     if (!GET_OBJ_VAL(temp, 1)) { /* The last bit */
       name_from_drinkcon(temp);
       GET_OBJ_VAL(temp, 2) = 0;
