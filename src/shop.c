@@ -846,26 +846,25 @@ static void shopping_value(char *arg, struct char_data *ch, struct char_data *ke
 static char *list_object(struct obj_data *obj, int cnt, int aindex, int shop_nr, struct char_data *keeper, struct char_data *ch)
 {
   static char result[256];
-  char	itemname[128],
-	quantity[16];	/* "Unlimited" or "%d" */
+  char  itemname[128],
+        quantity[16];  /* "Unlimited" or "%d" */
 
   if (shop_producing(obj, shop_nr))
-    strcpy(quantity, "Unlimited");	/* strcpy: OK (for 'quantity >= 10') */
+    strcpy(quantity, "Unlimited");  /* strcpy: OK (for 'quantity >= 10') */
   else
-    sprintf(quantity, "%d", cnt);	/* sprintf: OK (for 'quantity >= 11', 32-bit int) */
+    sprintf(quantity, "%d", cnt);   /* sprintf: OK (for 'quantity >= 11', 32-bit int) */
 
   switch (GET_OBJ_TYPE(obj)) {
   case ITEM_DRINKCON:
-    if (GET_OBJ_VAL(obj, 1))
-      snprintf(itemname, sizeof(itemname), "%s of %s", obj->short_description, drinks[GET_OBJ_VAL(obj, 2)]);
-    else
-      strlcpy(itemname, obj->short_description, sizeof(itemname));
+    /* Previously appended: "<sdesc> of <liquid>".
+     * We now rely solely on the object's short description for shop listings. */
+    strlcpy(itemname, obj->short_description, sizeof(itemname));
     break;
 
   case ITEM_WAND:
   case ITEM_STAFF:
     snprintf(itemname, sizeof(itemname), "%s%s", obj->short_description,
-	GET_OBJ_VAL(obj, 2) < GET_OBJ_VAL(obj, 1) ? " (partially used)" : "");
+        GET_OBJ_VAL(obj, 2) < GET_OBJ_VAL(obj, 1) ? " (partially used)" : "");
     break;
 
   default:
