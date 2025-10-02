@@ -1,1 +1,50 @@
+CircleMUD v3.0 Shop File~
+#100~
+135
+136
+137
+138
+-1
+1.00
+1.00
+-1
+%s We're fresh out of that.~
+%s Trying to sell something you don't have?~
+%s Not interested. Try someone else.~
+%s I can't afford that!~
+%s Come back when you have some coin.~
+%s That'll be %d coins.~
+%s I'll give you %d coins for that.~
+0
+4
+102
+0
+134
+-1
+0
+28
+0
+0
+#101~
+138
+-1
+1.00
+1.00
+-1
+%s Sorry, I don't stock that item.~
+%s You don't seem to have that.~
+%s I don't trade in such items.~
+%s I can't afford that!~
+%s You are too poor!~
+%s That'll be %d coins, thanks.~
+%s I'll give you %d coins for that.~
+0
+0
+103
+0
+-1
+0
+28
+0
+0
 $~

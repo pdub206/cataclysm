@@ -255,12 +255,81 @@ A backpack made of thick hide is lying here.~
 75 0 0 0
 5 50 0 0 0
 #132
-bar bartop~
-a long, wooden bar~
-A long, wooden bar takes up most of the south side of the room.~
-It's a long wooden bar!
+counter~
+a long, stone counter~
+A long, rough-hewn stone counter is here along the eastern wall.~
+   This stone countertop is a crude L-shape, allowing the staff of the
+establishment to enter from behind it as need be.  Carved of stone, it is
+rough-hewn except on the very top, which has been polished down as much as
+possible.  Chips and cracks have formed across its surface, which is beginning
+to show its age.  Most of the counter is relatively clean, but certain spots are
+sticky from spilled drink and food.
 ~
 6 0 0 0 0 0 0 0 0 0 0 0 0
 8 0 0 0
 200 0 0 0 0
+#133
+table long carved stone~
+a long, carved stone table~
+A long, carved stone table is near the southern wall.~
+Made of one piece of solid stone, this table is easily six feet in length.  At
+each of its corners a thick leg supports the top.  Each leg at the base has been
+carved to look like an erdlu's foot, with small talons extending out diagonally.
+Over time it has been worn and chipped, leaving it stained but still functional.
+~
+6 0 0 0 0 0 0 0 0 0 0 0 0
+6 0 1 0
+100 0 0 0 0
+#134
+ledge small stone~
+a small stone ledge~
+A small stone ledge rests against the western wall here.~
+This makeshift seat is really nothing more than a large slab of stone.  It is
+unfinished, yet shows some attempts to carve it into a more suitable place to
+sit upon.  One end is still slightly jagged, though has been dulled so as not to
+easily hurt someone.
+~
+6 0 0 0 0 0 0 0 0 0 0 0 0
+2 0 0 0
+100 0 0 0 0
+#135
+mug ale~
+a mug of ale~
+A mug of ale has been left here.~
+Made of clay, this mug appears to have been fired in a kiln to retain its shape.
+The craftsmanship is questionable, but it does it job well enough.
+~
+17 0 0 0 0 ap 0 0 0 0 0 0 0
+3 3 3 0
+8 12 0 0 0
+#136
+shot whiskey~
+a shot of whiskey~
+A shot of whiskey has been set here.~
+This shotglass is made of fired clay and is small enough to hold a single pour
+of spirits.
+~
+17 0 0 0 0 ap 0 0 0 0 0 0 0
+1 1 5 0
+1 15 0 0 0
+#137
+shot firebreather~
+a shot of firebreather~
+A shot of firebreather has been set here.~
+   Made of discolored stone, this shotglass appears to have been chipped by
+hand.  It could probably hold a small amount of spirits.
+~
+17 0 0 0 0 ap 0 0 0 0 0 0 0
+0 0 0 0
+1 15 0 0 0
+#138
+cup water~
+a cup of water~
+A small cup filled with water is here.~
+   This small cup is carved from wood and looks like it could hold a fair amount
+of liquid.
+~
+17 0 0 0 0 a 0 0 0 0 0 0 0
+4 4 0 0
+1 15 0 0 0
 $~

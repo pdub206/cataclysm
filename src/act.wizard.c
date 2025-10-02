@@ -5797,7 +5797,7 @@ ACMD(do_msave)
     o = GET_EQ(vict, pos);
     if (!o) continue;
     if (GET_OBJ_VNUM(o) <= 0) continue;
-    loadout_add_entry(&mob_proto[rnum].proto_loadout, GET_OBJ_VNUM(o), (sh_int)pos, 1);
+    loadout_add_entry(&mob_proto[rnum].proto_loadout, GET_OBJ_VNUM(o), (int)pos, 1);
     equips_added++;
   }
 

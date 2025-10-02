@@ -27,7 +27,7 @@
  * signed anymore so use the unsigned types and get 65,535 objects instead of
  * 32,768. NOTE: This will likely be unconditionally unsigned later.
  * 0 = use signed indexes; 1 = use unsigned indexes */
-#define CIRCLE_UNSIGNED_INDEX	1
+#define CIRCLE_UNSIGNED_INDEX	0
 
 #if CIRCLE_UNSIGNED_INDEX
 # define IDXTYPE	ush_int          /**< Index types are unsigned short ints */
@@ -38,9 +38,9 @@
 # define NOBODY		((IDXTYPE)~0)    /**< Sets to ush_int_MAX, or 65,535 */
 # define NOFLAG   ((IDXTYPE)~0)    /**< Sets to ush_int_MAX, or 65,535 */
 #else
-# define IDXTYPE	sh_int           /**< Index types are unsigned short ints */
-# define IDXTYPE_MAX SHRT_MAX      /**< Used for compatibility checks. */
-# define IDXTYPE_MIN SHRT_MIN      /**< Used for compatibility checks. */
+# define IDXTYPE	int              /**< Index types are unsigned short ints */
+# define IDXTYPE_MAX INT_MAX      /**< Used for compatibility checks. */
+# define IDXTYPE_MIN INT_MIN      /**< Used for compatibility checks. */
 # define NOWHERE	((IDXTYPE)-1)    /**< nil reference for rooms */
 # define NOTHING	((IDXTYPE)-1)    /**< nil reference for objects */
 # define NOBODY		((IDXTYPE)-1)	   /**< nil reference for mobiles  */

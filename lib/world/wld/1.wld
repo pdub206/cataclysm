@@ -142,7 +142,7 @@ S
 Caravan Way~
 This unfinished room was created by Kinther.
 ~
-1 0 0 0 0 0
+1 0 0 0 0 1
 D0
 ~
 ~
@@ -528,7 +528,11 @@ D2
 S
 #134
 The Golden Inix Inn~
-This unfinished room was created by Kinther.
+   This large, open room is filled with tables of various shapes and sizes.  
+The smell of food being cooked drifts through the area and seems to be coming
+from a curtained doorway.  In a corner is an L-shaped counter made of rough-hewn
+stone which has a selection of drinks behind it.  Near the eastern wall, a
+stairway heads upward toward an open dormitory.
 ~
 1 131080 0 0 0 0
 D0

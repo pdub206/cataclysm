@@ -38,7 +38,7 @@ dark hair has been pulled back behind her head, intensifying the sharpness of
 her nose.
 ~
 2122 0 0 0 0 0 0 0 0 E
-0 3d20+40 1d1
+1 3d20+40 1d1
 8 8 2
 Str: 14
 Dex: 18
@@ -75,4 +75,24 @@ Con: 18
 E
 L 14 113 1
 L 9 112 1
+#103
+woman lanky scarred~
+the lanky, scarred woman~
+The lanky, scarred woman is leaning against a wall here.
+~
+   This human woman is of average height and has a very lanky frame.  Her skin
+hugs her body tightly and there is little fat to be seen, possibly due to
+dehydration.  Tanned dark from the harsh rays of the sun, her upper torso is
+covered in scars from a lifetime of labor.  Unkempt brown hair covers her head,
+descending to just above her shoulders.  Her eyes are a light blue color and
+appear slightly bloodshot.
+~
+10 0 0 0 0 0 0 0 0 E
+1 3d8+60 1d2
+8 8 2
+Str: 12
+Dex: 14
+Con: 14
+Cha: 14
+E
 $

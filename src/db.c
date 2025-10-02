@@ -1864,7 +1864,7 @@ void parse_mobile(FILE *mob_f, int nr)
       log("SYSERR: Bad 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
     } else {
       if (qty < 1) qty = 1;
-      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (sh_int)wpos, qty);
+      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
     }
     /* look ahead to see if there is another 'L' */
     letter = fread_letter(mob_f);
@@ -1892,7 +1892,7 @@ void parse_mobile(FILE *mob_f, int nr)
       log("SYSERR: Bad post-trigger 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
     } else {
       if (qty < 1) qty = 1;
-      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (sh_int)wpos, qty);
+      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
     }
     letter = fread_letter(mob_f);
   }
@@ -2145,7 +2145,7 @@ static void load_zones(FILE *fl, char *zonename)
 
   line_num += get_line(fl, buf);
 
-  if (sscanf(buf, "#%hd", &Z.number) != 1) {
+  if (sscanf(buf, "#%d", &Z.number) != 1) {
     log("SYSERR: Format error in %s, line %d", zname, line_num);
     exit(1);
   }
@@ -2168,15 +2168,15 @@ static void load_zones(FILE *fl, char *zonename)
 
   line_num += get_line(fl, buf);
   /* Look for 10 items first (new tbaMUD), if not found, try 4 (old tbaMUD) */
-  if  (sscanf(buf, " %hd %hd %d %d %s %s %s %s %d %d", &Z.bot, &Z.top, &Z.lifespan,
+  if  (sscanf(buf, " %d %d %d %d %s %s %s %s %d %d", &Z.bot, &Z.top, &Z.lifespan,
       &Z.reset_mode, zbuf1, zbuf2, zbuf3, zbuf4, &Z.min_level, &Z.max_level) != 10)
   {
-    if (sscanf(buf, " %hd %hd %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
+    if (sscanf(buf, " %d %d %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
       /* This may be due to the fact that the zone has no builder.  So, we just
        * attempt to fix this by copying the previous 2 last reads into this
        * variable and the last one. */
       log("SYSERR: Format error in numeric constant line of %s, attempting to fix.", zname);
-      if (sscanf(Z.name, " %hd %hd %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
+      if (sscanf(Z.name, " %d %d %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
         log("SYSERR: Could not fix previous error, aborting game.");
         exit(1);
       } else {
