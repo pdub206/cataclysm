@@ -789,8 +789,11 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
     }
 
     if (!IS_NPC(victim)) {
-      mudlog(BRF, MAX(LVL_IMMORT, MAX(GET_INVIS_LEV(ch), GET_INVIS_LEV(victim))), 
-        TRUE, "%s killed by %s at %s", GET_NAME(victim), GET_NAME(ch), world[IN_ROOM(victim)].name);
+      /* NPC-safe invis check for killer (ch) */
+      int ch_invis = IS_NPC(ch) ? 0 : GET_INVIS_LEV(ch);  /* <-- added */
+      mudlog(BRF, MAX(LVL_IMMORT, MAX(ch_invis, GET_INVIS_LEV(victim))),
+        TRUE, "%s killed by %s at %s",
+        GET_NAME(victim), GET_NAME(ch), world[IN_ROOM(victim)].name);
       if (MOB_FLAGGED(ch, MOB_MEMORY))
 	forget(ch, victim);
     }
@@ -856,7 +859,8 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
     const char *skillname = skill_name_for_gain(skillnum);
 
     /* proficiency from current % */
-    attack_mod += GET_PROFICIENCY(GET_SKILL(ch, skillnum));
+    if (!IS_NPC(ch))
+      attack_mod += GET_PROFICIENCY(GET_SKILL(ch, skillnum));
 
     /* Weapon magic (cap +3) */
     if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {
@@ -889,7 +893,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
        * Only happens if an attack actually lands.
        */
       if (shield) {
-        int def_prof = GET_PROFICIENCY(GET_SKILL(victim, SKILL_SHIELD_USE));
+        int def_prof = (!IS_NPC(victim)) ? GET_PROFICIENCY(GET_SKILL(victim, SKILL_SHIELD_USE)) : 0;
         int block_chance = def_prof * 10;   /* 0–60% total chance to block an attack */
 
         if (block_chance > 0 && rand_number(1, 100) <= block_chance) {
