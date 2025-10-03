@@ -213,9 +213,10 @@ static void ensure_dir_exists(const char *path) {
 
 /* zone vnum for a given room rnum (e.g., 134 -> zone 1) */
 static int roomsave_zone_for_rnum(room_rnum rnum) {
-  if (rnum == NOWHERE) return -1;
-  if (world[rnum].zone < 0 || world[rnum].zone > top_of_zone_table) return -1;
-  return zone_table[ world[rnum].zone ].number; /* zone virtual number (e.g., 1) */
+  if (rnum == NOWHERE || rnum < 0 || rnum > top_of_world) return 0;
+  zone_rnum znum = world[rnum].zone;
+  if (znum < 0 || znum > top_of_zone_table) return 0;
+  return zone_table[znum].number; /* e.g., 1 for rooms 100–199, 2 for 200–299, etc. */
 }
 
 /* lib/world/rsv/<zone>.rsv */
