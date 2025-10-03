@@ -255,7 +255,7 @@ void gain_skill(struct char_data *ch, char *skill, bool success)
     return;
 
   /* Wisdom bonus from wis_app[] (constants.c). Higher = better learning & shorter cooldown. */
-  wisb = wis_app[GET_WIS(ch)].bonus;
+  wisb = GET_ABILITY_MOD(GET_WIS(ch));
 
   if (success) {
     /* Learning from success is harder: 1..100, threshold scales with WIS */

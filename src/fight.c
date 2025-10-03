@@ -155,7 +155,7 @@ int compute_armor_class(struct char_data *ch)
   int armorclass = GET_AC(ch);
 
   if (AWAKE(ch))
-    armorclass += dex_app[GET_DEX(ch)].defensive * 10;
+    armorclass += GET_ABILITY_MOD(GET_DEX(ch)) * 10;
 
   return (MAX(-100, armorclass));      /* -100 is lowest */
 }

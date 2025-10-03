@@ -1209,46 +1209,6 @@ struct dex_skill_type
   sh_int hide;     /**< Alters the success of hiding out of sight */
 };
 
-/** Describes the bonuses applied for a specific value of a character's
- * strength attribute. */
-struct dex_app_type
-{
-  sh_int reaction; /**< Historically affects reaction savings throws. */
-  sh_int miss_att; /**< Historically affects missile attacks */
-  sh_int defensive; /**< Alters character's inherent armor class */
-};
-
-/** Describes the bonuses applied for a specific value of a character's
- * strength attribute. */
-struct str_app_type
-{
-  sh_int tohit; /**< To Hit (THAC0) Bonus/Penalty        */
-  sh_int todam; /**< Damage Bonus/Penalty                */
-  sh_int carry_w; /**< Maximum weight that can be carrried */
-  sh_int wield_w; /**< Maximum weight that can be wielded  */
-};
-
-/** Describes the bonuses applied for a specific value of a character's
- * wisdom attribute. */
-struct wis_app_type
-{
-  byte bonus; /**< how many practices player gains per lev, unused now  */
-};
-
-/** Describes the bonuses applied for a specific value of a character's
- * intelligence attribute. */
-struct int_app_type
-{
-  byte learn; /**< how many % a player learns a spell/skill */
-};
-
-/** Describes the bonuses applied for a specific value of a
- * character's constitution attribute. */
-struct con_app_type
-{
-  sh_int hitp; /**< Added to a character's new MAXHP at each new level. */
-};
-
 /** Stores, and used to deliver, the current weather information
  * in the mud world. */
 struct weather_data

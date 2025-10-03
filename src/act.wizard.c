@@ -1199,8 +1199,8 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
 
     send_to_char(ch, "Played: [%dh %dm], Age: [%d], per[%d]/NSTL[%d]",
             k->player.time.played / 3600, (k->player.time.played % 3600) / 60,
-            age(k)->year, int_app[GET_INT(k)].learn,
-	    wis_app[GET_WIS(k)].bonus);
+            age(k)->year, GET_ABILITY_MOD(GET_INT(k)),
+	    GET_ABILITY_MOD(GET_WIS(k)));
     /* Display OLC zone for immorts. */
     if (GET_LEVEL(k) >= LVL_BUILDER) {
       if (GET_OLC_ZONE(k)==AEDIT_PERMISSION)
@@ -1239,7 +1239,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
                       CCYEL(ch, C_NRM), GET_PAGE_LENGTH(k), CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
 
   send_to_char(ch, "AC: [%d%+d/10], Saving throws: [%d/%d/%d/%d/%d]\r\n",
-	  GET_AC(k), dex_app[GET_DEX(k)].defensive, GET_SAVE(k, 0), GET_SAVE(k, 1), GET_SAVE(k, 2),
+	  GET_AC(k), GET_ABILITY_MOD(GET_DEX(k)), GET_SAVE(k, 0), GET_SAVE(k, 1), GET_SAVE(k, 2),
 	  GET_SAVE(k, 3), GET_SAVE(k, 4));
 
   sprinttype(GET_POS(k), position_types, buf, sizeof(buf));

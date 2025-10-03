@@ -1713,8 +1713,8 @@ ACMD(do_wield)
   else {
     if (!CAN_WEAR(obj, ITEM_WEAR_WIELD))
       send_to_char(ch, "You can't wield that.\r\n");
-    else if (GET_OBJ_WEIGHT(obj) > str_app[STRENGTH_APPLY_INDEX(ch)].wield_w)
-      send_to_char(ch, "It's too heavy for you to use.\r\n");
+  else if (GET_OBJ_WEIGHT(obj) > CAN_WIELD_W(ch))
+    send_to_char(ch, "It's too heavy for you to use.\r\n");
     else if (GET_LEVEL(ch) < GET_OBJ_LEVEL(obj))
       send_to_char(ch, "You are not experienced enough to use that.\r\n");
     else

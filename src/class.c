@@ -978,7 +978,7 @@ void advance_level(struct char_data *ch)
 {
   int add_hp, add_mana = 0, add_move = 0, i;
 
-  add_hp = con_app[GET_CON(ch)].hitp;
+  add_hp = GET_ABILITY_MOD(GET_CON(ch));
 
   switch (GET_CLASS(ch)) {
 

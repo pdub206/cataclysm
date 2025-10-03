@@ -687,10 +687,14 @@ do                                                              \
           (GET_ADD(ch) <= 99) ? 29 :  30 ) ) )                   \
         )
 
-/** Return how much weight ch can carry. */
-#define CAN_CARRY_W(ch) (str_app[STRENGTH_APPLY_INDEX(ch)].carry_w)
-/** Return how many items ch can carry. */
-#define CAN_CARRY_N(ch) (5 + (GET_DEX(ch) >> 1) + (GET_LEVEL(ch) >> 1))
+/** Return how much weight ch can carry (5e rule: Str × 15 lb). */
+#define CAN_CARRY_W(ch)  (GET_STR(ch) * 15)
+/** Return how many items ch can carry (5e has no item count, so base it on Strength too). 
+ * Here we use Str × 2 as a simple abstraction to replace the old level/dex scaling.
+ */
+#define CAN_CARRY_N(ch)  (GET_STR(ch) * 2)
+/** Max weapon weight a character can wield (5e-like rule of thumb: Str × 1.5 lb). */
+#define CAN_WIELD_W(ch)  (GET_STR(ch) * 1.5)
 /** Return whether or not ch is awake. */
 #define AWAKE(ch) (GET_POS(ch) > POS_SLEEPING)
 /** Defines if ch can see in general in the dark. */

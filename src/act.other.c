@@ -429,7 +429,7 @@ ACMD(do_steal)
   }
 
   /* 101% is a complete failure */
-  percent = rand_number(1, 101) - dex_app_skill[GET_DEX(ch)].p_pocket;
+  percent = rand_number(1, 101) - GET_ABILITY_MOD(GET_DEX(ch));
 
   if (GET_POS(vict) < POS_SLEEPING)
     percent = -1;		/* ALWAYS SUCCESS, unless heavy object. */
