@@ -740,31 +740,48 @@ ACMD(do_stand)
   case POS_STANDING:
     send_to_char(ch, "You are already standing.\r\n");
     break;
+
   case POS_SITTING:
-    send_to_char(ch, "You stand up.\r\n");
-    act("$n clambers to $s feet.", TRUE, ch, 0, 0, TO_ROOM);
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE) {
+      act("You stand up from $p.", TRUE, ch, SITTING(ch), 0, TO_CHAR);
+      act("$n stands up from $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    } else {
+      send_to_char(ch, "You stand up.\r\n");
+      act("$n clambers to $s feet.", TRUE, ch, 0, 0, TO_ROOM);
+    }
     /* Were they sitting in something? */
     char_from_furniture(ch);
-    /* Will be sitting after a successful bash and may still be fighting. */
+    /* Will be standing after a successful bash and may still be fighting. */
     GET_POS(ch) = FIGHTING(ch) ? POS_FIGHTING : POS_STANDING;
     break;
+
   case POS_RESTING:
-    send_to_char(ch, "You stop resting, and stand up.\r\n");
-    act("$n stops resting, and clambers on $s feet.", TRUE, ch, 0, 0, TO_ROOM);
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE) {
+      act("You stop resting, and stand up from $p.", TRUE, ch, SITTING(ch), 0, TO_CHAR);
+      act("$n stops resting, and stands up from $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    } else {
+      send_to_char(ch, "You stop resting, and stand up.\r\n");
+      act("$n stops resting, and clambers on $s feet.", TRUE, ch, 0, 0, TO_ROOM);
+    }
     GET_POS(ch) = POS_STANDING;
     /* Were they sitting in something. */
     char_from_furniture(ch);
     break;
+
   case POS_SLEEPING:
     send_to_char(ch, "You have to wake up first!\r\n");
     break;
+
   case POS_FIGHTING:
     send_to_char(ch, "Do you not consider fighting as standing?\r\n");
     break;
+
   default:
     send_to_char(ch, "You stop floating around, and put your feet on the ground.\r\n");
-    act("$n stops floating around, and puts $s feet on the ground.",
-	TRUE, ch, 0, 0, TO_ROOM);
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE)
+      act("$n stops floating around, and stands up from $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    else
+      act("$n stops floating around, and puts $s feet on the ground.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_STANDING;
     break;
   }
@@ -817,8 +834,8 @@ ACMD(do_sit)
             continue;
           NEXT_SITTING(tempch) = ch;
         }
-        act("You sit down upon $p.", TRUE, ch, furniture, 0, TO_CHAR);
-        act("$n sits down upon $p.", TRUE, ch, furniture, 0, TO_ROOM);
+        act("You sit down on $p.", TRUE, ch, furniture, 0, TO_CHAR);
+        act("$n sits down on $p.", TRUE, ch, furniture, 0, TO_ROOM);
         SITTING(ch) = furniture;
         NEXT_SITTING(ch) = NULL;
         GET_OBJ_VAL(furniture, 1) += 1;
@@ -831,7 +848,10 @@ ACMD(do_sit)
     break;
   case POS_RESTING:
     send_to_char(ch, "You stop resting, and sit up.\r\n");
-    act("$n stops resting.", TRUE, ch, 0, 0, TO_ROOM);
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE)
+      act("$n stops resting and sits up on $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    else
+      act("$n stops resting and sits up.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
     break;
   case POS_SLEEPING:
@@ -842,7 +862,10 @@ ACMD(do_sit)
     break;
   default:
     send_to_char(ch, "You stop floating around, and sit down.\r\n");
-    act("$n stops floating around, and sits down.", TRUE, ch, 0, 0, TO_ROOM);
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE)
+      act("$n stops floating around, and sits down on $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    else
+      act("$n stops floating around, and sits down.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
     break;
   }
@@ -852,10 +875,16 @@ ACMD(do_rest)
 {
   switch (GET_POS(ch)) {
   case POS_STANDING:
-    send_to_char(ch, "You sit down and rest your tired bones.\r\n");
-    act("$n sits down and rests.", TRUE, ch, 0, 0, TO_ROOM);
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE) {
+      act("You sit down and rest on $p.", TRUE, ch, SITTING(ch), 0, TO_CHAR);
+      act("$n sits down and rests on $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    } else {
+      send_to_char(ch, "You sit down and rest your tired bones.\r\n");
+      act("$n sits down and rests.", TRUE, ch, 0, 0, TO_ROOM);
+    }
     GET_POS(ch) = POS_RESTING;
     break;
+
   case POS_SITTING:
     /* Check if sitting on furniture that allows resting */
     if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE) {
@@ -864,23 +893,34 @@ ACMD(do_rest)
         act("$p doesn't look comfortable for resting.", TRUE, ch, SITTING(ch), 0, TO_CHAR);
         return;
       }
+      /* Valid furniture + resting */
+      act("You rest on $p.", TRUE, ch, SITTING(ch), 0, TO_CHAR);
+      act("$n rests on $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    } else {
+      send_to_char(ch, "You rest your tired bones.\r\n");
+      act("$n rests.", TRUE, ch, 0, 0, TO_ROOM);
     }
-    send_to_char(ch, "You rest your tired bones.\r\n");
-    act("$n rests.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_RESTING;
     break;
+
   case POS_RESTING:
     send_to_char(ch, "You are already resting.\r\n");
     break;
+
   case POS_SLEEPING:
     send_to_char(ch, "You have to wake up first.\r\n");
     break;
+
   case POS_FIGHTING:
     send_to_char(ch, "Rest while fighting?  Are you MAD?\r\n");
     break;
+
   default:
     send_to_char(ch, "You stop floating around, and stop to rest your tired bones.\r\n");
-    act("$n stops floating around, and rests.", FALSE, ch, 0, 0, TO_ROOM);
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE)
+      act("$n stops floating around, and rests on $p.", FALSE, ch, SITTING(ch), 0, TO_ROOM);
+    else
+      act("$n stops floating around, and rests.", FALSE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_RESTING;
     break;
   }
@@ -899,21 +939,30 @@ ACMD(do_sleep)
         act("$p doesn't look comfortable for sleeping.", TRUE, ch, SITTING(ch), 0, TO_CHAR);
         return;
       }
+      /* Valid furniture + sleeping */
+      act("You go to sleep on $p.", TRUE, ch, SITTING(ch), 0, TO_CHAR);
+      act("$n lies down and falls asleep on $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    } else {
+      send_to_char(ch, "You go to sleep.\r\n");
+      act("$n lies down and falls asleep.", TRUE, ch, 0, 0, TO_ROOM);
     }
-    send_to_char(ch, "You go to sleep.\r\n");
-    act("$n lies down and falls asleep.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SLEEPING;
     break;
+
   case POS_SLEEPING:
     send_to_char(ch, "You are already sound asleep.\r\n");
     break;
+
   case POS_FIGHTING:
     send_to_char(ch, "Sleep while fighting?  Are you MAD?\r\n");
     break;
+
   default:
     send_to_char(ch, "You stop floating around, and lie down to sleep.\r\n");
-    act("$n stops floating around, and lie down to sleep.",
-	TRUE, ch, 0, 0, TO_ROOM);
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE)
+      act("$n stops floating around, and lies down to sleep on $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    else
+      act("$n stops floating around, and lies down to sleep.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SLEEPING;
     break;
   }
@@ -947,13 +996,19 @@ ACMD(do_wake)
     if (!self)
       return;
   }
+
   if (AFF_FLAGGED(ch, AFF_SLEEP))
     send_to_char(ch, "You can't wake up!\r\n");
   else if (GET_POS(ch) > POS_SLEEPING)
     send_to_char(ch, "You are already awake...\r\n");
   else {
-    send_to_char(ch, "You awaken, and sit up.\r\n");
-    act("$n awakens.", TRUE, ch, 0, 0, TO_ROOM);
+    if (SITTING(ch) && GET_OBJ_TYPE(SITTING(ch)) == ITEM_FURNITURE) {
+      act("You awaken, and sit up on $p.", TRUE, ch, SITTING(ch), 0, TO_CHAR | TO_SLEEP);
+      act("$n awakens, and sits up on $p.", TRUE, ch, SITTING(ch), 0, TO_ROOM);
+    } else {
+      send_to_char(ch, "You awaken, and sit up.\r\n");
+      act("$n awakens.", TRUE, ch, 0, 0, TO_ROOM);
+    }
     GET_POS(ch) = POS_SITTING;
   }
 }
