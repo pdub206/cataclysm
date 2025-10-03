@@ -534,11 +534,15 @@ from a curtained doorway.  In a corner is an L-shaped counter made of rough-hewn
 stone which has a selection of drinks behind it.  Near the eastern wall, a
 stairway heads upward toward an open dormitory.
 ~
-1 131080 0 0 0 0
+1 8 0 0 0 0
 D0
 ~
 ~
 0 0 108
+D4
+~
+~
+0 0 200
 S
 #135
 Wall Road~
@@ -1473,5 +1477,22 @@ D3
 ~
 ~
 0 0 196
+S
+#200
+A Cramped Dormitory~
+   While this room is rather large, the amount of cots crammed into it makes it
+feel quite cramped.  Between the cots are small pathways that one can walk,
+though backpacks and other items spill out from below their respective cots to
+occasionally block the way.  The walls have small hooks on them and some appear
+to have cloaks attached.  An opening in the wall lets light in from the north
+and allows for fresh air to circulate.  A pair of sconces are on either side of
+the room to provide light during the evening hours.  On the south side of the
+room, a staircase descends to the room below.
+~
+1 131080 0 0 0 0
+D5
+~
+~
+0 0 134
 S
 $~

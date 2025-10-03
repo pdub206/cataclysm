@@ -1062,9 +1062,9 @@ ACMD(do_drink)
 ACMD(do_eat)
 {
   char arg[MAX_INPUT_LENGTH];
-  struct obj_data *food;
+  struct obj_data *obj = NULL;
   struct affected_type af;
-  int amount;
+  int amount = 0;
 
   one_argument(argument, arg);
 
@@ -1075,60 +1075,247 @@ ACMD(do_eat)
     send_to_char(ch, "Eat what?\r\n");
     return;
   }
-  if (!(food = get_obj_in_list_vis(ch, arg, NULL, ch->carrying))) {
-    send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg), arg);
-    return;
+
+  /* Find in inventory first, then in room */
+  if (!(obj = get_obj_in_list_vis(ch, arg, NULL, ch->carrying))) {
+    if (!(obj = get_obj_in_list_vis(ch, arg, NULL, world[IN_ROOM(ch)].contents))) {
+      send_to_char(ch, "You can't find it!\r\n");
+      return;
+    }
   }
-  if (subcmd == SCMD_TASTE && ((GET_OBJ_TYPE(food) == ITEM_DRINKCON) ||
-			       (GET_OBJ_TYPE(food) == ITEM_FOUNTAIN))) {
-    do_drink(ch, argument, 0, SCMD_SIP);
-    return;
+
+  /* If the player used 'taste', we handle both food and drink here (no delegation). */
+  if (subcmd == SCMD_TASTE) {
+    /* DRINKS: sip logic (inline; do not call do_drink) */
+    if (GET_OBJ_TYPE(obj) == ITEM_DRINKCON || GET_OBJ_TYPE(obj) == ITEM_FOUNTAIN) {
+      int cap = GET_OBJ_VAL(obj, 0);
+      int rem = GET_OBJ_VAL(obj, 1);
+      int liq = GET_OBJ_VAL(obj, 2); /* liquid type */
+
+      if (GET_COND(ch, DRUNK) > 10 && GET_COND(ch, THIRST) > 0) {
+        send_to_char(ch, "You can't seem to get close enough to your mouth.\r\n");
+        act("$n tries to drink but misses $s mouth!", TRUE, ch, 0, 0, TO_ROOM);
+        return;
+      }
+
+      if (rem < 1) {
+        send_to_char(ch, "It is empty.\r\n");
+
+        /* Update sdesc to "an empty <container>" like our drink update */
+        if (GET_OBJ_TYPE(obj) == ITEM_DRINKCON) {
+          obj_rnum rnum = GET_OBJ_RNUM(obj);
+          const char *proto_sd = (rnum != NOTHING) ? obj_proto[rnum].short_description : NULL;
+          const char *base = obj->short_description ? obj->short_description : proto_sd;
+          const char *noun = base ? base : "container";
+
+          /* strip leading article */
+          if (!strn_cmp(noun, "a ", 2))        noun += 2;
+          else if (!strn_cmp(noun, "an ", 3))  noun += 3;
+          else if (!strn_cmp(noun, "the ", 4)) noun += 4;
+
+          char sbuf[MAX_STRING_LENGTH];
+          const char *ofp = strstr(noun, " of ");
+          size_t noun_len = ofp ? (size_t)(ofp - noun) : strlen(noun);
+          snprintf(sbuf, sizeof(sbuf), "an empty %.*s", (int)MIN(noun_len, sizeof(sbuf) - 10), noun);
+
+          if (obj->short_description && obj->short_description != proto_sd)
+            free(obj->short_description);
+          obj->short_description = strdup(sbuf);
+        }
+        return;
+      }
+
+      /* Take a single sip */
+      amount = 1;
+      rem = MAX(0, rem - amount);
+      GET_OBJ_VAL(obj, 1) = rem;
+
+      /* Condition effects: use HUNGER (not FULL) in this codebase */
+      gain_condition(ch, DRUNK, (drink_aff[liq][DRUNK]  * amount) / 4);
+      gain_condition(ch, HUNGER,(drink_aff[liq][HUNGER] * amount) / 4); /* <-- FIX */
+      gain_condition(ch, THIRST,(drink_aff[liq][THIRST] * amount) / 4);
+
+      if (GET_COND(ch, DRUNK) > 10)
+        send_to_char(ch, "You feel drunk.\r\n");
+
+      if (GET_COND(ch, THIRST) > 20)
+        send_to_char(ch, "You don't feel thirsty.\r\n");
+
+      if (GET_OBJ_VAL(obj, 3) && GET_LEVEL(ch) < LVL_IMMORT) {
+        send_to_char(ch, "It tastes strange!\r\n");
+        act("$n tastes something strange and coughs.", FALSE, ch, 0, 0, TO_ROOM);
+
+        memset(&af, 0, sizeof(af));
+        af.spell    = SPELL_POISON;                 /* <-- FIX: use spell, not type */
+        af.duration = amount * 3;
+        af.location = APPLY_NONE;
+        af.modifier = 0;
+        /* no af.bonus in this codebase */
+        af.bitvector[0] = af.bitvector[1] = af.bitvector[2] = af.bitvector[3] = 0;
+        SET_BIT_AR(af.bitvector, AFF_POISON);
+        affect_join(ch, &af, FALSE, FALSE, FALSE, FALSE);
+      }
+
+      act("You sip from $p.", FALSE, ch, obj, 0, TO_CHAR);
+      act("$n sips from $p.", TRUE, ch, obj, 0, TO_ROOM);
+
+      /* Update dynamic sdesc band like drink code ("partially filled", etc.) */
+      if (GET_OBJ_TYPE(obj) == ITEM_DRINKCON) {
+        obj_rnum rnum = GET_OBJ_RNUM(obj);
+        const char *proto_sd = (rnum != NOTHING) ? obj_proto[rnum].short_description : NULL;
+        const char *base = obj->short_description ? obj->short_description : proto_sd;
+        const char *noun = base ? base : "container";
+
+        /* Strip leading article */
+        if (!strn_cmp(noun, "a ", 2))        noun += 2;
+        else if (!strn_cmp(noun, "an ", 3))  noun += 3;
+        else if (!strn_cmp(noun, "the ", 4)) noun += 4;
+
+        char sbuf[MAX_STRING_LENGTH];
+
+        if (rem <= 0) {
+          const char *ofp = strstr(noun, " of ");
+          size_t noun_len = ofp ? (size_t)(ofp - noun) : strlen(noun);
+          snprintf(sbuf, sizeof(sbuf), "an empty %.*s", (int)MIN(noun_len, sizeof(sbuf) - 10), noun);
+        } else {
+          const char *status = "partially filled";
+          if (cap > 0) {
+            int pct = (rem * 100) / cap;
+            if (pct >= 75)
+              status = "partially filled";
+            else if (pct >= 50)
+              status = "half-filled";
+            else
+              status = "nearly empty";
+          }
+          bool use_an = FALSE;
+          if (status && *status) {
+            char first = LOWER((unsigned char)status[0]);
+            use_an = (first == 'a' || first == 'e' || first == 'i' || first == 'o' || first == 'u');
+          }
+          const char *article = use_an ? "an" : "a";
+
+          size_t prefix_len = strlen(article) + 1 + strlen(status) + 1;
+          size_t max_noun = (sizeof(sbuf) > (prefix_len + 1))
+                            ? (sizeof(sbuf) - prefix_len - 1) : 0;
+          snprintf(sbuf, sizeof(sbuf), "%s %s %.*s", article, status, (int)max_noun, noun);
+        }
+
+        if (obj->short_description && obj->short_description != proto_sd)
+          free(obj->short_description);
+        obj->short_description = strdup(sbuf);
+      }
+
+      return;
+    } /* end taste of drink container */
+    /* otherwise fall through to taste FOOD below */
   }
-  if ((GET_OBJ_TYPE(food) != ITEM_FOOD) && (GET_LEVEL(ch) < LVL_IMMORT)) {
+
+  /* From here: regular EAT/TASTE handling for FOOD (multi-bite) */
+  if (GET_OBJ_TYPE(obj) != ITEM_FOOD && GET_LEVEL(ch) < LVL_IMMORT) {
     send_to_char(ch, "You can't eat THAT!\r\n");
     return;
   }
-  if (GET_COND(ch, HUNGER) > 20) { /* Stomach full */
+
+  /* Prevent overstuffing */
+  if (GET_COND(ch, HUNGER) > 20) {
     send_to_char(ch, "You are too full to eat more!\r\n");
     return;
   }
 
-  if (!consume_otrigger(food, ch, OCMD_EAT)) /* check trigger */
+  if (!consume_otrigger(obj, ch, OCMD_EAT)) /* check trigger */
     return;
 
-  if (subcmd == SCMD_EAT) {
-    act("You eat $p.", FALSE, ch, food, 0, TO_CHAR);
-    act("$n eats $p.", TRUE, ch, food, 0, TO_ROOM);
-  } else {
-    act("You nibble a little bit of $p.", FALSE, ch, food, 0, TO_CHAR);
-    act("$n tastes a little bit of $p.", TRUE, ch, food, 0, TO_ROOM);
+  /* Determine bites & nutrition */
+  int cap   = GET_OBJ_VAL(obj, VAL_FOOD_BITE_CAP);
+  int left  = GET_OBJ_VAL(obj, VAL_FOOD_BITES_LEFT);
+  int per   = GET_OBJ_VAL(obj, VAL_FOOD_HOURS_PER_BITE);
+  bool poisoned = (GET_OBJ_VAL(obj, VAL_FOOD_POISONED) != 0);
+
+  if (left < 1) {
+    send_to_char(ch, "There's nothing left of it.\r\n");
+    return;
   }
 
-  amount = (subcmd == SCMD_EAT ? GET_OBJ_VAL(food, 0) : 1);
+  /* Messaging differs for taste vs eat, nutrition identical per bite */
+  if (subcmd == SCMD_EAT) {
+    act("You eat a bite of $p.", FALSE, ch, obj, 0, TO_CHAR);
+    act("$n eats a bite of $p.", TRUE, ch, obj, 0, TO_ROOM);
+  } else {
+    act("You nibble a little bit of $p.", FALSE, ch, obj, 0, TO_CHAR);
+    act("$n tastes a little bit of $p.", TRUE, ch, obj, 0, TO_ROOM);
+  }
 
+  /* One bite per action (simple & consistent). */
+  left = MAX(0, left - 1);
+  GET_OBJ_VAL(obj, VAL_FOOD_BITES_LEFT) = left;
+
+  /* Apply hunger gain from one bite */
+  amount = MAX(0, per);
   gain_condition(ch, HUNGER, amount);
 
   if (GET_COND(ch, HUNGER) > 20)
     send_to_char(ch, "You are full.\r\n");
 
-  if (GET_OBJ_VAL(food, 3) && (GET_LEVEL(ch) < LVL_IMMORT)) {
-    /* The crap was poisoned ! */
+  if (poisoned && GET_LEVEL(ch) < LVL_IMMORT) {
     send_to_char(ch, "Oops, that tasted rather strange!\r\n");
     act("$n coughs and utters some strange sounds.", FALSE, ch, 0, 0, TO_ROOM);
 
-    new_affect(&af);
-    af.spell = SPELL_POISON;
-    af.duration = amount * 2;
+    memset(&af, 0, sizeof(af));
+    af.spell    = SPELL_POISON;                 /* <-- FIX: use spell, not type */
+    af.duration = MAX(1, amount * 2);
+    af.location = APPLY_NONE;
+    af.modifier = 0;
+    /* no af.bonus in this codebase */
+    af.bitvector[0] = af.bitvector[1] = af.bitvector[2] = af.bitvector[3] = 0;
     SET_BIT_AR(af.bitvector, AFF_POISON);
     affect_join(ch, &af, FALSE, FALSE, FALSE, FALSE);
   }
-  if (subcmd == SCMD_EAT)
-    extract_obj(food);
-  else {
-    if (!(--GET_OBJ_VAL(food, 0))) {
-      send_to_char(ch, "There's nothing left now.\r\n");
-      extract_obj(food);
+
+  /* If no bites remain, consume the object.
+   * Otherwise, update the instance sdesc with an "eaten" status band. */
+  if (left <= 0) {
+    send_to_char(ch, "There's nothing left now.\r\n");
+    extract_obj(obj);
+  } else {
+    /* Build "<a/an> <status> <noun>" using the instance/proto sdesc as noun */
+    obj_rnum rnum = GET_OBJ_RNUM(obj);
+    const char *proto_sd = (rnum != NOTHING) ? obj_proto[rnum].short_description : NULL;
+    const char *base = obj->short_description ? obj->short_description : proto_sd;
+    const char *noun = base ? base : "food";
+
+    /* Strip leading article from noun */
+    if (!strn_cmp(noun, "a ", 2))        noun += 2;
+    else if (!strn_cmp(noun, "an ", 3))  noun += 3;
+    else if (!strn_cmp(noun, "the ", 4)) noun += 4;
+
+    const char *status = "partially eaten";
+    if (cap > 0) {
+      int pct = (left * 100) / cap;
+      if (pct >= 75)
+        status = "partially eaten";
+      else if (pct >= 50)
+        status = "half-eaten";
+      else
+        status = "nearly eaten";
     }
+
+    bool use_an = FALSE;
+    if (status && *status) {
+      char first = LOWER((unsigned char)status[0]);
+      use_an = (first == 'a' || first == 'e' || first == 'i' || first == 'o' || first == 'u');
+    }
+    const char *article = use_an ? "an" : "a";
+
+    char sbuf[MAX_STRING_LENGTH];
+    size_t prefix_len = strlen(article) + 1 + strlen(status) + 1;
+    size_t max_noun   = (sizeof(sbuf) > (prefix_len + 1))
+                        ? (sizeof(sbuf) - prefix_len - 1) : 0;
+    snprintf(sbuf, sizeof(sbuf), "%s %s %.*s", article, status, (int)max_noun, noun);
+
+    if (obj->short_description && obj->short_description != proto_sd)
+      free(obj->short_description);
+    obj->short_description = strdup(sbuf);
   }
 }
 

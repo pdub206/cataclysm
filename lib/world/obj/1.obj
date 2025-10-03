@@ -331,5 +331,57 @@ of liquid.
 ~
 17 0 0 0 0 a 0 0 0 0 0 0 0
 4 4 0 0
-1 15 0 0 0
+9 8 0 0 0
+#139
+skewer erdlu meat~
+an erdlu meat skewer~
+A skewer with some browned meat is here.~
+   A thin piece of wood has been carved into a long skewer, with one end tied
+into a small hook.  Pieces of dark erdlu meat have been pressed into the skewer
+and cooked over an open fire.
+~
+19 0 0 0 0 ap 0 0 0 0 0 0 0
+2 2 1 0
+1 12 0 0 0
+#140
+steak carru thick~
+a thick carru steak~
+A thick, cooked steak is here.~
+   This steak is a very large piece of meat that has been cooked over an open
+fire.  Grill marks can be seen on both sides which form small X's.
+~
+19 0 0 0 0 a 0 0 0 0 0 0 0
+8 8 1 0
+2 20 0 0 0
+#141
+bacon aprig plate~
+a plate of aprig bacon~
+A plate with several slices of cooked bacon is here.~
+   This plate is small, but piled high with pieces of bacon.  They are cooked to
+the point that they are still chewy but not quite crunchy.
+~
+19 0 0 0 0 a 0 0 0 0 0 0 0
+4 4 1 0
+1 18 0 0 0
+#142
+bread hunk~
+a hunk of bread~
+A piece of bread has been torn from a loaf and left here.~
+   Torn from a larger piece of bread, this hunk is a still a decent size.  The
+crust is brown and the inside is fluffy.
+~
+19 0 0 0 0 a 0 0 0 0 0 0 0
+2 2 1 0
+1 14 0 0 0
+#143
+cot small~
+a small cot~
+A small cot has been set up here.~
+   This cot is made primarily from pieces of wood that are lashed together with
+rope.  Pieces of hide have been tied down, providing a soft yet supportive place
+for someone to rest upon.
+~
+6 0 0 0 0 0 0 0 0 0 0 0 0
+2 0 0 0
+10 100 0 0 0
 $~

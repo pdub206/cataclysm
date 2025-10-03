@@ -1331,12 +1331,22 @@ void loadout_free_list(struct mob_loadout **head);
 void loadout_add_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty);
 struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src);
 
-
 /* Furniture defines for object values */
 /* Furniture object values (obj_flags.value[x]) */
 #define VAL_FURN_CAPACITY      0  /* maximum number of people who can use furniture */
 #define VAL_FURN_MAX_OCC       1  /* current number of people using furniture (runtime only, managed by game engine) */
 #define VAL_FURN_POSITIONS     2  /* allowed positions bitvector: bit 0=STAND(1), bit 1=SIT(2), bit 2=REST(4), bit 3=SLEEP(8) */
+
+/* Food value indices (mirrors drinkcon layout for multi-bite foods)
+ * 0: bites_capacity     - total bite capacity
+ * 1: bites_left         - remaining bites
+ * 2: hours_full_per_bite- hunger gain per bite (like hours_full)
+ * 3: poisoned           - 1 if poisoned
+ */
+#define VAL_FOOD_BITE_CAP         0
+#define VAL_FOOD_BITES_LEFT       1
+#define VAL_FOOD_HOURS_PER_BITE   2
+#define VAL_FOOD_POISONED         3
 
 /* Config structs */
 

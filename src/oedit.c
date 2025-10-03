@@ -90,7 +90,7 @@ static const char *drink_val_labels[NUM_OBJ_VAL_POSITIONS] = {
 
 /* Food */
 static const char *food_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "hours_full", "unused1", "unused2", "poisoned",
+  "bites_capacity", "bites_left", "hours_full_per_bite", "poisoned",
   "Value[4]", "Value[5]", "Value[6]", "Value[7]"
 };
 
@@ -519,6 +519,7 @@ static void oedit_disp_values_menu(struct descriptor_data *d)
     case ITEM_FOUNTAIN:   labels = drink_val_labels; break;
     case ITEM_CONTAINER:  labels = container_val_labels; break;
     case ITEM_FURNITURE:  labels = furniture_val_labels; break;
+    case ITEM_FOOD:       labels = food_val_labels; break;
     default:              labels = generic_val_labels; break;
   }
 
