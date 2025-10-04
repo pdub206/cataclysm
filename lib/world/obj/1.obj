@@ -384,4 +384,49 @@ for someone to rest upon.
 6 0 0 0 0 0 0 0 0 0 0 0 0
 1 0 0 0
 10 100 0 0 0
+#144
+barrel water~
+a barrel of water~
+A barrel of water has been placed here.~
+   This barrel is made of thick agafari wood and bound by pieces of rope to keep
+it from falling apart.  Pitch has been pressed between each each stave.
+~
+17 0 0 0 0 0 0 0 0 0 0 0 0
+100 100 0 0
+20 0 0 0 0
+#145
+table~
+a squat wooden table~
+A squat wooden table is here, stained and dirty.~
+   This table was once expertly carved and stained, but years of use have begun
+to show.  Drinks have been spilled on it repeatedly, staining its top in
+different patterns.
+~
+6 0 0 0 0 0 0 0 0 0 0 0 0
+4 0 2 0
+40 0 0 0 0
+#146
+table long chipped granite~
+a long, chipped granite table~
+A long granite table that is chipped and worn is here.~
+   Carved from several pieces of granite, this table seems to have been made in
+such a way that the pieces can slot into each other to make the final form.  
+Long lines can be seen at various points which have accumulated dirt and debris
+over time.  The pieces don't fit properly in some areas, which has led to them
+becoming chipped and worn.
+~
+6 0 0 0 0 0 0 0 0 0 0 0 0
+6 0 2 0
+80 0 0 0 0
+#147
+pen animal wooden~
+a wooden animal pen~
+A wooden animal pen is here, holding several mounts.~
+   Within the wooden walls of this animal pen, several beasts can be seen
+roaming about.  There isn't a whole lot of room, but enough so that they can
+push past each other to get to the water troughs and feeding bins.
+~
+13 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0
+100 0 0 0 0
 $~

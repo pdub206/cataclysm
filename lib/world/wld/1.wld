@@ -1,6 +1,15 @@
 #100
 Caravan Gate~
-You are in an unfinished room.
+   Two large doors, each at least ten feet in height, make up the massive gate
+set into the walls that surround the city.  Made of agafari wood, mekillot hide,
+rusted old studs and iron hinges, they provide access into the city for
+travelers and traders alike.  A massive stone block sits off to the side of the
+road, which seems to have been carved to the exact size and shape of the gate
+itself.  Caravans and wagons can be seen passing through at all hours of the day
+when the gates are open, with some pausing just inside the gate to unload while
+others continue on their way to the inner city.
+   To the north and south, Wall Road continues onward. To the west, the main
+thoroughfare of Caravan Way passes by several buildings.
 ~
 1 0 0 0 0 1
 D0
@@ -18,7 +27,15 @@ D3
 S
 #101
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the west and east. A placard with a stylized
+eyeball, ear, and lips hangs as a standard above a building to the north,
+while the smell of a stable wafts from the south.
 ~
 1 0 0 0 0 0
 D0
@@ -40,7 +57,14 @@ D3
 S
 #102
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the west and east. To the south is a two-story
+building with a sign hanging above the entrance of crossed swords.
 ~
 1 0 0 0 0 0
 D1
@@ -58,7 +82,14 @@ D3
 S
 #103
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the north and east. To the south, a side street
+passes between some buildings.
 ~
 1 0 0 0 0 0
 D0
@@ -76,7 +107,14 @@ D2
 S
 #104
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the west and south. Buildings surround you on
+all sides.
 ~
 1 0 0 0 0 0
 D2
@@ -90,7 +128,14 @@ D3
 S
 #105
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the west and east. To the north, a side street
+passes between some buildings.
 ~
 1 0 0 0 0 0
 D0
@@ -108,7 +153,14 @@ D3
 S
 #106
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the west and south. Buildings surround you on
+all sides.
 ~
 1 0 0 0 0 0
 D1
@@ -122,7 +174,14 @@ D3
 S
 #107
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the south and east. To the west appears to be a
+building that deals with garments.
 ~
 1 0 0 0 0 0
 D1
@@ -140,7 +199,15 @@ D3
 S
 #108
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the north and west. To the south, a two story
+building rises above the others. Hanging above the entrance is a sign with
+a golden inix upon it and a stylized bottle.
 ~
 1 0 0 0 0 1
 D0
@@ -158,7 +225,14 @@ D3
 S
 #109
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the west and east. To the north appears to be a
+building that deals with garments.
 ~
 1 0 0 0 0 0
 D0
@@ -176,7 +250,14 @@ D3
 S
 #110
 Caravan Way~
-This unfinished room was created by Kinther.
+   This broad avenue is wide enough for several mounted riders to easily
+navigate, or even a pair of wagons to pass by without incident.  Buildings line
+the road offering services to travelers and visitors of the city.  Street
+vendors line the sides, with an occasional shout to draw attention to their
+wares.  The route through the city itself is made up of brick, though several
+appear cracked and broken when given a thorough inspection.
+   Caravan Way continues to the east, while to the west the noise of Iron
+Square can be heard. Buildings surround you on all sides.
 ~
 1 0 0 0 0 0
 D1
@@ -190,7 +271,14 @@ D3
 S
 #111
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the north and south, while Caravan Way winds its
+way back into the Tradesmen's District to the east.
 ~
 1 0 0 0 0 0
 D0
@@ -208,7 +296,15 @@ D2
 S
 #112
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the north and west. To the east is a larger
+building that seems to be both emporium and warehouse, bearing a sign above
+its entrance with a silver quill on a field of red.
 ~
 1 0 0 0 0 0
 D0
@@ -226,7 +322,16 @@ D3
 S
 #113
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the west and east. To the north is a massive
+emporium with a sign bearing a black diamond on a red-brown field. To the
+south is a smaller emporium with a sign bearing a gold circle on a black
+field.
 ~
 1 0 0 0 0 0
 D0
@@ -248,7 +353,14 @@ D3
 S
 #114
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the west and east. To the north is a rather wide
+building with a sign bearing a silver jozhal on a blue field.
 ~
 1 0 0 0 0 0
 D0
@@ -266,7 +378,14 @@ D3
 S
 #115
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the north and east. To the west is a dusty path
+the leads toward a ziggurat that rises up above the city.
 ~
 1 0 0 0 0 0
 D0
@@ -284,7 +403,14 @@ D3
 S
 #116
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the north and south. To the west is a smaller
+building with a sign bearing a green inix on a field of yellow.
 ~
 1 0 0 0 0 0
 D0
@@ -302,7 +428,15 @@ D3
 S
 #117
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the north and south. To the west is a building
+with a sign bearing a silver spear on an azure field. To the east is a three
+story building with a sign bearing three white dragonflies on a divided field.
 ~
 1 0 0 0 0 0
 D0
@@ -324,7 +458,14 @@ D3
 S
 #118
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the south and east. To the north lies a path that
+appears to be an old, dry riverbed.
 ~
 1 0 0 0 0 0
 D0
@@ -342,7 +483,14 @@ D2
 S
 #119
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the west and east. Buildings surround you on all
+sides.
 ~
 1 0 0 0 0 0
 D1
@@ -356,7 +504,16 @@ D3
 S
 #120
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the west and east. To the north is what seems to
+be a small fortress, with a sign above its entrance bearing two black
+scimitars over a white field. To the south is a building with a sign above
+bearing a pair of glaring, bestial eyes set on a black banner.
 ~
 1 0 0 0 0 0
 D0
@@ -378,7 +535,14 @@ D3
 S
 #121
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the west and south. Buildings surround you on all
+sides.
 ~
 1 0 0 0 0 0
 D0
@@ -396,7 +560,14 @@ D3
 S
 #122
 Iron Square~
-This unfinished room was created by Kinther.
+   This section of the city is filled with large buildings and seems well
+maintained.  A large cobblestone road known as Iron Square circles around the
+buildings at the center, providing access to the merchant houses that occupy it.
+The area is quieter than other parts of the city, giving the impression this is
+where business is done between traders and the nobility.  There is a noticeable
+increase in soldiers here, which might explain the lack of street vendors.
+   Iron Square continues to the north and south. Buildings surround you on all
+sides.
 ~
 1 0 0 0 0 0
 D0
@@ -490,7 +661,14 @@ D1
 S
 #131
 Draqoman Station~
-This unfinished room was created by Kinther.
+   This large building has a variety of tables and seats available in it, and
+seems to be a meeting point for those new to the city.  The walls are lined with
+sconces to provide light throughout the evening, and barrels of water can be
+seen in the northern side of the room.  Conversations can be heard in hushed
+tones, while others may be more boisterous as if between old friends.  A crude
+map of the city can be seen upon one wall, giving the impression this would be a
+good place to learn more about where certain landmarks are.
+   To the south lies Caravan Way, while to the east Wall Road can be seen.
 ~
 1 131072 0 0 0 0
 D1
@@ -546,7 +724,14 @@ D4
 S
 #135
 Wall Road~
-This unfinished room was created by Kinther.
+   Following along the walls of the city is a small road only large enough for a
+pair of mounted riders to traverse side by side.  The walls are thick and
+primarily made of adobe brick, rising at least ten feet.  The occasional figure
+can be seen walking the walls, keeping an eye on the horizon.  The buildings
+near the gate are small and unassuming.  Most have no windows and a simple
+wooden door.
+   Wall Road continues to the south, while Caravan Gate can be seen to the 
+north. To the west the smell of a stables wafts out onto the road.
 ~
 1 0 0 0 0 0
 D0
@@ -564,7 +749,15 @@ D3
 S
 #136
 Messenger's Mount~
-This unfinished room was created by Kinther.
+   This two story building eminates a smell from the multitude of beasts within
+that is all that is needed to knowing that this is a stable.  Various pens have
+been set up here, holding kanks, erdlus, crodlus, and occasionally other more
+uncommon livestock.  Traders and caravans come and go, leaving and retrieving
+mounts.  Animal handlers can be seen moving about with food and water, as well
+as shoveling dung to be taken away.
+   A small staircase is upon the southern wall and heads upward to the
+second floor. To the north lies Caravan Way, and to the east Wall Road can
+be seen.
 ~
 1 0 0 0 0 0
 D0
@@ -578,7 +771,14 @@ D1
 S
 #137
 Wall Road~
-This unfinished room was created by Kinther.
+   Following along the walls of the city is a small road only large enough for a
+pair of mounted riders to traverse side by side.  The walls are thick and
+primarily made of adobe brick, rising at least ten feet.  The occasional figure
+can be seen walking the walls, keeping an eye on the horizon.  The buildings
+near the gate are small and unassuming.  Most have no windows and a simple
+wooden door.
+   Wall Road continues to the north and south. Buildings rise up to the west,
+while the city walls are to the east.
 ~
 1 0 0 0 0 0
 D0
@@ -592,7 +792,14 @@ D2
 S
 #138
 Wall Road~
-This unfinished room was created by Kinther.
+   Following along the walls of the city is a small road only large enough for a
+pair of mounted riders to traverse side by side.  The walls are thick and
+primarily made of adobe brick, rising at least ten feet.  The occasional figure
+can be seen walking the walls, keeping an eye on the horizon.  The buildings
+near the gate are small and unassuming.  Most have no windows and a simple
+wooden door.
+   Wall Road continues to the north and south. Buildings rise up to the west,
+while the city walls are to the east.
 ~
 1 0 0 0 0 0
 D0
@@ -606,7 +813,14 @@ D2
 S
 #139
 Wall Road~
-This unfinished room was created by Kinther.
+   Following along the walls of the city is a small road only large enough for a
+pair of mounted riders to traverse side by side.  The walls are thick and
+primarily made of adobe brick, rising at least ten feet.  The occasional figure
+can be seen walking the walls, keeping an eye on the horizon.  The buildings
+near the gate are small and unassuming.  Most have no windows and a simple
+wooden door.
+   Wall Road continues to the north and south. To the west, an old dusty
+streambed runs between two buildings.
 ~
 1 0 0 0 0 0
 D0
@@ -620,7 +834,14 @@ D3
 S
 #140
 Near a Dusty Streambed~
-This unfinished room was created by Kinther.
+   This pathway appears to have once been a streambed where water flowed freely.
+Over the years the water must have dried up or has been diverted elsewhere.  
+Despite this, the path seems to be used as a walkway between buildings now.  
+The ground is exposed dirt which is kicked up in the air as passersby make their
+way through.  Small rocks and gravel can be seen every few feet in an attempt to
+keep the semblance of an actual road.
+   The pathway continues to the west, while to the east Wall Road can be
+seen.
 ~
 1 0 0 0 0 0
 D1
@@ -634,7 +855,14 @@ D3
 S
 #141
 Near a Dusty Streambed~
-This unfinished room was created by Kinther.
+   This pathway appears to have once been a streambed where water flowed freely.
+Over the years the water must have dried up or has been diverted elsewhere.  
+Despite this, the path seems to be used as a walkway between buildings now.  
+The ground is exposed dirt which is kicked up in the air as passersby make their
+way through.  Small rocks and gravel can be seen every few feet in an attempt to
+keep the semblance of an actual road.
+   The pathway continues to the west and east. Buildings flank either side,
+rising upward.
 ~
 1 0 0 0 0 0
 D1
@@ -648,7 +876,14 @@ D3
 S
 #142
 Near a Dusty Streambed~
-This unfinished room was created by Kinther.
+   This pathway appears to have once been a streambed where water flowed freely.
+Over the years the water must have dried up or has been diverted elsewhere.  
+Despite this, the path seems to be used as a walkway between buildings now.  
+The ground is exposed dirt which is kicked up in the air as passersby make their
+way through.  Small rocks and gravel can be seen every few feet in an attempt to
+keep the semblance of an actual road.
+   The pathway continues to the east, while a small side street opens up to
+the north.
 ~
 1 0 0 0 0 0
 D0
@@ -662,7 +897,13 @@ D1
 S
 #143
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the north, while to the south a dry streambed can
+be seen.
 ~
 1 0 0 0 0 0
 D0
@@ -676,7 +917,13 @@ D2
 S
 #144
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the north and south. Buildings flank either side,
+rising upward.
 ~
 1 0 0 0 0 0
 D0
@@ -694,7 +941,13 @@ door~
 S
 #145
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the south, while to the north Caravan Way can
+be seen.
 ~
 1 0 0 0 0 0
 D0
@@ -708,7 +961,15 @@ D2
 S
 #146
 Wall Road~
-This unfinished room was created by Kinther.
+   Following along the walls of the city is a small road only large enough for a
+pair of mounted riders to traverse side by side.  The walls are thick and
+primarily made of adobe brick, rising at least ten feet.  The occasional figure
+can be seen walking the walls, keeping an eye on the horizon.  The buildings
+near the gate are small and unassuming.  Most have no windows and a simple
+wooden door.
+   Wall Road continues to the north, while the Caravan Gate can be seen to
+the south. A placard with a stylized eyeball, ears, and lips hangs as a
+standard above a building to the west.
 ~
 1 0 0 0 0 0
 D0
@@ -726,7 +987,14 @@ D3
 S
 #147
 Wall Road~
-This unfinished room was created by Kinther.
+   Following along the walls of the city is a small road only large enough for a
+pair of mounted riders to traverse side by side.  The walls are thick and
+primarily made of adobe brick, rising at least ten feet.  The occasional figure
+can be seen walking the walls, keeping an eye on the horizon.  The buildings
+near the gate are small and unassuming.  Most have no windows and a simple
+wooden door.
+   Wall Road continues to the north and south. Buildings rise up to the west,
+while the city walls are to the east.
 ~
 1 0 0 0 0 0
 D0
@@ -740,7 +1008,14 @@ D2
 S
 #148
 Wall Road~
-This unfinished room was created by Kinther.
+   Following along the walls of the city is a small road only large enough for a
+pair of mounted riders to traverse side by side.  The walls are thick and
+primarily made of adobe brick, rising at least ten feet.  The occasional figure
+can be seen walking the walls, keeping an eye on the horizon.  The buildings
+near the gate are small and unassuming.  Most have no windows and a simple
+wooden door.
+   Wall Road continues to the north and south. Buildings rise up to the west,
+while the city walls are to the east.
 ~
 1 0 0 0 0 0
 D0
@@ -754,7 +1029,14 @@ D2
 S
 #149
 Wall Road~
-This unfinished room was created by Kinther.
+   Following along the walls of the city is a small road only large enough for a
+pair of mounted riders to traverse side by side.  The walls are thick and
+primarily made of adobe brick, rising at least ten feet.  The occasional figure
+can be seen walking the walls, keeping an eye on the horizon.  The buildings
+near the gate are small and unassuming.  Most have no windows and a simple
+wooden door.
+   Wall Road continues to the north and south. To the west, a side street opens
+up between two buildings.
 ~
 1 0 0 0 0 0
 D2
@@ -768,7 +1050,12 @@ D3
 S
 #150
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the west, while Wall Road can be seen to the east.
 ~
 1 0 0 0 0 0
 D1
@@ -786,7 +1073,13 @@ D3
 S
 #151
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the west and east. Buildings flank either side,
+rising upward.
 ~
 1 0 0 0 0 0
 D1
@@ -800,7 +1093,13 @@ D3
 S
 #152
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the west and east. Buildings flank either side,
+rising upward.
 ~
 1 0 0 0 0 0
 D1
@@ -818,7 +1117,13 @@ D3
 S
 #153
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the south and east. Buildings flank either side,
+rising upward.
 ~
 1 0 0 0 0 0
 D1
@@ -832,7 +1137,13 @@ D2
 S
 #154
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the north and south. Buildings flank either side,
+rising upward.
 ~
 1 0 0 0 0 0
 D0
@@ -850,7 +1161,13 @@ door~
 S
 #155
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the north, while to the south Caravan Way can
+be seen.
 ~
 1 0 0 0 0 0
 D0
@@ -914,7 +1231,13 @@ D0
 S
 #161
 A Dusty Path~
-This unfinished room was created by Kinther.
+   This pathway is more of a road that has fallen into disrepair.  Through years
+of use the cobblestone beneath has been cracked and broken.  Sections of the
+road appear to have deep divets, making it dangerous to not watch where you are
+stepping.  Large buildings made of adobe brick rise up on either side, though
+few have entrances that can be entered.
+   To the west, an immense ziggurat can be seen that rises up above the city.
+The sound of Iron Square can be heard to the east.
 ~
 1 0 0 0 0 0
 D1
@@ -928,7 +1251,14 @@ D3
 S
 #162
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet. From this point an enormous staircase can be seen which
+leads up to the pinnacle.
+   The path circling the ziggurat continues to the north and south. To the
+east a dusty pathway can be seen that leads into the rest of the city.
 ~
 1 0 0 0 0 0
 D0
@@ -946,7 +1276,14 @@ D2
 S
 #163
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet. From this point an enormous staircase can be seen which
+leads up to the pinnacle.
+   The path circling the ziggurat continues to the north and south. Buildings
+rise up to the east.
 ~
 1 0 0 0 0 0
 D0
@@ -960,7 +1297,14 @@ D2
 S
 #164
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet. From this point an enormous staircase can be seen which
+leads up to the pinnacle.
+   The path circling the ziggurat continues to the north and south. Buildings
+rise up to the east.
 ~
 1 0 0 0 0 0
 D0
@@ -974,7 +1318,14 @@ D2
 S
 #165
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet. From this point an enormous staircase can be seen which
+leads up to the pinnacle.
+   The path circling the ziggurat continues to the south and west. To the
+north a dusty pathway can be seen that leads into the rest of the city.
 ~
 1 0 0 0 0 0
 D0
@@ -992,7 +1343,14 @@ D3
 S
 #166
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the west and east. Buildings
+rise up to the north.
 ~
 1 0 0 0 0 0
 D1
@@ -1006,7 +1364,14 @@ D3
 S
 #167
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the west and east. Buildings
+rise up to the north.
 ~
 1 0 0 0 0 0
 D1
@@ -1020,7 +1385,14 @@ D3
 S
 #168
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the west and east. Buildings
+rise up to the north.
 ~
 1 0 0 0 0 0
 D1
@@ -1034,7 +1406,14 @@ D3
 S
 #169
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the south and east. Buildings
+rise up to the north and west.
 ~
 1 0 0 0 0 0
 D1
@@ -1048,7 +1427,14 @@ D2
 S
 #170
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the north and south. Buildings
+rise up to the west.
 ~
 1 0 0 0 0 0
 D0
@@ -1062,7 +1448,14 @@ D2
 S
 #171
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the north and south. Buildings
+rise up to the west.
 ~
 1 0 0 0 0 0
 D0
@@ -1076,7 +1469,14 @@ D2
 S
 #172
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the north and south. Buildings
+rise up to the west.
 ~
 1 0 0 0 0 0
 D0
@@ -1090,7 +1490,14 @@ D2
 S
 #173
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the north and east. Buildings
+rise up to the south and west.
 ~
 1 0 0 0 0 0
 D0
@@ -1104,7 +1511,14 @@ D1
 S
 #174
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the west and east. Buildings
+rise up to the south.
 ~
 1 0 0 0 0 0
 D1
@@ -1118,7 +1532,14 @@ D3
 S
 #175
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the west and east. Buildings
+rise up to the south.
 ~
 1 0 0 0 0 0
 D1
@@ -1132,7 +1553,14 @@ D3
 S
 #176
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet.  The ziggurat seems to dwarf everything else in sight except
+for an imposing golden tower off to the west.
+   The path circling the ziggurat continues to the west and east. Buildings
+rise up to the south.
 ~
 1 0 0 0 0 0
 D1
@@ -1146,7 +1574,14 @@ D3
 S
 #177
 Before the Ziggurat~
-This unfinished room was created by Kinther.
+   This pathway circles around an immense ziggurat that towers over the city.  
+The pyramid has multiple levels, each made of glazed brick of different color.
+The base is made of violet, the second tier indigo, third colored azure, the
+fourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the
+top a deep scarlet. From this point an enormous staircase can be seen which
+leads up to the pinnacle.
+   The path circling the ziggurat continues to the north and south. Buildings
+rise up to the east.
 ~
 1 0 0 0 0 0
 D0
@@ -1160,7 +1595,13 @@ D3
 S
 #178
 A Dusty Path~
-This unfinished room was created by Kinther.
+   This pathway is more of a road that has fallen into disrepair.  Through years
+of use the cobblestone beneath has been cracked and broken.  Sections of the
+road appear to have deep divets, making it dangerous to not watch where you are
+stepping.  Large buildings made of adobe brick rise up on either side, though
+few have entrances that can be entered.
+   To the south, an immense ziggurat can be seen that rises up above the city.
+The dusty pathway continues to the north.
 ~
 1 0 0 0 0 0
 D0
@@ -1174,7 +1615,13 @@ D2
 S
 #179
 A Dusty Path~
-This unfinished room was created by Kinther.
+   This pathway is more of a road that has fallen into disrepair.  Through years
+of use the cobblestone beneath has been cracked and broken.  Sections of the
+road appear to have deep divets, making it dangerous to not watch where you are
+stepping.  Large buildings made of adobe brick rise up on either side, though
+few have entrances that can be entered.
+   The dusty pathway continues to the west and south. A small side street can
+be seen to the east.
 ~
 1 0 0 0 0 0
 D1
@@ -1192,7 +1639,13 @@ D3
 S
 #180
 A Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street gives way to a dusty old riverbed to the east, and to the west
+a wider path can be seen.
 ~
 1 0 0 0 0 0
 D1
@@ -1206,7 +1659,14 @@ D3
 S
 #181
 A Dry Riverbed~
-This unfinished room was created by Kinther.
+   This wide, dust choked pathway looks as if it may have been a riverbed at
+some point in the distant past.  The water seems to have carved its way through
+the land, leaving a natural route through the city and between buildings.  
+Small plants attempt to grow near the buildings nearby, clinging to the shade.
+Several extremely smooth stones can be seen, having been worn down from years of
+water flowing over them.
+   The dusty riverbed continues to the south, while to the north a market can
+be seen. A small side street intersects with this pathway to the west.
 ~
 1 0 0 0 0 0
 D0
@@ -1224,7 +1684,14 @@ D3
 S
 #182
 A Dry Riverbed~
-This unfinished room was created by Kinther.
+   This wide, dust choked pathway looks as if it may have been a riverbed at
+some point in the distant past.  The water seems to have carved its way through
+the land, leaving a natural route through the city and between buildings.  
+Small plants attempt to grow near the buildings nearby, clinging to the shade.
+Several extremely smooth stones can be seen, having been worn down from years of
+water flowing over them.
+   The dusty riverbed continues to the north, while to the south the sounds
+of Iron Square can be heard.
 ~
 1 0 0 0 0 0
 D0
@@ -1252,7 +1719,13 @@ D2
 S
 #184
 A Dusty Path~
-This unfinished room was created by Kinther.
+   This pathway is more of a road that has fallen into disrepair.  Through years
+of use the cobblestone beneath has been cracked and broken.  Sections of the
+road appear to have deep divets, making it dangerous to not watch where you are
+stepping.  Large buildings made of adobe brick rise up on either side, though
+few have entrances that can be entered.
+   The dusty pathway continues to the east. To the west, a small square of
+shops can be seen.
 ~
 1 0 0 0 0 0
 D1
@@ -1266,7 +1739,13 @@ D3
 S
 #185
 Shadow Square~
-This unfinished room was created by Kinther.
+   This plaza within the city has many roads that join it, making it a clear
+convergence point for people.  The cobblestone seems well taken care of, with
+newer and lighter bricks replacing those that have cracked.  Benches have been
+placed in shaded areas, offering a reprieve from the harsh sun.  A few small
+stands have been placed here, offering food to those that pass by.
+   Shadow Square continues to the north and west. To the east, a dusty
+pathway leads on to the rest of the city.
 ~
 1 0 0 0 0 0
 D0
@@ -1284,7 +1763,14 @@ D3
 S
 #186
 Shadow Square~
-This unfinished room was created by Kinther.
+   This plaza within the city has many roads that join it, making it a clear
+convergence point for people.  The cobblestone seems well taken care of, with
+newer and lighter bricks replacing those that have cracked.  Benches have been
+placed in shaded areas, offering a reprieve from the harsh sun.  A few small
+stands have been placed here, offering food to those that pass by.
+   Shadow Square continues to the south and west. To the north is a building
+with a curtain covering the entrance and oil lamps illuminating the inside.
+To the east is a two story building that appears to be some sort of shop.
 ~
 1 0 0 0 0 0
 D0
@@ -1306,7 +1792,14 @@ D3
 S
 #187
 Shadow Square~
-This unfinished room was created by Kinther.
+   This plaza within the city has many roads that join it, making it a clear
+convergence point for people.  The cobblestone seems well taken care of, with
+newer and lighter bricks replacing those that have cracked.  Benches have been
+placed in shaded areas, offering a reprieve from the harsh sun.  A few small
+stands have been placed here, offering food to those that pass by.
+   Shadow square continues to the south and east. To the north is a well lit
+building with sweet scents eminating from within. To the west is a small
+building with an obvious bar immediately inside.
 ~
 1 0 0 0 0 0
 D0
@@ -1328,7 +1821,13 @@ D3
 S
 #188
 Shadow Square~
-This unfinished room was created by Kinther.
+   This plaza within the city has many roads that join it, making it a clear
+convergence point for people.  The cobblestone seems well taken care of, with
+newer and lighter bricks replacing those that have cracked.  Benches have been
+placed in shaded areas, offering a reprieve from the harsh sun.  A few small
+stands have been placed here, offering food to those that pass by.
+   Shadow Square continues to the north and east. To the west, a dimly lit
+establishment has a propped open door.
 ~
 1 0 0 0 0 0
 D0
@@ -1396,7 +1895,15 @@ D3
 S
 #194
 Elven Bridge~
-This unfinished room was created by Kinther.
+   This bridge looks absolutely ancient.  Made of solid stone quarried long ago,
+the pieces fit together smoothly and leave little gap between them.  While the
+mortar looks like it is aging in places, it still seems sturdy.  Below the
+bridge is a dusty, serpentine streambed that once had water free flowing in it.
+Years ago the water must have dried up was diverted elsewhere, leaving a place
+under the bridge for people to gather.  
+   The bridge leads west to east across the old streambed. To the east is a
+small side street that leads between buildings, while to the west a market
+can be seen.
 ~
 1 0 0 0 0 0
 D1
@@ -1410,7 +1917,13 @@ D3
 S
 #195
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the west and east. Buildings flank either side,
+rising upward.
 ~
 1 0 0 0 0 0
 D1
@@ -1424,7 +1937,13 @@ D3
 S
 #196
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the west and south. To the east is a building that
+has the scent of cooking meat wafting from it.
 ~
 1 0 0 0 0 0
 D1
@@ -1442,7 +1961,13 @@ D3
 S
 #197
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the north and south. Buildings flank either side,
+rising upward.
 ~
 1 0 0 0 0 0
 D0
@@ -1456,7 +1981,13 @@ D2
 S
 #198
 Side Street~
-This unfinished room was created by Kinther.
+   This small street is hardly big enough for a single mounted rider to pass
+through.  The ground is made up of a mix of broken brick and rough stones,
+giving the impression that it is not considered as main route through the city.
+Small buildings can be seen on either side without any windows, and most have a
+single small wooden door.
+   The street continues to the north, while to the south Iron Square can
+be seen.
 ~
 1 0 0 0 0 0
 D0

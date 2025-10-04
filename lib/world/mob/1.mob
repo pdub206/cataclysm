@@ -3,10 +3,10 @@ tall burly human soldier guard~
 the tall, burly human soldier~
 A tall, burly human soldier stands here at the gate.
 ~
-This man stands slightly taller than the average human, but not by much.  He has
-a thick, haggard looking brown beard that is flecked with dust and sand.  His
-eyes have a bluish-tint to them with a small amount of green.  One might call
-his stature bulky, as he has quite a bit of muscle.
+   This man stands slightly taller than the average human, but not by much.  He
+has a thick, haggard looking brown beard that is flecked with dust and sand.  
+His eyes have a bluish-tint to them with a small amount of green.  One might
+call his stature bulky, as he has quite a bit of muscle.
 ~
 2122 0 0 0 0 0 0 0 0 E
 1 3d20+40 1d1
@@ -15,23 +15,23 @@ Str: 16
 Dex: 14
 Con: 14
 E
-L 3 118 1
-L 5 131 1
-L 6 110 1
-L 7 108 1
-L 8 115 1
-L 9 124 1
-L 10 107 1
-L 11 111 1
-L 15 117 1
-L 16 117 1
 L 17 127 1
+L 16 117 1
+L 15 117 1
+L 11 111 1
+L 10 107 1
+L 9 124 1
+L 8 115 1
+L 7 108 1
+L 6 110 1
+L 5 131 1
+L 3 118 1
 #101
 slim lanky human soldier guard~
 a slim, lanky human soldier~
 A slim, lanky human soldier stands here eyeing passerbys.
 ~
-This woman looks rather thin, with her darkly tanned skin hugging her frame
+   This woman looks rather thin, with her darkly tanned skin hugging her frame
 tightly.  What muscle she does have is accentuated, though there is not much.  
 Her arms and legs are lanky, seeming to be longer than normal.  A ponytail of
 dark hair has been pulled back behind her head, intensifying the sharpness of
@@ -44,24 +44,24 @@ Str: 14
 Dex: 18
 Con: 14
 E
-L 17 127 1
-L 16 117 1
-L 15 117 1
-L 11 111 1
-L 10 107 1
-L 9 124 1
-L 8 115 1
-L 7 108 1
-L 6 110 1
-L 5 131 1
 L 3 118 1
+L 5 131 1
+L 6 110 1
+L 7 108 1
+L 8 115 1
+L 9 124 1
+L 10 107 1
+L 11 111 1
+L 15 117 1
+L 16 117 1
+L 17 127 1
 #102
 barkeep stocky bald~
 a stocky, bald barkeep~
 A stocky, bald barkeep stands behind the bar here.
 ~
-This man is short and stocky, with a cleanly shaven head.  Pattern baldness has
-taken hold, yet he has a thick and wiry beard that covers most of his face.  
+   This man is short and stocky, with a cleanly shaven head.  Pattern baldness
+has taken hold, yet he has a thick and wiry beard that covers most of his face.
 Pale blue eyes look bloodshot, and bluish-purple bags hang under them.  His
 hands are marred with minor cuts and scars from years of working in service to
 others.
@@ -73,8 +73,8 @@ Str: 18
 Int: 12
 Con: 18
 E
-L 14 113 1
 L 9 112 1
+L 14 113 1
 #103
 woman lanky scarred~
 the lanky, scarred woman~
