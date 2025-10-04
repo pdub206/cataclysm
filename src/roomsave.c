@@ -295,18 +295,19 @@ int RoomSave_now(room_rnum rnum) {
   ensure_dir_exists(ROOMSAVE_PREFIX);
   roomsave_zone_filename(zvnum, path, sizeof(path));
 
-  /* Build temp file path safely (same dir as final file). */
   {
     int n = snprintf(tmp, sizeof(tmp), "%s.tmp", path);
     if (n < 0 || n >= (int)sizeof(tmp)) {
-      mudlog(NRM, LVL_IMMORT, TRUE, "SYSERR: RoomSave: temp path too long for %s", path);
+      mudlog(NRM, LVL_IMMORT, TRUE,
+             "SYSERR: RoomSave: temp path too long for %s", path);
       return 0;
     }
   }
 
-  /* Open output temp; copy existing zone file minus this room’s block */
   if (!(out = fopen(tmp, "w"))) {
-    mudlog(NRM, LVL_IMMORT, TRUE, "SYSERR: RoomSave: fopen(%s) failed: %s", tmp, strerror(errno));
+    mudlog(NRM, LVL_IMMORT, TRUE,
+           "SYSERR: RoomSave: fopen(%s) failed: %s",
+           tmp, strerror(errno));
     return 0;
   }
 
@@ -317,41 +318,43 @@ int RoomSave_now(room_rnum rnum) {
         long ts;
         if (sscanf(line, "#R %d %ld", &file_rvnum, &ts) == 2) {
           if (file_rvnum == (int)rvnum) {
-            /* Skip old block for this room until '.' line */
+            /* Skip old block completely until and including '.' line */
             while (fgets(line, sizeof(line), in)) {
-              if (line[0] == '.')
+              if (line[0] == '.') {
+                /* consume it and break */
                 break;
+              }
             }
             continue; /* do NOT write skipped lines */
           }
         }
       }
-      /* Keep unrelated content */
-      fputs(line, out);
+      fputs(line, out); /* keep unrelated lines */
     }
     fclose(in);
   }
 
-  /* Append fresh block for this room */
+  /* Append new block */
   fprintf(out, "#R %d %ld\n", rvnum, (long)time(0));
 
-  /* Save NPCs (and their gear/inventory) present in the room */
   RS_write_room_mobs(out, rnum);
 
-  /* Then write ground objects */
   for (struct obj_data *obj = world[rnum].contents; obj; obj = obj->next_content)
     write_one_object(out, obj);
 
+  /* Always terminate block */
   fprintf(out, ".\n");
 
-  /* Finish and atomically replace */
   if (fclose(out) != 0) {
-    mudlog(NRM, LVL_IMMORT, TRUE, "SYSERR: RoomSave: fclose(%s) failed: %s", tmp, strerror(errno));
+    mudlog(NRM, LVL_IMMORT, TRUE,
+           "SYSERR: RoomSave: fclose(%s) failed: %s",
+           tmp, strerror(errno));
     return 0;
   }
   if (rename(tmp, path) != 0) {
-    mudlog(NRM, LVL_IMMORT, TRUE, "SYSERR: RoomSave: rename(%s -> %s) failed: %s", tmp, path, strerror(errno));
-    /* Leave tmp in place for debugging */
+    mudlog(NRM, LVL_IMMORT, TRUE,
+           "SYSERR: RoomSave: rename(%s -> %s) failed: %s",
+           tmp, path, strerror(errno));
     return 0;
   }
 
@@ -380,6 +383,33 @@ static struct char_data *RS_create_mob_by_vnum(mob_vnum mv) {
   mrnum = real_mobile(mv);
   if (mrnum == NOBODY) return NULL;
   return read_mobile(mrnum, REAL);
+}
+
+
+/* Reset the loader context before reading a new #R block */
+static void RS_ctx_clear(struct rs_load_ctx *ctx) {
+  if (!ctx)
+    return;
+
+  /* DO NOT reset ctx->rnum — each #R block sets this explicitly
+   * before parsing mobs or objects. Resetting it causes cross-room
+   * bleed (e.g., mobs from one room spawning in another).
+   */
+
+  ctx->cur_mob = NULL;
+
+  /* Clear all container stack pointers */
+  for (int i = 0; i < 16; i++)
+    ctx->stack[i] = NULL;
+}
+
+/* Optional autosave hook (invoked by limits.c:point_update). */
+void RoomSave_autosave_tick(void) {
+  /* Iterate all rooms; only save flagged ones. */
+  for (room_rnum rnum = 0; rnum <= top_of_world; ++rnum) {
+    if (ROOM_FLAGGED(rnum, ROOM_SAVE))
+      RoomSave_now(rnum);
+  }
 }
 
 /* Forward decl so RS_parse_mob_line can use it without implicit declaration */
@@ -475,7 +505,8 @@ void RoomSave_boot(void)
 
   dirp = opendir(ROOMSAVE_PREFIX);
   if (!dirp) {
-    mudlog(NRM, LVL_IMMORT, TRUE, "SYSERR: RoomSave_boot: cannot open %s", ROOMSAVE_PREFIX);
+    mudlog(NRM, LVL_IMMORT, TRUE,
+           "SYSERR: RoomSave_boot: cannot open %s", ROOMSAVE_PREFIX);
     return;
   }
 
@@ -486,157 +517,135 @@ void RoomSave_boot(void)
     if (n < 5) continue; /* skip . and .. */
     if (strcmp(dp->d_name + n - 4, ROOMSAVE_EXT) != 0) continue;
 
-    char path[PATH_MAX];
-    int wn = snprintf(path, sizeof(path), "%s%s", ROOMSAVE_PREFIX, dp->d_name);
-    if (wn < 0 || wn >= (int)sizeof(path)) {
-      mudlog(NRM, LVL_IMMORT, TRUE, "SYSERR: RoomSave_boot: path too long: %s%s",
-             ROOMSAVE_PREFIX, dp->d_name);
-      continue;
-    }
-
-    FILE *fl = fopen(path, "r");
-    if (!fl) {
-      mudlog(NRM, LVL_IMMORT, TRUE, "SYSERR: RoomSave_boot: fopen(%s) failed: %s",
-             path, strerror(errno));
-      continue;
-    }
-
-    log("RoomSave: reading %s", path);
-
-    /* ---- PASS 1: collect all #R headers and their offsets ---- */
-    struct {
-      long off;   /* file offset immediately after header line */
-      int  rvnum; /* room vnum from header */
-      long ts;    /* timestamp, unused here but handy for diagnostics */
-    } hdrs[1024];
-    int nh = 0;
-
     {
+      char path[PATH_MAX];
+      int wn = snprintf(path, sizeof(path), "%s%s", ROOMSAVE_PREFIX, dp->d_name);
+      if (wn < 0 || wn >= (int)sizeof(path)) {
+        mudlog(NRM, LVL_IMMORT, TRUE,
+               "SYSERR: RoomSave_boot: path too long: %s%s",
+               ROOMSAVE_PREFIX, dp->d_name);
+        continue;
+      }
+
+      FILE *fl = fopen(path, "r");
+      if (!fl) {
+        mudlog(NRM, LVL_IMMORT, TRUE,
+               "SYSERR: RoomSave_boot: fopen(%s) failed: %s",
+               path, strerror(errno));
+        continue;
+      }
+
+      log("RoomSave: reading %s", path);
+
+      int blocks = 0;
+      int restored_objs_total = 0;
+      int restored_mobs_total = 0;
+
+      /* Outer loop: read every #R block in this .rsv file */
       char line[512];
       while (fgets(line, sizeof(line), fl)) {
-        if (strncmp(line, "#R ", 3) == 0) {
-          int rv; long ts;
-          if (sscanf(line, "#R %d %ld", &rv, &ts) == 2) {
-            if (nh < (int)(sizeof(hdrs)/sizeof(hdrs[0]))) {
-              hdrs[nh].off   = ftell(fl);  /* position after this header line */
-              hdrs[nh].rvnum = rv;
-              hdrs[nh].ts    = ts;
-              nh++;
-            } else {
-              mudlog(NRM, LVL_IMMORT, TRUE, "RoomSave: %s contains too many room blocks; extras ignored.", path);
-              break;
-            }
-          }
-        }
-      }
-    }
 
-    /* ---- PASS 2: for each header, restore that one room block ---- */
-    int blocks = 0, restored_objs_total = 0, restored_mobs_total = 0;
+        /* Skip until a valid #R header */
+        if (strncmp(line, "#R ", 3) != 0)
+          continue;
 
-    for (int i = 0; i < nh; ++i) {
-      room_rnum rnum = real_room((room_vnum)hdrs[i].rvnum);
-      if (rnum == NOWHERE) {
-        mudlog(NRM, LVL_IMMORT, FALSE,
-               "RoomSave: unknown room vnum %d in %s (skipping)",
-               hdrs[i].rvnum, path);
-        continue;
-      }
-
-      /* clear ground contents for idempotence */
-      while (world[rnum].contents)
-        extract_obj(world[rnum].contents);
-
-      /* seek to start of this block's body (right after header) */
-      if (fseek(fl, hdrs[i].off, SEEK_SET) != 0) {
-        mudlog(NRM, LVL_IMMORT, TRUE,
-               "RoomSave: fseek(%s, off=%ld) failed for room %d",
-               path, hdrs[i].off, hdrs[i].rvnum);
-        continue;
-      }
-
-      /* fresh per-block context, *pinned* to this room */
-      struct rs_load_ctx mctx;
-      mctx.rnum    = rnum;
-      mctx.cur_mob = NULL;
-      RS_stack_clear(&mctx); /* clear only container stack */
-
-      int got_o = 0, got_m = 0;
-
-      /* read until the terminating '.' for this block */
-      for (;;) {
-        long pos = ftell(fl);
-        char line[512];
-        if (!fgets(line, sizeof(line), fl))
-          break; /* EOF ends block defensively */
-
-        /* trim leading spaces for dispatch */
-        char *p = line;
-        while (*p == ' ' || *p == '\t') ++p;
-
-        if (*p == '.') {           /* end of this #R block */
-          blocks++;
-          break;
-        }
-
-        if (*p == 'O') {
-          /* rewind and let the object reader consume contiguous O-lines only;
-             it must push back the first non-'O' */
-          struct obj_data *list, *it, *next;
-          fseek(fl, pos, SEEK_SET);
-          list = roomsave_read_list(fl);
-          for (it = list; it; it = next) {
-            next = it->next_content;
-            it->next_content = NULL;
-            obj_to_room(it, rnum);
-            ++got_o;
-          }
+        /* Parse header line */
+        int rvnum; long ts;
+        if (sscanf(line, "#R %d %ld", &rvnum, &ts) != 2) {
+          mudlog(NRM, LVL_IMMORT, TRUE,
+                 "RoomSave: malformed #R header in %s: %s", path, line);
+          /* Skip malformed block */
+          while (fgets(line, sizeof(line), fl))
+            if (line[0] == '.') break;
           continue;
         }
 
-        /* PIN CONTEXT to THIS room before every parse */
+        blocks++;
+
+        /* Resolve the room for this block */
+        room_rnum rnum = real_room((room_vnum)rvnum);
+        if (rnum == NOWHERE) {
+          mudlog(NRM, LVL_IMMORT, FALSE,
+                 "RoomSave: unknown room vnum %d in %s (skipping)",
+                 rvnum, path);
+          /* Skip to next block */
+          while (fgets(line, sizeof(line), fl))
+            if (line[0] == '.') break;
+          continue;
+        }
+
+        /* Clear this room's ground contents before restoring */
+        while (world[rnum].contents)
+          extract_obj(world[rnum].contents);
+
+        /* Clear and set mob context for this block */
+        struct rs_load_ctx mctx;
+        RS_ctx_clear(&mctx);
         mctx.rnum = rnum;
 
-        /* handle mob lines (M/E/G/P) */
-        if (RS_parse_mob_line(&mctx, p)) {
-          if (*p == 'M') {
-            /* sanity: ensure mob resides in THIS room */
-            if (mctx.cur_mob && IN_ROOM(mctx.cur_mob) != rnum)
-              char_to_room(mctx.cur_mob, rnum);
-            ++got_m;
+        /* Per-block counts */
+        int count_objs = 0, count_mobs = 0;
+        char inner[512];
+
+        /* Inner loop: read this #R block until '.' */
+        while (fgets(inner, sizeof(inner), fl)) {
+
+          /* Trim spaces */
+          while (inner[0] == ' ' || inner[0] == '\t')
+            memmove(inner, inner + 1, strlen(inner));
+
+          /* Stop at end of block */
+          if (inner[0] == '.')
+            break;
+
+          /* Defensive: stop if another #R starts (malformed file) */
+          if (!strncmp(inner, "#R ", 3)) {
+            fseek(fl, -((long)strlen(inner)), SEEK_CUR);
+            break;
           }
-          continue;
+
+          /* Handle object blocks */
+          if (inner[0] == 'O') {
+            long pos = ftell(fl);
+            fseek(fl, pos - strlen(inner), SEEK_SET);
+            struct obj_data *list = roomsave_read_list(fl);
+            for (struct obj_data *it = list, *next; it; it = next) {
+              next = it->next_content;
+              it->next_content = NULL;
+              obj_to_room(it, rnum);
+              count_objs++;
+            }
+            continue;
+          }
+
+          /* Handle mob & equipment/inventory */
+          if (RS_parse_mob_line(&mctx, inner)) {
+            if (inner[0] == 'M')
+              count_mobs++;
+            continue;
+          }
+
+          /* Unknown token: ignore gracefully */
         }
 
-        /* unknown token -> ignore for forward compatibility */
+        restored_objs_total += count_objs;
+        restored_mobs_total += count_mobs;
+
+        if (count_mobs > 0)
+          log("RoomSave: room %d <- %d object(s) and %d mob(s)",
+              rvnum, count_objs, count_mobs);
+        else
+          log("RoomSave: room %d <- %d object(s)", rvnum, count_objs);
       }
 
-      restored_objs_total += got_o;
-      restored_mobs_total += got_m;
+      log("RoomSave: finished %s (blocks=%d, objects=%d, mobs=%d)",
+          path, blocks, restored_objs_total, restored_mobs_total);
 
-      if (got_m > 0)
-        log("RoomSave: room %d <- %d object(s) and %d mob(s)", hdrs[i].rvnum, got_o, got_m);
-      else
-        log("RoomSave: room %d <- %d object(s)", hdrs[i].rvnum, got_o);
+      fclose(fl);
     }
-
-    log("RoomSave: finished %s (blocks=%d, objects=%d, mobs=%d)",
-        path, blocks, restored_objs_total, restored_mobs_total);
-
-    fclose(fl);
   }
 
   closedir(dirp);
-}
-
-/* Save all rooms flagged ROOM_SAVE. Called from point_update() on a cadence. */
-void RoomSave_autosave_tick(void) {
-  for (room_rnum rnum = 0; rnum <= top_of_world; rnum++) {
-    if (!ROOM_FLAGGED(rnum, ROOM_SAVE)) continue;
-    if (!roomsave_dirty || !roomsave_dirty[rnum]) continue;
-    if (RoomSave_now(rnum))
-      roomsave_dirty[rnum] = 0;
-  }
 }
 
 /* ======== MOB SAVE: write NPCs and their equipment/inventory ========== */
