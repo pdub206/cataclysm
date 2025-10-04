@@ -42,7 +42,7 @@ int mag_savingthrow(struct char_data *ch, int type, int modifier)
   if (!IS_NPC(ch))
     class_sav = GET_CLASS(ch);
 
-  save = saving_throws(class_sav, type, GET_LEVEL(ch));
+  save = GET_SAVE(ch, type);
   save += GET_SAVE(ch, type);
   save += modifier;
 
@@ -321,10 +321,10 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
   case SPELL_CHILL_TOUCH:
     af[0].location = APPLY_STR;
-    if (mag_savingthrow(victim, savetype, 0))
-      af[0].duration = 1;
+    if (mag_savingthrow(victim, ABIL_CON, savetype))
+      af[0].duration = 1;    /* resisted: brief weakening */
     else
-      af[0].duration = 4;
+      af[0].duration = 4;    /* failed: longer effect */
     af[0].modifier = -1;
     accum_duration = TRUE;
     to_vict = "You feel your strength wither!";
@@ -332,19 +332,20 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
   case SPELL_ARMOR:
     af[0].location = APPLY_AC;
-    af[0].modifier = -20;
+    af[0].modifier = +2;   /* +2 AC in 5e terms */
     af[0].duration = 24;
     accum_duration = TRUE;
     to_vict = "You feel someone protecting you.";
     break;
 
   case SPELL_BLESS:
-    af[0].location = GET_SPELL_ABILITY_MOD(ch);
-    af[0].modifier = 2;
+    af[0].location = APPLY_SAVE_WIS;
+    af[0].modifier = +1;   /* bonus to Wisdom saves */
     af[0].duration = 6;
 
-    af[1].location = APPLY_SAVING_SPELL;
-    af[1].modifier = -1;
+    /* Optional: extend to CHA saves if you want to emulate "morale" boost */
+    af[1].location = APPLY_SAVE_CHA;
+    af[1].modifier = +1;
     af[1].duration = 6;
 
     accum_duration = TRUE;
@@ -352,18 +353,19 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_BLINDNESS:
-    if (MOB_FLAGGED(victim, MOB_NOBLIND) || GET_LEVEL(victim) >= LVL_IMMORT || mag_savingthrow(victim, savetype, 0)) {
+    if (MOB_FLAGGED(victim, MOB_NOBLIND) || GET_LEVEL(victim) >= LVL_IMMORT ||
+        mag_savingthrow(victim, ABIL_CON, savetype)) {
       send_to_char(ch, "You fail.\r\n");
       return;
     }
 
-    af[0].location = GET_SPELL_ABILITY_MOD(ch);
-    af[0].modifier = -4;
+    af[0].location = APPLY_SAVE_DEX;   /* penalize Dex saves */
+    af[0].modifier = -2;
     af[0].duration = 2;
     SET_BIT_AR(af[0].bitvector, AFF_BLIND);
 
-    af[1].location = APPLY_AC;
-    af[1].modifier = 40;
+    af[1].location = APPLY_AC;         /* easier to hit */
+    af[1].modifier = +40;
     af[1].duration = 2;
     SET_BIT_AR(af[1].bitvector, AFF_BLIND);
 
@@ -372,17 +374,17 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_CURSE:
-    if (mag_savingthrow(victim, savetype, 0)) {
+    if (mag_savingthrow(victim, ABIL_WIS, savetype)) {
       send_to_char(ch, "%s", CONFIG_NOEFFECT);
       return;
     }
 
-    af[0].location = GET_SPELL_ABILITY_MOD(ch);
+    af[0].location = APPLY_SAVE_WIS;    /* harder to resist magic */
     af[0].duration = 1 + (GET_LEVEL(ch) / 2);
     af[0].modifier = -1;
     SET_BIT_AR(af[0].bitvector, AFF_CURSE);
 
-    af[1].location = GET_SPELL_ABILITY_MOD(ch);
+    af[1].location = APPLY_SAVE_CHA;    /* morale/charisma weakened */
     af[1].duration = 1 + (GET_LEVEL(ch) / 2);
     af[1].modifier = -1;
     SET_BIT_AR(af[1].bitvector, AFF_CURSE);
@@ -434,7 +436,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
       victim = ch;
 
     af[0].duration = 12 + (GET_LEVEL(ch) / 4);
-    af[0].modifier = -40;
+    af[0].modifier = +2;   /* ascending AC: harder to hit */
     af[0].location = APPLY_AC;
     SET_BIT_AR(af[0].bitvector, AFF_INVISIBLE);
     accum_duration = TRUE;
@@ -443,7 +445,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_POISON:
-    if (mag_savingthrow(victim, savetype, 0)) {
+    if (mag_savingthrow(victim, ABIL_CON, savetype)) {
       send_to_char(ch, "%s", CONFIG_NOEFFECT);
       return;
     }
@@ -466,7 +468,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
   case SPELL_SANCTUARY:
     af[0].duration = 4;
     SET_BIT_AR(af[0].bitvector, AFF_SANCTUARY);
-
     accum_duration = TRUE;
     to_vict = "A white aura momentarily surrounds you.";
     to_room = "$n is surrounded by a white aura.";
@@ -477,7 +478,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
       return;
     if (MOB_FLAGGED(victim, MOB_NOSLEEP))
       return;
-    if (mag_savingthrow(victim, savetype, 0))
+    if (mag_savingthrow(victim, ABIL_WIS, savetype))
       return;
 
     af[0].duration = 4 + (GET_LEVEL(ch) / 4);
@@ -496,14 +497,14 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
     af[0].location = APPLY_STR;
     af[0].duration = (GET_LEVEL(ch) / 2) + 4;
-    af[0].modifier = 1 + (level > 18);
+    af[0].modifier = 2; /* +2 bonus static */
     accum_duration = TRUE;
     accum_affect = TRUE;
     to_vict = "You feel stronger!";
     break;
 
   case SPELL_SENSE_LIFE:
-    to_vict = "Your feel your awareness improve.";
+    to_vict = "You feel your awareness improve.";
     af[0].duration = GET_LEVEL(ch);
     SET_BIT_AR(af[0].bitvector, AFF_SENSE_LIFE);
     accum_duration = TRUE;

@@ -155,11 +155,15 @@
 /* new attack types can be added here - up to TYPE_SUFFERING */
 #define TYPE_SUFFERING		     399
 
-#define SAVING_PARA   0
-#define SAVING_ROD    1
-#define SAVING_PETRI  2
-#define SAVING_BREATH 3
-#define SAVING_SPELL  4
+/* Saving throws for 5e-like system */
+#define SAVING_STR    0
+#define SAVING_DEX    1
+#define SAVING_CON    2
+#define SAVING_INT    3
+#define SAVING_WIS    4
+#define SAVING_CHA    5
+
+#define NUM_SAVING_THROWS  6
 
 /***
  **Possible Targets:

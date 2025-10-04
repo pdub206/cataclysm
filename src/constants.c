@@ -513,11 +513,12 @@ const char *apply_types[] = {
   "GOLD",
   "EXP",
   "ARMOR",
-  "SAVING_PARA",
-  "SAVING_ROD",
-  "SAVING_PETRI",
-  "SAVING_BREATH",
-  "SAVING_SPELL",
+  "SAVE_STR",
+  "SAVE_DEX",
+  "SAVE_CON",
+  "SAVE_INT",
+  "SAVE_WIS",
+  "SAVE_CHA",
   "\n"
 };
 

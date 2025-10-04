@@ -550,6 +550,16 @@ do                                                              \
 /** Current charisma of ch. */
 #define GET_CHA(ch)     ((ch)->aff_abils.cha)
 
+/* Definitions for 5e-like saving throws */
+#define GET_SAVE(ch, i)   ((ch)->char_specials.saved.saving_throws[(i)])
+
+#define SAVE_STR(ch)  GET_SAVE(ch, ABIL_STR)
+#define SAVE_DEX(ch)  GET_SAVE(ch, ABIL_DEX)
+#define SAVE_CON(ch)  GET_SAVE(ch, ABIL_CON)
+#define SAVE_INT(ch)  GET_SAVE(ch, ABIL_INT)
+#define SAVE_WIS(ch)  GET_SAVE(ch, ABIL_WIS)
+#define SAVE_CHA(ch)  GET_SAVE(ch, ABIL_CHA)
+
 /** Experience points of ch. */
 #define GET_EXP(ch)	  ((ch)->points.exp)
 /** Armor class of ch. */
@@ -589,7 +599,7 @@ do                                                              \
 /** Who or what the ch is hunting. */
 #define HUNTING(ch)	  ((ch)->char_specials.hunting)
 /** Saving throw i for character ch. */
-#define GET_SAVE(ch, i)	  ((ch)->char_specials.saved.apply_saving_throw[i])
+#define GET_SAVE(ch, i)   ((ch)->char_specials.saved.saving_throws[(i)])
 /** Alignment value for ch. */
 #define GET_ALIGNMENT(ch) ((ch)->char_specials.saved.alignment)
 

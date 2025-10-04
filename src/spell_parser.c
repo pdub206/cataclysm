@@ -208,13 +208,13 @@ int call_magic(struct char_data *caster, struct char_data *cvict,
   case CAST_SCROLL:
   case CAST_POTION:
   case CAST_WAND:
-    savetype = SAVING_ROD;
+    savetype = SAVING_WIS; 
     break;
   case CAST_SPELL:
-    savetype = SAVING_SPELL;
+    savetype = SAVING_WIS; 
     break;
   default:
-    savetype = SAVING_BREATH;
+    savetype = SAVING_DEX; 
     break;
   }
 

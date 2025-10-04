@@ -1658,29 +1658,35 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
     mob_proto[i].real_abils.cha = num_arg;
   }
 
-  CASE("SavingPara") {
+  /* --- New 5e-style saving throw keywords --- */
+  CASE("SaveStr") {
     RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_PARA] = num_arg;
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_STR] = num_arg;
   }
 
-  CASE("SavingRod") {
+  CASE("SaveDex") {
     RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_ROD] = num_arg;
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_DEX] = num_arg;
   }
 
-  CASE("SavingPetri") {
+  CASE("SaveCon") {
     RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_PETRI] = num_arg;
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_CON] = num_arg;
   }
 
-  CASE("SavingBreath") {
+  CASE("SaveInt") {
     RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_BREATH] = num_arg;
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_INT] = num_arg;
   }
 
-  CASE("SavingSpell") {
+  CASE("SaveWis") {
     RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_SPELL] = num_arg;
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_WIS] = num_arg;
+  }
+
+  CASE("SaveCha") {
+    RANGE(0, 100);
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_CHA] = num_arg;
   }
 
   if (!matched) {

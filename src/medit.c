@@ -222,6 +222,7 @@ void medit_setup_existing(struct descriptor_data *d, int rmob_num)
 /* Ideally, this function should be in db.c, but I'll put it here for portability. */
 static void init_mobile(struct char_data *mob)
 {
+  int i;
   clear_char(mob);
 
   GET_HIT(mob) = GET_MANA(mob) = 1;
@@ -234,11 +235,8 @@ static void init_mobile(struct char_data *mob)
   mob->real_abils.dex = mob->real_abils.con = mob->real_abils.cha = 11;
   mob->aff_abils = mob->real_abils;
 
-  GET_SAVE(mob, SAVING_PARA)   = 0;
-  GET_SAVE(mob, SAVING_ROD)    = 0;
-  GET_SAVE(mob, SAVING_PETRI)  = 0;
-  GET_SAVE(mob, SAVING_BREATH) = 0;
-  GET_SAVE(mob, SAVING_SPELL)  = 0;
+  for (i = 0; i < NUM_ABILITIES; i++)
+    GET_SAVE(mob, i) = 0;
 
   SET_BIT_AR(MOB_FLAGS(mob), MOB_ISNPC);
   mob->player_specials = &dummy_mob;
@@ -491,19 +489,32 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
   if (CONFIG_MEDIT_ADVANCED) {
     /* Bottom section - non-standard stats, togglable in cedit */
     write_to_output(d,
-    "(%sF%s) Str: %s[%s%2d/%3d%s]%s   Saving Throws\r\n"
-    "(%sG%s) Int: %s[%s%3d%s]%s      (%sL%s) Paralysis     %s[%s%3d%s]%s\r\n"
-    "(%sH%s) Wis: %s[%s%3d%s]%s      (%sM%s) Rods/Staves   %s[%s%3d%s]%s\r\n"
-    "(%sI%s) Dex: %s[%s%3d%s]%s      (%sN%s) Petrification %s[%s%3d%s]%s\r\n"
-    "(%sJ%s) Con: %s[%s%3d%s]%s      (%sO%s) Breath        %s[%s%3d%s]%s\r\n"
-    "(%sK%s) Cha: %s[%s%3d%s]%s      (%sP%s) Spells        %s[%s%3d%s]%s\r\n\r\n",
+    "               %sAttributes%s                   %sSaving Throws%s\r\n"
+    "(%sF%s) Str: %s[%s%2d/%3d%s]%s         (%sR%s) Save STR  %s[%s%3d%s]%s\r\n"
+    "(%sG%s) Int: %s[%s%3d%s]%s             (%sS%s) Save DEX  %s[%s%3d%s]%s\r\n"
+    "(%sH%s) Wis: %s[%s%3d%s]%s             (%sT%s) Save CON  %s[%s%3d%s]%s\r\n"
+    "(%sI%s) Dex: %s[%s%3d%s]%s             (%sU%s) Save INT  %s[%s%3d%s]%s\r\n"
+    "(%sJ%s) Con: %s[%s%3d%s]%s             (%sV%s) Save WIS  %s[%s%3d%s]%s\r\n"
+    "(%sK%s) Cha: %s[%s%3d%s]%s             (%sW%s) Save CHA  %s[%s%3d%s]%s\r\n\r\n",
+        nrm, cyn, nrm, cyn,
         cyn, nrm, cyn, yel, GET_STR(mob), GET_ADD(mob), cyn, nrm,
-        cyn, nrm, cyn, yel, GET_INT(mob), cyn, nrm,   cyn, nrm, cyn, yel, GET_SAVE(mob, SAVING_PARA), cyn, nrm,
-        cyn, nrm, cyn, yel, GET_WIS(mob), cyn, nrm,   cyn, nrm, cyn, yel, GET_SAVE(mob, SAVING_ROD), cyn, nrm,
-        cyn, nrm, cyn, yel, GET_DEX(mob), cyn, nrm,   cyn, nrm, cyn, yel, GET_SAVE(mob, SAVING_PETRI), cyn, nrm,
-        cyn, nrm, cyn, yel, GET_CON(mob), cyn, nrm,   cyn, nrm, cyn, yel, GET_SAVE(mob, SAVING_BREATH), cyn, nrm,
-        cyn, nrm, cyn, yel, GET_CHA(mob), cyn, nrm,   cyn, nrm, cyn, yel, GET_SAVE(mob, SAVING_SPELL), cyn, nrm
-        );
+              cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_STR), cyn, nrm,
+
+        cyn, nrm, cyn, yel, GET_INT(mob), cyn, nrm,
+              cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_DEX), cyn, nrm,
+
+        cyn, nrm, cyn, yel, GET_WIS(mob), cyn, nrm,
+              cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_CON), cyn, nrm,
+
+        cyn, nrm, cyn, yel, GET_DEX(mob), cyn, nrm,
+              cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_INT), cyn, nrm,
+
+        cyn, nrm, cyn, yel, GET_CON(mob), cyn, nrm,
+              cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_WIS), cyn, nrm,
+
+        cyn, nrm, cyn, yel, GET_CHA(mob), cyn, nrm,
+              cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_CHA), cyn, nrm
+    );
   }
 
   /* Quit to previous menu option */
@@ -751,45 +762,66 @@ void medit_parse(struct descriptor_data *d, char *arg)
         write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
         return;
 	  }
-      OLC_MODE(d) = MEDIT_PARA;
-      i++;
-      break;
-    case 'm':
-    case 'M':
+    case 'r':
+    case 'R':
       if (!CONFIG_MEDIT_ADVANCED) {
         write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
         return;
-	  }
-      OLC_MODE(d) = MEDIT_ROD;
+      }
+      OLC_MODE(d) = MEDIT_SAVE_STR;
       i++;
       break;
-    case 'n':
-    case 'N':
+
+    case 's':
+    case 'S':
       if (!CONFIG_MEDIT_ADVANCED) {
         write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
         return;
-	  }
-      OLC_MODE(d) = MEDIT_PETRI;
+      }
+      OLC_MODE(d) = MEDIT_SAVE_DEX;
       i++;
       break;
-    case 'o':
-    case 'O':
+
+    case 't':
+    case 'T':
       if (!CONFIG_MEDIT_ADVANCED) {
         write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
         return;
-	  }
-      OLC_MODE(d) = MEDIT_BREATH;
+      }
+      OLC_MODE(d) = MEDIT_SAVE_CON;
       i++;
       break;
-    case 'p':
-    case 'P':
+
+    case 'u':
+    case 'U':
       if (!CONFIG_MEDIT_ADVANCED) {
         write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
         return;
-	  }
-      OLC_MODE(d) = MEDIT_SPELL;
+      }
+      OLC_MODE(d) = MEDIT_SAVE_INT;
       i++;
       break;
+
+    case 'v':
+    case 'V':
+      if (!CONFIG_MEDIT_ADVANCED) {
+        write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
+        return;
+      }
+      OLC_MODE(d) = MEDIT_SAVE_WIS;
+      i++;
+      break;
+
+    case 'w':
+    case 'W':
+      if (!CONFIG_MEDIT_ADVANCED) {
+        write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
+        return;
+      }
+      OLC_MODE(d) = MEDIT_SAVE_CHA;
+      i++;
+      break;
+
     default:
       medit_disp_stats_menu(d);
       return;
@@ -942,35 +974,29 @@ void medit_parse(struct descriptor_data *d, char *arg)
     medit_disp_stats_menu(d);
     return;
 
-  case MEDIT_PARA:
-    GET_SAVE(OLC_MOB(d), SAVING_PARA) = LIMIT(i, 0, 100);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
+  case MEDIT_SAVE_STR:
+    GET_SAVE(OLC_MOB(d), ABIL_STR) = LIMIT(atoi(arg), -20, 20);
+    break;
 
-  case MEDIT_ROD:
-    GET_SAVE(OLC_MOB(d), SAVING_ROD) = LIMIT(i, 0, 100);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
+  case MEDIT_SAVE_DEX:
+    GET_SAVE(OLC_MOB(d), ABIL_DEX) = LIMIT(atoi(arg), -20, 20);
+    break;
 
-  case MEDIT_PETRI:
-    GET_SAVE(OLC_MOB(d), SAVING_PETRI) = LIMIT(i, 0, 100);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
+  case MEDIT_SAVE_CON:
+    GET_SAVE(OLC_MOB(d), ABIL_CON) = LIMIT(atoi(arg), -20, 20);
+    break;
 
-  case MEDIT_BREATH:
-    GET_SAVE(OLC_MOB(d), SAVING_BREATH) = LIMIT(i, 0, 100);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
+  case MEDIT_SAVE_INT:
+    GET_SAVE(OLC_MOB(d), ABIL_INT) = LIMIT(atoi(arg), -20, 20);
+    break;
 
-  case MEDIT_SPELL:
-    GET_SAVE(OLC_MOB(d), SAVING_SPELL) = LIMIT(i, 0, 100);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
+  case MEDIT_SAVE_WIS:
+    GET_SAVE(OLC_MOB(d), ABIL_WIS) = LIMIT(atoi(arg), -20, 20);
+    break;
+
+  case MEDIT_SAVE_CHA:
+    GET_SAVE(OLC_MOB(d), ABIL_CHA) = LIMIT(atoi(arg), -20, 20);
+    break;
 
   case MEDIT_POS:
     GET_POS(OLC_MOB(d)) = LIMIT(i - 1, 0, NUM_POSITIONS - 1);
@@ -1053,27 +1079,28 @@ void medit_autoroll_stats(struct descriptor_data *d)
   mob_lev = GET_LEVEL(OLC_MOB(d));
   mob_lev = GET_LEVEL(OLC_MOB(d)) = LIMIT(mob_lev, 1, LVL_IMPL);
 
-  GET_MOVE(OLC_MOB(d))    = mob_lev*10;          /* hit point bonus (mobs don't use movement points */
-  GET_HIT(OLC_MOB(d))     = mob_lev/5;           /* number of hitpoint dice */
-  GET_MANA(OLC_MOB(d))    = mob_lev/5;           /* size of hitpoint dice   */
+  GET_MOVE(OLC_MOB(d))    = mob_lev * 10;        /* hit point bonus (mobs don't use movement points) */
+  GET_HIT(OLC_MOB(d))     = mob_lev / 5;         /* number of hitpoint dice */
+  GET_MANA(OLC_MOB(d))    = mob_lev / 5;         /* size of hitpoint dice   */
 
-  GET_NDD(OLC_MOB(d))     = MAX(1, mob_lev/6);   /* number damage dice 1-5  */
-  GET_SDD(OLC_MOB(d))     = MAX(2, mob_lev/6);   /* size of damage dice 2-5 */
+  GET_NDD(OLC_MOB(d))     = MAX(1, mob_lev / 6); /* number damage dice 1-5  */
+  GET_SDD(OLC_MOB(d))     = MAX(2, mob_lev / 6); /* size of damage dice 2-5 */
 
   /* 'Advanced' stats are only rolled if advanced options are enabled */
   if (CONFIG_MEDIT_ADVANCED) {
-    GET_STR(OLC_MOB(d))     = LIMIT((mob_lev*2)/3, 11, 18); /* 2/3 level in range 11 to 18 */
-    GET_INT(OLC_MOB(d))     = LIMIT((mob_lev*2)/3, 11, 18);
-    GET_WIS(OLC_MOB(d))     = LIMIT((mob_lev*2)/3, 11, 18);
-    GET_DEX(OLC_MOB(d))     = LIMIT((mob_lev*2)/3, 11, 18);
-    GET_CON(OLC_MOB(d))     = LIMIT((mob_lev*2)/3, 11, 18);
-    GET_CHA(OLC_MOB(d))     = LIMIT((mob_lev*2)/3, 11, 18);
+    GET_STR(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18); /* 2/3 level in range 11 to 18 */
+    GET_INT(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
+    GET_WIS(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
+    GET_DEX(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
+    GET_CON(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
+    GET_CHA(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
 
-    GET_SAVE(OLC_MOB(d), SAVING_PARA)   = mob_lev / 4;  /* All Saving throws */
-    GET_SAVE(OLC_MOB(d), SAVING_ROD)    = mob_lev / 4;  /* set to a quarter  */
-    GET_SAVE(OLC_MOB(d), SAVING_PETRI)  = mob_lev / 4;  /* of the mobs level */
-    GET_SAVE(OLC_MOB(d), SAVING_BREATH) = mob_lev / 4;
-    GET_SAVE(OLC_MOB(d), SAVING_SPELL)  = mob_lev / 4;
+    /* New ability-based saving throws: all default to 1/4 of mob level */
+    GET_SAVE(OLC_MOB(d), ABIL_STR) = mob_lev / 4;
+    GET_SAVE(OLC_MOB(d), ABIL_DEX) = mob_lev / 4;
+    GET_SAVE(OLC_MOB(d), ABIL_CON) = mob_lev / 4;
+    GET_SAVE(OLC_MOB(d), ABIL_INT) = mob_lev / 4;
+    GET_SAVE(OLC_MOB(d), ABIL_WIS) = mob_lev / 4;
+    GET_SAVE(OLC_MOB(d), ABIL_CHA) = mob_lev / 4;
   }
-
 }

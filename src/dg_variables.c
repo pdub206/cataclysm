@@ -970,40 +970,52 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           }
           break;
         case 's':
-          if (!str_cmp(field, "saving_breath")) {
+          if (!str_cmp(field, "save_str")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_BREATH) += addition;
+              GET_SAVE(c, ABIL_STR) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_BREATH));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_STR));
           }
-          else if (!str_cmp(field, "saving_para")) {
+
+          else if (!str_cmp(field, "save_dex")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_PARA) += addition;
+              GET_SAVE(c, ABIL_DEX) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_PARA));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_DEX));
           }
-          else if (!str_cmp(field, "saving_petri")) {
+
+          else if (!str_cmp(field, "save_con")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_PETRI) += addition;
+              GET_SAVE(c, ABIL_CON) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_PETRI));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_CON));
           }
-          else if (!str_cmp(field, "saving_rod")) {
+
+          else if (!str_cmp(field, "save_int")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_ROD) += addition;
+              GET_SAVE(c, ABIL_INT) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_ROD));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_INT));
           }
-          else if (!str_cmp(field, "saving_spell")) {
+
+          else if (!str_cmp(field, "save_wis")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_SPELL) += addition;
+              GET_SAVE(c, ABIL_WIS) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_SPELL));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_WIS));
+          }
+
+          else if (!str_cmp(field, "save_cha")) {
+            if (subfield && *subfield) {
+              int addition = atoi(subfield);
+              GET_SAVE(c, ABIL_CHA) += addition;
+            }
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_CHA));
           }
           else if (!str_cmp(field, "sex"))
             snprintf(str, slen, "%s", genders[(int)GET_SEX(c)]);

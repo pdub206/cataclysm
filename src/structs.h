@@ -464,13 +464,15 @@
 #define APPLY_EXP              16	/**< Reserved			*/
 #define APPLY_AC               17	/**< Apply to Armor Class		*/
 #define APPLY_PROFICIENCY      18 /**< Apply to Proficiency Bonus */
-#define APPLY_SAVING_PARA      19	/**< Apply to save throw: paralysis	*/
-#define APPLY_SAVING_ROD       20	/**< Apply to save throw: rods	*/
-#define APPLY_SAVING_PETRI     21	/**< Apply to save throw: petrif	*/
-#define APPLY_SAVING_BREATH    22	/**< Apply to save throw: breath	*/
-#define APPLY_SAVING_SPELL     23	/**< Apply to save throw: spells	*/
+#define APPLY_SAVE_STR         19  /**< Apply to STR saving throws */
+#define APPLY_SAVE_DEX         20  /**< Apply to DEX saving throws */
+#define APPLY_SAVE_CON         21  /**< Apply to CON saving throws */
+#define APPLY_SAVE_INT         22  /**< Apply to INT saving throws */
+#define APPLY_SAVE_WIS         23  /**< Apply to WIS saving throws */
+#define APPLY_SAVE_CHA         24  /**< Apply to CHA saving throws */
+
 /** Total number of applies */
-#define NUM_APPLIES   24
+#define NUM_APPLIES   25
 
 /* Equals the total number of SAVING_* defines in spells.h */
 #define NUM_OF_SAVING_THROWS  5
@@ -900,6 +902,17 @@ struct char_ability_data
   sbyte cha;     /**< Charisma */
 };
 
+/* Ability score indices for 5e-like system */
+enum ability_scores {
+  ABIL_STR = 0,
+  ABIL_DEX = 1,
+  ABIL_CON = 2,
+  ABIL_INT = 3,
+  ABIL_WIS = 4,
+  ABIL_CHA = 5,
+  NUM_ABILITIES
+};
+
 /** Character 'points', or health statistics. */
 struct char_point_data
 {
@@ -931,7 +944,7 @@ struct char_special_data_saved
   long idnum;            /**< PC's idnum; -1 for mobiles. */
   int act[PM_ARRAY_MAX]; /**< act flags for NPC's; player flag for PC's */
   int affected_by[AF_ARRAY_MAX]; /**< Bitvector for spells/skills affected by */
-  sh_int apply_saving_throw[5];  /**< Saving throw (Bonuses)		*/
+  sh_int saving_throws[NUM_ABILITIES];  /* STR, DEX, CON, INT, WIS, CHA */
 };
 
 /** Special playing constants shared by PCs and NPCs which aren't in pfile */

@@ -343,16 +343,21 @@ int write_mobile_espec(mob_vnum mvnum, struct char_data *mob, FILE *fd)
     fprintf(fd, "Con: %d\n", GET_CON(mob));
   if (GET_CHA(mob) != 11)
     fprintf(fd, "Cha: %d\n", GET_CHA(mob));
-  if (GET_SAVE(mob, SAVING_PARA) != 0)
-    fprintf(fd, "SavingPara: %d\n", GET_SAVE(mob, SAVING_PARA));
-  if (GET_SAVE(mob, SAVING_ROD) != 0)
-    fprintf(fd, "SavingRod: %d\n", GET_SAVE(mob, SAVING_ROD));
-  if (GET_SAVE(mob, SAVING_PETRI) != 0)
-    fprintf(fd, "SavingPetri: %d\n", GET_SAVE(mob, SAVING_PETRI));
-  if (GET_SAVE(mob, SAVING_BREATH) != 0)
-    fprintf(fd, "SavingBreath: %d\n", GET_SAVE(mob, SAVING_BREATH));
-  if (GET_SAVE(mob, SAVING_SPELL) != 0)
-    fprintf(fd, "SavingSpell: %d\n", GET_SAVE(mob, SAVING_SPELL));
+
+  /* --- New ability-based saving throws --- */
+  if (GET_SAVE(mob, ABIL_STR) != 0)
+    fprintf(fd, "SaveStr: %d\n", GET_SAVE(mob, ABIL_STR));
+  if (GET_SAVE(mob, ABIL_DEX) != 0)
+    fprintf(fd, "SaveDex: %d\n", GET_SAVE(mob, ABIL_DEX));
+  if (GET_SAVE(mob, ABIL_CON) != 0)
+    fprintf(fd, "SaveCon: %d\n", GET_SAVE(mob, ABIL_CON));
+  if (GET_SAVE(mob, ABIL_INT) != 0)
+    fprintf(fd, "SaveInt: %d\n", GET_SAVE(mob, ABIL_INT));
+  if (GET_SAVE(mob, ABIL_WIS) != 0)
+    fprintf(fd, "SaveWis: %d\n", GET_SAVE(mob, ABIL_WIS));
+  if (GET_SAVE(mob, ABIL_CHA) != 0)
+    fprintf(fd, "SaveCha: %d\n", GET_SAVE(mob, ABIL_CHA));
+
   fputs("E\n", fd);
   return TRUE;
 }

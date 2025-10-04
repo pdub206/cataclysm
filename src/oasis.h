@@ -283,11 +283,12 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define MEDIT_DEX                       27
 #define MEDIT_CON                       28
 #define MEDIT_CHA                       29
-#define MEDIT_PARA                      30
-#define MEDIT_ROD                       31
-#define MEDIT_PETRI                     32
-#define MEDIT_BREATH                    33
-#define MEDIT_SPELL                     34
+#define MEDIT_SAVE_STR                  30
+#define MEDIT_SAVE_DEX                  31
+#define MEDIT_SAVE_CON                  32
+#define MEDIT_SAVE_INT                  33
+#define MEDIT_SAVE_WIS                  34
+#define MEDIT_SAVE_CHA                  35
 
 /* Submodes of SEDIT connectedness. */
 #define SEDIT_MAIN_MENU              	0

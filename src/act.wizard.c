@@ -1238,9 +1238,17 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
                       CCCYN(ch, C_NRM), CCYEL(ch, C_NRM), GET_SCREEN_WIDTH(k), CCNRM(ch, C_NRM),
                       CCYEL(ch, C_NRM), GET_PAGE_LENGTH(k), CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
 
-  send_to_char(ch, "AC: [%d%+d/10], Saving throws: [%d/%d/%d/%d/%d]\r\n",
-	  GET_AC(k), GET_ABILITY_MOD(GET_DEX(k)), GET_SAVE(k, 0), GET_SAVE(k, 1), GET_SAVE(k, 2),
-	  GET_SAVE(k, 3), GET_SAVE(k, 4));
+  send_to_char(ch,
+    "AC: [%d%+d/10], \r\n"
+    "Saving throws: STR[%d] DEX[%d] CON[%d] INT[%d] WIS[%d] CHA[%d]\r\n",
+    GET_AC(k),
+    GET_ABILITY_MOD(GET_DEX(k)),
+    GET_SAVE(k, ABIL_STR),
+    GET_SAVE(k, ABIL_DEX),
+    GET_SAVE(k, ABIL_CON),
+    GET_SAVE(k, ABIL_INT),
+    GET_SAVE(k, ABIL_WIS),
+    GET_SAVE(k, ABIL_CHA));
 
   sprinttype(GET_POS(k), position_types, buf, sizeof(buf));
   send_to_char(ch, "Pos: %s, Fighting: %s", buf, FIGHTING(k) ? GET_NAME(FIGHTING(k)) : "Nobody");
@@ -4018,11 +4026,12 @@ static struct zcheck_affs {
   {APPLY_GOLD,         0,   0, "gold"},
   {APPLY_EXP,          0,   0, "experience"},
   {APPLY_AC,         -10,  10, "magical AC"},
-  {APPLY_SAVING_PARA, -2,   2, "saving throw (paralysis)"},
-  {APPLY_SAVING_ROD,  -2,   2, "saving throw (rod)"},
-  {APPLY_SAVING_PETRI,-2,   2, "saving throw (death)"},
-  {APPLY_SAVING_BREATH,-2,  2, "saving throw (breath)"},
-  {APPLY_SAVING_SPELL,-2,   2, "saving throw (spell)"}
+  {APPLY_SAVE_STR, -2, 2, "saving throw (Strength)"},
+  {APPLY_SAVE_DEX, -2, 2, "saving throw (Dexterity)"},
+  {APPLY_SAVE_CON, -2, 2, "saving throw (Constitution)"},
+  {APPLY_SAVE_INT, -2, 2, "saving throw (Intelligence)"},
+  {APPLY_SAVE_WIS, -2, 2, "saving throw (Wisdom)"},
+  {APPLY_SAVE_CHA, -2, 2, "saving throw (Charisma)"}
 };
 
 /*room limits*/

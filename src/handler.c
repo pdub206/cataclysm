@@ -112,28 +112,16 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
   case APPLY_NONE:
     break;
 
-  case APPLY_STR:
-    GET_STR(ch) += mod;
-    break;
-  case APPLY_DEX:
-    GET_DEX(ch) += mod;
-    break;
-  case APPLY_INT:
-    GET_INT(ch) += mod;
-    break;
-  case APPLY_WIS:
-    GET_WIS(ch) += mod;
-    break;
-  case APPLY_CON:
-    GET_CON(ch) += mod;
-    break;
-  case APPLY_CHA:
-    GET_CHA(ch) += mod;
-    break;
+  /* --- ability scores --- */
+  case APPLY_STR:  GET_STR(ch) += mod; break;
+  case APPLY_DEX:  GET_DEX(ch) += mod; break;
+  case APPLY_INT:  GET_INT(ch) += mod; break;
+  case APPLY_WIS:  GET_WIS(ch) += mod; break;
+  case APPLY_CON:  GET_CON(ch) += mod; break;
+  case APPLY_CHA:  GET_CHA(ch) += mod; break;
 
   /* Do Not Use. */
   case APPLY_CLASS:
-    break;
   case APPLY_LEVEL:
     break;
 
@@ -141,64 +129,28 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
     ch->player.time.birth -= (mod * SECS_PER_MUD_YEAR);
     break;
 
-  case APPLY_CHAR_WEIGHT:
-    GET_WEIGHT(ch) += mod;
-    break;
+  case APPLY_CHAR_WEIGHT:  GET_WEIGHT(ch) += mod; break;
+  case APPLY_CHAR_HEIGHT:  GET_HEIGHT(ch) += mod; break;
+  case APPLY_MANA:         GET_MAX_MANA(ch) += mod; break;
+  case APPLY_HIT:          GET_MAX_HIT(ch) += mod; break;
+  case APPLY_MOVE:         GET_MAX_MOVE(ch) += mod; break;
+  case APPLY_GOLD:         break;
+  case APPLY_EXP:          break;
 
-  case APPLY_CHAR_HEIGHT:
-    GET_HEIGHT(ch) += mod;
-    break;
+  case APPLY_AC:           GET_AC(ch) += mod; break;
+  case APPLY_PROFICIENCY:  GET_PROF_MOD(ch) += mod; break;
 
-  case APPLY_MANA:
-    GET_MAX_MANA(ch) += mod;
-    break;
-
-  case APPLY_HIT:
-    GET_MAX_HIT(ch) += mod;
-    break;
-
-  case APPLY_MOVE:
-    GET_MAX_MOVE(ch) += mod;
-    break;
-
-  case APPLY_GOLD:
-    break;
-
-  case APPLY_EXP:
-    break;
-
-  case APPLY_AC:
-    GET_AC(ch) += mod;
-    break;
-
-  case APPLY_PROFICIENCY:
-    GET_PROF_MOD(ch) += mod;
-    break;
-
-  case APPLY_SAVING_PARA:
-    GET_SAVE(ch, SAVING_PARA) += mod;
-    break;
-
-  case APPLY_SAVING_ROD:
-    GET_SAVE(ch, SAVING_ROD) += mod;
-    break;
-
-  case APPLY_SAVING_PETRI:
-    GET_SAVE(ch, SAVING_PETRI) += mod;
-    break;
-
-  case APPLY_SAVING_BREATH:
-    GET_SAVE(ch, SAVING_BREATH) += mod;
-    break;
-
-  case APPLY_SAVING_SPELL:
-    GET_SAVE(ch, SAVING_SPELL) += mod;
-    break;
+  /* --- new 5e-style saving throws --- */
+  case APPLY_SAVE_STR: SAVE_STR(ch) += mod; break;
+  case APPLY_SAVE_DEX: SAVE_DEX(ch) += mod; break;
+  case APPLY_SAVE_CON: SAVE_CON(ch) += mod; break;
+  case APPLY_SAVE_INT: SAVE_INT(ch) += mod; break;
+  case APPLY_SAVE_WIS: SAVE_WIS(ch) += mod; break;
+  case APPLY_SAVE_CHA: SAVE_CHA(ch) += mod; break;
 
   default:
     log("SYSERR: Unknown apply adjust %d attempt (%s, affect_modify).", loc, __FILE__);
     break;
-
   } /* switch */
 }
 
