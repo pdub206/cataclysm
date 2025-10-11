@@ -3177,7 +3177,7 @@ ACMD(do_show)
       nlen = snprintf(buf + len, sizeof(buf) - len,  "%-3d - %-6d %-6d %-6d %-6d %-6d %-6d %-6d %-6d\r\n", i,  
 				level_exp(CLASS_SORCEROR, i) - level_exp(CLASS_SORCEROR, i - 1),
 				level_exp(CLASS_CLERIC, i) - level_exp(CLASS_CLERIC, i - 1),
-				level_exp(CLASS_THIEF, i) - level_exp(CLASS_THIEF, i - 1),
+				level_exp(CLASS_ROGUE, i) - level_exp(CLASS_ROGUE, i - 1),
 				level_exp(CLASS_FIGHTER, i) - level_exp(CLASS_FIGHTER, i - 1),
 				level_exp(CLASS_BARBARIAN, i) - level_exp(CLASS_BARBARIAN, i - 1),
 				level_exp(CLASS_RANGER, i) - level_exp(CLASS_RANGER, i - 1),

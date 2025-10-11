@@ -28,7 +28,7 @@
 const char *class_abbrevs[] = {
   "Mu",
   "Cl",
-  "Th",
+  "Ro",
   "Wa",
   "Ba",
   "Ra",
@@ -40,7 +40,7 @@ const char *class_abbrevs[] = {
 const char *pc_class_types[] = {
   "Sorceror",
   "Cleric",
-  "Thief",
+  "Rogue",
   "Fighter",
   "Barbarian",
   "Ranger",
@@ -54,12 +54,12 @@ const char *class_menu =
 "\r\n"
 "Select a class:\r\n"
 "  [\t(C\t)]leric\r\n"
-"  [\t(T\t)]hief\r\n"
+"  R[\t(o\t)]gue\r\n"
 "  [\t(F\t)]ighter\r\n"
 "  [\t(S\t)]orceror\r\n"
 "  [\t(B\t)]arbarian\r\n"
 "  [\t(R\t)]anger\r\n"
-"  B[\t(A\t)]rd\r\n"
+"  B[\t(a\t)]rd\r\n"
 "  [\t(D\t)]ruid\r\n";
 
 /* The code to interpret a class letter -- used in interpreter.c when a new
@@ -72,7 +72,7 @@ int parse_class(char arg)
   case 's': return CLASS_SORCEROR;
   case 'c': return CLASS_CLERIC;
   case 'f': return CLASS_FIGHTER;
-  case 't': return CLASS_THIEF;
+  case 'o': return CLASS_ROGUE;
   case 'b': return CLASS_BARBARIAN;
   case 'r': return CLASS_RANGER;
   case 'a': return CLASS_BARD;
@@ -143,7 +143,7 @@ struct guild_info_type guild_info[] = {
 /* Midgaard */
  { CLASS_SORCEROR,      3017,    SOUTH   },
  { CLASS_CLERIC,        3004,    NORTH   },
- { CLASS_THIEF,         3027,    EAST   },
+ { CLASS_ROGUE,         3027,    EAST   },
  { CLASS_FIGHTER,       3021,    EAST   },
  { CLASS_BARBARIAN,     3021,    EAST   },
  { CLASS_RANGER,        3021,    EAST   },
@@ -162,7 +162,7 @@ bool has_save_proficiency(int class_num, int ability) {
   switch (class_num) {
     case CLASS_SORCEROR:   return (ability == ABIL_CON || ability == ABIL_CHA);
     case CLASS_CLERIC:     return (ability == ABIL_WIS || ability == ABIL_CHA);
-    case CLASS_THIEF:      return (ability == ABIL_DEX || ability == ABIL_INT);
+    case CLASS_ROGUE:      return (ability == ABIL_DEX || ability == ABIL_INT);
     case CLASS_FIGHTER:    return (ability == ABIL_STR || ability == ABIL_CON);
     case CLASS_BARBARIAN:  return (ability == ABIL_STR || ability == ABIL_CON);
     case CLASS_RANGER:     return (ability == ABIL_STR || ability == ABIL_DEX);
@@ -219,7 +219,7 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.con = table[4];
     ch->real_abils.cha = table[5];
     break;
-  case CLASS_THIEF:
+  case CLASS_ROGUE:
     ch->real_abils.dex = table[0];
     ch->real_abils.str = table[1];
     ch->real_abils.con = table[2];
@@ -352,7 +352,7 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
     break;
 
-  case CLASS_THIEF:
+  case CLASS_ROGUE:
     SET_SKILL(ch, SKILL_SNEAK, 5);
     SET_SKILL(ch, SKILL_HIDE, 5);
     SET_SKILL(ch, SKILL_TRACK, 5);
@@ -465,7 +465,7 @@ void advance_level(struct char_data *ch)
     add_move = rand_number(0, 2);
     break;
 
-  case CLASS_THIEF:
+  case CLASS_ROGUE:
     add_hp += rand_number(7, 13);
     add_mana = 0;
     add_move = rand_number(1, 3);
@@ -545,7 +545,7 @@ int invalid_class(struct char_data *ch, struct obj_data *obj)
   if (OBJ_FLAGGED(obj, ITEM_ANTI_FIGHTER) && IS_FIGHTER(ch))
     return TRUE;
 
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_THIEF) && IS_THIEF(ch))
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_ROGUE) && IS_ROGUE(ch))
     return TRUE;
 
   if (OBJ_FLAGGED(obj, ITEM_ANTI_BARBARIAN) && IS_BARBARIAN(ch))
@@ -630,17 +630,17 @@ void init_spell_levels(void)
   spell_level(SPELL_REMOVE_CURSE, CLASS_CLERIC, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_CLERIC, 1);
 
-  /* THIEVES */
-  spell_level(SKILL_SNEAK, CLASS_THIEF, 1);
-  spell_level(SKILL_PICK_LOCK, CLASS_THIEF, 1);
-  spell_level(SKILL_BACKSTAB, CLASS_THIEF, 1);
-  spell_level(SKILL_STEAL, CLASS_THIEF, 1);
-  spell_level(SKILL_HIDE, CLASS_THIEF, 1);
-  spell_level(SKILL_TRACK, CLASS_THIEF, 1);
-  spell_level(SKILL_UNARMED, CLASS_THIEF, 1);
-  spell_level(SKILL_PIERCING_WEAPONS, CLASS_THIEF, 1);
-  spell_level(SKILL_SHIELD_USE, CLASS_THIEF, 1);
-  spell_level(SKILL_PERCEPTION, CLASS_THIEF, 1);
+  /* ROGUES */
+  spell_level(SKILL_SNEAK, CLASS_ROGUE, 1);
+  spell_level(SKILL_PICK_LOCK, CLASS_ROGUE, 1);
+  spell_level(SKILL_BACKSTAB, CLASS_ROGUE, 1);
+  spell_level(SKILL_STEAL, CLASS_ROGUE, 1);
+  spell_level(SKILL_HIDE, CLASS_ROGUE, 1);
+  spell_level(SKILL_TRACK, CLASS_ROGUE, 1);
+  spell_level(SKILL_UNARMED, CLASS_ROGUE, 1);
+  spell_level(SKILL_PIERCING_WEAPONS, CLASS_ROGUE, 1);
+  spell_level(SKILL_SHIELD_USE, CLASS_ROGUE, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_ROGUE, 1);
 
   /* FIGHTERS */
   spell_level(SKILL_KICK, CLASS_FIGHTER, 1);
@@ -736,7 +736,7 @@ int level_exp(int chclass, int level)
     }
     break;
 
-    case CLASS_THIEF:
+    case CLASS_ROGUE:
     switch (level) {
       case  0: return 0;
       case  1: return 1;
@@ -820,13 +820,13 @@ const char *title_male(int chclass, int level)
       default: return "the Cleric";
     }
 
-    case CLASS_THIEF:
+    case CLASS_ROGUE:
     switch (level) {
       case  1: return "the Pilferer";
       case LVL_IMMORT: return "the Immortal Assassin";
       case LVL_GOD: return "the Demi God of Thieves";
       case LVL_GRGOD: return "the God of Thieves and Tradesmen";
-      default: return "the Thief";
+      default: return "the Rogue";
     }
 
     case CLASS_FIGHTER:
@@ -907,13 +907,13 @@ const char *title_female(int chclass, int level)
       default: return "the Cleric";
     }
 
-    case CLASS_THIEF:
+    case CLASS_ROGUE:
     switch (level) {
       case  1: return "the Pilferess";
       case LVL_IMMORT: return "the Immortal Assassin";
       case LVL_GOD: return "the Demi Goddess of Thieves";
       case LVL_GRGOD: return "the Goddess of Thieves and Tradesmen";
-      default: return "the Thief";
+      default: return "the Rogue";
     }
 
     case CLASS_FIGHTER:

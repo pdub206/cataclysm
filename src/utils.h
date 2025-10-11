@@ -914,9 +914,9 @@ do                                                              \
 /** 1 if ch is cleric class, 0 if not. */
 #define IS_CLERIC(ch)		(!IS_NPC(ch) && \
         (GET_CLASS(ch) == CLASS_CLERIC))
-/** 1 if ch is thief class, 0 if not. */
-#define IS_THIEF(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_THIEF))
+/** 1 if ch is rogue class, 0 if not. */
+#define IS_ROGUE(ch)		(!IS_NPC(ch) && \
+        (GET_CLASS(ch) == CLASS_ROGUE))
 /** 1 if ch is fighter class, 0 if not. */
 #define IS_FIGHTER(ch)		(!IS_NPC(ch) && \
         (GET_CLASS(ch) == CLASS_FIGHTER))
