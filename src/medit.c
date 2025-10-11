@@ -490,14 +490,14 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
     /* Bottom section - non-standard stats, togglable in cedit */
     write_to_output(d,
     "               %sAttributes%s                   %sSaving Throws%s\r\n"
-    "(%sF%s) Str: %s[%s%2d/%3d%s]%s         (%sR%s) Save STR  %s[%s%3d%s]%s\r\n"
+    "(%sF%s) Str: %s[%s%2d%s]%s             (%sR%s) Save STR  %s[%s%3d%s]%s\r\n"
     "(%sG%s) Int: %s[%s%3d%s]%s             (%sS%s) Save DEX  %s[%s%3d%s]%s\r\n"
     "(%sH%s) Wis: %s[%s%3d%s]%s             (%sT%s) Save CON  %s[%s%3d%s]%s\r\n"
     "(%sI%s) Dex: %s[%s%3d%s]%s             (%sU%s) Save INT  %s[%s%3d%s]%s\r\n"
     "(%sJ%s) Con: %s[%s%3d%s]%s             (%sV%s) Save WIS  %s[%s%3d%s]%s\r\n"
     "(%sK%s) Cha: %s[%s%3d%s]%s             (%sW%s) Save CHA  %s[%s%3d%s]%s\r\n\r\n",
         nrm, cyn, nrm, cyn,
-        cyn, nrm, cyn, yel, GET_STR(mob), GET_ADD(mob), cyn, nrm,
+        cyn, nrm, cyn, yel, GET_STR(mob), cyn, nrm,
               cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_STR), cyn, nrm,
 
         cyn, nrm, cyn, yel, GET_INT(mob), cyn, nrm,

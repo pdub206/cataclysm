@@ -200,8 +200,6 @@ void roll_real_abils(struct char_data *ch)
       }
   }
 
-  ch->real_abils.str_add = 0;
-
   switch (GET_CLASS(ch)) {
   case CLASS_SORCEROR:
     ch->real_abils.intel = table[0];
@@ -234,9 +232,6 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.wis = table[3];
     ch->real_abils.intel = table[4];
     ch->real_abils.cha = table[5];
-    if (ch->real_abils.str == 18)
-      ch->real_abils.str_add = rand_number(0, 100);
-    break;
   case CLASS_BARBARIAN:
     ch->real_abils.dex = table[0];
     ch->real_abils.str = table[1];

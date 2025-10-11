@@ -537,8 +537,6 @@ do                                                              \
 
 /** Current strength of ch. */
 #define GET_STR(ch)     ((ch)->aff_abils.str)
-/** Current strength modifer of ch. */
-#define GET_ADD(ch)     ((ch)->aff_abils.str_add)
 /** Current dexterity of ch. */
 #define GET_DEX(ch)     ((ch)->aff_abils.dex)
 /** Current intelligence of ch. */
@@ -687,15 +685,6 @@ do                                                              \
 #define GET_DEFAULT_POS(ch)	((ch)->mob_specials.default_pos)
 /** Return the memory of ch. */
 #define MEMORY(ch)		((ch)->mob_specials.memory)
-
-/** Return the equivalent strength of ch if ch has level 18 strength. */
-#define STRENGTH_APPLY_INDEX(ch) \
-        ( ((GET_ADD(ch) ==0) || (GET_STR(ch) != 18)) ? GET_STR(ch) :\
-          (GET_ADD(ch) <= 50) ? 26 :( \
-          (GET_ADD(ch) <= 75) ? 27 :( \
-          (GET_ADD(ch) <= 90) ? 28 :( \
-          (GET_ADD(ch) <= 99) ? 29 :  30 ) ) )                   \
-        )
 
 /** Return how much weight ch can carry (5e rule: Str × 15 lb). */
 #define CAN_CARRY_W(ch)  (GET_STR(ch) * 15)

@@ -231,13 +231,7 @@ void affect_total(struct char_data *ch)
 
   if (IS_NPC(ch) || GET_LEVEL(ch) >= LVL_GRGOD) {
     GET_STR(ch) = MIN(GET_STR(ch), i);
-  } else {
-    if (GET_STR(ch) > 18) {
-      i = GET_ADD(ch) + ((GET_STR(ch) - 18) * 10);
-      GET_ADD(ch) = MIN(i, 100);
-      GET_STR(ch) = 18;
-    }
-  }
+  } 
 }
 
 /* Insert an affect_type in a char_data structure. Automatically sets

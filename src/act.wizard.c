@@ -1216,9 +1216,9 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
     }
     send_to_char(ch, "\r\n");
   }
-  send_to_char(ch, "Str: [%s%d/%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
+  send_to_char(ch, "Str: [%s%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
 	  "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
-	  CCCYN(ch, C_NRM), GET_STR(k), GET_ADD(k), CCNRM(ch, C_NRM),
+	  CCCYN(ch, C_NRM), GET_STR(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_INT(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_WIS(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_DEX(k), CCNRM(ch, C_NRM),
@@ -2021,7 +2021,6 @@ ACMD(do_restore)
           SET_SKILL(vict, i, 100);
 
       if (GET_LEVEL(vict) >= LVL_GRGOD) {
-	vict->real_abils.str_add = 100;
 	vict->real_abils.intel = 25;
 	vict->real_abils.wis = 25;
 	vict->real_abils.dex = 25;
@@ -2755,8 +2754,8 @@ ACMD(do_wizutil)
       send_to_char(ch, "Rerolled...\r\n");
       roll_real_abils(vict);
       log("(GC) %s has rerolled %s.", GET_NAME(ch), GET_NAME(vict));
-      send_to_char(ch, "New stats: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
-	      GET_STR(vict), GET_ADD(vict), GET_INT(vict), GET_WIS(vict),
+      send_to_char(ch, "New stats: Str %d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+	      GET_STR(vict), GET_INT(vict), GET_WIS(vict),
 	      GET_DEX(vict), GET_CON(vict), GET_CHA(vict));
       break;
     case SCMD_PARDON:
@@ -3283,14 +3282,13 @@ static struct set_struct {
    { "siteok",   LVL_GOD,  PC,   BINARY },
    { "skill",   LVL_GOD,  BOTH,   NUMBER },
    { "str",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "stradd",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "thief",		LVL_GOD, 	PC, 	BINARY }, /* 50 */
-   { "thirst",		LVL_BUILDER, 	BOTH, 	MISC },
+   { "thief",		LVL_GOD, 	PC, 	BINARY }, 
+   { "thirst",		LVL_BUILDER, 	BOTH, 	MISC }, /* 50 */
    { "title",		LVL_GOD, 	PC, 	MISC   },
    { "variable",        LVL_GRGOD,	PC,	MISC },
    { "weight",		LVL_BUILDER,	BOTH,	NUMBER },
-   { "wis", 		LVL_BUILDER, 	BOTH, 	NUMBER }, /* 55 */
-   { "questpoints",     LVL_GOD,        PC,     NUMBER },
+   { "wis", 		LVL_BUILDER, 	BOTH, 	NUMBER }, 
+   { "questpoints",     LVL_GOD,        PC,     NUMBER }, /* 55 */
    { "questhistory",    LVL_GOD,        PC,   NUMBER },
    { "\n", 0, BOTH, MISC }
   };
@@ -3715,19 +3713,12 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       else
         RANGE(3, 18);
       vict->real_abils.str = value;
-      vict->real_abils.str_add = 0;
       affect_total(vict);
       break;
-    case 47: /* stradd */
-      vict->real_abils.str_add = RANGE(0, 100);
-      if (value > 0)
-        vict->real_abils.str = 18;
-      affect_total(vict);
-      break;
-    case 48: /* thief */
+    case 47: /* thief */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_THIEF);
       break;
-    case 49: /* thirst */
+    case 48: /* thirst */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, THIRST) = -1;
         send_to_char(ch, "%s's thirst is now off.\r\n", GET_NAME(vict));
@@ -3741,17 +3732,17 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 50: /* title */
+    case 49: /* title */
       set_title(vict, val_arg);
       send_to_char(ch, "%s's title is now: %s\r\n", GET_NAME(vict), GET_TITLE(vict));
       break;
-    case 51: /* variable */
+    case 50: /* variable */
       return perform_set_dg_var(ch, vict, val_arg);
-    case 52: /* weight */
+    case 51: /* weight */
       GET_WEIGHT(vict) = value;
       affect_total(vict);
       break;
-    case 53: /* wis */
+    case 52: /* wis */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3759,10 +3750,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.wis = value;
       affect_total(vict);
       break;
-    case 54: /* questpoints */
+    case 53: /* questpoints */
       GET_QUESTPOINTS(vict) = RANGE(0, 100000000);
       break;
-    case 55: /* questhistory */
+    case 54: /* questhistory */
       qvnum = atoi(val_arg);
       if (real_quest(qvnum) == NOTHING) {
         send_to_char(ch, "That quest doesn't exist.\r\n");

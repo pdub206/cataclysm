@@ -894,7 +894,6 @@ struct char_player_data
 struct char_ability_data
 {
   sbyte str;     /**< Strength.  */
-  sbyte str_add; /**< Strength multiplier if str = 18. Usually from 0 to 100 */
   sbyte intel;   /**< Intelligence */
   sbyte wis;     /**< Wisdom */
   sbyte dex;     /**< Dexterity */
