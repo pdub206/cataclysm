@@ -651,8 +651,7 @@ D1
 S
 #130
 House Troika~
-This unfinished room was created by Kinther.
-~
+undefined~
 1 0 0 0 0 0
 D1
 ~
@@ -682,7 +681,13 @@ D2
 S
 #132
 Grik's Weapons~
-This unfinished room was created by Kinther.
+   The walls of this building have been made out of uneven blocks of sandstone.
+Piled haphazardly on top of each other, they somehow remain stable despite
+looking precarious and ready to fall anytime.  Upon the walls are hooks that
+have weapons placed on them, as well as trophies from gladiator tournaments.  A
+counter sits in the southwest corner of the room, and a stairway behind it leads
+upward to a trapdoor in the ceiling.
+   Outside to the north lies Caravan Way.
 ~
 1 0 0 0 0 0
 D0
@@ -692,7 +697,13 @@ D0
 S
 #133
 The Shining Sands~
-This unfinished room was created by Kinther.
+   Within this spacious building are several clotheslines and hanging garments.
+Some appear to be waiting to be cleaned while others are awaiting pickup by
+their owner.  Long work tables have been placed throughout the area which look
+to be used for cleaning clothing.  Barrels of white sand have been set near each
+of these tables, with a stone scoop protruding from them.  A simple countertop
+has been setup near the southeastern corner.
+   Outside to the east and south is Caravan Way.
 ~
 1 0 0 0 0 0
 D1
@@ -1181,7 +1192,14 @@ D2
 S
 #156
 A Small Domicile~
-This unfinished room was created by Kinther.
+   Somewhat upscale compared to other buildings around it, this domicile feels
+more like a home.  It has a hearth in the south side of the room to allow the
+occupants to cook their own food.  The walls are made of adobe brick set in
+alternating patterns, with the grout having been smoothed over by the
+bricklayers.  Pieces of flat wood have been placed along the floor, giving the
+dwelling a reprieve from the dusty cobblestone outside.
+   A simple wooden door has been placed in the northern wall, leading
+back outside.
 ~
 1 0 0 0 0 0
 D0
@@ -1191,7 +1209,14 @@ door~
 S
 #157
 A Large Domicile~
-This unfinished room was created by Kinther.
+   Somewhat upscale compared to other buildings around it, this domicile feels
+more like a home.  It has a hearth in the south side of the room to allow the
+occupants to cook their own food.  The walls are made of adobe brick set in
+alternating patterns, with the grout having been smoothed over by the
+bricklayers.  Pieces of flat wood have been placed along the floor, giving the
+dwelling a reprieve from the dusty cobblestone outside.
+   A simple wooden door has been placed in the northern wall, leading
+back outside.
 ~
 1 0 0 0 0 0
 D0
@@ -1201,7 +1226,12 @@ door~
 S
 #158
 A Small Hovel~
-This unfinished room was created by Kinther.
+   Small and dilapidated, this hovel is only big enough for a few pieces of
+furniture.  The walls are adobe brick that are showing their age with cracks
+throughout.  In one corner the ceiling appears to be falling in on itself,
+letting light through during the day.
+   A simple wooden door has been placed in the eastern wall, leading back
+outside.
 ~
 1 0 0 0 0 0
 D1
@@ -1211,7 +1241,12 @@ door~
 S
 #159
 A Small Hovel~
-This unfinished room was created by Kinther.
+   Small and dilapidated, this hovel is only big enough for a few pieces of
+furniture.  The walls are adobe brick that are showing their age with cracks
+throughout.  In one corner the ceiling appears to be falling in on itself,
+letting light through during the day.
+   A simple wooden door has been placed in the eastern wall, leading back
+outside.
 ~
 1 0 0 0 0 0
 D1
@@ -1221,7 +1256,13 @@ door~
 S
 #160
 House Inika~
-This unfinished room was created by Kinther.
+   Inside this building are several barrels filled with all sorts of nuts,
+spices, feathers, and other small items.  The floor is swept clean, keeping dust
+and debris outside.  There is a single counter in the middle of the room that
+forms a square shape, with a wooden pass-through panel on one side to allow the
+merchants to step behind it.  Within the counter are a few other boxes and
+crates of goods for trade.
+   Outside to the north is Iron Square.
 ~
 1 0 0 0 0 0
 D0
@@ -1705,7 +1746,15 @@ D2
 S
 #183
 Elven Market~
-This unfinished room was created by Kinther.
+   Numerous stalls form small collectives in this open air market.  Sets of
+four, six, or eight seems to have been setup near each other, creating walkways
+throughout.  Most are made of simple wooden poles and sandcloth, with either a
+counter and seat behind it for the proprietor, or simply an open stall to walk
+into.  At all hours of the day conversations can be heard and bartering taking
+place.
+   To the south is an old dry riverbed, which acts as a pathway through the
+city. To the east is the Elven Bridge, which stretches over to another part
+of the city.
 ~
 1 0 0 0 0 0
 D1
@@ -1845,7 +1894,13 @@ D3
 S
 #189
 The Rat's Nest~
-This unfinished room was created by Kinther.
+   This building is not well lit, which takes your eyes a moment to adjust to.
+Behind the bar is a small oil lamp that provides light for those nearby, but
+besides that the shadows prevail here.  A wooden beam supports a ceiling that
+appears to be sagging or falling in on itself, with cracks extending toward the
+walls.  The smell of something that has gone bad lingers in the air, though it
+is difficult to identify its source.
+   Outside to the east is Shadow Square.
 ~
 1 0 0 0 0 0
 D1
@@ -1855,7 +1910,12 @@ D1
 S
 #190
 The Weeping Wyvern~
-This unfinished room was created by Kinther.
+   Hanging on the walls are the heads of different animals, bloodied weapons,
+shields, and harnesses worn by the city's gladiators.  A stuffed jhakar head
+descends from the ceiling in the middle of the room, its jaws open but eyes
+distant.  There isn't much seating in this building except for what is near the
+bar.
+   Outside to the east is Shadow Square.
 ~
 1 0 0 0 0 0
 D1
@@ -1865,7 +1925,13 @@ D1
 S
 #191
 The Drunken Giant~
-This unfinished room was created by Kinther.
+   The smell of cheap beer and roasting meats assaults your senses as you enter
+this room.  Parts of the floor are sticky, possibly from vomit or perhaps just
+spilled drinks.  Numerous tables have been placed throughout the floor, with
+some of them missing chairs.  A long wooden bar runs the length of the northern
+wall with fixed stools mounted to the ground before it.  A hearth takes up a
+portion of the western wall where food is being cooked.
+   Outside to the south is Shadow Square.
 ~
 1 0 0 0 0 0
 D2
@@ -1875,7 +1941,12 @@ D2
 S
 #192
 The Midnight Sands~
-This unfinished room was created by Kinther.
+   This dimly lit establishment has oil lamps placed strategically throughout,
+granting a small amount of illumination to those that sit nearby.  The scent of
+incense drifts about the room from various burners.  A counter with no seating
+has been set near the northwestern corner.  Behind the counter are several
+bottles and delicate glasses.
+   Outside to the south is Shadow Square.
 ~
 1 0 0 0 0 0
 D2
@@ -1885,13 +1956,24 @@ D2
 S
 #193
 The Red Kank~
-This unfinished room was created by Kinther.
+   This building has a long counter with rows of bottles behind it.  The entire
+east wall has had wooden pieces installed in an X pattern, which allows for the
+bottles to be placed within up to the ceiling.  The floor is made of smoothed
+pieces of granite and is nearly free of sand despite it flowing in from the
+outside square when a breeze passes through.
+   Outside to the west is Shadow Square. A staircase climbs the northern
+side of the building and leads through a trapdoor to a room above.
 ~
 1 0 0 0 0 0
 D3
 ~
 ~
 0 0 186
+D4
+A trapdoor in the ceiling can be passed through by climbing a set of stairs.
+~
+trapdoor~
+1 0 201
 S
 #194
 Elven Bridge~
@@ -2001,7 +2083,13 @@ D2
 S
 #199
 The Sandstone Inn~
-This unfinished room was created by Kinther.
+   This modest building has two entrances, one on the west end and one on the
+east.  The occasional breeze passes through, cooling the building slightly.  On
+the south end is a hearth that is used for cooking food, and nearby is a small
+counter with drinks behind it.  The northern end of the room has a couple small
+tables.  The overall feel of the place is a cozy place to rest after a long day.
+   Outside to the west is a small side street, while to the east is a
+courtyard that smells vaguely of a stable.
 ~
 1 0 0 0 0 0
 D3
@@ -2025,5 +2113,22 @@ D5
 ~
 ~
 0 0 134
+S
+#201
+The Red Kank Terrace~
+   This upper floor is partially covered, with a terrace that looks out on
+Shadow Square below.  Artistically carved pieces of stone have been placed at
+the edge of the terrace, providing a small amount of protection from falling as
+well as preventing those below from seeing what transpires here.  Canopies have
+been installed above the exposed terrace, shading it from the sun.
+   A trapdoor on the northern end of the terrace leads downward to the shop
+below.
+~
+1 0 0 0 0 0
+D5
+A trapdoor in the floor can be passed through by climbing a set of stairs.
+~
+trapdoor~
+1 0 193
 S
 $~

@@ -90,18 +90,22 @@ int isname(const char *str, const char *namelist)
   if (!str || !*str || !namelist || !*namelist)
     return 0;
 
-  if (!strcmp(str, namelist)) /* the easy way */
+  /* exact full-string match check */
+  if (!strcasecmp(str, namelist))
     return 1;
 
-  newlist = strdup(namelist); /* make a copy since strtok 'modifies' strings */
-  for(curtok = strtok(newlist, WHITESPACE); curtok; curtok = strtok(NULL, WHITESPACE))
-    if(curtok && is_abbrev(str, curtok)) {
-      /* Don't allow abbreviated numbers. - Sryth */
-      if (isdigit(*str) && (atoi(str) != atoi(curtok)))
-        return 0;
+  newlist = strdup(namelist); /* make a copy since strtok modifies the string */
+  if (!newlist)
+    return 0;
+
+  for (curtok = strtok(newlist, WHITESPACE); curtok; curtok = strtok(NULL, WHITESPACE)) {
+    /* Compare each token as a full word, case-insensitive */
+    if (!strcasecmp(str, curtok)) {
       free(newlist);
       return 1;
     }
+  }
+
   free(newlist);
   return 0;
 }
