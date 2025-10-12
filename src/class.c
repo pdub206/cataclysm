@@ -202,12 +202,12 @@ void roll_real_abils(struct char_data *ch)
 
   switch (GET_CLASS(ch)) {
   case CLASS_SORCEROR:
-    ch->real_abils.intel = table[0];
-    ch->real_abils.wis = table[1];
+    ch->real_abils.cha = table[0];
+    ch->real_abils.intel = table[1];
     ch->real_abils.dex = table[2];
-    ch->real_abils.str = table[3];
+    ch->real_abils.wis = table[3];
     ch->real_abils.con = table[4];
-    ch->real_abils.cha = table[5];
+    ch->real_abils.str = table[5];
     break;
   case CLASS_CLERIC:
     ch->real_abils.wis = table[0];
@@ -233,35 +233,35 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.intel = table[4];
     ch->real_abils.cha = table[5];
   case CLASS_BARBARIAN:
-    ch->real_abils.dex = table[0];
-    ch->real_abils.str = table[1];
-    ch->real_abils.con = table[2];
-    ch->real_abils.intel = table[3];
-    ch->real_abils.wis = table[4];
+    ch->real_abils.str = table[0];
+    ch->real_abils.con = table[1];
+    ch->real_abils.dex = table[2];
+    ch->real_abils.wis = table[3];
+    ch->real_abils.intel = table[4];
     ch->real_abils.cha = table[5];
     break;
   case CLASS_RANGER:
     ch->real_abils.dex = table[0];
-    ch->real_abils.str = table[1];
-    ch->real_abils.con = table[2];
-    ch->real_abils.intel = table[3];
-    ch->real_abils.wis = table[4];
+    ch->real_abils.con = table[1];
+    ch->real_abils.str = table[2];
+    ch->real_abils.wis = table[3];
+    ch->real_abils.intel = table[4];
     ch->real_abils.cha = table[5];
     break;
   case CLASS_BARD:
-    ch->real_abils.dex = table[0];
-    ch->real_abils.str = table[1];
+    ch->real_abils.cha = table[0];
+    ch->real_abils.dex = table[1];
     ch->real_abils.con = table[2];
     ch->real_abils.intel = table[3];
     ch->real_abils.wis = table[4];
-    ch->real_abils.cha = table[5];
+    ch->real_abils.str = table[5];
     break;
   case CLASS_DRUID:
-    ch->real_abils.dex = table[0];
-    ch->real_abils.str = table[1];
+    ch->real_abils.wis = table[0];
+    ch->real_abils.dex = table[1];
     ch->real_abils.con = table[2];
     ch->real_abils.intel = table[3];
-    ch->real_abils.wis = table[4];
+    ch->real_abils.str = table[4];
     ch->real_abils.cha = table[5];
     break;
   }
@@ -277,9 +277,9 @@ void do_start(struct char_data *ch)
   set_title(ch, NULL);
   roll_real_abils(ch);
 
-  GET_MAX_HIT(ch)  = 10;
+  GET_MAX_HIT(ch)  = 90;
   GET_MAX_MANA(ch) = 100;
-  GET_MAX_MOVE(ch) = 82;
+  GET_MAX_MOVE(ch) = 90;
 
   switch (GET_CLASS(ch)) {
 
@@ -655,7 +655,7 @@ void init_spell_levels(void)
   spell_level(SKILL_BANDAGE, CLASS_BARBARIAN, 1);
   spell_level(SKILL_WHIRLWIND, CLASS_BARBARIAN, 1);
   spell_level(SKILL_UNARMED, CLASS_BARBARIAN, 1);
-  spell_level(SKILL_SLASHING_WEAPONS, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_PIERCING_WEAPONS, CLASS_BARBARIAN, 1);
   spell_level(SKILL_BLUDGEONING_WEAPONS, CLASS_BARBARIAN, 1);
   spell_level(SKILL_PERCEPTION, CLASS_BARBARIAN, 1);
 
