@@ -429,4 +429,129 @@ push past each other to get to the water troughs and feeding bins.
 13 0 0 0 0 0 0 0 0 0 0 0 0
 0 0 0 0
 100 0 0 0 0
+#148
+torch bone~
+a bone torch~
+A torch made out of a piece of bone has been discarded here.~
+   Made out of a piece of broken bone, this torch has some oil-wrapped cloth
+wrapped around one end.
+~
+1 0 0 0 0 ap 0 0 0 0 0 0 0
+0 0 8 0
+1 20 0 0 0
+#149
+torch wooden~
+a wooden torch~
+A wooden torch has been left here.~
+   A piece of carved wood has been fashioned into a crude torch, with one end
+wrapped in oil-soaked cloth.
+~
+1 0 0 0 0 ap 0 0 0 0 0 0 0
+0 0 8 0
+1 20 0 0 0
+#150
+board rumor~
+the Tyr rumor board~
+A board with rumors has been placed here.~
+OOC: This is the rumor board for the city of Tyr. Treat it as if you are overhearing
+a rumor at the bar.
+~
+13 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0
+0 0 0 0 0
+#151
+lantern stone~
+a stone lantern~
+A lantern carved out of grey stone is here.~
+   Made out of a single piece of grey stone, this lantern has been carved to
+allow for a candle to be placed inside.  A small handle on the top allows the
+user to carry it.
+~
+1 0 0 0 0 ap 0 0 0 0 0 0 0
+0 0 14 0
+2 40 0 0 0
+#152
+basket wicker~
+a wicker basket~
+A wicker basket has been left here.~
+   Made of some sort of dried plant reed, this basket has been tightly braided
+with few visible holes.  A handle has been made that that allows for ease of
+carry.
+~
+15 0 0 0 0 ap 0 0 0 0 0 0 0
+10 0 0 0
+1 40 0 0 0
+#153
+backpack jozhal hide~
+a jozhal-hide backpack~
+A backpack made out of jozhal hide is lying here.~
+   This backpack has been made out of several pieces of jozhal hide.  Sewn
+together to form the main compartment, it has a pair of shoulder straps that
+would fit most humanoids.
+~
+15 0 0 0 0 adp 0 0 0 0 0 0 0
+40 0 0 0
+4 80 0 0 0
+#154
+rope short piece~
+a short piece of rope~
+A short piece of rope has been left here.~
+   This piece of rope is no more than six feet in length and has been made out
+of some sort of plant fiber.
+~
+13 0 0 0 0 ap 0 0 0 0 0 0 0
+0 0 0 0
+1 50 0 0 0
+#155
+rope coil~
+a coil of rope~
+A long piece of rope has been coiled and left here.~
+   This piece of rope must be at least thirty feet in length.  Made out of some
+sort of plant fiber, the ends have been waxed slightly to prevent it from
+unraveling.
+~
+13 0 0 0 0 ap 0 0 0 0 0 0 0
+0 0 0 0
+5 200 0 0 0
+#156
+ring bone~
+a bone ring~
+A simple hoop of bone is lying here.~
+   This ring is carved from a single piece of yellowed bone.  It is unevenly
+shaped and likely would slip off the finger.
+~
+11 0 0 0 0 ab 0 0 0 0 0 0 0
+0 0 0 0
+1 10 0 0 0
+#157
+ring bone blackened~
+a blackened bone ring~
+A blackened piece of bone in the shape of a ring is here.~
+   This piece of bone has been carved into the shape of a ring, then blackened
+in a fire.
+~
+11 0 0 0 0 ab 0 0 0 0 0 0 0
+0 0 0 0
+1 15 0 0 0
+#158
+necklace bone~
+a bone necklace~
+A necklace made of pieces of bone is lying here.~
+   Various pieces of bone have had a hole drilled through them to allow for a
+string to pass through, forming a simple necklace.
+~
+11 0 0 0 0 ac 0 0 0 0 0 0 0
+0 0 0 0
+1 25 0 0 0
+#159
+necklace blackened bone~
+a blackened bone necklace~
+A blackened bone necklace has been left here.~
+   Small and thick piece of bone have had a small hole drilled into them to
+create this crude necklace.  Each piece seems to have been blackened in a fire,
+though some are lighter than others.
+~
+11 0 0 0 0 ac 0 0 0 0 0 0 0
+0 0 0 0
+1 40 0 0 0
 $~

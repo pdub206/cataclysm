@@ -69,10 +69,9 @@ void assign_mobiles(void)
 /* assign special procedures to objects */
 void assign_objects(void)
 {
-  ASSIGNOBJ(3096, gen_board);	/* social board */
-  ASSIGNOBJ(3097, gen_board);	/* freeze board */
-  ASSIGNOBJ(3098, gen_board);	/* immortal board */
-  ASSIGNOBJ(3099, gen_board);	/* mortal board */
+
+  ASSIGNOBJ(1, gen_board);   	/* immortal board */
+  ASSIGNOBJ(150, gen_board);	/* tyr board */
 
   ASSIGNOBJ(3034, bank);        /* atm */
   ASSIGNOBJ(3036, bank);        /* cashcard */

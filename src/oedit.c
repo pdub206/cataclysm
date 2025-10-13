@@ -520,6 +520,7 @@ static void oedit_disp_values_menu(struct descriptor_data *d)
     case ITEM_CONTAINER:  labels = container_val_labels; break;
     case ITEM_FURNITURE:  labels = furniture_val_labels; break;
     case ITEM_FOOD:       labels = food_val_labels; break;
+    case ITEM_LIGHT:      labels = light_val_labels; break;
     default:              labels = generic_val_labels; break;
   }
 
