@@ -485,8 +485,8 @@ void Crash_crashsave(struct char_data *ch)
   if (!(fp = fopen(buf, "w")))
     return;
 
-  if (!objsave_write_rentcode(fp, RENT_CRASH, 0, ch))
-  	return;
+  /* Skip rent header logic — just write directly. */
+  fprintf(fp, "Crashsave for %s\n", GET_NAME(ch));
 
   for (j = 0; j < NUM_WEARS; j++)
     if (GET_EQ(ch, j)) {

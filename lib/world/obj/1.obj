@@ -482,7 +482,7 @@ carry.
 10 0 0 0
 1 40 0 0 0
 #153
-backpack jozhal hide~
+backpack pack jozhal hide~
 a jozhal-hide backpack~
 A backpack made out of jozhal hide is lying here.~
    This backpack has been made out of several pieces of jozhal hide.  Sewn
@@ -553,5 +553,26 @@ though some are lighter than others.
 ~
 11 0 0 0 0 ac 0 0 0 0 0 0 0
 0 0 0 0
+1 40 0 0 0
+#160
+waterskin skin~
+a waterskin~
+A simple waterskin is lying here.~
+   Made of some sort of animal hide, the pieces have been sewn tightly together
+to form a receptacle that can hold water.
+~
+17 0 0 0 0 ap 0 0 0 0 0 0 0
+4 4 0 0
+1 40 0 0 0
+#161
+waterpouch pouch leather~
+a leather waterpouch~
+A leather waterpouch has been left here.~
+   Formed out of a few pieces of cheap leather that have been sewn tightly
+together, this waterpouch has a small opening on one side which can be capped to
+prevent water spilling out.
+~
+17 0 0 0 0 ap 0 0 0 0 0 0 0
+4 4 0 0
 1 40 0 0 0
 $~

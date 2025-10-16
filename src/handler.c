@@ -912,17 +912,20 @@ void extract_char_final(struct char_data *ch)
   if (GROUP(ch))
     leave_group(ch);
 
-  /* transfer objects to room, if any */
-  while (ch->carrying) {
-    obj = ch->carrying;
-    obj_from_char(obj);
-    obj_to_room(obj, IN_ROOM(ch));
-  }
+  /* Only drop items for NPCs or players not quitting cleanly. */
+  if (IS_NPC(ch) || !PLR_FLAGGED(ch, PLR_QUITING)) {
+    /* transfer objects to room, if any */
+    while (ch->carrying) {
+      obj = ch->carrying;
+      obj_from_char(obj);
+      obj_to_room(obj, IN_ROOM(ch));
+    }
 
-  /* transfer equipment to room, if any */
-  for (i = 0; i < NUM_WEARS; i++)
-    if (GET_EQ(ch, i))
-      obj_to_room(unequip_char(ch, i), IN_ROOM(ch));
+    /* transfer equipment to room, if any */
+    for (i = 0; i < NUM_WEARS; i++)
+      if (GET_EQ(ch, i))
+        obj_to_room(unequip_char(ch, i), IN_ROOM(ch));
+  }
 
   if (FIGHTING(ch))
     stop_fighting(ch);
@@ -962,6 +965,7 @@ void extract_char_final(struct char_data *ch)
   } else {
     save_char(ch);
     Crash_delete_crashfile(ch);
+    REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_QUITING);
   }
 
   /* If there's a descriptor, they're in the menu now. */

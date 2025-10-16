@@ -82,12 +82,9 @@ ACMD(do_quit)
 
     send_to_char(ch, "You step out-of-character and leave the world...\r\n");
 
-    /* We used to check here for duping attempts, but we may as well do it right
-     * in extract_char(), since there is no check if a player rents out and it
-     * can leave them in an equally screwy situation. */
-
-    if (CONFIG_FREE_RENT)
-      Crash_rentsave(ch, 0);
+    /* Save character and objects */
+    save_char(ch);
+    Crash_rentsave(ch, 0);
 
     /* Requirement: respawn in the same (possibly non-QUIT) room. */
     GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
@@ -112,12 +109,9 @@ ACMD(do_quit)
 
     send_to_char(ch, "Goodbye, friend.. Come back soon!\r\n");
 
-    /* We used to check here for duping attempts, but we may as well do it right
-     * in extract_char(), since there is no check if a player rents out and it
-     * can leave them in an equally screwy situation. */
-
-    if (CONFIG_FREE_RENT)
-      Crash_rentsave(ch, 0);
+    /* Save character and objects */
+    save_char(ch);
+    Crash_rentsave(ch, 0);
 
     /* Requirement: respawn in the same QUIT room they logged out in. */
     GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
@@ -129,6 +123,7 @@ ACMD(do_quit)
       ch->desc->snoop_by = NULL;
     }
 
+    SET_BIT_AR(PLR_FLAGS(ch), PLR_QUITING);
     extract_char(ch);   /* Char is saved before extracting. */
   }
 }
