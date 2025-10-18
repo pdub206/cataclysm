@@ -1283,9 +1283,8 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
   }
 
   if (IS_MOB(k))
-    send_to_char(ch, "Mob Spec-Proc: %s, NPC Bare Hand Dam: %dd%d\r\n",
-        (mob_index[GET_MOB_RNUM(k)].func ? get_spec_func_name(mob_index[GET_MOB_RNUM(k)].func) : "None"),
-	    k->mob_specials.damnodice, k->mob_specials.damsizedice);
+    send_to_char(ch, "Mob Spec-Proc: %s\r\n",
+        (mob_index[GET_MOB_RNUM(k)].func ? get_spec_func_name(mob_index[GET_MOB_RNUM(k)].func) : "None"));
 
   for (i = 0, j = k->carrying; j; j = j->next_content, i++);
   send_to_char(ch, "Carried: weight: %d, items: %d; Items in: inventory: %d, ", IS_CARRYING_W(k), IS_CARRYING_N(k), i);
@@ -4090,19 +4089,37 @@ ACMD (do_zcheck)
                           "- Is level %d (limit: 1-%d)\r\n",
                           GET_LEVEL(mob), MAX_LEVEL_ALLOWED);
 
-        /* avg. dam per round of combat */
-        avg_dam = (((mob->mob_specials.damsizedice / 2.0)));
-        if (avg_dam>MAX_MOB_DAM_ALLOWED && (found=1))
-          len += snprintf(buf + len, sizeof(buf) - len,
-                          "- average damage of %4.1f is too high (limit: %d)\r\n",
-                          avg_dam, MAX_MOB_DAM_ALLOWED);
+        /* --- 5e-style average unarmed damage check --- */
+        {
+          int prof = 0;
+          int str_mod = GET_ABILITY_MOD(GET_STR(mob));
+          int die_size;
 
-        if (mob->mob_specials.damsizedice == 1 &&
-            mob->mob_specials.damnodice == 1 &&
-            GET_LEVEL(mob) == 0 &&
-            (found=1))
-          len += snprintf(buf + len, sizeof(buf) - len,
-                          "- Needs to be fixed - %sAutogenerate!%s\r\n", CCYEL(ch, C_NRM), CCNRM(ch, C_NRM));
+          /* derive proficiency tier; mobs use their stored unarmed skill */
+          prof = GET_PROFICIENCY(GET_SKILL(mob, SKILL_UNARMED));
+
+          switch (prof) {
+            case 0:  die_size = 4; break; /* initial unarmed skill die size */
+            case 1:  die_size = 4; break;
+            case 2:  die_size = 6; break; /* ~40 skill level */
+            case 3:  die_size = 6; break;
+            case 4:  die_size = 8; break; /* ~80 skill level */
+            case 5:  die_size = 10; break; /* max skill level */
+            default: die_size = 12; break;
+          }
+
+          /* expected average damage = average roll + STR + proficiency */
+          avg_dam = ((die_size + 1) / 2.0) + str_mod + prof;
+
+          if (avg_dam > MAX_MOB_DAM_ALLOWED && (found=1))
+            len += snprintf(buf + len, sizeof(buf) - len,
+                            "- average unarmed damage of %4.1f is too high (limit: %d)\r\n",
+                            avg_dam, MAX_MOB_DAM_ALLOWED);
+
+          if (prof == 0 && str_mod <= 0 && (found=1))
+            len += snprintf(buf + len, sizeof(buf) - len,
+                            "- No unarmed combat proficiency set (add skill or weapon)\r\n");
+        }
 
         if (MOB_FLAGGED(mob, MOB_AGGRESSIVE) && (MOB_FLAGGED(mob, MOB_AGGR_GOOD) || MOB_FLAGGED(mob, MOB_AGGR_EVIL) || MOB_FLAGGED(mob, MOB_AGGR_NEUTRAL)) && (found=1))
 	 len += snprintf(buf + len, sizeof(buf) - len,

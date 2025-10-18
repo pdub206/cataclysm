@@ -227,7 +227,6 @@ static void init_mobile(struct char_data *mob)
 
   GET_HIT(mob) = GET_MANA(mob) = 1;
   GET_MAX_MANA(mob) = GET_MAX_MOVE(mob) = 100;
-  GET_NDD(mob) = GET_SDD(mob) = 1;
   GET_WEIGHT(mob) = 200;
   GET_HEIGHT(mob) = 198;
 
@@ -467,23 +466,26 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
   clear_screen(d);
 
   /* Color codes have to be used here, for count_color_codes to work */
-  sprintf(buf, "(range \ty%d\tn to \ty%d\tn)", GET_HIT(mob) + GET_MOVE(mob), (GET_HIT(mob) * GET_MANA(mob)) + GET_MOVE(mob));
+  sprintf(buf, "(range \ty%d\tn to \ty%d\tn)", GET_HIT(mob) + GET_MOVE(mob),
+          (GET_HIT(mob) * GET_MANA(mob)) + GET_MOVE(mob));
 
   /* Top section - standard stats */
   write_to_output(d,
   "-- Mob Number:  %s[%s%d%s]%s\r\n"
   "(%s1%s) Level:       %s[%s%4d%s]%s\r\n"
   "(%s2%s) %sAuto Set Stats (based on level)%s\r\n\r\n"
-  "Hit Points  (xdy+z):        Bare Hand Damage (xdy+z): \r\n"
-  "(%s3%s) HP NumDice:  %s[%s%5d%s]%s    (%s6%s) BHD NumDice:  %s[%s%5d%s]%s\r\n"
-  "(%s4%s) HP SizeDice: %s[%s%5d%s]%s    (%s7%s) BHD SizeDice: %s[%s%5d%s]%s\r\n"
-  "(%s5%s) HP Addition: %s[%s%5d%s]%s    (%s8%s) Alignment: %s[%s%5d%s]%s\r\n\r\n",
+  "Hit Points  (xdy+z):\r\n"
+  "(%s3%s) HP NumDice:  %s[%s%5d%s]%s\r\n"
+  "(%s4%s) HP SizeDice: %s[%s%5d%s]%s\r\n"
+  "(%s5%s) HP Addition: %s[%s%5d%s]%s\r\n"
+  "(%s8%s) Alignment:   %s[%s%5d%s]%s\r\n\r\n",
       cyn, yel, OLC_NUM(d), cyn, nrm,
       cyn, nrm, cyn, yel, GET_LEVEL(mob), cyn, nrm,
       cyn, nrm, cyn, nrm,
-      cyn, nrm, cyn, yel, GET_HIT(mob), cyn, nrm,   cyn, nrm, cyn, yel, GET_NDD(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_MANA(mob), cyn, nrm,  cyn, nrm, cyn, yel, GET_SDD(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_MOVE(mob), cyn, nrm,  cyn, nrm, cyn, yel, GET_ALIGNMENT(mob), cyn, nrm
+      cyn, nrm, cyn, yel, GET_HIT(mob), cyn, nrm,
+      cyn, nrm, cyn, yel, GET_MANA(mob), cyn, nrm,
+      cyn, nrm, cyn, yel, GET_MOVE(mob), cyn, nrm,
+      cyn, nrm, cyn, yel, GET_ALIGNMENT(mob), cyn, nrm
       );
 
   if (CONFIG_MEDIT_ADVANCED) {
@@ -688,14 +690,6 @@ void medit_parse(struct descriptor_data *d, char *arg)
       break;
     case '5':
       OLC_MODE(d) = MEDIT_ADD_HP;
-      i++;
-      break;
-    case '6':
-      OLC_MODE(d) = MEDIT_NDD;
-      i++;
-      break;
-    case '7':
-      OLC_MODE(d) = MEDIT_SDD;
       i++;
       break;
     case '8':
@@ -908,18 +902,6 @@ void medit_parse(struct descriptor_data *d, char *arg)
     GET_SEX(OLC_MOB(d)) = LIMIT(i - 1, 0, NUM_GENDERS - 1);
     break;
 
-  case MEDIT_NDD:
-    GET_NDD(OLC_MOB(d)) = LIMIT(i, 0, 30);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
-
-  case MEDIT_SDD:
-    GET_SDD(OLC_MOB(d)) = LIMIT(i, 0, 127);
-    OLC_VAL(d) = TRUE;
-    medit_disp_stats_menu(d);
-    return;
-
   case MEDIT_NUM_HP_DICE:
     GET_HIT(OLC_MOB(d)) = LIMIT(i, 0, 30);
     OLC_VAL(d) = TRUE;
@@ -1082,9 +1064,6 @@ void medit_autoroll_stats(struct descriptor_data *d)
   GET_MOVE(OLC_MOB(d))    = mob_lev * 10;        /* hit point bonus (mobs don't use movement points) */
   GET_HIT(OLC_MOB(d))     = mob_lev / 5;         /* number of hitpoint dice */
   GET_MANA(OLC_MOB(d))    = mob_lev / 5;         /* size of hitpoint dice   */
-
-  GET_NDD(OLC_MOB(d))     = MAX(1, mob_lev / 6); /* number damage dice 1-5  */
-  GET_SDD(OLC_MOB(d))     = MAX(2, mob_lev / 6); /* size of damage dice 2-5 */
 
   /* 'Advanced' stats are only rolled if advanced options are enabled */
   if (CONFIG_MEDIT_ADVANCED) {

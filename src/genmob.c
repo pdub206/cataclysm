@@ -387,14 +387,14 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
     fprintf(fd, "%s", convert_from_tabs(buf));
 
     fprintf(fd, "%d %d %d %d %d %d %d %d %d E\n"
-        "%d %dd%d+%d %dd%d\n",
+        "%d %dd%d+%d\n",
         MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
         MOB_FLAGS(mob)[2], MOB_FLAGS(mob)[3],
         AFF_FLAGS(mob)[0], AFF_FLAGS(mob)[1],
         AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3],
         GET_ALIGNMENT(mob),
         GET_LEVEL(mob), GET_HIT(mob),
-        GET_MANA(mob), GET_MOVE(mob), GET_NDD(mob), GET_SDD(mob));
+        GET_MANA(mob), GET_MOVE(mob));
 
     fprintf(fd, "%d %d %d\n",
       GET_POS(mob), GET_DEFAULT_POS(mob), GET_SEX(mob)

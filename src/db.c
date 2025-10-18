@@ -1552,10 +1552,10 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
     exit(1);
   }
 
-  if (sscanf(line, " %d %dd%d+%d %dd%d ",
-	  t, t + 1, t + 2, t + 3, t + 4, t + 5) != 6) {
+  if (sscanf(line, " %d %dd%d+%d ",
+	  t, t + 1, t + 2, t + 3) != 4) {
     log("SYSERR: Format error in mob #%d, first line after S flag\n"
-	"...expecting line of form '# #d#+# #d#'", nr);
+	"...expecting line of form '# #d#+#'", nr);
     exit(1);
   }
 
@@ -1569,9 +1569,6 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
 
   GET_MAX_MANA(mob_proto + i) = 10;
   GET_MAX_MOVE(mob_proto + i) = 50;
-
-  mob_proto[i].mob_specials.damnodice = t[4];
-  mob_proto[i].mob_specials.damsizedice = t[5];
 
   if (!get_line(mob_f, line)) {
     log("SYSERR: Format error in last line of mob #%d\n"

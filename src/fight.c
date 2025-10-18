@@ -862,6 +862,32 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
     if (!IS_NPC(ch))
       attack_mod += GET_PROFICIENCY(GET_SKILL(ch, skillnum));
 
+    /* --- UNARMED ATTACK HANDLING --- */
+    if (!wielded) {
+      int prof_bonus = (!IS_NPC(ch)) ? GET_PROFICIENCY(GET_SKILL(ch, SKILL_UNARMED)) : 0;
+      int str_mod = GET_ABILITY_MOD(GET_STR(ch));
+      int die_size;
+
+      /* Simple scaling by proficiency tier */
+      switch (prof_bonus) {
+        case 0:  die_size = 4; break;  /* untrained */
+        case 1:  die_size = 6; break;  /* trained */
+        case 2:  die_size = 8; break;  /* expert */
+        default: die_size = 10; break; /* master or above */
+      }
+
+      /* NPC fallback scaling */
+      if (IS_NPC(ch) && prof_bonus <= 0) {
+        prof_bonus = MIN(6, (GET_LEVEL(ch) / 4)); /* level scaling */
+      }
+
+      /* base damage roll for unarmed attacks */
+      dam = dice(1, die_size) + str_mod + prof_bonus;
+
+      /* mark attack type for damage() messaging */
+      w_type = SKILL_UNARMED + TYPE_HIT;
+    }
+
     /* Weapon magic (cap +3) */
     if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {
       int wmag = GET_OBJ_VAL(wielded, VAL_ARMOR_MAGIC_BONUS);
@@ -886,8 +912,12 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
 
     /* Apply result */
     if (hit_success) {
-      /* Roll damage up front (needed for shield durability) */
-      dam = roll_damage(ch, victim, wielded, w_type);
+      /* Roll damage up front (needed for shield durability)
+       * If we are unarmed, dam was already rolled above.
+       * If wielding a weapon, roll normally.
+       */
+      if (wielded)
+        dam = roll_damage(ch, victim, wielded, w_type);
 
       /* --- SHIELD BLOCK CHECK ---
        * Only happens if an attack actually lands.

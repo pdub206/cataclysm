@@ -252,43 +252,41 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define ZEDIT_ZONE_CLAIM              26
 
 /* Submodes of MEDIT connectedness. */
-#define MEDIT_MAIN_MENU            	0
-#define MEDIT_KEYWORD               1
-#define MEDIT_S_DESC                2
-#define MEDIT_L_DESC                3
-#define MEDIT_D_DESC                4
-#define MEDIT_NPC_FLAGS             5
-#define MEDIT_AFF_FLAGS             6
-#define MEDIT_CONFIRM_SAVESTRING    7
-#define MEDIT_STATS_MENU            8
+#define MEDIT_MAIN_MENU            	    0
+#define MEDIT_KEYWORD                   1
+#define MEDIT_S_DESC                    2
+#define MEDIT_L_DESC                    3
+#define MEDIT_D_DESC                    4
+#define MEDIT_NPC_FLAGS                 5
+#define MEDIT_AFF_FLAGS                 6
+#define MEDIT_CONFIRM_SAVESTRING        7
+#define MEDIT_STATS_MENU                8
 
 /* Numerical responses. */
 #define MEDIT_NUMERICAL_RESPONSE	       10
 #define MEDIT_SEX			                11
-#define MEDIT_NDD			                12
-#define MEDIT_SDD			                13
-#define MEDIT_NUM_HP_DICE		          14
-#define MEDIT_SIZE_HP_DICE		          15
-#define MEDIT_ADD_HP			             16
-#define MEDIT_POS			                17
-#define MEDIT_DEFAULT_POS		          18
-#define MEDIT_ATTACK			             19
-#define MEDIT_LEVEL			             20
-#define MEDIT_ALIGNMENT			          21
-#define MEDIT_DELETE                    22
-#define MEDIT_COPY                      23
-#define MEDIT_STR                       24
-#define MEDIT_INT                       25
-#define MEDIT_WIS                       26
-#define MEDIT_DEX                       27
-#define MEDIT_CON                       28
-#define MEDIT_CHA                       29
-#define MEDIT_SAVE_STR                  30
-#define MEDIT_SAVE_DEX                  31
-#define MEDIT_SAVE_CON                  32
-#define MEDIT_SAVE_INT                  33
-#define MEDIT_SAVE_WIS                  34
-#define MEDIT_SAVE_CHA                  35
+#define MEDIT_NUM_HP_DICE		          12
+#define MEDIT_SIZE_HP_DICE		          13
+#define MEDIT_ADD_HP			             14
+#define MEDIT_POS			                15
+#define MEDIT_DEFAULT_POS		          16
+#define MEDIT_ATTACK			             17
+#define MEDIT_LEVEL			             18
+#define MEDIT_ALIGNMENT			          19
+#define MEDIT_DELETE                    20
+#define MEDIT_COPY                      21
+#define MEDIT_STR                       22
+#define MEDIT_INT                       23
+#define MEDIT_WIS                       24
+#define MEDIT_DEX                       25
+#define MEDIT_CON                       26
+#define MEDIT_CHA                       27
+#define MEDIT_SAVE_STR                  28
+#define MEDIT_SAVE_DEX                  29
+#define MEDIT_SAVE_CON                  30
+#define MEDIT_SAVE_INT                  31
+#define MEDIT_SAVE_WIS                  32
+#define MEDIT_SAVE_CHA                  33
 
 /* Submodes of SEDIT connectedness. */
 #define SEDIT_MAIN_MENU              	0
