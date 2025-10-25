@@ -36,7 +36,6 @@ static void auto_equip(struct char_data *ch, struct obj_data *obj, int location)
 static void Crash_restore_weight(struct obj_data *obj);
 static int Crash_load_objs(struct char_data *ch);
 static int handle_obj(struct obj_data *obj, struct char_data *ch, int locate, struct obj_data **cont_rows);
-static int objsave_write_rentcode(FILE *fl, int rentcode, int cost_per_day, struct char_data *ch);
 
 /* Writes one object record to FILE.  Old name: Obj_to_store().
  * Updated to save all NUM_OBJ_VAL_POSITIONS values instead of only 4. */
@@ -524,24 +523,6 @@ void Crash_rentsave(struct char_data *ch, int cost)
     return;
 
   Crash_crashsave(ch);
-}
-
-static int objsave_write_rentcode(FILE *fl, int rentcode, int cost_per_day, struct char_data *ch)
-{
-  if (fprintf(fl, "%d %ld %d %d %d %d\r\n",
-          rentcode,
-          (long) time(0),
-          cost_per_day,
-          GET_GOLD(ch),
-          GET_BANK_GOLD(ch),
-          0)
-       < 1)
-    {
-       perror("Syserr: Writing rent code");
-       return FALSE;
-    }
-  return TRUE;
-
 }
 
 void Crash_save_all(void)

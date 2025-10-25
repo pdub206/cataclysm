@@ -130,7 +130,7 @@ ACMD(do_backstab)
   int roll, atk_bonus, total, target_ac;
   bool crit_success = FALSE, crit_fail = FALSE;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_BACKSTAB)) {
+  if (!GET_SKILL(ch, SKILL_BACKSTAB)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -314,7 +314,7 @@ ACMD(do_bash)
 
   one_argument(argument, arg);
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_BASH)) {
+  if (!GET_SKILL(ch, SKILL_BASH)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
@@ -405,7 +405,7 @@ ACMD(do_rescue)
   struct char_data *vict, *tmp_ch;
   int roll, bonus, total, dc;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_RESCUE)) {
+  if (!GET_SKILL(ch, SKILL_RESCUE)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -576,7 +576,7 @@ EVENTFUNC(event_whirlwind)
 ACMD(do_whirlwind)
 {
   
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_WHIRLWIND)) {
+  if (!GET_SKILL(ch, SKILL_WHIRLWIND)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
@@ -618,7 +618,7 @@ ACMD(do_kick)
   int roll, atk_bonus, total, target_ac;
   bool crit_success = FALSE, crit_miss = FALSE;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_KICK)) {
+  if (!GET_SKILL(ch, SKILL_KICK)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }

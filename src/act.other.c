@@ -195,7 +195,7 @@ ACMD(do_sneak)
   int rolla, rollb, roll, bonus, total, dc;
   bool disadv = FALSE;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_SNEAK)) {
+  if (!GET_SKILL(ch, SKILL_SNEAK)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -259,7 +259,7 @@ ACMD(do_hide)
   int rolla, rollb, roll, bonus, total, dc;
   bool disadv = FALSE;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_HIDE)) {
+  if (!GET_SKILL(ch, SKILL_HIDE)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -323,7 +323,7 @@ ACMD(do_perception)
   int roll, bonus, total;
   int found_chars = 0, found_objs = 0;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_PERCEPTION)) {
+  if (!GET_SKILL(ch, SKILL_PERCEPTION)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -404,7 +404,7 @@ ACMD(do_steal)
   char vict_name[MAX_INPUT_LENGTH], obj_name[MAX_INPUT_LENGTH];
   int percent, gold, eq_pos, pcsteal = 0, ohoh = 0;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_STEAL)) {
+  if (!GET_SKILL(ch, SKILL_STEAL)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -524,9 +524,6 @@ ACMD(do_steal)
 
 ACMD(do_skills)
 {
-
-  if (IS_NPC(ch))
-    return;
 
   list_skills(ch);
 

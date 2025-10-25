@@ -248,7 +248,10 @@ int load_char(const char *name, struct char_data *ch)
     /* Character initializations. Necessary to keep some things straight. */
     ch->affected = NULL;
     for (i = 1; i <= MAX_SKILLS; i++)
-      GET_SKILL(ch, i) = 0;
+      if (IS_NPC(ch))
+        ch->mob_specials.skills[i] = 0;
+      else
+        ch->player_specials->saved.skills[i] = 0;
     GET_SEX(ch) = PFDEF_SEX;
     GET_CLASS(ch) = PFDEF_CLASS;
     GET_LEVEL(ch) = PFDEF_LEVEL;
@@ -479,7 +482,10 @@ int load_char(const char *name, struct char_data *ch)
   /* initialization for imms */
   if (GET_LEVEL(ch) >= LVL_IMMORT) {
     for (i = 1; i <= MAX_SKILLS; i++)
-      GET_SKILL(ch, i) = 100;
+      if (IS_NPC(ch))
+        ch->mob_specials.skills[i] = 100;
+      else
+        ch->player_specials->saved.skills[i] = 100;
     GET_COND(ch, HUNGER) = -1;
     GET_COND(ch, THIRST) = -1;
     GET_COND(ch, DRUNK) = -1;
@@ -868,8 +874,13 @@ static void load_skills(FILE *fl, struct char_data *ch)
   do {
     get_line(fl, line);
     sscanf(line, "%d %d", &num, &num2);
-      if (num != 0)
-	GET_SKILL(ch, num) = num2;
+
+    if (num != 0) {
+      if (IS_NPC(ch))
+        ch->mob_specials.skills[num] = num2;
+      else
+        ch->player_specials->saved.skills[num] = num2;
+    }
   } while (num != 0);
 }
 

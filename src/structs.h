@@ -1014,6 +1014,7 @@ struct mob_special_data
   memory_rec *memory; /**< List of PCs to remember */
   byte attack_type;   /**< The primary attack type (bite, sting, hit, etc.) */
   byte default_pos;   /**< Default position (standing, sleeping, etc.) */
+  byte skills[MAX_SKILLS];     /* NPC-specific skill proficiency (0-100) */
 };
 
 /** An affect structure. */

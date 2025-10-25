@@ -327,37 +327,62 @@ int save_mobiles(zone_rnum rznum)
 
 int write_mobile_espec(mob_vnum mvnum, struct char_data *mob, FILE *fd)
 {
-  if (GET_ATTACK(mob) != 0)
-    fprintf(fd, "BareHandAttack: %d\n", GET_ATTACK(mob));
-  if (GET_STR(mob) != 11)
+  int count = 0;
+
+  /* --- Ability scores (only write non-defaults) --- */
+  if (GET_STR(mob) != 11) {
     fprintf(fd, "Str: %d\n", GET_STR(mob));
-  if (GET_DEX(mob) != 11)
+    count++;
+  }
+  if (GET_DEX(mob) != 11) {
     fprintf(fd, "Dex: %d\n", GET_DEX(mob));
-  if (GET_INT(mob) != 11)
+    count++;
+  }
+  if (GET_INT(mob) != 11) {
     fprintf(fd, "Int: %d\n", GET_INT(mob));
-  if (GET_WIS(mob) != 11)
+    count++;
+  }
+  if (GET_WIS(mob) != 11) {
     fprintf(fd, "Wis: %d\n", GET_WIS(mob));
-  if (GET_CON(mob) != 11)
+    count++;
+  }
+  if (GET_CON(mob) != 11) {
     fprintf(fd, "Con: %d\n", GET_CON(mob));
-  if (GET_CHA(mob) != 11)
+    count++;
+  }
+  if (GET_CHA(mob) != 11) {
     fprintf(fd, "Cha: %d\n", GET_CHA(mob));
+    count++;
+  }
 
-  /* --- New ability-based saving throws --- */
-  if (GET_SAVE(mob, ABIL_STR) != 0)
+  /* --- 5e-style saving throws --- */
+  if (GET_SAVE(mob, ABIL_STR) != 0) {
     fprintf(fd, "SaveStr: %d\n", GET_SAVE(mob, ABIL_STR));
-  if (GET_SAVE(mob, ABIL_DEX) != 0)
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_DEX) != 0) {
     fprintf(fd, "SaveDex: %d\n", GET_SAVE(mob, ABIL_DEX));
-  if (GET_SAVE(mob, ABIL_CON) != 0)
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_CON) != 0) {
     fprintf(fd, "SaveCon: %d\n", GET_SAVE(mob, ABIL_CON));
-  if (GET_SAVE(mob, ABIL_INT) != 0)
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_INT) != 0) {
     fprintf(fd, "SaveInt: %d\n", GET_SAVE(mob, ABIL_INT));
-  if (GET_SAVE(mob, ABIL_WIS) != 0)
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_WIS) != 0) {
     fprintf(fd, "SaveWis: %d\n", GET_SAVE(mob, ABIL_WIS));
-  if (GET_SAVE(mob, ABIL_CHA) != 0)
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_CHA) != 0) {
     fprintf(fd, "SaveCha: %d\n", GET_SAVE(mob, ABIL_CHA));
+    count++;
+  }
 
-  fputs("E\n", fd);
-  return TRUE;
+  /* DO NOT print "E" here — handled by write_mobile_record() */
+  return count;
 }
 
 int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
@@ -371,59 +396,77 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
   strip_cr(strncpy(ldesc, GET_LDESC(mob), MAX_STRING_LENGTH - 1));
   strip_cr(strncpy(ddesc, GET_DDESC(mob), MAX_STRING_LENGTH - 1));
 
-  int n = snprintf(buf, MAX_STRING_LENGTH, "#%d\n"
-		"%s%c\n"
-		"%s%c\n"
-		"%s%c\n"
-		"%s%c\n",
-	mvnum,
-	GET_ALIAS(mob), STRING_TERMINATOR,
-	GET_SDESC(mob), STRING_TERMINATOR,
-	ldesc, STRING_TERMINATOR,
-	ddesc, STRING_TERMINATOR
-  );
+  int n = snprintf(buf, MAX_STRING_LENGTH,
+                   "#%d\n"
+                   "%s%c\n"
+                   "%s%c\n"
+                   "%s%c\n"
+                   "%s%c\n",
+                   mvnum,
+                   GET_ALIAS(mob), STRING_TERMINATOR,
+                   GET_SDESC(mob), STRING_TERMINATOR,
+                   ldesc, STRING_TERMINATOR,
+                   ddesc, STRING_TERMINATOR);
 
-  if (n < MAX_STRING_LENGTH) {
-    fprintf(fd, "%s", convert_from_tabs(buf));
-
-    fprintf(fd, "%d %d %d %d %d %d %d %d %d E\n"
-        "%d %dd%d+%d\n",
-        MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
-        MOB_FLAGS(mob)[2], MOB_FLAGS(mob)[3],
-        AFF_FLAGS(mob)[0], AFF_FLAGS(mob)[1],
-        AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3],
-        GET_ALIGNMENT(mob),
-        GET_LEVEL(mob), GET_HIT(mob),
-        GET_MANA(mob), GET_MOVE(mob));
-
-    fprintf(fd, "%d %d %d\n",
-      GET_POS(mob), GET_DEFAULT_POS(mob), GET_SEX(mob)
-    );
-
-    /* Write any E-specs */
-    if (write_mobile_espec(mvnum, mob, fd) < 0)
-      log("SYSERR: GenOLC: Error writing E-specs for mobile #%d.", mvnum);
-
-    /* --- Persist prototype loadout lines (one per entry) --- */
-    for (struct mob_loadout *e = mob->proto_loadout; e; e = e->next) {
-      fprintf(fd, "L %d %d %d\n",
-              (int)e->wear_pos,
-              (int)e->vnum,
-              MAX(1, e->quantity));
-    }
-
-    /* DG scripts after loadout lines */
-    script_save_to_disk(fd, mob, MOB_TRIGGER);
-
-#if CONFIG_GENOLC_MOBPROG
-    if (write_mobile_mobprog(mvnum, mob, fd) < 0)
-      log("SYSERR: GenOLC: Error writing MobProgs for mobile #%d.", mvnum);
-#endif
-  } else {
+  if (n >= MAX_STRING_LENGTH) {
     mudlog(BRF, LVL_BUILDER, TRUE,
            "SYSERR: Could not save mobile #%d due to size (%d > maximum of %d)",
            mvnum, n, MAX_STRING_LENGTH);
+    return TRUE;
   }
+
+  fprintf(fd, "%s", convert_from_tabs(buf));
+
+  /* --- FLAGS/AFFECT/ALIGN line --- */
+  fprintf(fd,
+          "%d %d %d %d %d %d %d %d %d E\n",
+          MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
+          MOB_FLAGS(mob)[2], MOB_FLAGS(mob)[3],
+          AFF_FLAGS(mob)[0], AFF_FLAGS(mob)[1],
+          AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3],
+          GET_ALIGNMENT(mob));
+
+  /* --- Level, hitdice, mana, move --- */
+  fprintf(fd, "%d %dd%d+%d\n",
+          GET_LEVEL(mob),
+          GET_HIT(mob),
+          GET_MANA(mob),
+          GET_MOVE(mob));
+
+  /* --- Position / default position / sex --- */
+  fprintf(fd, "%d %d %d\n",
+          GET_POS(mob),
+          GET_DEFAULT_POS(mob),
+          GET_SEX(mob));
+
+  /* --- Enhanced (E-spec + Skills) --- */
+  if (write_mobile_espec(mvnum, mob, fd) < 0)
+    log("SYSERR: GenOLC: Error writing E-specs for mobile #%d.", mvnum);
+
+  /* Write NPC skills (if any set) */
+  for (int s = 0; s < MAX_SKILLS; s++) {
+    if (mob->mob_specials.skills[s] > 0)
+      fprintf(fd, "Skill %d %d\n", s, mob->mob_specials.skills[s]);
+  }
+
+  /* Single proper terminator */
+  fprintf(fd, "E\n");
+
+  /* --- Loadout lines --- */
+  for (struct mob_loadout *e = mob->proto_loadout; e; e = e->next) {
+    fprintf(fd, "L %d %d %d\n",
+            (int)e->wear_pos,
+            (int)e->vnum,
+            MAX(1, e->quantity));
+  }
+
+  /* --- DG Scripts --- */
+  script_save_to_disk(fd, mob, MOB_TRIGGER);
+
+#if CONFIG_GENOLC_MOBPROG
+  if (write_mobile_mobprog(mvnum, mob, fd) < 0)
+    log("SYSERR: GenOLC: Error writing MobProgs for mobile #%d.", mvnum);
+#endif
 
   return TRUE;
 }

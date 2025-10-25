@@ -432,6 +432,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  "%s7%s) Default   : %s%s\r\n"
 	  "%s8%s) Attack    : %s%s\r\n"
       "%s9%s) Stats Menu...\r\n"
+      "%s0%s) Skills Menu...\r\n"
 	  "%sA%s) NPC Flags : %s%s\r\n"
 	  "%sB%s) AFF Flags : %s%s\r\n"
           "%sS%s) Script    : %s%s\r\n"
@@ -443,6 +444,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  grn, nrm, yel, position_types[(int)GET_POS(mob)],
 	  grn, nrm, yel, position_types[(int)GET_DEFAULT_POS(mob)],
 	  grn, nrm, yel, attack_hit_text[(int)GET_ATTACK(mob)].singular,
+	  grn, nrm,
 	  grn, nrm,
 	  grn, nrm, cyn, flags,
 	  grn, nrm, cyn, flag2,
@@ -491,27 +493,27 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
   if (CONFIG_MEDIT_ADVANCED) {
     /* Bottom section - non-standard stats, togglable in cedit */
     write_to_output(d,
-    "               %sAttributes%s                   %sSaving Throws%s\r\n"
-    "(%sF%s) Str: %s[%s%2d%s]%s             (%sR%s) Save STR  %s[%s%3d%s]%s\r\n"
-    "(%sG%s) Int: %s[%s%3d%s]%s             (%sS%s) Save DEX  %s[%s%3d%s]%s\r\n"
-    "(%sH%s) Wis: %s[%s%3d%s]%s             (%sT%s) Save CON  %s[%s%3d%s]%s\r\n"
-    "(%sI%s) Dex: %s[%s%3d%s]%s             (%sU%s) Save INT  %s[%s%3d%s]%s\r\n"
-    "(%sJ%s) Con: %s[%s%3d%s]%s             (%sV%s) Save WIS  %s[%s%3d%s]%s\r\n"
+    "%sAttributes                 Saving Throws\r\n"
+    "(%sF%s) Str: %s[%s%3d%s]%s             (%sR%s) Save STR  %s[%s%3d%s]%s\r\n"
+    "(%sG%s) Dex: %s[%s%3d%s]%s             (%sS%s) Save DEX  %s[%s%3d%s]%s\r\n"
+    "(%sH%s) Con: %s[%s%3d%s]%s             (%sT%s) Save CON  %s[%s%3d%s]%s\r\n"
+    "(%sI%s) Int: %s[%s%3d%s]%s             (%sU%s) Save INT  %s[%s%3d%s]%s\r\n"
+    "(%sJ%s) Wis: %s[%s%3d%s]%s             (%sV%s) Save WIS  %s[%s%3d%s]%s\r\n"
     "(%sK%s) Cha: %s[%s%3d%s]%s             (%sW%s) Save CHA  %s[%s%3d%s]%s\r\n\r\n",
-        nrm, cyn, nrm, cyn,
+        nrm,
         cyn, nrm, cyn, yel, GET_STR(mob), cyn, nrm,
               cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_STR), cyn, nrm,
 
-        cyn, nrm, cyn, yel, GET_INT(mob), cyn, nrm,
+        cyn, nrm, cyn, yel, GET_DEX(mob), cyn, nrm,
               cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_DEX), cyn, nrm,
 
-        cyn, nrm, cyn, yel, GET_WIS(mob), cyn, nrm,
+        cyn, nrm, cyn, yel, GET_CON(mob), cyn, nrm,
               cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_CON), cyn, nrm,
 
-        cyn, nrm, cyn, yel, GET_DEX(mob), cyn, nrm,
+        cyn, nrm, cyn, yel, GET_INT(mob), cyn, nrm,
               cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_INT), cyn, nrm,
 
-        cyn, nrm, cyn, yel, GET_CON(mob), cyn, nrm,
+        cyn, nrm, cyn, yel, GET_WIS(mob), cyn, nrm,
               cyn, nrm, cyn, yel, GET_SAVE(mob, ABIL_WIS), cyn, nrm,
 
         cyn, nrm, cyn, yel, GET_CHA(mob), cyn, nrm,
@@ -523,6 +525,37 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
   write_to_output(d, "(%sQ%s) Quit to main menu\r\nEnter choice : ", cyn, nrm);
 
   OLC_MODE(d) = MEDIT_STATS_MENU;
+}
+
+static void medit_disp_skill_menu(struct descriptor_data *d)
+{
+  struct char_data *mob = OLC_MOB(d);
+  int count = 0;
+
+  clear_screen(d);
+  write_to_output(d, "-- %sSkill Editor%s for %s%s%s\r\n",
+                  cyn, nrm, yel, GET_SDESC(mob), nrm);
+
+  /* List all skills that exist (non-zero entries only) */
+  for (int i = 0; i < MAX_SKILLS; i++) {
+    if (mob->mob_specials.skills[i] > 0) {
+      write_to_output(d, "%3d) %-25s : %3d%%\r\n",
+                      i, spell_info[i].name, mob->mob_specials.skills[i]);
+      count++;
+    }
+  }
+
+  if (count == 0)
+    write_to_output(d, "No skills set.\r\n");
+
+  write_to_output(d, "\r\n"
+                       "%sA%s) Add / modify skill\r\n"
+                       "%sD%s) Delete skill\r\n"
+                       "%sQ%s) Return to main menu\r\n"
+                       "Enter choice : ",
+                       grn, nrm, grn, nrm, grn, nrm);
+
+  OLC_MODE(d) = MEDIT_SKILL_MENU;
 }
 
 void medit_parse(struct descriptor_data *d, char *arg)
@@ -625,6 +658,10 @@ void medit_parse(struct descriptor_data *d, char *arg)
       OLC_MODE(d) = MEDIT_STATS_MENU;
       medit_disp_stats_menu(d);
       return;
+    case '0':  /* Enter skill sub-menu */
+      OLC_MODE(d) = MEDIT_SKILL_MENU;
+      medit_disp_skill_menu(d);
+      return;
     case 'a':
     case 'A':
       OLC_MODE(d) = MEDIT_NPC_FLAGS;
@@ -711,7 +748,7 @@ void medit_parse(struct descriptor_data *d, char *arg)
         write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
         return;
 	  }
-      OLC_MODE(d) = MEDIT_INT;
+      OLC_MODE(d) = MEDIT_DEX;
       i++;
       break;
     case 'h':
@@ -720,7 +757,7 @@ void medit_parse(struct descriptor_data *d, char *arg)
         write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
         return;
 	  }
-      OLC_MODE(d) = MEDIT_WIS;
+      OLC_MODE(d) = MEDIT_CON;
       i++;
       break;
     case 'i':
@@ -729,7 +766,7 @@ void medit_parse(struct descriptor_data *d, char *arg)
         write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
         return;
 	  }
-      OLC_MODE(d) = MEDIT_DEX;
+      OLC_MODE(d) = MEDIT_INT;
       i++;
       break;
     case 'j':
@@ -738,7 +775,7 @@ void medit_parse(struct descriptor_data *d, char *arg)
         write_to_output(d, "Invalid Choice!\r\nEnter Choice : ");
         return;
 	  }
-      OLC_MODE(d) = MEDIT_CON;
+      OLC_MODE(d) = MEDIT_WIS;
       i++;
       break;
     case 'k':
@@ -829,6 +866,72 @@ void medit_parse(struct descriptor_data *d, char *arg)
     else
       write_to_output(d, "Oops...\r\n");
     return;
+
+  case MEDIT_SKILL_MENU:
+    switch (*arg) {
+      case 'q':
+      case 'Q':
+        medit_disp_menu(d);
+        return;
+      case 'a':
+      case 'A':
+        write_to_output(d, "Enter skill name to add or modify: ");
+        OLC_MODE(d) = MEDIT_SKILL_EDIT;
+        return;
+      case 'd':
+      case 'D':
+        write_to_output(d, "Enter skill name to delete: ");
+        OLC_MODE(d) = MEDIT_SKILL_EDIT;
+        OLC_VAL(d) = 1;  /* delete mode */
+        return;
+      default:
+        medit_disp_skill_menu(d);
+        return;
+    }
+    break;
+
+  case MEDIT_SKILL_EDIT: {
+    char skillname[MAX_INPUT_LENGTH];
+    int snum;
+
+    skip_spaces(&arg);
+    strlcpy(skillname, arg, sizeof(skillname));
+    snum = find_skill_num(skillname);
+
+    if (snum <= 0 || snum >= MAX_SKILLS) {
+      write_to_output(d, "Invalid skill.\r\n");
+      medit_disp_skill_menu(d);
+      return;
+    }
+
+    /* Delete mode */
+    if (OLC_VAL(d) == 1) {
+      OLC_MOB(d)->mob_specials.skills[snum] = 0;
+      write_to_output(d, "Removed %s.\r\n", spell_info[snum].name);
+      OLC_VAL(d) = 0;
+      medit_disp_skill_menu(d);
+      return;
+    }
+
+    write_to_output(d, "Enter skill value (0-100): ");
+    OLC_VAL(d) = snum;
+    OLC_MODE(d) = MEDIT_SKILL_EDIT + 1;
+    return;
+  }
+  break;
+
+  case MEDIT_SKILL_EDIT + 1: {
+    int val = atoi(arg);
+    int snum = OLC_VAL(d);
+
+    val = MAX(0, MIN(100, val));
+    OLC_MOB(d)->mob_specials.skills[snum] = (byte)val;
+
+    write_to_output(d, "%s set to %d%%.\r\n", spell_info[snum].name, val);
+    medit_disp_skill_menu(d);
+    return;
+  }
+  break;
 
   case OLC_SCRIPT_EDIT:
     if (dg_script_edit_parse(d, arg)) return;

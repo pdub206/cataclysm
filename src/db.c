@@ -1597,42 +1597,26 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
 }
 
 /* interpret_espec is the function that takes espec keywords and values and
- * assigns the correct value to the mob as appropriate.  Adding new e-specs is
- * absurdly easy -- just add a new CASE statement to this function! No other
- * changes need to be made anywhere in the code.
- * CASE		: Requires a parameter through 'value'. */
-#define CASE(test)	\
-	if (value && !matched && !str_cmp(keyword, test) && (matched = TRUE))
-#define RANGE(low, high)	\
-	(num_arg = MAX((low), MIN((high), (num_arg))))
+ * assigns the correct value to the mob as appropriate. Adding new e-specs is
+ * straightforward: just add a new CASE() block. */
+#define CASE(test) \
+  if (value && !matched && !str_cmp(keyword, test) && (matched = TRUE))
+#define RANGE(low, high) \
+  (num_arg = MAX((low), MIN((high), (num_arg))))
 
 static void interpret_espec(const char *keyword, const char *value, int i, int nr)
 {
-  int num_arg = 0, matched = FALSE;
+  int num_arg = 0;
+  bool matched = FALSE;
 
-  /* If there isn't a colon, there is no value.  While Boolean options are
-   * possible, we don't actually have any.  Feel free to make some. */
+  /* Defensive check: if there's a value, convert to int */
   if (value)
     num_arg = atoi(value);
 
-  CASE("BareHandAttack") {
-    RANGE(0, NUM_ATTACK_TYPES - 1);
-    mob_proto[i].mob_specials.attack_type = num_arg;
-  }
-
+  /* --- Ability Scores --- */
   CASE("Str") {
     RANGE(3, 25);
     mob_proto[i].real_abils.str = num_arg;
-  }
-
-  CASE("Int") {
-    RANGE(3, 25);
-    mob_proto[i].real_abils.intel = num_arg;
-  }
-
-  CASE("Wis") {
-    RANGE(3, 25);
-    mob_proto[i].real_abils.wis = num_arg;
   }
 
   CASE("Dex") {
@@ -1645,12 +1629,22 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
     mob_proto[i].real_abils.con = num_arg;
   }
 
+  CASE("Int") {
+    RANGE(3, 25);
+    mob_proto[i].real_abils.intel = num_arg;
+  }
+
+  CASE("Wis") {
+    RANGE(3, 25);
+    mob_proto[i].real_abils.wis = num_arg;
+  }
+
   CASE("Cha") {
     RANGE(3, 25);
     mob_proto[i].real_abils.cha = num_arg;
   }
 
-  /* --- New 5e-style saving throw keywords --- */
+  /* --- 5e-style Saving Throws --- */
   CASE("SaveStr") {
     RANGE(0, 100);
     mob_proto[i].char_specials.saved.saving_throws[ABIL_STR] = num_arg;
@@ -1681,42 +1675,100 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
     mob_proto[i].char_specials.saved.saving_throws[ABIL_CHA] = num_arg;
   }
 
+  /* --- Debug + Fallback --- */
   if (!matched) {
+    log("DEBUG: Unmatched espec line '%s' value '%s' in mob #%d",
+        keyword, value ? value : "(null)", nr);
     log("SYSERR: Warning: unrecognized espec keyword %s in mob #%d",
-	    keyword, nr);
+        keyword, nr);
   }
 }
 
+/* Prevent macro bleed outside this function’s scope */
 #undef CASE
-#undef BOOL_CASE
 #undef RANGE
 
 static void parse_espec(char *buf, int i, int nr)
 {
   char *ptr;
+  int value;
 
+  /* Split on ':' if present (e.g., "Str: 16") */
   if ((ptr = strchr(buf, ':')) != NULL) {
     *(ptr++) = '\0';
     while (isspace(*ptr))
       ptr++;
   }
-  interpret_espec(buf, ptr, i, nr);
+
+  /* Trim leading spaces from keyword */
+  while (isspace(*buf))
+    buf++;
+
+  /* --- Handle ability score lines --- */
+  if (!str_cmp(buf, "Str") && sscanf(ptr, "%d", &value) == 1)
+    GET_STR(mob_proto + i) = LIMIT(value, 3, 25);
+  else if (!str_cmp(buf, "Dex") && sscanf(ptr, "%d", &value) == 1)
+    GET_DEX(mob_proto + i) = LIMIT(value, 3, 25);
+  else if (!str_cmp(buf, "Int") && sscanf(ptr, "%d", &value) == 1)
+    GET_INT(mob_proto + i) = LIMIT(value, 3, 25);
+  else if (!str_cmp(buf, "Wis") && sscanf(ptr, "%d", &value) == 1)
+    GET_WIS(mob_proto + i) = LIMIT(value, 3, 25);
+  else if (!str_cmp(buf, "Con") && sscanf(ptr, "%d", &value) == 1)
+    GET_CON(mob_proto + i) = LIMIT(value, 3, 25);
+  else if (!str_cmp(buf, "Cha") && sscanf(ptr, "%d", &value) == 1)
+    GET_CHA(mob_proto + i) = LIMIT(value, 3, 25);
+
+  /* --- Optional saving throw support (if you use these in files) --- */
+  else if (!str_cmp(buf, "SaveStr") && sscanf(ptr, "%d", &value) == 1)
+    GET_SAVE(mob_proto + i, ABIL_STR) = value;
+  else if (!str_cmp(buf, "SaveDex") && sscanf(ptr, "%d", &value) == 1)
+    GET_SAVE(mob_proto + i, ABIL_DEX) = value;
+  else if (!str_cmp(buf, "SaveCon") && sscanf(ptr, "%d", &value) == 1)
+    GET_SAVE(mob_proto + i, ABIL_CON) = value;
+  else if (!str_cmp(buf, "SaveInt") && sscanf(ptr, "%d", &value) == 1)
+    GET_SAVE(mob_proto + i, ABIL_INT) = value;
+  else if (!str_cmp(buf, "SaveWis") && sscanf(ptr, "%d", &value) == 1)
+    GET_SAVE(mob_proto + i, ABIL_WIS) = value;
+  else if (!str_cmp(buf, "SaveCha") && sscanf(ptr, "%d", &value) == 1)
+    GET_SAVE(mob_proto + i, ABIL_CHA) = value;
+
+  /* --- Fallback: hand off anything else to the old interpreter --- */
+  else
+    interpret_espec(buf, ptr, i, nr);
 }
 
 static void parse_enhanced_mob(FILE *mob_f, int i, int nr)
 {
   char line[READ_SIZE];
 
+  /* Step 1: parse the standard numeric lines (level, dice, pos, sex, etc.) */
   parse_simple_mob(mob_f, i, nr);
 
+  /* Step 2: read extended attributes until 'E' line encountered */
   while (get_line(mob_f, line)) {
-    if (!strcmp(line, "E"))	/* end of the enhanced section */
+    if (!strcmp(line, "E"))  /* end of the enhanced section */
       return;
-    else if (*line == '#') {	/* we've hit the next mob, maybe? */
+    else if (*line == '#') { /* premature next mob start */
       log("SYSERR: Unterminated E section in mob #%d", nr);
       exit(1);
-    } else
-      parse_espec(line, i, nr);
+    }
+
+    /* --- Begin NPC Skill Extension --- */
+    else if (!strncmp(line, "Skill", 5)) {
+      int snum = 0, sval = 0;
+      if (sscanf(line, "Skill %d %d", &snum, &sval) == 2) {
+        if (snum >= 0 && snum < MAX_SKILLS)
+          SET_SKILL(&mob_proto[i], snum, (byte)MIN(MAX(0, sval), 100));
+        else
+          log("SYSERR: Invalid skill index %d in mob #%d", snum, nr);
+      } else
+        log("SYSERR: Malformed Skill line in mob #%d: '%s'", nr, line);
+      continue;
+    }
+    /* --- End NPC Skill Extension --- */
+
+    else
+      parse_espec(line, i, nr); /* interpret Str:, Dex:, Save*, etc. */
   }
 
   log("SYSERR: Unexpected end of file reached after mob #%d", nr);
