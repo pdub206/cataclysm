@@ -230,8 +230,14 @@ static void init_mobile(struct char_data *mob)
   GET_WEIGHT(mob) = 200;
   GET_HEIGHT(mob) = 198;
 
-  mob->real_abils.str = mob->real_abils.intel = mob->real_abils.wis = 11;
-  mob->real_abils.dex = mob->real_abils.con = mob->real_abils.cha = 11;
+  /* Only assign defaults if the individual stat is unset (zero) */
+  if (!mob->real_abils.str)   mob->real_abils.str   = 11;
+  if (!mob->real_abils.intel) mob->real_abils.intel = 11;
+  if (!mob->real_abils.wis)   mob->real_abils.wis   = 11;
+  if (!mob->real_abils.dex)   mob->real_abils.dex   = 11;
+  if (!mob->real_abils.con)   mob->real_abils.con   = 11;
+  if (!mob->real_abils.cha)   mob->real_abils.cha   = 11;
+
   mob->aff_abils = mob->real_abils;
 
   for (i = 0; i < NUM_ABILITIES; i++)
@@ -1061,27 +1067,39 @@ void medit_parse(struct descriptor_data *d, char *arg)
 
   case MEDIT_SAVE_STR:
     GET_SAVE(OLC_MOB(d), ABIL_STR) = LIMIT(atoi(arg), -20, 20);
-    break;
+    OLC_VAL(d) = TRUE;
+    medit_disp_stats_menu(d);
+    return;
 
   case MEDIT_SAVE_DEX:
     GET_SAVE(OLC_MOB(d), ABIL_DEX) = LIMIT(atoi(arg), -20, 20);
-    break;
+    OLC_VAL(d) = TRUE;
+    medit_disp_stats_menu(d);
+    return;
 
   case MEDIT_SAVE_CON:
     GET_SAVE(OLC_MOB(d), ABIL_CON) = LIMIT(atoi(arg), -20, 20);
-    break;
+    OLC_VAL(d) = TRUE;
+    medit_disp_stats_menu(d);
+    return;
 
   case MEDIT_SAVE_INT:
     GET_SAVE(OLC_MOB(d), ABIL_INT) = LIMIT(atoi(arg), -20, 20);
-    break;
+    OLC_VAL(d) = TRUE;
+    medit_disp_stats_menu(d);
+    return;
 
   case MEDIT_SAVE_WIS:
     GET_SAVE(OLC_MOB(d), ABIL_WIS) = LIMIT(atoi(arg), -20, 20);
-    break;
+    OLC_VAL(d) = TRUE;
+    medit_disp_stats_menu(d);
+    return;
 
   case MEDIT_SAVE_CHA:
     GET_SAVE(OLC_MOB(d), ABIL_CHA) = LIMIT(atoi(arg), -20, 20);
-    break;
+    OLC_VAL(d) = TRUE;
+    medit_disp_stats_menu(d);
+    return;
 
   case MEDIT_POS:
     GET_POS(OLC_MOB(d)) = LIMIT(i - 1, 0, NUM_POSITIONS - 1);

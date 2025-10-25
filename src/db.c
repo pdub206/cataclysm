@@ -1596,6 +1596,28 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
     GET_SAVE(mob_proto + i, j) = 0;
 }
 
+static void parse_espec(char *buf, int i, int nr)
+{
+  char *ptr;
+
+  /* Split on ':' if present (e.g., "Str: 16") */
+  if ((ptr = strchr(buf, ':')) != NULL) {
+    *(ptr++) = '\0';
+    while (isspace(*ptr))
+      ptr++;
+  } else {
+    /* No colon: treat the remainder as value start (may be NULL) */
+    ptr = NULL;
+  }
+
+  /* Trim leading spaces from keyword */
+  while (isspace(*buf))
+    buf++;
+
+  /* Always route to interpret_espec so we only write to real_abils there. */
+  interpret_espec(buf, ptr, i, nr);
+}
+
 /* interpret_espec is the function that takes espec keywords and values and
  * assigns the correct value to the mob as appropriate. Adding new e-specs is
  * straightforward: just add a new CASE() block. */
@@ -1608,40 +1630,41 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
 {
   int num_arg = 0;
   bool matched = FALSE;
+  bool touched_ability = FALSE;
 
-  /* Defensive check: if there's a value, convert to int */
   if (value)
     num_arg = atoi(value);
 
-  /* --- Ability Scores --- */
+  /* --- Ability Scores (write REAL, then sync AFF) --- */
   CASE("Str") {
     RANGE(3, 25);
     mob_proto[i].real_abils.str = num_arg;
+    touched_ability = TRUE;
   }
-
   CASE("Dex") {
     RANGE(3, 25);
     mob_proto[i].real_abils.dex = num_arg;
+    touched_ability = TRUE;
   }
-
   CASE("Con") {
     RANGE(3, 25);
     mob_proto[i].real_abils.con = num_arg;
+    touched_ability = TRUE;
   }
-
   CASE("Int") {
     RANGE(3, 25);
     mob_proto[i].real_abils.intel = num_arg;
+    touched_ability = TRUE;
   }
-
   CASE("Wis") {
     RANGE(3, 25);
     mob_proto[i].real_abils.wis = num_arg;
+    touched_ability = TRUE;
   }
-
   CASE("Cha") {
     RANGE(3, 25);
     mob_proto[i].real_abils.cha = num_arg;
+    touched_ability = TRUE;
   }
 
   /* --- 5e-style Saving Throws --- */
@@ -1649,31 +1672,30 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
     RANGE(0, 100);
     mob_proto[i].char_specials.saved.saving_throws[ABIL_STR] = num_arg;
   }
-
   CASE("SaveDex") {
     RANGE(0, 100);
     mob_proto[i].char_specials.saved.saving_throws[ABIL_DEX] = num_arg;
   }
-
   CASE("SaveCon") {
     RANGE(0, 100);
     mob_proto[i].char_specials.saved.saving_throws[ABIL_CON] = num_arg;
   }
-
   CASE("SaveInt") {
     RANGE(0, 100);
     mob_proto[i].char_specials.saved.saving_throws[ABIL_INT] = num_arg;
   }
-
   CASE("SaveWis") {
     RANGE(0, 100);
     mob_proto[i].char_specials.saved.saving_throws[ABIL_WIS] = num_arg;
   }
-
   CASE("SaveCha") {
     RANGE(0, 100);
     mob_proto[i].char_specials.saved.saving_throws[ABIL_CHA] = num_arg;
   }
+
+  /* If we changed a base ability, keep aff_abils in sync for the prototype. */
+  if (touched_ability)
+    mob_proto[i].aff_abils = mob_proto[i].real_abils;
 
   /* --- Debug + Fallback --- */
   if (!matched) {
@@ -1684,58 +1706,10 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
   }
 }
 
-/* Prevent macro bleed outside this function’s scope */
+/* Prevent macro bleed */
 #undef CASE
 #undef RANGE
 
-static void parse_espec(char *buf, int i, int nr)
-{
-  char *ptr;
-  int value;
-
-  /* Split on ':' if present (e.g., "Str: 16") */
-  if ((ptr = strchr(buf, ':')) != NULL) {
-    *(ptr++) = '\0';
-    while (isspace(*ptr))
-      ptr++;
-  }
-
-  /* Trim leading spaces from keyword */
-  while (isspace(*buf))
-    buf++;
-
-  /* --- Handle ability score lines --- */
-  if (!str_cmp(buf, "Str") && sscanf(ptr, "%d", &value) == 1)
-    GET_STR(mob_proto + i) = LIMIT(value, 3, 25);
-  else if (!str_cmp(buf, "Dex") && sscanf(ptr, "%d", &value) == 1)
-    GET_DEX(mob_proto + i) = LIMIT(value, 3, 25);
-  else if (!str_cmp(buf, "Int") && sscanf(ptr, "%d", &value) == 1)
-    GET_INT(mob_proto + i) = LIMIT(value, 3, 25);
-  else if (!str_cmp(buf, "Wis") && sscanf(ptr, "%d", &value) == 1)
-    GET_WIS(mob_proto + i) = LIMIT(value, 3, 25);
-  else if (!str_cmp(buf, "Con") && sscanf(ptr, "%d", &value) == 1)
-    GET_CON(mob_proto + i) = LIMIT(value, 3, 25);
-  else if (!str_cmp(buf, "Cha") && sscanf(ptr, "%d", &value) == 1)
-    GET_CHA(mob_proto + i) = LIMIT(value, 3, 25);
-
-  /* --- Optional saving throw support (if you use these in files) --- */
-  else if (!str_cmp(buf, "SaveStr") && sscanf(ptr, "%d", &value) == 1)
-    GET_SAVE(mob_proto + i, ABIL_STR) = value;
-  else if (!str_cmp(buf, "SaveDex") && sscanf(ptr, "%d", &value) == 1)
-    GET_SAVE(mob_proto + i, ABIL_DEX) = value;
-  else if (!str_cmp(buf, "SaveCon") && sscanf(ptr, "%d", &value) == 1)
-    GET_SAVE(mob_proto + i, ABIL_CON) = value;
-  else if (!str_cmp(buf, "SaveInt") && sscanf(ptr, "%d", &value) == 1)
-    GET_SAVE(mob_proto + i, ABIL_INT) = value;
-  else if (!str_cmp(buf, "SaveWis") && sscanf(ptr, "%d", &value) == 1)
-    GET_SAVE(mob_proto + i, ABIL_WIS) = value;
-  else if (!str_cmp(buf, "SaveCha") && sscanf(ptr, "%d", &value) == 1)
-    GET_SAVE(mob_proto + i, ABIL_CHA) = value;
-
-  /* --- Fallback: hand off anything else to the old interpreter --- */
-  else
-    interpret_espec(buf, ptr, i, nr);
-}
 
 static void parse_enhanced_mob(FILE *mob_f, int i, int nr)
 {
