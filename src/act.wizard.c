@@ -1175,19 +1175,11 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
 	  GET_NAME(k), IS_NPC(k) ? char_script_id(k) : GET_IDNUM(k), GET_ROOM_VNUM(IN_ROOM(k)), IS_NPC(k) ? NOWHERE : GET_LOADROOM(k));
 
   if (IS_MOB(k)) {
-    send_to_char(ch, "Keyword: %s, VNum: [%5d], RNum: [%5d]\r\n", k->player.name, GET_MOB_VNUM(k), GET_MOB_RNUM(k));
-    send_to_char(ch, "L-Des: %s", k->player.long_descr ? k->player.long_descr : "<None>\r\n");
+    send_to_char(ch, "Keywords: %s, VNum: [%5d], RNum: [%5d]\r\n", k->player.name, GET_MOB_VNUM(k), GET_MOB_RNUM(k));
+    send_to_char(ch, "L-Desc: %s", k->player.long_descr ? k->player.long_descr : "<None>\r\n");
   }
 
-  if (!IS_MOB(k))
-    send_to_char(ch, "Title: %s\r\n", k->player.title ? k->player.title : "<None>");
-
-  send_to_char(ch, "D-Des: %s", k->player.description ? k->player.description : "<None>\r\n");
-
-  sprinttype(k->player.chclass, pc_class_types, buf, sizeof(buf));
-  send_to_char(ch, "%s%s, Lev: [%s%2d%s], XP: [%s%7d%s], Align: [%4d]\r\n",
-	IS_NPC(k) ? "Mobile" : "Class: ", IS_NPC(k) ? "" : buf, CCYEL(ch, C_NRM), GET_LEVEL(k), CCNRM(ch, C_NRM),
-	CCYEL(ch, C_NRM), GET_EXP(k), CCNRM(ch, C_NRM), GET_ALIGNMENT(k));
+  send_to_char(ch, "D-Desc:\r\n %s", k->player.description ? k->player.description : "<None>\r\n");
 
   if (!IS_NPC(k)) {
     char buf1[64], buf2[64];
@@ -1216,7 +1208,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
     }
     send_to_char(ch, "\r\n");
   }
-  send_to_char(ch, "Str: [%s%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
+  send_to_char(ch, "Attributes: Str: [%s%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
 	  "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
 	  CCCYN(ch, C_NRM), GET_STR(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_INT(k), CCNRM(ch, C_NRM),
@@ -1224,13 +1216,21 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
 	  CCCYN(ch, C_NRM), GET_DEX(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_CON(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_CHA(k), CCNRM(ch, C_NRM));
+  send_to_char(ch, "Saving Throws: Str: [%s%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
+	  "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
+    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_STR), CCNRM(ch, C_NRM),
+    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_DEX), CCNRM(ch, C_NRM),
+    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_CON), CCNRM(ch, C_NRM),
+    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_INT), CCNRM(ch, C_NRM),
+    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_WIS), CCNRM(ch, C_NRM),
+    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_CHA), CCNRM(ch, C_NRM));
 
   send_to_char(ch, "Hit p.:[%s%d/%d+%d%s]  Mana p.:[%s%d/%d+%d%s]  Move p.:[%s%d/%d+%d%s]\r\n",
 	  CCGRN(ch, C_NRM), GET_HIT(k), GET_MAX_HIT(k), hit_gain(k), CCNRM(ch, C_NRM),
 	  CCGRN(ch, C_NRM), GET_MANA(k), GET_MAX_MANA(k), mana_gain(k), CCNRM(ch, C_NRM),
 	  CCGRN(ch, C_NRM), GET_MOVE(k), GET_MAX_MOVE(k), move_gain(k), CCNRM(ch, C_NRM));
 
-  send_to_char(ch, "Gold: [%9d], Bank: [%9d] (Total: %d), ",
+  send_to_char(ch, "Gold: [%9d], Bank: [%9d] (Total: %d)\r\n",
 	  GET_GOLD(k), GET_BANK_GOLD(k), GET_GOLD(k) + GET_BANK_GOLD(k));
 
   if (!IS_NPC(k))
@@ -1238,17 +1238,23 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
                       CCCYN(ch, C_NRM), CCYEL(ch, C_NRM), GET_SCREEN_WIDTH(k), CCNRM(ch, C_NRM),
                       CCYEL(ch, C_NRM), GET_PAGE_LENGTH(k), CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
 
-  send_to_char(ch,
-    "AC: [%d%+d/10], \r\n"
-    "Saving throws: STR[%d] DEX[%d] CON[%d] INT[%d] WIS[%d] CHA[%d]\r\n",
-    GET_AC(k),
-    GET_ABILITY_MOD(GET_DEX(k)),
-    GET_SAVE(k, ABIL_STR),
-    GET_SAVE(k, ABIL_DEX),
-    GET_SAVE(k, ABIL_CON),
-    GET_SAVE(k, ABIL_INT),
-    GET_SAVE(k, ABIL_WIS),
-    GET_SAVE(k, ABIL_CHA));
+  /* Unified AC display for PCs and NPCs (5e-style ascending AC) */
+  {
+    struct ac_breakdown acb;
+
+    /* Use the same calculation as do_score */
+    compute_ac_breakdown(k, &acb);
+
+    send_to_char(ch,
+      "Armor Class: %d (base: %d, armor: %d, armor magic: %+d, DEX (cap %d): %+d, situational: %+d)\r\n",
+      acb.total,
+      acb.base,
+      acb.armor_piece_sum,
+      acb.armor_magic_sum,
+      acb.dex_cap,
+      acb.dex_mod_applied,
+      acb.situational);
+  }
 
   sprinttype(GET_POS(k), position_types, buf, sizeof(buf));
   send_to_char(ch, "Pos: %s, Fighting: %s", buf, FIGHTING(k) ? GET_NAME(FIGHTING(k)) : "Nobody");

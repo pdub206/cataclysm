@@ -8,12 +8,15 @@ has a thick, haggard looking brown beard that is flecked with dust and sand.
 His eyes have a bluish-tint to them with a small amount of green.  One might
 call his stature bulky, as he has quite a bit of muscle.
 ~
-2122 0 0 0 0 0 0 0 0 E
+6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
 8 8 1
 Str: 16
 SaveStr: 3
 Skill 134 60
+Skill 142 60
+Skill 143 60
+Skill 145 60
 E
 L 3 118 1
 L 5 131 1
@@ -37,9 +40,13 @@ Her arms and legs are lanky, seeming to be longer than normal.  A ponytail of
 dark hair has been pulled back behind her head, intensifying the sharpness of
 her nose.
 ~
-2122 0 0 0 0 0 0 0 0 E
+6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
 8 8 2
+Skill 134 60
+Skill 142 60
+Skill 143 60
+Skill 145 60
 E
 L 17 127 1
 L 16 117 1
