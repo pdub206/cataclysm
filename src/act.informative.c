@@ -883,11 +883,8 @@ ACMD(do_score)
 {
   struct time_info_data playing_time;
   struct ac_breakdown acb;
+  bool ismob = IS_NPC(ch);
 
-  if (IS_NPC(ch))
-    return;
-
-  /* Compute AC components using new 5e-like system */
   compute_ac_breakdown(ch, &acb);
 
   send_to_char(ch,
@@ -936,27 +933,34 @@ ACMD(do_score)
   else
     send_to_char(ch, "\r\n");
 
-  send_to_char(ch, "You have %d gold coins, and %d questpoints.\r\n",
-      GET_GOLD(ch), GET_QUESTPOINTS(ch));
+  send_to_char(ch, "You have %d gold coins.\r\n", GET_GOLD(ch));
 
-  if (GET_QUEST(ch) == NOTHING)
-    send_to_char(ch, "and you are not on a quest at the moment.\r\n");
-  else
-  {
-    send_to_char(ch, "and your current quest is: %s", QST_NAME(real_quest(GET_QUEST(ch))));
+  /* Only players have quest data */
+  if (!ismob) {
+    send_to_char(ch, "You have %d questpoints.\r\n", GET_QUESTPOINTS(ch));
 
-    if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_SHOWVNUMS))
+    if (GET_QUEST(ch) == NOTHING)
+      send_to_char(ch, "You are not on a quest at the moment.\r\n");
+    else {
+      send_to_char(ch, "Your current quest is: %s",
+                   QST_NAME(real_quest(GET_QUEST(ch))));
+      if (PRF_FLAGGED(ch, PRF_SHOWVNUMS))
         send_to_char(ch, " [%d]\r\n", GET_QUEST(ch));
-    else
+      else
         send_to_char(ch, "\r\n");
+    }
   }
 
-  playing_time = *real_time_passed((time(0) - ch->player.time.logon) +
-                  ch->player.time.played, 0);
-  send_to_char(ch, "You have been playing for %d day%s and %d hour%s.\r\n",
-     playing_time.day, playing_time.day == 1 ? "" : "s",
-     playing_time.hours, playing_time.hours == 1 ? "" : "s");
+  /* Only players have valid playtime data */
+  if (!ismob) {
+    playing_time = *real_time_passed((time(0) - ch->player.time.logon) +
+                                     ch->player.time.played, 0);
+    send_to_char(ch, "You have been playing for %d day%s and %d hour%s.\r\n",
+       playing_time.day, playing_time.day == 1 ? "" : "s",
+       playing_time.hours, playing_time.hours == 1 ? "" : "s");
+  }
 
+  /* Position */
   switch (GET_POS(ch)) {
   case POS_DEAD:
     send_to_char(ch, "You are DEAD!\r\n");
@@ -985,7 +989,8 @@ ACMD(do_score)
     }
     break;
   case POS_FIGHTING:
-    send_to_char(ch, "You are fighting %s.\r\n", FIGHTING(ch) ? PERS(FIGHTING(ch), ch) : "thin air");
+    send_to_char(ch, "You are fighting %s.\r\n",
+                 FIGHTING(ch) ? PERS(FIGHTING(ch), ch) : "thin air");
     break;
   case POS_STANDING:
     send_to_char(ch, "You are standing.\r\n");
@@ -995,6 +1000,7 @@ ACMD(do_score)
     break;
   }
 
+  /* Conditions and effects */
   if (GET_COND(ch, DRUNK) > 10)
     send_to_char(ch, "You are intoxicated.\r\n");
 
@@ -1028,22 +1034,24 @@ ACMD(do_score)
   if (AFF_FLAGGED(ch, AFF_INFRAVISION))
     send_to_char(ch, "Your eyes are glowing red.\r\n");
 
-  if (PRF_FLAGGED(ch, PRF_SUMMONABLE))
+  if (!ismob && PRF_FLAGGED(ch, PRF_SUMMONABLE))
     send_to_char(ch, "You are summonable by other players.\r\n");
 
-  if (GET_LEVEL(ch) >= LVL_IMMORT) {
+  if (!ismob && GET_LEVEL(ch) >= LVL_IMMORT) {
     if (POOFIN(ch))
       send_to_char(ch, "%sPOOFIN:  %s%s %s%s\r\n", QYEL, QCYN, GET_NAME(ch), POOFIN(ch), QNRM);
     else
-      send_to_char(ch, "%sPOOFIN:  %s%s appears with an ear-splitting bang.%s\r\n", QYEL, QCYN, GET_NAME(ch), QNRM);
+      send_to_char(ch, "%sPOOFIN:  %s%s appears with an ear-splitting bang.%s\r\n",
+                   QYEL, QCYN, GET_NAME(ch), QNRM);
 
     if (POOFOUT(ch))
       send_to_char(ch, "%sPOOFOUT: %s%s %s%s\r\n", QYEL, QCYN, GET_NAME(ch), POOFOUT(ch), QNRM);
     else
-      send_to_char(ch, "%sPOOFOUT: %s%s disappears in a puff of smoke.%s\r\n", QYEL, QCYN, GET_NAME(ch), QNRM);
+      send_to_char(ch, "%sPOOFOUT: %s%s disappears in a puff of smoke.%s\r\n",
+                   QYEL, QCYN, GET_NAME(ch), QNRM);
 
-    send_to_char(ch, "Your current zone: %s%d%s\r\n", CCCYN(ch, C_NRM), GET_OLC_ZONE(ch),
- CCNRM(ch, C_NRM));
+    send_to_char(ch, "Your current zone: %s%d%s\r\n",
+                 CCCYN(ch, C_NRM), GET_OLC_ZONE(ch), CCNRM(ch, C_NRM));
   }
 }
 

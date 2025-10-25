@@ -106,15 +106,31 @@ void list_skills(struct char_data *ch)
 
   len = snprintf(buf2, sizeof(buf2), "You know of the following %ss:\r\n", SPLSKL(ch));
 
-  for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
-    i = spell_sort_info[sortpos];
-    if (GET_LEVEL(ch) >= spell_info[i].min_level[(int) GET_CLASS(ch)]) {
-    ret = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s\r\n", spell_info[i].name, how_good(GET_SKILL(ch, i)));
-      if (ret < 0 || len + ret >= sizeof(buf2))
-        break;
-      len += ret;
+  if (IS_NPC(ch)) {
+    /* NPCs: show only the skills actually assigned to them */
+    for (i = 1; i <= MAX_SKILLS; i++) {
+      if (GET_SKILL(ch, i) > 0) {
+        ret = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s\r\n",
+                       spell_info[i].name, how_good(GET_SKILL(ch, i)));
+        if (ret < 0 || len + ret >= sizeof(buf2))
+          break;
+        len += ret;
+      }
+    }
+  } else {
+    /* PCs: show skills available to their class and level */
+    for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
+      i = spell_sort_info[sortpos];
+      if (GET_LEVEL(ch) >= spell_info[i].min_level[(int) GET_CLASS(ch)]) {
+        ret = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s\r\n",
+                       spell_info[i].name, how_good(GET_SKILL(ch, i)));
+        if (ret < 0 || len + ret >= sizeof(buf2))
+          break;
+        len += ret;
+      }
     }
   }
+
   if (len >= sizeof(buf2))
     strcpy(buf2 + sizeof(buf2) - strlen(overflow) - 1, overflow); /* strcpy: OK */
 
