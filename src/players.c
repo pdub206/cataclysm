@@ -450,7 +450,6 @@ int load_char(const char *name, struct char_data *ch)
 	else if (!strcmp(tag, "Thr3"))	GET_SAVE(ch, 2)		= atoi(line);
 	else if (!strcmp(tag, "Thr4"))	GET_SAVE(ch, 3)		= atoi(line);
 	else if (!strcmp(tag, "Thr5"))	GET_SAVE(ch, 4)		= atoi(line);
-	else if (!strcmp(tag, "Titl"))	GET_TITLE(ch)		= strdup(line);
         else if (!strcmp(tag, "Trig") && CONFIG_SCRIPT_PLAYERS) {
           if ((t_rnum = real_trigger(atoi(line))) != NOTHING) {
             t = read_trigger(t_rnum);
@@ -572,7 +571,6 @@ void save_char(struct char_data * ch)
 
   if (GET_NAME(ch))				fprintf(fl, "Name: %s\n", GET_NAME(ch));
   if (GET_PASSWD(ch))				fprintf(fl, "Pass: %s\n", GET_PASSWD(ch));
-  if (GET_TITLE(ch))				fprintf(fl, "Titl: %s\n", GET_TITLE(ch));
   if (ch->player.description && *ch->player.description) {
     strcpy(buf, ch->player.description);
     strip_cr(buf);

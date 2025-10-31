@@ -1041,13 +1041,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             }
             snprintf(str, slen, "%d", GET_COND(c, THIRST));
           }
-          else if (!str_cmp(field, "title")) {
-            if (!IS_NPC(c) && subfield && *subfield && valid_dg_target(c, DG_ALLOW_GODS)) {
-              if (GET_TITLE(c)) free(GET_TITLE(c));
-                GET_TITLE(c) = strdup(subfield);
-            }
-            snprintf(str, slen, "%s", IS_NPC(c) ? "" : GET_TITLE(c));
-          }
           break;
 	case 'v':
           if (!str_cmp(field, "varexists")) {

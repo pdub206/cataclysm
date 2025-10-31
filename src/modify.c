@@ -42,7 +42,6 @@ static const char *string_fields[] =
   "short",
   "long",
   "description",
-  "title",
   "delete-description",
   "\n"
 };

@@ -543,26 +543,6 @@ ACMD(do_visible)
     send_to_char(ch, "You are already visible.\r\n");
 }
 
-ACMD(do_title)
-{
-  skip_spaces(&argument);
-  delete_doubledollar(argument);
-  parse_at(argument);
-
-  if (IS_NPC(ch))
-    send_to_char(ch, "Your title is fine... go away.\r\n");
-  else if (PLR_FLAGGED(ch, PLR_NOTITLE))
-    send_to_char(ch, "You can't title yourself -- you shouldn't have abused it!\r\n");
-  else if (strstr(argument, "(") || strstr(argument, ")"))
-    send_to_char(ch, "Titles can't contain the ( or ) characters.\r\n");
-  else if (strlen(argument) > MAX_TITLE_LENGTH)
-    send_to_char(ch, "Sorry, titles can't be longer than %d characters.\r\n", MAX_TITLE_LENGTH);
-  else {
-    set_title(ch, argument);
-    send_to_char(ch, "Okay, you're now %s%s%s.\r\n", GET_NAME(ch), *GET_TITLE(ch) ? " " : "", GET_TITLE(ch));
-  }
-}
-
 static void print_group(struct char_data *ch)
 {
   struct char_data * k;

@@ -2774,12 +2774,6 @@ ACMD(do_wizutil)
       send_to_char(vict, "You have been pardoned by the Gods!\r\n");
       mudlog(BRF, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s pardoned by %s", GET_NAME(vict), GET_NAME(ch));
       break;
-    case SCMD_NOTITLE:
-      result = PLR_TOG_CHK(vict, PLR_NOTITLE);
-      mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) Notitle %s for %s by %s.",
-		ONOFF(result), GET_NAME(vict), GET_NAME(ch));
-      send_to_char(ch, "(GC) Notitle %s for %s by %s.\r\n", ONOFF(result), GET_NAME(vict), GET_NAME(ch));
-      break;
     case SCMD_MUTE:
       result = PLR_TOG_CHK(vict, PLR_NOSHOUT);
       mudlog(BRF, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) Mute %s for %s by %s.",
@@ -3289,12 +3283,11 @@ static struct set_struct {
    { "str",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "thief",		LVL_GOD, 	PC, 	BINARY }, 
    { "thirst",		LVL_BUILDER, 	BOTH, 	MISC }, /* 50 */
-   { "title",		LVL_GOD, 	PC, 	MISC   },
    { "variable",        LVL_GRGOD,	PC,	MISC },
    { "weight",		LVL_BUILDER,	BOTH,	NUMBER },
    { "wis", 		LVL_BUILDER, 	BOTH, 	NUMBER }, 
-   { "questpoints",     LVL_GOD,        PC,     NUMBER }, /* 55 */
-   { "questhistory",    LVL_GOD,        PC,   NUMBER },
+   { "questpoints",     LVL_GOD,        PC,     NUMBER }, 
+   { "questhistory",    LVL_GOD,        PC,   NUMBER }, /* 55 */
    { "\n", 0, BOTH, MISC }
   };
 
@@ -3737,17 +3730,13 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 49: /* title */
-      set_title(vict, val_arg);
-      send_to_char(ch, "%s's title is now: %s\r\n", GET_NAME(vict), GET_TITLE(vict));
-      break;
-    case 50: /* variable */
+    case 49: /* variable */
       return perform_set_dg_var(ch, vict, val_arg);
-    case 51: /* weight */
+    case 50: /* weight */
       GET_WEIGHT(vict) = value;
       affect_total(vict);
       break;
-    case 52: /* wis */
+    case 51: /* wis */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3755,10 +3744,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.wis = value;
       affect_total(vict);
       break;
-    case 53: /* questpoints */
+    case 52: /* questpoints */
       GET_QUESTPOINTS(vict) = RANGE(0, 100000000);
       break;
-    case 54: /* questhistory */
+    case 53: /* questhistory */
       qvnum = atoi(val_arg);
       if (real_quest(qvnum) == NOTHING) {
         send_to_char(ch, "That quest doesn't exist.\r\n");

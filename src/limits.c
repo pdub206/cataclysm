@@ -178,23 +178,6 @@ int move_gain(struct char_data *ch)
   return (gain);
 }
 
-void set_title(struct char_data *ch, char *title)
-{
-  if (GET_TITLE(ch) != NULL)
-    free(GET_TITLE(ch));
-
-  if (title == NULL) {
-    GET_TITLE(ch) = strdup(GET_SEX(ch) == SEX_FEMALE ?
-      title_female(GET_CLASS(ch), GET_LEVEL(ch)) :
-      title_male(GET_CLASS(ch), GET_LEVEL(ch)));
-  } else {
-    if (strlen(title) > MAX_TITLE_LENGTH)
-      title[MAX_TITLE_LENGTH] = '\0';
-
-    GET_TITLE(ch) = strdup(title);
-  }
-}
-
 void run_autowiz(void)
 {
 #if defined(CIRCLE_UNIX) || defined(CIRCLE_WINDOWS)
@@ -317,7 +300,6 @@ void gain_exp(struct char_data *ch, int gain)
         send_to_char(ch, "You rise a level!\r\n");
       else
 	send_to_char(ch, "You rise %d levels!\r\n", num_levels);
-      set_title(ch, NULL);
       if (GET_LEVEL(ch) >= LVL_IMMORT && !PLR_FLAGGED(ch, PLR_NOWIZLIST))
         run_autowiz();
     }
@@ -356,7 +338,6 @@ void gain_exp_regardless(struct char_data *ch, int gain)
         send_to_char(ch, "You rise a level!\r\n");
       else
 	send_to_char(ch, "You rise %d levels!\r\n", num_levels);
-      set_title(ch, NULL);
     }
   }
   if (GET_LEVEL(ch) >= LVL_IMMORT && !PLR_FLAGGED(ch, PLR_NOWIZLIST))

@@ -587,8 +587,6 @@ void destroy_db(void)
   for (cnt = 0; cnt <= top_of_mobt; cnt++) {
     if (mob_proto[cnt].player.name)
       free(mob_proto[cnt].player.name);
-    if (mob_proto[cnt].player.title)
-      free(mob_proto[cnt].player.title);
     if (mob_proto[cnt].player.short_descr)
       free(mob_proto[cnt].player.short_descr);
     if (mob_proto[cnt].player.long_descr)
@@ -1778,7 +1776,6 @@ void parse_mobile(FILE *mob_f, int nr)
       *tmpptr = LOWER(*tmpptr);
   mob_proto[i].player.long_descr = fread_string(mob_f, buf2);
   mob_proto[i].player.description = fread_string(mob_f, buf2);
-  GET_TITLE(mob_proto + i) = NULL;
 
   /* Numeric data */
   if (!get_line(mob_f, line)) {
@@ -3390,8 +3387,6 @@ void free_char(struct char_data *ch)
     /* if this is a player, or a non-prototyped non-player, free all */
     if (GET_NAME(ch))
       free(GET_NAME(ch));
-    if (ch->player.title)
-      free(ch->player.title);
     if (ch->player.short_descr)
       free(ch->player.short_descr);
     if (ch->player.long_descr)
@@ -3412,8 +3407,6 @@ void free_char(struct char_data *ch)
     /* otherwise, free strings only if the string is not pointing at proto */
     if (ch->player.name && ch->player.name != mob_proto[i].player.name)
       free(ch->player.name);
-    if (ch->player.title && ch->player.title != mob_proto[i].player.title)
-      free(ch->player.title);
     if (ch->player.short_descr && ch->player.short_descr != mob_proto[i].player.short_descr)
       free(ch->player.short_descr);
     if (ch->player.long_descr && ch->player.long_descr != mob_proto[i].player.long_descr)
@@ -3659,7 +3652,6 @@ void init_char(struct char_data *ch)
     GET_MOVE(ch) = GET_MAX_MOVE(ch);
   }
 
-  set_title(ch, NULL);
   ch->player.short_descr = NULL;
   ch->player.long_descr = NULL;
   ch->player.description = NULL;

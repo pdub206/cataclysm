@@ -942,8 +942,6 @@ ACMD(do_mtransform)
        the strings so we don't end up free'ing the prototypes later */
     if(m->player.name)
       tmpmob.player.name = strdup(m->player.name);
-    if(m->player.title)
-      tmpmob.player.title = strdup(m->player.title);
     if(m->player.short_descr)
       tmpmob.player.short_descr = strdup(m->player.short_descr);
     if(m->player.long_descr)

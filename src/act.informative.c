@@ -411,7 +411,7 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
   if (IS_NPC(i))
     send_to_char(ch, "%c%s", UPPER(*i->player.short_descr), i->player.short_descr + 1);
   else
-    send_to_char(ch, "%s%s%s", i->player.name, *GET_TITLE(i) ? " " : "", GET_TITLE(i));
+    send_to_char(ch, "%s", i->player.name);
 
   if (AFF_FLAGGED(i, AFF_INVISIBLE))
     send_to_char(ch, " (invisible)");
@@ -1241,7 +1241,7 @@ ACMD(do_who)
   int i, num_can_see = 0;
   char name_search[MAX_INPUT_LENGTH], buf[MAX_INPUT_LENGTH];
   char mode;
-  int low = 0, high = LVL_IMPL, localwho = 0, questwho = 0;
+  int low = 0, high = LVL_IMPL + 1, localwho = 0, questwho = 0;
   int showclass = 0, short_list = 0, outlaws = 0;
   int who_room = 0, showgroup = 0, showleader = 0;
 
@@ -1249,10 +1249,10 @@ ACMD(do_who)
     char *disp;
     int min_level;
     int max_level;
-    int count; /* must always start as 0 */
+    int count;
   } rank[] = {
-    { "Immortals\r\n---------\r\n", LVL_IMMORT, LVL_IMPL, 0},
-    { "Mortals\r\n-------\r\n", 1, LVL_IMMORT - 1, 0 },
+    { "Immortals\r\n---------\r\n", LVL_IMMORT, LVL_IMPL, 0 },  /* 2–5 */
+    { "Mortals\r\n-------\r\n", 1, LVL_IMMORT - 1, 0 },         /* 1 */
     { "\n", 0, 0, 0 }
   };
 
@@ -1322,8 +1322,7 @@ ACMD(do_who)
       continue;
 
     if (CAN_SEE(ch, tch) && IS_PLAYING(d)) {
-      if (*name_search && str_cmp(GET_NAME(tch), name_search) &&
-          !strstr(GET_TITLE(tch), name_search))
+      if (*name_search && str_cmp(GET_NAME(tch), name_search))
         continue;
       if (!CAN_SEE(ch, tch) || GET_LEVEL(tch) < low || GET_LEVEL(tch) > high)
         continue;
@@ -1362,12 +1361,14 @@ ACMD(do_who)
       else if (!(tch = d->character))
         continue;
 
+      log("WHO: tch=%s lvl=%d checking rank[%d]: min=%d max=%d",
+          GET_NAME(tch), GET_LEVEL(tch), i, rank[i].min_level, rank[i].max_level);
+
       if ((GET_LEVEL(tch) < rank[i].min_level || GET_LEVEL(tch) > rank[i].max_level) && !short_list)
         continue;
       if (!IS_PLAYING(d))
         continue;
-      if (*name_search && str_cmp(GET_NAME(tch), name_search) &&
-          !strstr(GET_TITLE(tch), name_search))
+      if (*name_search && str_cmp(GET_NAME(tch), name_search))
         continue;
       if (!CAN_SEE(ch, tch) || GET_LEVEL(tch) < low || GET_LEVEL(tch) > high)
         continue;
@@ -1393,11 +1394,10 @@ ACMD(do_who)
           CCNRM(ch, C_SPR), ((!(++num_can_see % 4)) ? "\r\n" : ""));
       } else {
         num_can_see++;
-        send_to_char(ch, "%s[%2d %s] %s%s%s%s",
+        send_to_char(ch, "%s[%2d %s] %s%s",
             (GET_LEVEL(tch) >= LVL_IMMORT ? CCYEL(ch, C_SPR) : ""),
             GET_LEVEL(tch), CLASS_ABBR(tch),
-            GET_NAME(tch), (*GET_TITLE(tch) ? " " : ""), GET_TITLE(tch),
-            CCNRM(ch, C_SPR));
+            GET_NAME(tch), CCNRM(ch, C_SPR));
 
         if (GET_INVIS_LEV(tch))
           send_to_char(ch, " (i%d)", GET_INVIS_LEV(tch));
@@ -1861,79 +1861,6 @@ ACMD(do_where)
     perform_immort_where(ch, arg);
   else
     perform_mortal_where(ch, arg);
-}
-
-ACMD(do_levels)
-{
-  char buf[MAX_STRING_LENGTH], arg[MAX_STRING_LENGTH];
-  size_t len = 0, nlen;
-  int i, ret, min_lev=1, max_lev=LVL_IMMORT, val;
-
-  if (IS_NPC(ch)) {
-    send_to_char(ch, "You ain't nothin' but a hound-dog.\r\n");
-    return;
-  }
-  one_argument(argument, arg);
-
-  if (*arg) {
-    if (isdigit(*arg)) {
-      ret = sscanf(arg, "%d-%d", &min_lev, &max_lev);
-      if (ret == 0) {
-        /* No valid args found */
-        min_lev = 1;
-        max_lev = LVL_IMMORT;
-      }
-      else if (ret == 1) {
-        /* One arg = range is (num) either side of current level */
-        val = min_lev;
-        max_lev = MIN(GET_LEVEL(ch) + val, LVL_IMMORT);
-        min_lev = MAX(GET_LEVEL(ch) - val, 1);
-      }
-      else if (ret == 2) {
-        /* Two args = min-max range limit - just do sanity checks */
-        min_lev = MAX(min_lev, 1);
-        max_lev = MIN(max_lev + 1, LVL_IMMORT);
-      }
-    }
-    else
-    {
-      send_to_char(ch, "Usage: %slevels [<min>-<max> | <range>]%s\r\n\r\n", QYEL, QNRM);
-      send_to_char(ch, "Displays exp required for levels.\r\n");
-      send_to_char(ch, "%slevels       %s- shows all levels (1-%d)\r\n", QCYN, QNRM, (LVL_IMMORT-1));
-      send_to_char(ch, "%slevels 5     %s- shows 5 levels either side of your current level\r\n", QCYN, QNRM);
-      send_to_char(ch, "%slevels 10-40 %s- shows level 10 to level 40\r\n",QCYN, QNRM);
-      return;
-    }
-  }
-
-  for (i = min_lev; i < max_lev; i++) {
-    nlen = snprintf(buf + len, sizeof(buf) - len, "[%2d] %8d-%-8d : ", (int)i,
-    level_exp(GET_CLASS(ch), i), level_exp(GET_CLASS(ch), i + 1) - 1);
-    if (len + nlen >= sizeof(buf))
-      break;
-    len += nlen;
-
-    switch (GET_SEX(ch)) {
-    case SEX_MALE:
-    case SEX_NEUTRAL:
-      nlen = snprintf(buf + len, sizeof(buf) - len, "%s\r\n", title_male(GET_CLASS(ch), i));
-      break;
-    case SEX_FEMALE:
-      nlen = snprintf(buf + len, sizeof(buf) - len, "%s\r\n", title_female(GET_CLASS(ch), i));
-      break;
-    default:
-      nlen = snprintf(buf + len, sizeof(buf) - len, "Oh dear.  You seem to be sexless.\r\n");
-      break;
-    }
-    if (len + nlen >= sizeof(buf))
-      break;
-    len += nlen;
-  }
-
-  if (len < sizeof(buf) && max_lev == LVL_IMMORT)
-    snprintf(buf + len, sizeof(buf) - len, "[%2d] %8d          : Immortality\r\n",
-        LVL_IMMORT, level_exp(GET_CLASS(ch), LVL_IMMORT));
-  page_string(ch->desc, buf, TRUE);
 }
 
 ACMD(do_consider)
@@ -2541,8 +2468,7 @@ ACMD(do_whois)
 
   /* We either have our victim from file or he's playing or function has returned. */
   sprinttype(GET_SEX(victim), genders, buf, sizeof(buf));
-  send_to_char(ch, "Name: %s %s\r\nSex: %s\r\n", GET_NAME(victim),
-                   (victim->player.title ? victim->player.title : ""), buf);
+  send_to_char(ch, "Name: %s\r\nSex: %s\r\n", GET_NAME(victim), buf);
 
   sprinttype (victim->player.chclass, pc_class_types, buf, sizeof(buf));
   send_to_char(ch, "Class: %s\r\n", buf);

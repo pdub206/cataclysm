@@ -209,7 +209,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "noshout"  , "noshout" , POS_SLEEPING, do_gen_tog  , 1, SCMD_NOSHOUT },
   { "nosummon" , "nosummon", POS_DEAD    , do_gen_tog  , 1, SCMD_NOSUMMON },
   { "notell"   , "notell"  , POS_DEAD    , do_gen_tog  , 1, SCMD_NOTELL },
-  { "notitle"  , "notitle" , POS_DEAD    , do_wizutil  , LVL_IMMORT, SCMD_NOTITLE },
   { "nowiz"    , "nowiz"   , POS_DEAD    , do_gen_tog  , LVL_IMMORT, SCMD_NOWIZ },
 
   { "open"     , "o"       , POS_SITTING , do_gen_door , 0, SCMD_OPEN },
@@ -298,7 +297,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "tedit"    , "tedit"   , POS_DEAD    , do_tedit    , LVL_GOD, 0 },  /* XXX: Oasisify */
   { "thaw"     , "thaw"    , POS_DEAD    , do_wizutil  , LVL_GRGOD, SCMD_THAW },
   { "think"    , "thin"    , POS_RESTING , do_think    , 0, 0 },
-  { "title"    , "title"   , POS_DEAD    , do_title    , LVL_IMMORT, 0 },
   { "time"     , "time"    , POS_DEAD    , do_time     , 0, 0 },
   { "toggle"   , "toggle"  , POS_DEAD    , do_toggle   , 0, 0 },
   { "track"    , "track"   , POS_STANDING, do_track    , 0, 0 },

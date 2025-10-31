@@ -202,18 +202,17 @@
 #define PLR_CRASH         6   /**< Player needs to be crash-saved */
 #define PLR_SITEOK        7   /**< Player has been site-cleared */
 #define PLR_NOSHOUT       8   /**< Player not allowed to shout */
-#define PLR_NOTITLE       9   /**< Player not allowed to set title */
-#define PLR_DELETED      10   /**< Player deleted - space reusable */
-#define PLR_LOADROOM     11   /**< Player uses nonstandard loadroom */
-#define PLR_NOWIZLIST    12   /**< Player shouldn't be on wizlist */
-#define PLR_NODELETE     13   /**< Player shouldn't be deleted */
-#define PLR_INVSTART     14   /**< Player should enter game wizinvis */
-#define PLR_CRYO         15   /**< Player is cryo-saved (purge prog) */
-#define PLR_NOTDEADYET   16   /**< (R) Player being extracted */
-#define PLR_BUG          17   /**< Player is writing a bug */
-#define PLR_IDEA         18   /**< Player is writing an idea */
-#define PLR_TYPO         19   /**< Player is writing a typo */
-#define PLR_QUITING      20   /**< Player is quitting cleanly */
+#define PLR_DELETED       9   /**< Player deleted - space reusable */
+#define PLR_LOADROOM     10   /**< Player uses nonstandard loadroom */
+#define PLR_NOWIZLIST    11   /**< Player shouldn't be on wizlist */
+#define PLR_NODELETE     12   /**< Player shouldn't be deleted */
+#define PLR_INVSTART     13   /**< Player should enter game wizinvis */
+#define PLR_CRYO         14   /**< Player is cryo-saved (purge prog) */
+#define PLR_NOTDEADYET   15   /**< (R) Player being extracted */
+#define PLR_BUG          16   /**< Player is writing a bug */
+#define PLR_IDEA         17   /**< Player is writing an idea */
+#define PLR_TYPO         18   /**< Player is writing a typo */
+#define PLR_QUITING      19   /**< Player is quitting cleanly */
 
 /* Mobile flags: used by char_data.char_specials.act */
 #define MOB_SPEC            0   /**< Mob has a callable spec-proc */
@@ -616,7 +615,6 @@
 #define MAX_MESSAGES          60     /**< Max Different attack message types */
 #define MAX_NAME_LENGTH       20     /**< Max PC/NPC name length */
 #define MAX_PWD_LENGTH        30     /**< Max PC password length */
-#define MAX_TITLE_LENGTH      80     /**< Max PC title length */
 #define HOST_LENGTH           40     /**< Max hostname resolution length */
 #define PLR_DESC_LENGTH       4096   /**< Max length for PC description */
 #define MAX_SKILLS            200    /**< Max number of skills/spells */
@@ -881,7 +879,6 @@ struct char_player_data
   char *short_descr;             /**< NPC 'actions' */
   char *long_descr;              /**< PC / NPC look description */
   char *description;             /**< NPC Extra descriptions */
-  char *title;                   /**< PC / NPC title */
   byte sex;                      /**< PC / NPC sex */
   byte chclass;                  /**< PC / NPC class */
   byte level;                    /**< PC / NPC level */

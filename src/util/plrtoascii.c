@@ -17,7 +17,6 @@
 #define MAX_NAME_LENGTH		20  /* Used in char_file_u *DO*NOT*CHANGE* */
 
 #define MAX_PWD_LENGTH		30  /* Used in char_file_u *DO*NOT*CHANGE* */
-#define MAX_TITLE_LENGTH	80  /* Used in char_file_u *DO*NOT*CHANGE* */
 #define HOST_LENGTH		40  /* Used in char_file_u *DO*NOT*CHANGE* */
 #define MAX_TONGUE		3   /* Used in char_file_u *DO*NOT*CHANGE* */
 #define MAX_SKILLS		200 /* Used in char_file_u *DO*NOT*CHANGE* */
@@ -124,7 +123,6 @@ struct char_file_u_plrtoascii {
    /* char_player_data */
    char	name[MAX_NAME_LENGTH+1];
    char	description[PLR_DESC_LENGTH];
-   char	title[MAX_TITLE_LENGTH+1];
    byte sex;
    byte chclass;
    byte level;
@@ -195,7 +193,6 @@ void convert(char *filename)
 /* char_file_u */
     fprintf(outfile, "Name: %s\n", player.name);
     fprintf(outfile, "Pass: %s\n", player.pwd);
-    fprintf(outfile, "Titl: %s\n", player.title);
     if (*player.description)
       fprintf(outfile, "Desc:\n%s~\n", player.description);
     if (player.sex != PFDEF_SEX)

@@ -112,10 +112,6 @@ static void extract_mobile_all(mob_vnum vnum)
           free(ch->player.name);
 				ch->player.name = NULL;
 				
-        if (ch->player.title && ch->player.title != mob_proto[i].player.title)
-          free(ch->player.title);
-				ch->player.title = NULL;
-				
         if (ch->player.short_descr && ch->player.short_descr != mob_proto[i].player.short_descr)
           free(ch->player.short_descr);
 				ch->player.short_descr = NULL;
@@ -199,8 +195,6 @@ int copy_mobile_strings(struct char_data *t, struct char_data *f)
 {
   if (f->player.name)
     t->player.name = strdup(f->player.name);
-  if (f->player.title)
-    t->player.title = strdup(f->player.title);
   if (f->player.short_descr)
     t->player.short_descr = strdup(f->player.short_descr);
   if (f->player.long_descr)
@@ -214,8 +208,6 @@ int update_mobile_strings(struct char_data *t, struct char_data *f)
 {
   if (f->player.name)
     t->player.name = f->player.name;
-  if (f->player.title)
-    t->player.title = f->player.title;
   if (f->player.short_descr)
     t->player.short_descr = f->player.short_descr;
   if (f->player.long_descr)
@@ -229,8 +221,6 @@ int free_mobile_strings(struct char_data *mob)
 {
   if (mob->player.name)
     free(mob->player.name);
-  if (mob->player.title)
-    free(mob->player.title);
   if (mob->player.short_descr)
     free(mob->player.short_descr);
   if (mob->player.long_descr)
@@ -257,8 +247,6 @@ int free_mobile(struct char_data *mob)
    } else {	/* Prototyped mobile. */
     if (mob->player.name && mob->player.name != mob_proto[i].player.name)
       free(mob->player.name);
-    if (mob->player.title && mob->player.title != mob_proto[i].player.title)
-      free(mob->player.title);
     if (mob->player.short_descr && mob->player.short_descr != mob_proto[i].player.short_descr)
       free(mob->player.short_descr);
     if (mob->player.long_descr && mob->player.long_descr != mob_proto[i].player.long_descr)

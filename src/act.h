@@ -90,7 +90,6 @@ ACMD(do_gold);
 ACMD(do_help);
 ACMD(do_history);
 ACMD(do_inventory);
-ACMD(do_levels);
 ACMD(do_scan);
 ACMD(do_score);
 ACMD(do_time);
@@ -239,7 +238,6 @@ ACMD(do_sneak);
 ACMD(do_perception);
 ACMD(do_split);
 ACMD(do_steal);
-ACMD(do_title);
 ACMD(do_visible);
 
 
@@ -298,11 +296,10 @@ ACMD(do_shutdown);
 ACMD(do_wizutil);
 #define SCMD_REROLL   0
 #define SCMD_PARDON   1
-#define SCMD_NOTITLE  2
-#define SCMD_MUTE     3
-#define SCMD_FREEZE   4
-#define SCMD_THAW     5
-#define SCMD_UNAFFECT 6
+#define SCMD_MUTE     2
+#define SCMD_FREEZE   3
+#define SCMD_THAW     4
+#define SCMD_UNAFFECT 5
 /* Functions without subcommands */
 ACMD(do_acaudit);
 ACMD(do_advance);

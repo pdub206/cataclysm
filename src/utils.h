@@ -166,7 +166,6 @@ int	perform_move(struct char_data *ch, int dir, int following);
 int	mana_gain(struct char_data *ch);
 int	hit_gain(struct char_data *ch);
 int	move_gain(struct char_data *ch);
-void	set_title(struct char_data *ch, char *title);
 void	gain_exp(struct char_data *ch, int gain);
 void	gain_exp_regardless(struct char_data *ch, int gain);
 void	gain_condition(struct char_data *ch, int condition, int value);
@@ -528,8 +527,6 @@ do                                                              \
 #define IS_NAME_MATCH(str, ch) \
   (isname((str), IS_NPC(ch) ? GET_KEYWORDS(ch) : GET_NAME(ch)))
 
-/** Title of PC */
-#define GET_TITLE(ch)   ((ch)->player.title)
 /** Level of PC or NPC. */
 #define GET_LEVEL(ch)   ((ch)->player.level)
 /** Password of PC. */

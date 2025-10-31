@@ -198,7 +198,6 @@ const char *player_bits[] = {
   "CSH",
   "SITEOK",
   "NOSHOUT",
-  "NOTITLE",
   "DELETED",
   "LOADRM",
   "NO_WIZL",
