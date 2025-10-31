@@ -1616,29 +1616,94 @@ void nanny(struct descriptor_data *d, char *arg)
     } else {
       GET_CLASS(d->character) = load_result;
     }
-      if (d->olc) {
-        free(d->olc);
-        d->olc = NULL;
-      }
-      if (GET_PFILEPOS(d->character) < 0)
+
+    /* Create player entry and initialize character now so file exists */
+    if (d->olc) {
+      free(d->olc);
+      d->olc = NULL;
+    }
+    if (GET_PFILEPOS(d->character) < 0)
       GET_PFILEPOS(d->character) = create_entry(GET_PC_NAME(d->character));
-    /* Now GET_NAME() will work properly. */
+
+    /* Initialize base stats, starting level, etc. */
     init_char(d->character);
     save_char(d->character);
     save_player_index();
+
+    /* Log and register early so new players are tracked immediately */
+    GET_PREF(d->character) = rand_number(1, 128000);
+    GET_HOST(d->character) = strdup(d->host);
+    mudlog(NRM, LVL_GOD, TRUE, "%s [%s] new player created (awaiting description).",
+           GET_NAME(d->character), d->host);
+
+    if (AddRecentPlayer(GET_NAME(d->character), d->host, TRUE, FALSE) == FALSE)
+      mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE,
+             "Failure to AddRecentPlayer (returned FALSE).");
+
+    /* Now move to mandatory description entry */
+    write_to_output(d,
+      "\r\nBefore entering the world, please describe your character.\r\n"
+      "Focus on what others can immediately see — height, build, complexion,\r\n"
+      "facial structure, hair, eyes, and other physical details. Avoid names,\r\n"
+      "clothing, or personal information that someone would not know meeting\r\n"
+      "you for the first time.\r\n\r\n"
+      "Example:\r\n"
+      "  This broad-shouldered human stands with a relaxed but watchful bearing.\r\n"
+      "  Weather and sun have darkened their skin, and faint scars trace the backs\r\n"
+      "  of their hands. Their eyes are a pale, gray-green hue, steady and alert\r\n"
+      "  beneath a low brow. Thick, uneven hair falls around a strong jaw and\r\n"
+      "  angular features.\r\n\r\n");
+
+    d->backstr = NULL;
+    d->str = &d->character->player.description;
+    d->max_str = PLR_DESC_LENGTH;
+    STATE(d) = CON_PLR_DESC;
+    send_editor_help(d);
+    return;
+
+  case CON_PLR_DESC:
+    /* If the player canceled or has no description, prompt again */
+    if (!d->character->player.description || !*d->character->player.description) {
+      write_to_output(d,
+        "\r\nYou must provide a description before entering the world.\r\n"
+        "Please try again.  Type '/s' on a blank line when finished.\r\n\r\n");
+      d->backstr = NULL;
+      d->str = &d->character->player.description;
+      d->max_str = PLR_DESC_LENGTH;
+      send_editor_help(d);
+      return;
+    }
+
+    /* Count lines */
+    {
+      int line_count = 0;
+      for (char *p = d->character->player.description; *p; p++)
+        if (*p == '\n')
+          line_count++;
+
+      if (line_count < 4) {
+        write_to_output(d,
+          "\r\nYour description must be at least four lines long.\r\n"
+          "Please expand on your appearance and try again.\r\n");
+        free(d->character->player.description);
+        d->character->player.description = NULL;
+        d->backstr = NULL;
+        d->str = &d->character->player.description;
+        d->max_str = PLR_DESC_LENGTH;
+        send_editor_help(d);
+        return;
+      }
+    }
+
+    /* Description accepted — save and continue */
+    save_char(d->character);
+
     write_to_output(d, "%s\r\n*** PRESS RETURN: ", motd);
     STATE(d) = CON_RMOTD;
-    /* make sure the last log is updated correctly. */
-    GET_PREF(d->character)= rand_number(1, 128000);
-    GET_HOST(d->character)= strdup(d->host);
 
-    mudlog(NRM, LVL_GOD, TRUE, "%s [%s] new player.", GET_NAME(d->character), d->host);
-
-    /* Add to the list of 'recent' players (since last reboot) */
-    if (AddRecentPlayer(GET_NAME(d->character), d->host, TRUE, FALSE) == FALSE)
-    {
-      mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE, "Failure to AddRecentPlayer (returned FALSE).");
-    }
+    /* Final log confirmation */
+    mudlog(NRM, LVL_GOD, TRUE, "%s [%s] completed character creation.",
+           GET_NAME(d->character), d->host);
     break;
 
   case CON_RMOTD:		/* read CR after printing motd   */
@@ -1657,6 +1722,38 @@ void nanny(struct descriptor_data *d, char *arg)
       break;
 
     case '1':
+      /* Require a description before entering the world */
+      if (!d->character->player.description || !*d->character->player.description) {
+        write_to_output(d,
+          "\r\nBefore entering the world, you must describe your character.\r\n"
+          "Focus on what others can immediately see — height, build, complexion,\r\n"
+          "facial structure, hair, eyes, and other physical traits.\r\n"
+          "When done, type '/s' on a blank line.\r\n\r\n");
+        d->backstr = NULL;
+        d->str = &d->character->player.description;
+        d->max_str = PLR_DESC_LENGTH;
+        STATE(d) = CON_PLR_DESC;
+        send_editor_help(d);
+        return;
+      } else {
+        int line_count = 0;
+        for (char *p = d->character->player.description; *p; p++)
+          if (*p == '\n')
+            line_count++;
+        if (line_count < 4) {
+          write_to_output(d,
+            "\r\nYour description must be at least four lines long.\r\n"
+            "Please expand it before entering the world.\r\n\r\n");
+          d->backstr = NULL;
+          d->str = &d->character->player.description;
+          d->max_str = PLR_DESC_LENGTH;
+          STATE(d) = CON_PLR_DESC;
+          send_editor_help(d);
+          return;
+        }
+      }
+
+      /* Proceed into the world */
       load_result = enter_player_game(d);
       send_to_char(d->character, "%s", CONFIG_WELC_MESSG);
 
@@ -1668,49 +1765,34 @@ void nanny(struct descriptor_data *d, char *arg)
       act("$n has entered the game.", TRUE, d->character, 0, 0, TO_ROOM);
 
       STATE(d) = CON_PLAYING;
-      MXPSendTag( d, "<VERSION>" );
+      MXPSendTag(d, "<VERSION>");
+
       if (GET_LEVEL(d->character) == 0) {
-	do_start(d->character);
-	send_to_char(d->character, "%s", CONFIG_START_MESSG);
+        do_start(d->character);
+        send_to_char(d->character, "%s", CONFIG_START_MESSG);
       }
+
       look_at_room(d->character, 0);
       if (has_mail(GET_IDNUM(d->character)))
-	send_to_char(d->character, "You have mail waiting.\r\n");
-      if (load_result == 2) {	/* rented items lost */
-	send_to_char(d->character, "\r\n\007You could not afford your rent!\r\n"
-		"Your possesions have been donated to the Salvation Army!\r\n");
-      }
+        send_to_char(d->character, "You have mail waiting.\r\n");
+
       d->has_prompt = 0;
       /* We've updated to 3.1 - some bits might be set wrongly: */
       REMOVE_BIT_AR(PRF_FLAGS(d->character), PRF_BUILDWALK);
       break;
 
     case '2':
-      if (d->character->player.description) {
-	write_to_output(d, "Current description:\r\n%s", d->character->player.description);
-	/* Don't free this now... so that the old description gets loaded as the
-	 * current buffer in the editor.  Do setup the ABORT buffer here, however. */
-	d->backstr = strdup(d->character->player.description);
-      }
-      write_to_output(d, "Enter the new text you'd like others to see when they look at you.\r\n");
-      send_editor_help(d);
-      d->str = &d->character->player.description;
-      d->max_str = PLR_DESC_LENGTH;
-      STATE(d) = CON_PLR_DESC;
-      break;
-
-    case '3':
       page_string(d, background, 0);
       STATE(d) = CON_RMOTD;
       break;
 
-    case '4':
+    case '3':
       write_to_output(d, "\r\nEnter your old password: ");
       echo_off(d);
       STATE(d) = CON_CHPWD_GETOLD;
       break;
 
-    case '5':
+    case '4':
       write_to_output(d, "\r\nEnter your password for verification: ");
       echo_off(d);
       STATE(d) = CON_DELCNF1;
