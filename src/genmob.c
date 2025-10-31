@@ -401,9 +401,11 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
                    "%s%c\n"
                    "%s%c\n"
                    "%s%c\n"
+                   "%s%c\n"
                    "%s%c\n",
                    mvnum,
-                   GET_ALIAS(mob), STRING_TERMINATOR,
+                   GET_NAME(mob), STRING_TERMINATOR,
+                   GET_KEYWORDS(mob), STRING_TERMINATOR,
                    GET_SDESC(mob), STRING_TERMINATOR,
                    ldesc, STRING_TERMINATOR,
                    ddesc, STRING_TERMINATOR);
@@ -474,10 +476,11 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
 void check_mobile_strings(struct char_data *mob)
 {
   mob_vnum mvnum = mob_index[mob->nr].vnum;
+  check_mobile_string(mvnum, &GET_NAME(mob), "npc name");
+  check_mobile_string(mvnum, &GET_KEYWORDS(mob), "alias list");
+  check_mobile_string(mvnum, &GET_SDESC(mob), "short description");
   check_mobile_string(mvnum, &GET_LDESC(mob), "long description");
   check_mobile_string(mvnum, &GET_DDESC(mob), "detailed description");
-  check_mobile_string(mvnum, &GET_ALIAS(mob), "alias list");
-  check_mobile_string(mvnum, &GET_SDESC(mob), "short description");
 }
 
 void check_mobile_string(mob_vnum i, char **string, const char *desc)

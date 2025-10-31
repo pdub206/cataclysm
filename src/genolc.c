@@ -606,7 +606,7 @@ static int export_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
 		"%s%c\n"
 		"%s%c\n",
 	mvnum%100,
-	GET_ALIAS(mob), STRING_TERMINATOR,
+	GET_KEYWORDS(mob), STRING_TERMINATOR,
 	GET_SDESC(mob), STRING_TERMINATOR,
 	ldesc, STRING_TERMINATOR,
 	ddesc, STRING_TERMINATOR

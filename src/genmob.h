@@ -31,7 +31,6 @@ int write_mobile_mobprog(mob_vnum mvnum, struct char_data *mob, FILE *fd);
 #endif
 
 /* Handy macros. */
-#define GET_ALIAS(mob)	((mob)->player.name)
 #define GET_SDESC(mob)	((mob)->player.short_descr)
 #define GET_LDESC(mob)	((mob)->player.long_descr)
 #define GET_DDESC(mob)	((mob)->player.description)

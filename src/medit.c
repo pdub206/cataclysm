@@ -186,9 +186,10 @@ static void medit_setup_new(struct descriptor_data *d)
 
   GET_MOB_RNUM(mob) = NOBODY;
   /* Set up some default strings. */
-  GET_ALIAS(mob) = strdup("mob unfinished");
-  GET_SDESC(mob) = strdup("the unfinished mob");
-  GET_LDESC(mob) = strdup("An unfinished mob stands here.\r\n");
+  GET_NAME(mob) = strdup("NPC");
+  GET_KEYWORDS(mob) = strdup("unfinished npc");
+  GET_SDESC(mob) = strdup("the unfinished npc");
+  GET_LDESC(mob) = strdup("An unfinished npc stands here.\r\n");
   GET_DDESC(mob) = strdup("It looks unfinished.\r\n");
   SCRIPT(mob) = NULL;
   mob->proto_script = OLC_SCRIPT(d) = NULL;
@@ -417,15 +418,18 @@ static void medit_disp_menu(struct descriptor_data *d)
   clear_screen(d);
 
   write_to_output(d,
-  "-- Mob Number:  [%s%d%s]\r\n"
-  "%s1%s) Sex: %s%-7.7s%s	         %s2%s) Keywords: %s%s\r\n"
-  "%s3%s) S-Desc: %s%s\r\n"
-  "%s4%s) L-Desc:-\r\n%s%s\r\n"
-  "%s5%s) D-Desc:-\r\n%s%s\r\n",
+    "-- Mob Number:  [%s%d%s]\r\n"
+    "%s1%s) Name: %s%s\r\n"
+    "%s2%s) Keywords: %s%s\r\n"
+    "%s3%s) Sex: %s%-7.7s%s\r\n"
+    "%s4%s) S-Desc: %s%s\r\n"
+    "%s5%s) L-Desc:-\r\n%s%s\r\n"
+    "%s6%s) D-Desc:-\r\n%s%s\r\n",
 
 	  cyn, OLC_NUM(d), nrm,
+	  grn, nrm, yel, GET_NAME(mob),
+	  grn, nrm, yel, GET_KEYWORDS(mob),
 	  grn, nrm, yel, genders[(int)GET_SEX(mob)], nrm,
-	  grn, nrm, yel, GET_ALIAS(mob),
 	  grn, nrm, yel, GET_SDESC(mob),
 	  grn, nrm, yel, GET_LDESC(mob),
 	  grn, nrm, yel, GET_DDESC(mob)
@@ -434,15 +438,15 @@ static void medit_disp_menu(struct descriptor_data *d)
   sprintbitarray(MOB_FLAGS(mob), action_bits, AF_ARRAY_MAX, flags);
   sprintbitarray(AFF_FLAGS(mob), affected_bits, AF_ARRAY_MAX, flag2);
   write_to_output(d,
-	  "%s6%s) Position  : %s%s\r\n"
-	  "%s7%s) Default   : %s%s\r\n"
-	  "%s8%s) Attack    : %s%s\r\n"
-      "%s9%s) Stats Menu...\r\n"
-      "%s0%s) Skills Menu...\r\n"
+	  "%s7%s) Position  : %s%s\r\n"
+	  "%s8%s) Default   : %s%s\r\n"
+	  "%s9%s) Attack    : %s%s\r\n"
+    "%s0%s) Stats Menu...\r\n"
+    "%s-%s) Skills Menu...\r\n"
 	  "%sA%s) NPC Flags : %s%s\r\n"
 	  "%sB%s) AFF Flags : %s%s\r\n"
-          "%sS%s) Script    : %s%s\r\n"
-          "%sW%s) Copy mob\r\n"
+    "%sS%s) Script    : %s%s\r\n"
+    "%sW%s) Copy mob\r\n"
 	  "%sX%s) Delete mob\r\n"
 	  "%sQ%s) Quit\r\n"
 	  "Enter choice : ",
@@ -622,22 +626,26 @@ void medit_parse(struct descriptor_data *d, char *arg)
 	cleanup_olc(d, CLEANUP_ALL);
       return;
     case '1':
-      OLC_MODE(d) = MEDIT_SEX;
-      medit_disp_sex(d);
-      return;
+      OLC_MODE(d) = MEDIT_NAME;
+      i--;
+      break;
     case '2':
       OLC_MODE(d) = MEDIT_KEYWORD;
       i--;
       break;
     case '3':
+      OLC_MODE(d) = MEDIT_SEX;
+      medit_disp_sex(d);
+      return;
+    case '4':
       OLC_MODE(d) = MEDIT_S_DESC;
       i--;
       break;
-    case '4':
+    case '5':
       OLC_MODE(d) = MEDIT_L_DESC;
       i--;
       break;
-    case '5':
+    case '6':
       OLC_MODE(d) = MEDIT_D_DESC;
       send_editor_help(d);
       write_to_output(d, "Enter mob description:\r\n\r\n");
@@ -648,23 +656,23 @@ void medit_parse(struct descriptor_data *d, char *arg)
       string_write(d, &OLC_MOB(d)->player.description, MAX_MOB_DESC, 0, oldtext);
       OLC_VAL(d) = 1;
       return;
-    case '6':
+    case '7':
       OLC_MODE(d) = MEDIT_POS;
       medit_disp_positions(d);
       return;
-    case '7':
+    case '8':
       OLC_MODE(d) = MEDIT_DEFAULT_POS;
       medit_disp_positions(d);
       return;
-    case '8':
+    case '9':
       OLC_MODE(d) = MEDIT_ATTACK;
       medit_disp_attack_types(d);
       return;
-    case '9':
+    case '0':
       OLC_MODE(d) = MEDIT_STATS_MENU;
       medit_disp_stats_menu(d);
       return;
-    case '0':  /* Enter skill sub-menu */
+    case '-':  /* Enter skill sub-menu */
       OLC_MODE(d) = MEDIT_SKILL_MENU;
       medit_disp_skill_menu(d);
       return;
@@ -943,11 +951,18 @@ void medit_parse(struct descriptor_data *d, char *arg)
     if (dg_script_edit_parse(d, arg)) return;
     break;
 
+  case MEDIT_NAME:
+    smash_tilde(arg);
+    if (GET_NAME(OLC_MOB(d)))
+      free(GET_NAME(OLC_MOB(d)));
+    GET_NAME(OLC_MOB(d)) = str_udup(arg);
+    break;
+
   case MEDIT_KEYWORD:
     smash_tilde(arg);
-    if (GET_ALIAS(OLC_MOB(d)))
-      free(GET_ALIAS(OLC_MOB(d)));
-    GET_ALIAS(OLC_MOB(d)) = str_udup(arg);
+    if (GET_KEYWORDS(OLC_MOB(d)))
+      free(GET_KEYWORDS(OLC_MOB(d)));
+    GET_KEYWORDS(OLC_MOB(d)) = str_udup(arg);
     break;
 
   case MEDIT_S_DESC:
@@ -971,9 +986,6 @@ void medit_parse(struct descriptor_data *d, char *arg)
     break;
 
   case MEDIT_D_DESC:
-    /*
-     * We should never get here.
-     */
     cleanup_olc(d, CLEANUP_ALL);
     mudlog(BRF, LVL_BUILDER, TRUE, "SYSERR: OLC: medit_parse(): Reached D_DESC case!");
     write_to_output(d, "Oops...\r\n");

@@ -1084,11 +1084,27 @@ struct char_data *get_char_room_vis(struct char_data *ch, char *name, int *numbe
   if (*number == 0)
     return (get_player_vis(ch, name, NULL, FIND_CHAR_ROOM));
 
-  for (i = world[IN_ROOM(ch)].people; i && *number; i = i->next_in_room)
-    if (isname(name, i->player.name))
-      if (CAN_SEE(ch, i))
-	if (--(*number) == 0)
-	  return (i);
+  for (i = world[IN_ROOM(ch)].people; i && *number; i = i->next_in_room) {
+    const char *namelist = NULL;
+    bool match = FALSE;
+
+    if (IS_NPC(i)) {
+      /* NPCs match either keywords or their name */
+      const char *keywords = GET_KEYWORDS(i);
+      const char *proper   = GET_NAME(i);
+      if ((keywords && isname(name, keywords)) || (proper && isname(name, proper)))
+        match = TRUE;
+    } else {
+      /* PCs match only their name */
+      namelist = GET_NAME(i);
+      if (namelist && isname(name, namelist))
+        match = TRUE;
+    }
+
+    if (match && CAN_SEE(ch, i))
+      if (--(*number) == 0)
+        return (i);
+  }
 
   return (NULL);
 }
@@ -1103,16 +1119,32 @@ struct char_data *get_char_world_vis(struct char_data *ch, char *name, int *numb
     num = get_number(&name);
   }
 
+  /* First, try to find character in the same room */
   if ((i = get_char_room_vis(ch, name, number)) != NULL)
     return (i);
 
+  /* 0.<name> means PC with name */
   if (*number == 0)
     return get_player_vis(ch, name, NULL, 0);
 
   for (i = character_list; i && *number; i = i->next) {
     if (IN_ROOM(ch) == IN_ROOM(i))
       continue;
-    if (!isname(name, i->player.name))
+
+    bool match = FALSE;
+
+    if (IS_NPC(i)) {
+      const char *keywords = GET_KEYWORDS(i);
+      const char *proper   = GET_NAME(i);
+      if ((keywords && isname(name, keywords)) || (proper && isname(name, proper)))
+        match = TRUE;
+    } else {
+      const char *namelist = GET_NAME(i);
+      if (namelist && isname(name, namelist))
+        match = TRUE;
+    }
+
+    if (!match)
       continue;
     if (!CAN_SEE(ch, i))
       continue;
@@ -1121,6 +1153,7 @@ struct char_data *get_char_world_vis(struct char_data *ch, char *name, int *numb
 
     return (i);
   }
+
   return (NULL);
 }
 

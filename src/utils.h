@@ -506,11 +506,28 @@ do                                                              \
 /** How old is PC/NPC, at last recorded time? */
 #define GET_AGE(ch)     (age(ch)->year)
 
-/** Name of PC. */
-#define GET_PC_NAME(ch)	((ch)->player.name)
-/** Name of PC or short_descr of NPC. */
-#define GET_NAME(ch)    (IS_NPC(ch) ? \
-			 (ch)->player.short_descr : GET_PC_NAME(ch))
+/** Proper name for PCs and NPCs. */
+#define GET_NAME(ch)        ((ch)->player.name)
+
+/** Player-only convenience. */
+#define GET_PC_NAME(ch)     ((ch)->player.name)
+
+/** Parsing keywords for matching. */
+#define GET_KEYWORDS(ch)    ((ch)->player.keywords)
+
+/** Appearance-based description for displays (e.g. short look text). */
+#define GET_SHORT_DESC(ch)  ((ch)->player.short_descr)
+
+/** Safe name for room messages. */
+#define GET_DISPLAY_NAME(ch) (GET_NAME(ch) && *GET_NAME(ch) ? GET_NAME(ch) : "someone")
+
+/*
+ * Wrapper around isname() that checks GET_KEYWORDS for NPCs and GET_NAME for PCs.
+ * Use this instead of calling isname() directly when matching character names.
+ */
+#define IS_NAME_MATCH(str, ch) \
+  (isname((str), IS_NPC(ch) ? GET_KEYWORDS(ch) : GET_NAME(ch)))
+
 /** Title of PC */
 #define GET_TITLE(ch)   ((ch)->player.title)
 /** Level of PC or NPC. */
@@ -867,8 +884,15 @@ do                                                              \
    (CAN_WEAR((obj), ITEM_WEAR_TAKE) && CAN_CARRY_OBJ((ch),(obj)) && \
     CAN_SEE_OBJ((ch),(obj)))
 
-/** If vict can see ch, return ch name, else return "someone". */
-#define PERS(ch, vict)   (CAN_SEE(vict, ch) ? GET_NAME(ch) : (GET_LEVEL(ch) > LVL_IMMORT ? "an immortal" : "someone"))
+/** 
+ * If vict can see ch, return visible name. 
+ * For NPCs: use short_descr (e.g. "a burly guard").
+ * For PCs:  use proper name.
+ */
+#define PERS(ch, vict) \
+  (CAN_SEE((vict), (ch)) ? \
+   (IS_NPC(ch) ? GET_SHORT_DESC(ch) : GET_NAME(ch)) : \
+   ((GET_LEVEL(ch) > LVL_IMMORT) ? "an immortal" : "someone"))
 
 /** If vict can see obj, return obj short description, else return
  * "something". */
