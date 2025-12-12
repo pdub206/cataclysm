@@ -388,6 +388,7 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
               CCNRM(ch, C_NRM));
   }
 
+  /* NPCs with a full long description at default position: print that and bail. */
   if (IS_NPC(i) && i->player.long_descr && GET_POS(i) == GET_DEFAULT_POS(i)) {
     if (AFF_FLAGGED(i, AFF_INVISIBLE))
       send_to_char(ch, "*");
@@ -398,6 +399,7 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
       else if (IS_GOOD(i))
         send_to_char(ch, "(Blue Aura) ");
     }
+
     send_to_char(ch, "%s", i->player.long_descr);
 
     if (AFF_FLAGGED(i, AFF_SANCTUARY))
@@ -408,10 +410,16 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
     return;
   }
 
-  if (IS_NPC(i))
-    send_to_char(ch, "%c%s", UPPER(*i->player.short_descr), i->player.short_descr + 1);
-  else
-    send_to_char(ch, "%s", i->player.name);
+  /* Otherwise, use short description (PC or NPC) if present, else name. */
+  {
+    const char *sdesc = GET_SHORT_DESC(i);
+    if (sdesc && *sdesc) {
+      /* Capitalize first letter for room list */
+      send_to_char(ch, "%c%s", UPPER(*sdesc), sdesc + 1);
+    } else {
+      send_to_char(ch, "%s", GET_NAME(i));
+    }
+  }
 
   if (AFF_FLAGGED(i, AFF_INVISIBLE))
     send_to_char(ch, " (invisible)");
@@ -456,6 +464,7 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
     else if (IS_GOOD(i))
       send_to_char(ch, " (Blue Aura)");
   }
+
   send_to_char(ch, "\r\n");
 
   if (AFF_FLAGGED(i, AFF_SANCTUARY))
@@ -654,7 +663,20 @@ static void look_in_obj(struct char_data *ch, char *arg)
       if (OBJVAL_FLAGGED(obj, CONT_CLOSED) && (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE)))
         send_to_char(ch, "It is closed.\r\n");
       else {
-        send_to_char(ch, "%s", fname(obj->name));
+        /* Choose a label for the container:
+         *  - For corpses (GET_OBJ_VAL(obj,3) == 1), use the short_description,
+         *    e.g. "the corpse of the tall, muscular man"
+         *  - Otherwise, fall back to the first keyword (fname(obj->name))
+         */
+        const char *label;
+
+        if (GET_OBJ_VAL(obj, 3) == 1 && obj->short_description && *obj->short_description)
+          label = obj->short_description;
+        else
+          label = fname(obj->name);
+
+        send_to_char(ch, "%s", label);
+
         switch (bits) {
         case FIND_OBJ_INV:
           send_to_char(ch, " (carried): \r\n");

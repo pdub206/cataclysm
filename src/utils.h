@@ -881,15 +881,17 @@ do                                                              \
    (CAN_WEAR((obj), ITEM_WEAR_TAKE) && CAN_CARRY_OBJ((ch),(obj)) && \
     CAN_SEE_OBJ((ch),(obj)))
 
-/** 
- * If vict can see ch, return visible name. 
- * For NPCs: use short_descr (e.g. "a burly guard").
- * For PCs:  use proper name.
+/* Display name for a character as seen by 'vict'.
+ * - If vict can’t see ch: "someone"
+ * - If NPC: use short_descr if set, else personal name
+ * - If PC: use short_descr if set, else personal name
  */
-#define PERS(ch, vict) \
-  (CAN_SEE((vict), (ch)) ? \
-   (IS_NPC(ch) ? GET_SHORT_DESC(ch) : GET_NAME(ch)) : \
-   ((GET_LEVEL(ch) > LVL_IMMORT) ? "an immortal" : "someone"))
+#define PERS(ch, vict)                                                     \
+  (CAN_SEE((vict), (ch)) ?                                                 \
+    ((GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch)) ?                         \
+      GET_SHORT_DESC(ch) :                                                 \
+      GET_NAME(ch)) :                                                      \
+    "someone")
 
 /** If vict can see obj, return obj short description, else return
  * "something". */

@@ -1608,58 +1608,108 @@ void nanny(struct descriptor_data *d, char *arg)
     STATE(d) = CON_QCLASS;
     break;
 
-  case CON_QCLASS:
-    load_result = parse_class(*arg);
-    if (load_result == CLASS_UNDEFINED) {
-      write_to_output(d, "\r\nThat's not a class.\r\nClass: ");
-      return;
-    } else {
-      GET_CLASS(d->character) = load_result;
-    }
-
-    /* Create player entry and initialize character now so file exists */
-    if (d->olc) {
-      free(d->olc);
-      d->olc = NULL;
-    }
-    if (GET_PFILEPOS(d->character) < 0)
-      GET_PFILEPOS(d->character) = create_entry(GET_PC_NAME(d->character));
-
-    /* Initialize base stats, starting level, etc. */
-    init_char(d->character);
-    save_char(d->character);
-    save_player_index();
-
-    /* Log and register early so new players are tracked immediately */
-    GET_PREF(d->character) = rand_number(1, 128000);
-    GET_HOST(d->character) = strdup(d->host);
-    mudlog(NRM, LVL_GOD, TRUE, "%s [%s] new player created (awaiting description).",
-           GET_NAME(d->character), d->host);
-
-    if (AddRecentPlayer(GET_NAME(d->character), d->host, TRUE, FALSE) == FALSE)
-      mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE,
-             "Failure to AddRecentPlayer (returned FALSE).");
-
-    /* Now move to mandatory description entry */
-    write_to_output(d,
-      "\r\nBefore entering the world, please describe your character.\r\n"
-      "Focus on what others can immediately see — height, build, complexion,\r\n"
-      "facial structure, hair, eyes, and other physical details. Avoid names,\r\n"
-      "clothing, or personal information that someone would not know meeting\r\n"
-      "you for the first time.\r\n\r\n"
-      "Example:\r\n"
-      "  This broad-shouldered human stands with a relaxed but watchful bearing.\r\n"
-      "  Weather and sun have darkened their skin, and faint scars trace the backs\r\n"
-      "  of their hands. Their eyes are a pale, gray-green hue, steady and alert\r\n"
-      "  beneath a low brow. Thick, uneven hair falls around a strong jaw and\r\n"
-      "  angular features.\r\n\r\n");
-
-    d->backstr = NULL;
-    d->str = &d->character->player.description;
-    d->max_str = PLR_DESC_LENGTH;
-    STATE(d) = CON_PLR_DESC;
-    send_editor_help(d);
+case CON_QCLASS:
+  load_result = parse_class(*arg);
+  if (load_result == CLASS_UNDEFINED) {
+    write_to_output(d, "\r\nThat's not a class.\r\nClass: ");
     return;
+  } else {
+    GET_CLASS(d->character) = load_result;
+  }
+
+  /* Create player entry and initialize character now so file exists */
+  if (d->olc) {
+    free(d->olc);
+    d->olc = NULL;
+  }
+  if (GET_PFILEPOS(d->character) < 0)
+    GET_PFILEPOS(d->character) = create_entry(GET_PC_NAME(d->character));
+
+  /* Initialize base stats, starting level, etc. */
+  init_char(d->character);
+  save_char(d->character);
+  save_player_index();
+
+  /* Log and register early so new players are tracked immediately */
+  GET_PREF(d->character) = rand_number(1, 128000);
+  GET_HOST(d->character) = strdup(d->host);
+  mudlog(NRM, LVL_GOD, TRUE, "%s [%s] new player created (awaiting description).",
+         GET_NAME(d->character), d->host);
+
+  if (AddRecentPlayer(GET_NAME(d->character), d->host, TRUE, FALSE) == FALSE)
+    mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE,
+           "Failure to AddRecentPlayer (returned FALSE).");
+
+  /* === NEW: mandatory short description before main description === */
+  write_to_output(d,
+    "\r\nBefore entering the world, you must choose a short description.\r\n"
+    "This is what others see in the room list and messages instead of your name.\r\n"
+    "It should describe your appearance, not identity.\r\n\r\n"
+    "Examples:\r\n"
+    "  the tall, muscular man\r\n"
+    "  the lanky, sharp-eyed elf\r\n"
+    "  the short, bald dwarf\r\n\r\n"
+    "Do not include your character's name here.\r\n"
+    "Short description: ");
+
+  STATE(d) = CON_QSHORTDESC;
+  return;
+
+  case CON_QSHORTDESC: {
+      skip_spaces(&arg);
+
+      if (!*arg) {
+          write_to_output(d, "\r\nA short description cannot be empty.\r\n"
+                            "Short description: ");
+          return;
+      }
+
+      /* Do not allow their character name in the sdesc */
+      if (str_str(arg, GET_NAME(d->character))) {
+          write_to_output(d, "\r\nYour short description must not include your name.\r\n"
+                            "Short description: ");
+          return;
+      }
+
+      /* Enforce length limit (optional, but recommended) */
+      if (strlen(arg) > MAX_NAME_LENGTH * 2) {
+          write_to_output(d, "\r\nThat description is too long.\r\n"
+                            "Short description: ");
+          return;
+      }
+
+      /* Store as player's short description */
+      if (GET_SHORT_DESC(d->character))
+          free(GET_SHORT_DESC(d->character));
+
+      GET_SHORT_DESC(d->character) = strdup(arg);
+
+      /* Immediately save it to disk */
+      save_char(d->character);
+      save_player_index();
+
+      /* Now transition to full description input */
+      write_to_output(d,
+        "\r\nBefore entering the world, please describe your character.\r\n"
+        "Focus on what others can immediately see — height, build, complexion,\r\n"
+        "facial structure, hair, eyes, and other physical details. Avoid names,\r\n"
+        "clothing, or personal information that someone would not know meeting\r\n"
+        "you for the first time.\r\n\r\n"
+        "Example:\r\n"
+        "  This broad-shouldered human stands with a relaxed but watchful bearing.\r\n"
+        "  Weather and sun have darkened their skin, and faint scars trace the backs\r\n"
+        "  of their hands. Their eyes are a pale, gray-green hue, steady and alert\r\n"
+        "  beneath a low brow. Thick, uneven hair falls around a strong jaw and\r\n"
+        "  angular features.\r\n\r\n");
+
+      d->backstr = NULL;
+      d->str = &d->character->player.description;
+      d->max_str = PLR_DESC_LENGTH;
+      STATE(d) = CON_PLR_DESC;
+
+      send_editor_help(d);
+      return;
+  }
 
   case CON_PLR_DESC:
     /* If the player canceled or has no description, prompt again */

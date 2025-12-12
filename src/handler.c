@@ -1078,35 +1078,66 @@ struct char_data *get_char_room_vis(struct char_data *ch, char *name, int *numbe
 
   /* JE */
   if (!str_cmp(name, "self") || !str_cmp(name, "me"))
-    return (ch);
+    return ch;
 
   /* 0.<name> means PC with name */
   if (*number == 0)
-    return (get_player_vis(ch, name, NULL, FIND_CHAR_ROOM));
+    return get_player_vis(ch, name, NULL, FIND_CHAR_ROOM);
 
   for (i = world[IN_ROOM(ch)].people; i && *number; i = i->next_in_room) {
-    const char *namelist = NULL;
     bool match = FALSE;
 
     if (IS_NPC(i)) {
-      /* NPCs match either keywords or their name */
+      /* NPCs: match either keywords or their name (unchanged) */
       const char *keywords = GET_KEYWORDS(i);
       const char *proper   = GET_NAME(i);
-      if ((keywords && isname(name, keywords)) || (proper && isname(name, proper)))
+
+      if ((keywords && isname(name, keywords)) ||
+          (proper   && isname(name, proper)))
         match = TRUE;
+
     } else {
-      /* PCs match only their name */
-      namelist = GET_NAME(i);
-      if (namelist && isname(name, namelist))
+      /* PCs: match against name + sanitized short description */
+      const char *proper = GET_NAME(i);
+      const char *sdesc  = GET_SHORT_DESC(i);
+
+      if (sdesc && *sdesc) {
+        char clean_sdesc[MAX_INPUT_LENGTH];
+        char tmp[MAX_INPUT_LENGTH * 2];
+        int w = 0;
+
+        /* Turn punctuation etc. into spaces so "tall," -> "tall" */
+        for (int r = 0; sdesc[r] && w < (int)sizeof(clean_sdesc) - 1; r++) {
+          unsigned char c = (unsigned char)sdesc[r];
+
+          if (isalnum(c) || c == '\'' || c == '-') {
+            clean_sdesc[w++] = c;
+          } else {
+            /* normalize anything else (spaces, commas, etc.) to a single space */
+            clean_sdesc[w++] = ' ';
+          }
+        }
+        clean_sdesc[w] = '\0';
+
+        if (proper && *proper)
+          snprintf(tmp, sizeof(tmp), "%s %s", proper, clean_sdesc);
+        else
+          snprintf(tmp, sizeof(tmp), "%s", clean_sdesc);
+
+        if (isname(name, tmp))
+          match = TRUE;
+      } else if (proper && isname(name, proper)) {
+        /* Fallback: no sdesc yet, use name only */
         match = TRUE;
+      }
     }
 
     if (match && CAN_SEE(ch, i))
       if (--(*number) == 0)
-        return (i);
+        return i;
   }
 
-  return (NULL);
+  return NULL;
 }
 
 struct char_data *get_char_world_vis(struct char_data *ch, char *name, int *number)

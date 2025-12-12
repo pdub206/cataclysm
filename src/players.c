@@ -247,6 +247,7 @@ int load_char(const char *name, struct char_data *ch)
 
     /* Character initializations. Necessary to keep some things straight. */
     ch->affected = NULL;
+    ch->player.short_descr = NULL;   /* ensure a clean start */
     for (i = 1; i <= MAX_SKILLS; i++)
       if (IS_NPC(ch))
         ch->mob_specials.skills[i] = 0;
@@ -430,6 +431,13 @@ int load_char(const char *name, struct char_data *ch)
 
       case 'S':
 	     if (!strcmp(tag, "Sex "))	GET_SEX(ch)		= atoi(line);
+  else if (!strcmp(tag, "Sdsc")) {
+    /* Clear any existing sdesc to avoid leaks */
+    if (GET_SHORT_DESC(ch))
+      free(GET_SHORT_DESC(ch));
+    /* 'line' is the remainder of the line after "Sdsc" + space */
+    GET_SHORT_DESC(ch) = strdup(line);
+  }
   else if (!strcmp(tag, "ScrW"))  GET_SCREEN_WIDTH(ch) = atoi(line);
 	else if (!strcmp(tag, "Skil"))	load_skills(fl, ch);
   else if (!strcmp(tag, "SkGt")) {  /* Skill Gain Timers */
@@ -570,6 +578,7 @@ void save_char(struct char_data * ch)
   /* end char_to_store code */
 
   if (GET_NAME(ch))				fprintf(fl, "Name: %s\n", GET_NAME(ch));
+  if (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch))       fprintf(fl, "Sdsc: %s\n", GET_SHORT_DESC(ch));
   if (GET_PASSWD(ch))				fprintf(fl, "Pass: %s\n", GET_PASSWD(ch));
   if (ch->player.description && *ch->player.description) {
     strcpy(buf, ch->player.description);

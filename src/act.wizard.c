@@ -145,9 +145,20 @@ static void collapse_spaces(char *s) {
   *dst = '\0';
 }
 
-static void build_actor_name(struct char_data *actor, bool possessive, char *out, size_t outsz) {
-  if (!possessive) strlcpy(out, GET_NAME(actor), outsz);
-  else             make_possessive(GET_NAME(actor), out, outsz);
+static void build_actor_name(struct char_data *actor,
+                             bool possessive,
+                             char *out, size_t outsz)
+{
+  /* Prefer short description if present; fall back to personal name */
+  const char *base =
+    (GET_SHORT_DESC(actor) && *GET_SHORT_DESC(actor))
+      ? GET_SHORT_DESC(actor)
+      : GET_NAME(actor);
+
+  if (!possessive)
+    strlcpy(out, base, outsz);
+  else
+    make_possessive(base, out, outsz);
 }
 
 /* Replace all occurrences of 'needle' in 'hay' with 'repl'. */
@@ -273,23 +284,69 @@ static void build_replacement(const struct emote_tok *tok,
   out[0] = '\0';
 
   if (tok->op == '@') {
-    if (!actor_possessive_for_at) strlcpy(out, GET_NAME(actor), outsz);
-    else                          make_possessive(GET_NAME(actor), out, outsz);
+    /* Use actor's sdesc if present, otherwise their name */
+    const char *ref = (GET_SHORT_DESC(actor) && *GET_SHORT_DESC(actor))
+                      ? GET_SHORT_DESC(actor)
+                      : GET_NAME(actor);
+
+    if (!actor_possessive_for_at)
+      strlcpy(out, ref, outsz);
+    else
+      make_possessive(ref, out, outsz);
     return;
   }
 
   if (tok->tch) {
     bool you = (viewer == tok->tch);
+    /* For non-you views, prefer sdesc over name */
+    const char *ref = (GET_SHORT_DESC(tok->tch) && *GET_SHORT_DESC(tok->tch))
+                      ? GET_SHORT_DESC(tok->tch)
+                      : GET_NAME(tok->tch);
+
     switch (tok->op) {
-      case '~': if (you) strlcpy(out, "you", outsz); else strlcpy(out, GET_NAME(tok->tch), outsz); break;
-      case '!': if (you) strlcpy(out, "you", outsz); else strlcpy(out, pron_obj(tok->tch), outsz); break;
-      case '%': if (you) strlcpy(out, "your", outsz); else make_possessive(GET_NAME(tok->tch), out, outsz); break;
-      case '^': if (you) strlcpy(out, "your", outsz); else strlcpy(out, pron_pos_adj(tok->tch), outsz); break;
-      case '#': if (you) strlcpy(out, "you", outsz); else strlcpy(out, pron_subj(tok->tch), outsz); break;
-      case '&': if (you) strlcpy(out, "yourself", outsz); else strlcpy(out, pron_refl(tok->tch), outsz); break;
-      case '=': if (you) strlcpy(out, "yours", outsz); else make_possessive(GET_NAME(tok->tch), out, outsz); break;
-      case '+': if (you) strlcpy(out, "yours", outsz); else strlcpy(out, pron_pos_pron(tok->tch), outsz); break;
-      default:  strlcpy(out, GET_NAME(tok->tch), outsz); break;
+      case '~':
+        if (you) strlcpy(out, "you", outsz);
+        else     strlcpy(out, ref, outsz);
+        break;
+
+      case '!':
+        if (you) strlcpy(out, "you", outsz);
+        else     strlcpy(out, pron_obj(tok->tch), outsz);
+        break;
+
+      case '%':
+        if (you) strlcpy(out, "your", outsz);
+        else     make_possessive(ref, out, outsz);
+        break;
+
+      case '^':
+        if (you) strlcpy(out, "your", outsz);
+        else     strlcpy(out, pron_pos_adj(tok->tch), outsz);
+        break;
+
+      case '#':
+        if (you) strlcpy(out, "you", outsz);
+        else     strlcpy(out, pron_subj(tok->tch), outsz);
+        break;
+
+      case '&':
+        if (you) strlcpy(out, "yourself", outsz);
+        else     strlcpy(out, pron_refl(tok->tch), outsz);
+        break;
+
+      case '=':
+        if (you) strlcpy(out, "yours", outsz);
+        else     make_possessive(ref, out, outsz);
+        break;
+
+      case '+':
+        if (you) strlcpy(out, "yours", outsz);
+        else     strlcpy(out, pron_pos_pron(tok->tch), outsz);
+        break;
+
+      default:
+        strlcpy(out, ref, outsz);
+        break;
     }
     return;
   }

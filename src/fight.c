@@ -242,14 +242,22 @@ static void make_corpse(struct char_data *ch)
   IN_ROOM(corpse) = NOWHERE;
   corpse->name = strdup("corpse");
 
-  snprintf(buf2, sizeof(buf2), "The corpse of %s is lying here.", GET_NAME(ch));
+  /* Use short description if available, otherwise fall back to name */
+  const char *who = NULL;
+
+  if (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch))
+    who = GET_SHORT_DESC(ch);
+  else
+    who = GET_NAME(ch);
+
+  snprintf(buf2, sizeof(buf2), "The corpse of %s is lying here.", who);
   corpse->description = strdup(buf2);
 
-  snprintf(buf2, sizeof(buf2), "the corpse of %s", GET_NAME(ch));
+  snprintf(buf2, sizeof(buf2), "the corpse of %s", who);
   corpse->short_description = strdup(buf2);
 
   GET_OBJ_TYPE(corpse) = ITEM_CONTAINER;
-  for(x = y = 0; x < EF_ARRAY_MAX || y < TW_ARRAY_MAX; x++, y++) {
+  for (x = y = 0; x < EF_ARRAY_MAX || y < TW_ARRAY_MAX; x++, y++) {
     if (x < EF_ARRAY_MAX)
       GET_OBJ_EXTRA_AR(corpse, x) = 0;
     if (y < TW_ARRAY_MAX)
@@ -257,8 +265,8 @@ static void make_corpse(struct char_data *ch)
   }
   SET_BIT_AR(GET_OBJ_WEAR(corpse), ITEM_WEAR_TAKE);
   SET_BIT_AR(GET_OBJ_EXTRA(corpse), ITEM_NODONATE);
-  GET_OBJ_VAL(corpse, 0) = 0;	/* You can't store stuff in a corpse */
-  GET_OBJ_VAL(corpse, 3) = 1;	/* corpse identifier */
+  GET_OBJ_VAL(corpse, 0) = 0;    /* You can't store stuff in a corpse */
+  GET_OBJ_VAL(corpse, 3) = 1;    /* corpse identifier */
   GET_OBJ_WEIGHT(corpse) = GET_WEIGHT(ch) + IS_CARRYING_W(ch);
   GET_OBJ_RENT(corpse) = 100000;
   if (IS_NPC(ch))
@@ -281,11 +289,6 @@ static void make_corpse(struct char_data *ch)
 
   /* transfer gold */
   if (GET_GOLD(ch) > 0) {
-    /* following 'if' clause added to fix gold duplication loophole. The above
-     * line apparently refers to the old "partially log in, kill the game
-     * character, then finish login sequence" duping bug. The duplication has
-     * been fixed (knock on wood) but the test below shall live on, for a
-     * while. -gg 3/3/2002 */
     if (IS_NPC(ch) || ch->desc) {
       money = create_money(GET_GOLD(ch));
       obj_to_obj(money, corpse);

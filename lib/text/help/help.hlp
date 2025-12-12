@@ -296,6 +296,25 @@ to list all forms. i. e. the keyword rumble could be used to cover anyone who
 types <action> rumble rumbl rumb rum ru.
 
 #31
+AC ARMOR-CLASS ASCENDING-AC DEFENSE
+
+   Summary: We use an ascending AC system (higher is better). A typical
+unarmored character has AC 10. Attacks roll 1d20 + attack modifiers and
+hit if the total  your AC. Natural 1 always misses; natural 20 always hits.
+
+How AC is built:
+
+Base: 10
+
+Armor pieces: each worn slot contributes 03 AC (clamped by slot caps)
+Armor magic: total armor magic across all pieces is capped at +3
+Dexterity: add min(DEX modifier, Dex cap); Dex cap depends on total armor bulk
+Shield: base +2 (tower +3 if present), plus shield magic (capped at +3), plus
+Shield Use skill proficiency
+Situational: cover (+2/+5), spells (Shield, Haste, etc.)
+
+See Also: SCORE
+#0
 ACAUDIT ARMOR-AUDIT AUDIT-ARMOR IMMORTAL
 
    Summary: Imm-only tool that scans all ITEM\_ARMOR prototypes and reports
@@ -338,117 +357,6 @@ Heavy  : AC \~16–20
 
 See Also: ARMOR PIECES, BULK, SHIELDS, MAGIC CAPS, SCORE, OEDIT ARMOR
 #32
-AC ARMOR-CLASS ASCENDING-AC DEFENSE
-
-   Summary: We use an ascending AC system (higher is better). A typical
-unarmored character has AC 10. Attacks roll 1d20 + attack modifiers and
-hit if the total  your AC. Natural 1 always misses; natural 20 always hits.
-
-How AC is built:
-
-Base: 10
-
-Armor pieces: each worn slot contributes 03 AC (clamped by slot caps)
-Armor magic: total armor magic across all pieces is capped at +3
-Dexterity: add min(DEX modifier, Dex cap); Dex cap depends on total armor bulk
-Shield: base +2 (tower +3 if present), plus shield magic (capped at +3), plus
-Shield Use skill proficiency
-Situational: cover (+2/+5), spells (Shield, Haste, etc.)
-
-See Also: SCORE
-#0
-ARMOR SLOTS
-
-   Summary: Armor is split across six slots: head, body, legs, arms, hands,
-feet. Each piece has:
-
-Piece AC (value[0]): 0–3 (per-slot hard cap)
-Bulk (value[1]): 0–3 (drives Dex cap & stealth)
-Magic (value[2]): 0–3 (per-slot cap; global armor magic cap +3)
-Flags (value[3]): special rules (e.g., Stealth Disadvantage)
-Slot caps (defaults)
-Head: AC ≤2, Magic ≤1
-Body: AC ≤3, Magic ≤3
-Legs: AC ≤2, Magic ≤1
-Arms/Hands/Feet: AC ≤1, Magic ≤1
-Shield is handled separately
-
-SEE ALSO: SHIELDS
-#0
-BULK DEX-CAP LIGHT MEDIUM HEAVY
-
-   Summary: Armor bulk limits how much of your Dex modifier you can apply 
-to AC.
-
-Light (bulk ≤ 5): Dex cap +5
-Medium (bulk 6–10): Dex cap +2
-Heavy (bulk ≥ 11): Dex cap +0 and imposes Stealth Disadvantage
-
-Bulk is computed by summing each piece’s bulk × slot weight. 
-Slot weights: head 1, body 3, legs 2, arms 1, hands 1, feet 1.
-
-SEE ALSO: ARMOR
-#0
-SHIELD SHIELDS SHIELD-USE
-
-   Summary: A shield adds to AC:
-
-Base +2 (tower +3 if applicable)
-Shield magic (capped at +3)
-Shield Use proficiency (based on your skill%)
-
-Shield Use proficiency (from skill%)
-<=14:+0
-<=29:+1
-<=44:+2
-<=59:+3
-<=74:+4
-<=90:+5
-<=100:+6
-
-SEE ALSO: AC ARMOR SLOTS
-#0
-MAGIC-CAP ENCHANTED-ITEMS
-
-   Summary: Sum of magic across all worn pieces is capped at +3 (after
-slot caps)
-
-Shield: magic is capped at +3 (separate from armor)
-Weapons: magic is capped at +3
-Total attack bonus (stats + proficiency + magic + situational) is gently
-capped around +10 for balance
-
-These caps are enforced automatically in calculations.
-
-SEE ALSO: AC ARMOR SLOTS SHIELDS
-#0
-PROFICIENCY WEAPON SKILL SAVING THROWS
-
-   Summary: We map your skill % to a 5e-like proficiency bonus:
-
-<=14:+0
-<=29:+1
-<=44:+2
-<=59:+3
-<=74:+4
-<=90:+5
-<=100:+6
-
-This is used for weapon attacks, shields, and (when applicable) saving throws.
-
-SEE ALSO: SHIELDS
-#0
-STEALTH SNEAK HIDE DISADVTANGE
-
-    Summary: You have Stealth Disadvantage if certain conditions are met,
-such as:
-
-Any worn piece has the Stealth Disadvantage armor flag, or
-Your total armor bulk puts you in Heavy (Dex cap 0)
-
-With Stealth Disadvantage, Sneak and Hide roll twice and take the worse result.
-Both success and failure can grant training progress.
-#0
 ACRONYMS TERMINOLOGY VOCABULARY
 
 Here are some common terms used in building, and TBA zone:
@@ -776,6 +684,24 @@ areas 5-12  list areas in the level range 5 to 12
 Any areas that 'overlap' the specified range are shown in red.
 
 See Also: ZONES
+#0
+ARMOR SLOTS
+
+   Summary: Armor is split across six slots: head, body, legs, arms, hands,
+feet. Each piece has:
+
+Piece AC (value[0]): 0–3 (per-slot hard cap)
+Bulk (value[1]): 0–3 (drives Dex cap & stealth)
+Magic (value[2]): 0–3 (per-slot cap; global armor magic cap +3)
+Flags (value[3]): special rules (e.g., Stealth Disadvantage)
+Slot caps (defaults)
+Head: AC ≤2, Magic ≤1
+Body: AC ≤3, Magic ≤3
+Legs: AC ≤2, Magic ≤1
+Arms/Hands/Feet: AC ≤1, Magic ≤1
+Shield is handled separately
+
+SEE ALSO: SHIELDS
 #0
 ARMOR-SPELL
 
@@ -1303,6 +1229,20 @@ NOTE: Buildwalk does not autosave on exit. You must type SAVEALL. This way if
  
 See also: TOGGLE, SAVEALL, REDIT, OLC, RLIST, DIG
 #31
+BULK DEX-CAP LIGHT MEDIUM HEAVY
+
+   Summary: Armor bulk limits how much of your Dex modifier you can apply 
+to AC.
+
+Light (bulk ≤ 5): Dex cap +5
+Medium (bulk 6–10): Dex cap +2
+Heavy (bulk ≥ 11): Dex cap +0 and imposes Stealth Disadvantage
+
+Bulk is computed by summing each piece’s bulk × slot weight. 
+Slot weights: head 1, body 3, legs 2, arms 1, hands 1, feet 1.
+
+SEE ALSO: ARMOR
+#0
 BULLETINS BOARDS BULLETIN-BOARDS MESSAGE-BOARDS POSTING
 
 Bulletin boards are the forum of inter-player communication on the MUD.
@@ -4802,6 +4742,20 @@ LOVE MARRIAGE WEDDINGS SEX
    Seek professional counseling if you need help on these topics.
 
 #0
+MAGIC-CAP ENCHANTED-ITEMS
+
+   Summary: Sum of magic across all worn pieces is capped at +3 (after
+slot caps)
+
+Shield: magic is capped at +3 (separate from armor)
+Weapons: magic is capped at +3
+Total attack bonus (stats + proficiency + magic + situational) is gently
+capped around +10 for balance
+
+These caps are enforced automatically in calculations.
+
+SEE ALSO: AC ARMOR SLOTS SHIELDS
+#0
 MAGIC-MISSILE
 
 Usage       : cast 'magic missile' <victim>
@@ -4984,20 +4938,6 @@ objects and quests.
 
 See also: AUTOROLL
 #31
-MEDIT-NUMDAMDICE MEDIT-SIZEDAMDICE MEDIT-BHD
- 
-Bare Hand Damage (xdy+z): 
-(6) BHD NumDice:  [    5]
-(7) BHD SizeDice: [    5]
-   For BHD (bare hand damage), xdy specifies the dice rolls and z is the 
-strength bonus added both to BHD and weapon-inflicted damage. For example,
-a monster with a BHD of 1d4+10 will do between 11 and 14 hit points each 
-round without a weapon. If the monster picks up and wields a tiny stick 
-which gives 1d2 damage, then the monster will do 1d2 + 10 points of damage 
-per round with the stick.
-
-See also: AUTOROLL
-#31
 MEDIT-KEYWORDS MEDIT-ALIAS MEDIT-SEX MEDITNAME MOB-NAME MEDIT-ALIAS MOB-SEX 
 
 1) Sex: @yneutral@n 
@@ -5157,6 +5097,20 @@ Instead of gold reward the player with a pelt, teeth, claws, etc. Always have
 a mob carry *something*. It might be low-grade piece of food, trash, or a bad
 rash. Be creative.
 
+#31
+MEDIT-NUMDAMDICE MEDIT-SIZEDAMDICE MEDIT-BHD
+ 
+Bare Hand Damage (xdy+z): 
+(6) BHD NumDice:  [    5]
+(7) BHD SizeDice: [    5]
+   For BHD (bare hand damage), xdy specifies the dice rolls and z is the 
+strength bonus added both to BHD and weapon-inflicted damage. For example,
+a monster with a BHD of 1d4+10 will do between 11 and 14 hit points each 
+round without a weapon. If the monster picks up and wields a tiny stick 
+which gives 1d2 damage, then the monster will do 1d2 + 10 points of damage 
+per round with the stick.
+
+See also: AUTOROLL
 #31
 MEDIT-POSITIONS MEDIT-DEFAULT MOB-POSITIONS MOBILE-POSITIONS
 
@@ -7112,6 +7066,22 @@ AUTOASSIST - Player has Autoassist enabled.
 
 See also: FLAGS, PLR
 #31
+PROFICIENCY WEAPON SKILL SAVING THROWS
+
+   Summary: We map your skill % to a 5e-like proficiency bonus:
+
+<=14:+0
+<=29:+1
+<=44:+2
+<=59:+3
+<=74:+4
+<=90:+5
+<=100:+6
+
+This is used for weapon attacks, shields, and (when applicable) saving throws.
+
+SEE ALSO: SHIELDS
+#0
 PROMOTE PROMOTIONS ADVANCEMENTS RAISES LVLS LEVELS GAINS 31 32 33 34 RANKS RANKING HIRING JOBS STAFFING
 
 Here at The Builder Academy, the level of an immortal generally reflects that
@@ -8643,6 +8613,25 @@ page me if you really need something, if I don't respond I'm probably sleeping
 or in class or just don't want to be bothered :-)
 
 #0
+SHIELD SHIELDS SHIELD-USE
+
+   Summary: A shield adds to AC:
+
+Base +2 (tower +3 if applicable)
+Shield magic (capped at +3)
+Shield Use proficiency (based on your skill%)
+
+Shield Use proficiency (from skill%)
+<=14:+0
+<=29:+1
+<=44:+2
+<=59:+3
+<=74:+4
+<=90:+5
+<=100:+6
+
+SEE ALSO: AC ARMOR SLOTS
+#0
 SHOCKING-GRASP
 
 Usage       : cast 'shocking grasp' <victim>
@@ -9257,6 +9246,17 @@ Examples:
     (If it is wielded, only possible if he is sleeping)
 
 See also: FLAGS
+#0
+STEALTH SNEAK HIDE DISADVTANGE
+
+    Summary: You have Stealth Disadvantage if certain conditions are met,
+such as:
+
+Any worn piece has the Stealth Disadvantage armor flag, or
+Your total armor bulk puts you in Heavy (Dex cap 0)
+
+With Stealth Disadvantage, Sneak and Hide roll twice and take the worse result.
+Both success and failure can grant training progress.
 #0
 STOCK
 
@@ -13524,4 +13524,60 @@ zlock - Locks one or all zones. Type zlock for usage.
 zunlock - Locks one or all zones. Type zunlock for usage. 
 
 #31
+EMOTE EMOTING
+
+Emoting allows you to describe your characters actions, expressions, and
+nuances in freeform text, bringing scenes to life in ways that predefined
+commands cannot. These tools let you craft rich, reactive roleplay that
+feels immediate and personal to everyone who sees it.
+
+The emoting engine in this game supports dynamic references which can be used
+in your emotes to help you make the world feel vibrant: 
+
++----------+----------------------------+----------------+-----------------+
+| Operator | Actor Types                | Target Sees    | Others See      |
++----------+----------------------------+----------------+-----------------+
+|    ~     | target's name              | you            | target's name   |
+|    !     | him/her/them               | you            | him/her/them    |
+|    %     | target's possessive        | your           | name's          |
+|    ^     | his/her/their              | your           | his/her/their   |
+|    #     | he/she/they                | you            | he/she/they     |
+|    &     | himself/herself/themself   | yourself       | himself/etc.    |
+|    =     | target's possessive (abs)  | yours          | name's          |
+|    +     | his/hers/theirs (abs)      | yours          | his/hers/theirs |
+|    @     | actor's name or possessive | actor name/pos | actor name/pos  |
++----------+----------------------------+----------------+-----------------+
+
+Examples of using these operators in an emote:
+
+>emote scans the room, looking for ~amos
+
+The room sees:
+
+The bald, pudgy man scans the room, looking for the tall, muscular man.
+
+Amos sees:
+
+The bald, pudgy man scans the room, looking for you.
+
+>pemote after scanning the room, @ eyes drop to ~mug in his hand as he sighs.
+
+The room sees:
+
+After scanning the room, the bald, pudgy man's eyes drop to a clay mug in his
+hand as he sighs.
+
+>emote gesturing to %amos empty mug, @ waves !amos over with %me right hand,
+pointing to an empty seat at ^me table.
+
+The room sees:
+
+Gesturing to the tall, muscular man's empty mug, the bald, budgy man waves
+him over with his right hand, pointing to an empty seat at his table.
+
+Amos sees:
+
+Gesturing to your empty mug, the bald, pudgy man waves you over with his right
+hand, pointing to an empty seat at his table.
+#0
 $~
