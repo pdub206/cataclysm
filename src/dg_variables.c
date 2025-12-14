@@ -830,7 +830,11 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           if (!str_cmp(field, "level")) {
             if (subfield && *subfield) {
               int lev = atoi(subfield);
-              GET_LEVEL(c) = MIN(MAX(lev, 0), LVL_IMMORT-1);
+              if (IS_NPC(c)) {
+                if (GET_LEVEL(c) != 1)
+                  GET_LEVEL(c) = 1;
+              } else
+                GET_LEVEL(c) = MIN(MAX(lev, 1), LVL_IMPL);
             } else
               snprintf(str, slen, "%d", GET_LEVEL(c));
           }

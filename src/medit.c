@@ -1148,7 +1148,9 @@ void medit_parse(struct descriptor_data *d, char *arg)
     break;
 
   case MEDIT_LEVEL:
-    GET_LEVEL(OLC_MOB(d)) = LIMIT(i, 1, LVL_IMPL);
+    if (i != 1)
+      write_to_output(d, "Mobile levels are locked to 1 in this world; ignoring value.\r\n");
+    GET_LEVEL(OLC_MOB(d)) = 1;
     OLC_VAL(d) = TRUE;
     medit_disp_stats_menu(d);
     return;
@@ -1214,8 +1216,8 @@ void medit_autoroll_stats(struct descriptor_data *d)
 {
   int mob_lev;
 
-  mob_lev = GET_LEVEL(OLC_MOB(d));
-  mob_lev = GET_LEVEL(OLC_MOB(d)) = LIMIT(mob_lev, 1, LVL_IMPL);
+  mob_lev = 1;
+  GET_LEVEL(OLC_MOB(d)) = 1;
 
   GET_MOVE(OLC_MOB(d))    = mob_lev * 10;        /* hit point bonus (mobs don't use movement points) */
   GET_HIT(OLC_MOB(d))     = mob_lev / 5;         /* number of hitpoint dice */

@@ -1559,7 +1559,9 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
     exit(1);
   }
 
-  GET_LEVEL(mob_proto + i) = t[0];
+  if (t[0] != 1)
+    log("INFO: Forcing mob #%d level from %d to 1 per level lock.", nr, t[0]);
+  GET_LEVEL(mob_proto + i) = 1;
 
   /* max hit = 0 is a flag that H, M, V is xdy+z */
   GET_MAX_HIT(mob_proto + i) = 0;
