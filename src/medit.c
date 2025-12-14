@@ -191,6 +191,7 @@ static void medit_setup_new(struct descriptor_data *d)
   GET_SDESC(mob) = strdup("the unfinished npc");
   GET_LDESC(mob) = strdup("An unfinished npc stands here.\r\n");
   GET_DDESC(mob) = strdup("It looks unfinished.\r\n");
+  GET_BACKGROUND(mob) = strdup("No background has been recorded.\r\n");
   SCRIPT(mob) = NULL;
   mob->proto_script = OLC_SCRIPT(d) = NULL;
 
@@ -412,10 +413,12 @@ static void medit_disp_menu(struct descriptor_data *d)
 {
   struct char_data *mob;
   char flags[MAX_STRING_LENGTH], flag2[MAX_STRING_LENGTH];
+  const char *background;
 
   mob = OLC_MOB(d);
   get_char_colors(d->character);
   clear_screen(d);
+  background = GET_BACKGROUND(mob) ? GET_BACKGROUND(mob) : "<None>\r\n";
 
   write_to_output(d,
     "-- Mob Number:  [%s%d%s]\r\n"
@@ -442,11 +445,12 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  "%s8%s) Default   : %s%s\r\n"
 	  "%s9%s) Attack    : %s%s\r\n"
     "%s0%s) Stats Menu...\r\n"
-    "%s-%s) Skills Menu...\r\n"
+	  "%s-%s) Skills Menu...\r\n"
 	  "%sA%s) NPC Flags : %s%s\r\n"
 	  "%sB%s) AFF Flags : %s%s\r\n"
-    "%sS%s) Script    : %s%s\r\n"
-    "%sW%s) Copy mob\r\n"
+    "%sC%s) Background:-\r\n%s%s\r\n"
+	  "%sS%s) Script    : %s%s\r\n"
+	  "%sW%s) Copy mob\r\n"
 	  "%sX%s) Delete mob\r\n"
 	  "%sQ%s) Quit\r\n"
 	  "Enter choice : ",
@@ -458,7 +462,8 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  grn, nrm,
 	  grn, nrm, cyn, flags,
 	  grn, nrm, cyn, flag2,
-          grn, nrm, cyn, OLC_SCRIPT(d) ?"Set.":"Not Set.",
+          grn, nrm, yel, background,
+	  grn, nrm, cyn, OLC_SCRIPT(d) ?"Set.":"Not Set.",
           grn, nrm,
 	  grn, nrm,
 	  grn, nrm
@@ -685,6 +690,18 @@ void medit_parse(struct descriptor_data *d, char *arg)
     case 'B':
       OLC_MODE(d) = MEDIT_AFF_FLAGS;
       medit_disp_aff_flags(d);
+      return;
+    case 'c':
+    case 'C':
+      OLC_MODE(d) = MEDIT_BACKGROUND;
+      send_editor_help(d);
+      write_to_output(d, "Enter mob background:\r\n\r\n");
+      if (OLC_MOB(d)->player.background) {
+        write_to_output(d, "%s", OLC_MOB(d)->player.background);
+        oldtext = strdup(OLC_MOB(d)->player.background);
+      }
+      string_write(d, &OLC_MOB(d)->player.background, MAX_MOB_DESC, 0, oldtext);
+      OLC_VAL(d) = 1;
       return;
     case 'w':
     case 'W':
@@ -990,6 +1007,11 @@ void medit_parse(struct descriptor_data *d, char *arg)
     mudlog(BRF, LVL_BUILDER, TRUE, "SYSERR: OLC: medit_parse(): Reached D_DESC case!");
     write_to_output(d, "Oops...\r\n");
     break;
+  case MEDIT_BACKGROUND:
+    cleanup_olc(d, CLEANUP_ALL);
+    mudlog(BRF, LVL_BUILDER, TRUE, "SYSERR: OLC: medit_parse(): Reached BACKGROUND case!");
+    write_to_output(d, "Oops...\r\n");
+    break;
 
   case MEDIT_NPC_FLAGS:
     if ((i = atoi(arg)) <= 0)
@@ -1181,6 +1203,7 @@ void medit_string_cleanup(struct descriptor_data *d, int terminator)
   switch (OLC_MODE(d)) {
 
   case MEDIT_D_DESC:
+  case MEDIT_BACKGROUND:
   default:
      medit_disp_menu(d);
      break;

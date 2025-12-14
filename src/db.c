@@ -589,10 +589,12 @@ void destroy_db(void)
       free(mob_proto[cnt].player.name);
     if (mob_proto[cnt].player.short_descr)
       free(mob_proto[cnt].player.short_descr);
-    if (mob_proto[cnt].player.long_descr)
-      free(mob_proto[cnt].player.long_descr);
-    if (mob_proto[cnt].player.description)
-      free(mob_proto[cnt].player.description);
+  if (mob_proto[cnt].player.long_descr)
+    free(mob_proto[cnt].player.long_descr);
+  if (mob_proto[cnt].player.description)
+    free(mob_proto[cnt].player.description);
+  if (mob_proto[cnt].player.background)
+    free(mob_proto[cnt].player.background);
 
     /* free script proto list */
     free_proto_script(&mob_proto[cnt], MOB_TRIGGER);
@@ -1776,6 +1778,33 @@ void parse_mobile(FILE *mob_f, int nr)
       *tmpptr = LOWER(*tmpptr);
   mob_proto[i].player.long_descr = fread_string(mob_f, buf2);
   mob_proto[i].player.description = fread_string(mob_f, buf2);
+  mob_proto[i].player.background = NULL;
+
+  /* Optional background block signaled by a leading 'B' marker */
+  {
+    int letter;
+
+    do {
+      letter = fgetc(mob_f);
+      if (letter == EOF)
+        break;
+    } while (letter == '\n' || letter == '\r');
+
+    if (letter == 'B') {
+      mob_proto[i].player.background = fread_string(mob_f, buf2);
+
+      /* consume trailing newlines before numeric section */
+      do {
+        letter = fgetc(mob_f);
+        if (letter == EOF)
+          break;
+      } while (letter == '\n' || letter == '\r');
+
+      if (letter != EOF)
+        ungetc(letter, mob_f);
+    } else if (letter != EOF)
+      ungetc(letter, mob_f);
+  }
 
   /* Numeric data */
   if (!get_line(mob_f, line)) {
@@ -3393,6 +3422,8 @@ void free_char(struct char_data *ch)
       free(ch->player.long_descr);
     if (ch->player.description)
       free(ch->player.description);
+    if (ch->player.background)
+      free(ch->player.background);
     for (i = 0; i < NUM_HIST; i++)
       if (GET_HISTORY(ch, i))
         free_history(ch, i);
@@ -3413,6 +3444,8 @@ void free_char(struct char_data *ch)
       free(ch->player.long_descr);
     if (ch->player.description && ch->player.description != mob_proto[i].player.description)
       free(ch->player.description);
+    if (ch->player.background && ch->player.background != mob_proto[i].player.background)
+      free(ch->player.background);
     /* free script proto list if it's not the prototype */
     if (ch->proto_script && ch->proto_script != mob_proto[i].proto_script)
       free_proto_script(ch, MOB_TRIGGER);
@@ -3655,6 +3688,7 @@ void init_char(struct char_data *ch)
   ch->player.short_descr = NULL;
   ch->player.long_descr = NULL;
   ch->player.description = NULL;
+  ch->player.background = NULL;
 
   GET_NUM_QUESTS(ch) = 0;
   ch->player_specials->saved.completed_quests = NULL;

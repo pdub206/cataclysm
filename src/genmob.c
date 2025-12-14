@@ -123,6 +123,10 @@ static void extract_mobile_all(mob_vnum vnum)
         if (ch->player.description && ch->player.description != mob_proto[i].player.description)
           free(ch->player.description);
 				ch->player.description = NULL;
+				
+        if (ch->player.background && ch->player.background != mob_proto[i].player.background)
+          free(ch->player.background);
+        ch->player.background = NULL;
     
         /* free script proto list if it's not the prototype */
         if (ch->proto_script && ch->proto_script != mob_proto[i].proto_script)
@@ -201,6 +205,8 @@ int copy_mobile_strings(struct char_data *t, struct char_data *f)
     t->player.long_descr = strdup(f->player.long_descr);
   if (f->player.description)
     t->player.description = strdup(f->player.description);
+  if (f->player.background)
+    t->player.background = strdup(f->player.background);
   return TRUE;
 }
 
@@ -214,6 +220,8 @@ int update_mobile_strings(struct char_data *t, struct char_data *f)
     t->player.long_descr = f->player.long_descr;
   if (f->player.description)
     t->player.description = f->player.description;
+  if (f->player.background)
+    t->player.background = f->player.background;
   return TRUE;
 }
 
@@ -227,6 +235,8 @@ int free_mobile_strings(struct char_data *mob)
     free(mob->player.long_descr);
   if (mob->player.description)
     free(mob->player.description);
+  if (mob->player.background)
+    free(mob->player.background);
   return TRUE;
 }
 
@@ -253,6 +263,8 @@ int free_mobile(struct char_data *mob)
       free(mob->player.long_descr);
     if (mob->player.description && mob->player.description != mob_proto[i].player.description)
       free(mob->player.description);
+    if (mob->player.background && mob->player.background != mob_proto[i].player.background)
+      free(mob->player.background);
     /* free script proto list if it's not the prototype */
     if (mob->proto_script && mob->proto_script != mob_proto[i].proto_script)
       free_proto_script(mob, MOB_TRIGGER);
@@ -377,12 +389,18 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
 {
   char ldesc[MAX_STRING_LENGTH];
   char ddesc[MAX_STRING_LENGTH];
+  char bdesc[MAX_STRING_LENGTH];
   char buf[MAX_STRING_LENGTH];
 
   ldesc[MAX_STRING_LENGTH - 1] = '\0';
   ddesc[MAX_STRING_LENGTH - 1] = '\0';
+  bdesc[MAX_STRING_LENGTH - 1] = '\0';
   strip_cr(strncpy(ldesc, GET_LDESC(mob), MAX_STRING_LENGTH - 1));
   strip_cr(strncpy(ddesc, GET_DDESC(mob), MAX_STRING_LENGTH - 1));
+  if (GET_BDESC(mob))
+    strip_cr(strncpy(bdesc, GET_BDESC(mob), MAX_STRING_LENGTH - 1));
+  else
+    bdesc[0] = '\0';
 
   int n = snprintf(buf, MAX_STRING_LENGTH,
                    "#%d\n"
@@ -390,13 +408,16 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
                    "%s%c\n"
                    "%s%c\n"
                    "%s%c\n"
+                   "%s%c\n"
+                   "B\n"
                    "%s%c\n",
                    mvnum,
                    GET_NAME(mob), STRING_TERMINATOR,
                    GET_KEYWORDS(mob), STRING_TERMINATOR,
                    GET_SDESC(mob), STRING_TERMINATOR,
                    ldesc, STRING_TERMINATOR,
-                   ddesc, STRING_TERMINATOR);
+                   ddesc, STRING_TERMINATOR,
+                   bdesc, STRING_TERMINATOR);
 
   if (n >= MAX_STRING_LENGTH) {
     mudlog(BRF, LVL_BUILDER, TRUE,

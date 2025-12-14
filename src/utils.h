@@ -517,6 +517,9 @@ do                                                              \
 /** Appearance-based description for displays (e.g. short look text). */
 #define GET_SHORT_DESC(ch)  ((ch)->player.short_descr)
 
+/** Character background / history text. */
+#define GET_BACKGROUND(ch)  ((ch)->player.background)
+
 /** Safe name for room messages. */
 #define GET_DISPLAY_NAME(ch) (GET_NAME(ch) && *GET_NAME(ch) ? GET_NAME(ch) : "someone")
 

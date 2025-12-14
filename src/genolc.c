@@ -594,22 +594,31 @@ static int export_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
 
   char ldesc[MAX_STRING_LENGTH];
   char ddesc[MAX_STRING_LENGTH];
+  char bdesc[MAX_STRING_LENGTH];
 
   ldesc[MAX_STRING_LENGTH - 1] = '\0';
   ddesc[MAX_STRING_LENGTH - 1] = '\0';
+  bdesc[MAX_STRING_LENGTH - 1] = '\0';
   strip_cr(strncpy(ldesc, GET_LDESC(mob), MAX_STRING_LENGTH - 1));
   strip_cr(strncpy(ddesc, GET_DDESC(mob), MAX_STRING_LENGTH - 1));
+  if (GET_BDESC(mob))
+    strip_cr(strncpy(bdesc, GET_BDESC(mob), MAX_STRING_LENGTH - 1));
+  else
+    bdesc[0] = '\0';
 
   fprintf(fd,	"#QQ%02d\n"
 		"%s%c\n"
 		"%s%c\n"
 		"%s%c\n"
+		"%s%c\n"
+    "B\n"
 		"%s%c\n",
 	mvnum%100,
 	GET_KEYWORDS(mob), STRING_TERMINATOR,
 	GET_SDESC(mob), STRING_TERMINATOR,
 	ldesc, STRING_TERMINATOR,
-	ddesc, STRING_TERMINATOR
+	ddesc, STRING_TERMINATOR,
+	bdesc, STRING_TERMINATOR
   );
 
   fprintf(fd, "%d %d %d %d %d %d %d %d %d E\n"

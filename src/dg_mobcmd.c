@@ -948,6 +948,8 @@ ACMD(do_mtransform)
       tmpmob.player.long_descr = strdup(m->player.long_descr);
     if(m->player.description)
       tmpmob.player.description = strdup(m->player.description);
+    if(m->player.background)
+      tmpmob.player.background = strdup(m->player.background);
 
     tmpmob.script_id = ch->script_id;
     tmpmob.affected = ch->affected;

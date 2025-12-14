@@ -32,6 +32,7 @@ static char *next_page(char *str, struct char_data *ch);
 static int count_pages(char *str, struct char_data *ch);
 static void playing_string_cleanup(struct descriptor_data *d, int action);
 static void exdesc_string_cleanup(struct descriptor_data *d, int action);
+static void background_string_cleanup(struct descriptor_data *d, int action);
 
 /* Local (file scope) global variables */
 /* @deprecated string_fields appears to be no longer be used.
@@ -217,6 +218,7 @@ void string_add(struct descriptor_data *d, char *str)
       { CON_TEDIT  , tedit_string_cleanup },
       { CON_TRIGEDIT, trigedit_string_cleanup },
       { CON_PLR_DESC , exdesc_string_cleanup },
+      { CON_PLR_BACKGROUND , background_string_cleanup },
       { CON_PLAYING, playing_string_cleanup },
       { CON_HEDIT, hedit_string_cleanup },
       { CON_QEDIT  , qedit_string_cleanup },
@@ -297,6 +299,27 @@ static void exdesc_string_cleanup(struct descriptor_data *d, int action)
 {
   if (action == STRINGADD_ABORT)
     write_to_output(d, "Description aborted.\r\n");
+
+  write_to_output(d, "%s", CONFIG_MENU);
+  STATE(d) = CON_MENU;
+}
+
+static void background_string_cleanup(struct descriptor_data *d, int action)
+{
+  if (d->character) {
+    if (!GET_BACKGROUND(d->character) || !*GET_BACKGROUND(d->character)) {
+      if (GET_BACKGROUND(d->character))
+        free(GET_BACKGROUND(d->character));
+      GET_BACKGROUND(d->character) = strdup("This character prefers to keep their past unspoken.\r\n");
+      if (action == STRINGADD_ABORT)
+        write_to_output(d, "Background entry canceled. We'll note that your past remains a mystery.\r\n");
+      else
+        write_to_output(d, "No background submitted. We'll note that your past remains a mystery.\r\n");
+    } else if (action == STRINGADD_ABORT)
+      write_to_output(d, "Background entry canceled.\r\n");
+    else
+      write_to_output(d, "Background saved.\r\n");
+  }
 
   write_to_output(d, "%s", CONFIG_MENU);
   STATE(d) = CON_MENU;

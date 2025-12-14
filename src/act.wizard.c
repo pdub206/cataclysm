@@ -1237,6 +1237,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
   }
 
   send_to_char(ch, "D-Desc:\r\n %s", k->player.description ? k->player.description : "<None>\r\n");
+  send_to_char(ch, "Background:\r\n %s", k->player.background ? k->player.background : "<None>\r\n");
 
   if (!IS_NPC(k)) {
     char buf1[64], buf2[64];

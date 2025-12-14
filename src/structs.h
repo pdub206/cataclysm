@@ -338,6 +338,7 @@
 #define CON_PREFEDIT     30 /**< OLC mode - preference edit */
 #define CON_IBTEDIT      31 /**< OLC mode - idea/bug/typo edit */
 #define CON_MSGEDIT      32 /**< OLC mode - message editor */
+#define CON_PLR_BACKGROUND 33 /**< Entering a new character background */
 #define CON_GET_PROTOCOL 33 /**< Used at log-in while attempting to get protocols > */
 
 /* OLC States range - used by IS_IN_OLC and IS_PLAYING */
@@ -880,6 +881,7 @@ struct char_player_data
   char *short_descr;             /**< PC / NPC short description */
   char *long_descr;              /**< PC / NPC long description */
   char *description;             /**< PC / NPC main descriptions */
+  char *background;              /**< PC / NPC background / history text */
   byte sex;                      /**< PC / NPC sex */
   byte chclass;                  /**< PC / NPC class */
   byte level;                    /**< PC / NPC level */

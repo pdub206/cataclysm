@@ -1803,6 +1803,41 @@ case CON_QCLASS:
         }
       }
 
+      if (!GET_BACKGROUND(d->character) || !*GET_BACKGROUND(d->character)) {
+        write_to_output(d,
+          "\r\nBefore stepping into Athas, share a bit of your character's background.\r\n"
+          "Guideline: aim for at least four lines that hint at where they came from,\r\n"
+          "who shaped them, and why they now walk the Tyr region. Touch on things like:\r\n"
+          "  - The city-state, tribe, or caravan that claimed them.\r\n"
+          "  - Mentors, slavers, or patrons who left a mark.\r\n"
+          "  - A defining hardship, triumph, oath, or secret.\r\n"
+          "  - The goal, vengeance, or hope that drives them back into the wastes.\r\n"
+          "\r\nExample 1:\r\n"
+          "   Raised beneath the ziggurat of Tyr, I learned to barter gossip between\r\n"
+          "   templars and gladiators just to stay alive. Freedom came when Kalak fell,\r\n"
+          "   but the slave-scar on my shoulder still aches. I now search the desert\r\n"
+          "   for the relic my clutch mates died protecting, hoping to buy their kin peace.\r\n"
+          "\r\nExample 2:\r\n"
+          "   I rode caravan outrider routes from Balic until giants shattered our train.\r\n"
+          "   Two nights buried in silt taught me to whisper with the wind and trust only\r\n"
+          "   my erdlu. I hunt the warlord who sold us out, yet coin and company on the\r\n"
+          "   road must come first.\r\n"
+          "\r\nExample 3:\r\n"
+          "   Born outside Raam, I was tempered by obsidian shards and psionic murmurs.\r\n"
+          "   A defiler ruined our oasis, so I swore to hound such spell-scars wherever\r\n"
+          "   they bloom. Rumor of a hidden well near Tyr is the lone hope that guides me.\r\n"
+          "\r\nType your background now. Use '/s' on a blank line when you finish.\r\n"
+          "If you'd rather keep it secret, just save immediately and we'll note the mystery.\r\n\r\n");
+        d->backstr = NULL;
+        if (GET_BACKGROUND(d->character) && *GET_BACKGROUND(d->character))
+          d->backstr = strdup(GET_BACKGROUND(d->character));
+        d->str = &d->character->player.background;
+        d->max_str = PLR_DESC_LENGTH;
+        STATE(d) = CON_PLR_BACKGROUND;
+        send_editor_help(d);
+        return;
+      }
+
       /* Proceed into the world */
       load_result = enter_player_game(d);
       send_to_char(d->character, "%s", CONFIG_WELC_MESSG);

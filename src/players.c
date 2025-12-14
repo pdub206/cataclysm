@@ -334,7 +334,8 @@ int load_char(const char *name, struct char_data *ch)
 	break;
 
       case 'B':
-	     if (!strcmp(tag, "Badp"))	GET_BAD_PWS(ch)		= atoi(line);
+        if (!strcmp(tag, "Back"))     ch->player.background   = fread_string(fl, buf2);
+	else if (!strcmp(tag, "Badp"))	GET_BAD_PWS(ch)		= atoi(line);
 	else if (!strcmp(tag, "Bank"))	GET_BANK_GOLD(ch)	= atoi(line);
 	else if (!strcmp(tag, "Brth"))	ch->player.time.birth	= atol(line);
 	break;
@@ -584,6 +585,11 @@ void save_char(struct char_data * ch)
     strcpy(buf, ch->player.description);
     strip_cr(buf);
     fprintf(fl, "Desc:\n%s~\n", buf);
+  }
+  if (ch->player.background && *ch->player.background) {
+    strcpy(buf, ch->player.background);
+    strip_cr(buf);
+    fprintf(fl, "Back:\n%s~\n", buf);
   }
   if (POOFIN(ch))				fprintf(fl, "PfIn: %s\n", POOFIN(ch));
   if (POOFOUT(ch))				fprintf(fl, "PfOt: %s\n", POOFOUT(ch));
