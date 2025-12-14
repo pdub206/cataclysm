@@ -355,6 +355,11 @@ int write_mobile_espec(mob_vnum mvnum, struct char_data *mob, FILE *fd)
     count++;
   }
 
+  if (HAS_VALID_CLASS(mob)) {
+    fprintf(fd, "Class: %d\n", (int)GET_CLASS(mob));
+    count++;
+  }
+
   /* --- 5e-style saving throws --- */
   if (GET_SAVE(mob, ABIL_STR) != 0) {
     fprintf(fd, "SaveStr: %d\n", GET_SAVE(mob, ABIL_STR));

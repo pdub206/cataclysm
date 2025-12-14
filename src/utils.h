@@ -931,33 +931,28 @@ do                                                              \
 #define IS_DIAGONAL(dir) (((dir) == NORTHWEST) || ((dir) == NORTHEAST) || \
 		((dir) == SOUTHEAST) || ((dir) == SOUTHWEST) )
 
+/** True if ch has a valid player class assigned. */
+#define HAS_VALID_CLASS(ch) ((GET_CLASS(ch) >= CLASS_SORCEROR) && (GET_CLASS(ch) < NUM_CLASSES))
+
 /** Return the class abbreviation for ch. */
-#define CLASS_ABBR(ch) (IS_NPC(ch) ? "--" : class_abbrevs[(int)GET_CLASS(ch)])
+#define CLASS_ABBR(ch)    (HAS_VALID_CLASS(ch) ? class_abbrevs[(int)GET_CLASS(ch)] : "--")
 
 /** 1 if ch is sorceror class, 0 if not. */
-#define IS_SORCEROR(ch)	(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_SORCEROR))
+#define IS_SORCEROR(ch)	(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_SORCEROR))
 /** 1 if ch is cleric class, 0 if not. */
-#define IS_CLERIC(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_CLERIC))
+#define IS_CLERIC(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_CLERIC))
 /** 1 if ch is rogue class, 0 if not. */
-#define IS_ROGUE(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_ROGUE))
+#define IS_ROGUE(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_ROGUE))
 /** 1 if ch is fighter class, 0 if not. */
-#define IS_FIGHTER(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_FIGHTER))
+#define IS_FIGHTER(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_FIGHTER))
 /** 1 if ch is barbarian class, 0 if not. */
-#define IS_BARBARIAN(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_BARBARIAN))
+#define IS_BARBARIAN(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_BARBARIAN))
 /** 1 if ch is ranger class, 0 if not. */
-#define IS_RANGER(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_RANGER))
+#define IS_RANGER(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_RANGER))
 /** 1 if ch is bard class, 0 if not. */
-#define IS_BARD(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_BARD))
+#define IS_BARD(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_BARD))
 /** 1 if ch is druid class, 0 if not. */
-#define IS_DRUID(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_DRUID))
+#define IS_DRUID(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_DRUID))
 
 /** Defines if ch is outdoors or not. */
 #define OUTSIDE(ch) (!ROOM_FLAGGED(IN_ROOM(ch), ROOM_INDOORS))

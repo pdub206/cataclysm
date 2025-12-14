@@ -12,6 +12,7 @@
 #include "interpreter.h"
 #include "comm.h"
 #include "spells.h"
+#include "class.h"
 #include "db.h"
 #include "shop.h"
 #include "genolc.h"
@@ -39,6 +40,7 @@ static int  medit_get_mob_flag_by_number(int num);
 static void medit_disp_mob_flags(struct descriptor_data *d);
 static void medit_disp_aff_flags(struct descriptor_data *d);
 static void medit_disp_menu(struct descriptor_data *d);
+static void medit_disp_class_menu(struct descriptor_data *d);
 
 /*  utility functions */
 ACMD(do_oasis_medit)
@@ -413,12 +415,13 @@ static void medit_disp_menu(struct descriptor_data *d)
 {
   struct char_data *mob;
   char flags[MAX_STRING_LENGTH], flag2[MAX_STRING_LENGTH];
-  const char *background;
+  const char *background, *classname;
 
   mob = OLC_MOB(d);
   get_char_colors(d->character);
   clear_screen(d);
   background = GET_BACKGROUND(mob) ? GET_BACKGROUND(mob) : "<None>\r\n";
+  classname = HAS_VALID_CLASS(mob) ? pc_class_types[GET_CLASS(mob)] : "Unassigned";
 
   write_to_output(d,
     "-- Mob Number:  [%s%d%s]\r\n"
@@ -444,6 +447,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  "%s7%s) Position  : %s%s\r\n"
 	  "%s8%s) Default   : %s%s\r\n"
 	  "%s9%s) Attack    : %s%s\r\n"
+    "%sD%s) Class     : %s%s\r\n"
     "%s0%s) Stats Menu...\r\n"
 	  "%s-%s) Skills Menu...\r\n"
 	  "%sA%s) NPC Flags : %s%s\r\n"
@@ -458,6 +462,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  grn, nrm, yel, position_types[(int)GET_POS(mob)],
 	  grn, nrm, yel, position_types[(int)GET_DEFAULT_POS(mob)],
 	  grn, nrm, yel, attack_hit_text[(int)GET_ATTACK(mob)].singular,
+    grn, nrm, yel, classname,
 	  grn, nrm,
 	  grn, nrm,
 	  grn, nrm, cyn, flags,
@@ -470,6 +475,46 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  );
 
   OLC_MODE(d) = MEDIT_MAIN_MENU;
+}
+
+static void medit_disp_class_menu(struct descriptor_data *d)
+{
+  struct char_data *mob = OLC_MOB(d);
+  const char *current = HAS_VALID_CLASS(mob) ? pc_class_types[GET_CLASS(mob)] : "Unassigned";
+
+  get_char_colors(d->character);
+  clear_screen(d);
+
+  write_to_output(d,
+    "-- Mob Number:  %s[%s%d%s]%s\r\n"
+    "Class selection for %s%s%s\r\n\r\n",
+    cyn, yel, OLC_NUM(d), cyn, nrm,
+    yel, GET_SDESC(mob), nrm);
+
+  for (int i = 0; i < NUM_CLASSES; i++) {
+    bool selected = HAS_VALID_CLASS(mob) && (GET_CLASS(mob) == i);
+    write_to_output(d, "%s%2d%s) %s%-12s%s%s\r\n",
+                    cyn, i + 1, nrm,
+                    selected ? grn : yel,
+                    pc_class_types[i],
+                    nrm,
+                    selected ? " (current)" : "");
+  }
+
+  write_to_output(d, "%s%2d%s) %sUnassigned%s%s\r\n",
+                  cyn, NUM_CLASSES + 1, nrm,
+                  !HAS_VALID_CLASS(mob) ? grn : yel,
+                  nrm,
+                  !HAS_VALID_CLASS(mob) ? " (current)" : "");
+
+  write_to_output(d,
+    "\r\nCurrent choice: %s%s%s\r\n"
+    "%s0%s) Return to main menu\r\n"
+    "Enter choice : ",
+    cyn, current, nrm,
+    cyn, nrm);
+
+  OLC_MODE(d) = MEDIT_CLASS_MENU;
 }
 
 /* Display main menu. */
@@ -672,6 +717,10 @@ void medit_parse(struct descriptor_data *d, char *arg)
     case '9':
       OLC_MODE(d) = MEDIT_ATTACK;
       medit_disp_attack_types(d);
+      return;
+    case 'd':
+    case 'D':
+      medit_disp_class_menu(d);
       return;
     case '0':
       OLC_MODE(d) = MEDIT_STATS_MENU;
@@ -946,12 +995,12 @@ void medit_parse(struct descriptor_data *d, char *arg)
 
     write_to_output(d, "Enter skill value (0-100): ");
     OLC_VAL(d) = snum;
-    OLC_MODE(d) = MEDIT_SKILL_EDIT + 1;
+    OLC_MODE(d) = MEDIT_SKILL_VALUE;
     return;
   }
   break;
 
-  case MEDIT_SKILL_EDIT + 1: {
+  case MEDIT_SKILL_VALUE: {
     int val = atoi(arg);
     int snum = OLC_VAL(d);
 
@@ -963,6 +1012,32 @@ void medit_parse(struct descriptor_data *d, char *arg)
     return;
   }
   break;
+
+  case MEDIT_CLASS_MENU:
+    i = atoi(arg);
+    if (i == 0) {
+      medit_disp_menu(d);
+      return;
+    }
+    if (i == NUM_CLASSES + 1) {
+      GET_CLASS(OLC_MOB(d)) = CLASS_UNDEFINED;
+      grant_class_skills(OLC_MOB(d), TRUE);
+      OLC_VAL(d) = TRUE;
+      write_to_output(d, "Class cleared.\r\n");
+      medit_disp_menu(d);
+      return;
+    }
+    if (i < 1 || i > NUM_CLASSES + 1) {
+      write_to_output(d, "Invalid choice!\r\n");
+      medit_disp_class_menu(d);
+      return;
+    }
+    GET_CLASS(OLC_MOB(d)) = i - 1;
+    grant_class_skills(OLC_MOB(d), TRUE);
+    OLC_VAL(d) = TRUE;
+    write_to_output(d, "Class set to %s.\r\n", pc_class_types[GET_CLASS(OLC_MOB(d))]);
+    medit_disp_menu(d);
+    return;
 
   case OLC_SCRIPT_EDIT:
     if (dg_script_edit_parse(d, arg)) return;

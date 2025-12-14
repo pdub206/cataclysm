@@ -2560,7 +2560,7 @@ ACMD(do_last)
 
     send_to_char(ch, "[%5ld] [%2d %s] %-12s : %-18s : %-24s\r\n",
     GET_IDNUM(vict), (int) GET_LEVEL(vict),
-    class_abbrevs[(int) GET_CLASS(vict)], GET_NAME(vict),
+    CLASS_ABBR(vict), GET_NAME(vict),
     GET_HOST(vict) && *GET_HOST(vict) ? GET_HOST(vict) : "(NOHOST)", timestr);
     free_char(vict);
     return;
@@ -3088,8 +3088,7 @@ ACMD(do_show)
     strftime(buf2, sizeof(buf2), "%a %b %d %H:%H:%S %Y", localtime(&(vict->player.time.logon)));
 
     send_to_char(ch, "Player: %-12s (%s) [%2d %s]\r\n", GET_NAME(vict),
-      genders[(int) GET_SEX(vict)], GET_LEVEL(vict), class_abbrevs[(int)
-      GET_CLASS(vict)]);
+      genders[(int) GET_SEX(vict)], GET_LEVEL(vict), CLASS_ABBR(vict));
     send_to_char(ch, "Gold: %-8d  Bal: %-8d Exp: %-8d  Align: %-5d\r\n",
       GET_GOLD(vict), GET_BANK_GOLD(vict), GET_EXP(vict),
       GET_ALIGNMENT(vict));

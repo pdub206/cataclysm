@@ -22,6 +22,7 @@ int level_exp(int chclass, int level);
 int parse_class(char arg);
 void roll_real_abils(struct char_data *ch);
 bool has_save_proficiency(int class_num, int ability);
+void grant_class_skills(struct char_data *ch, bool reset);
 
 /* Global variables */
 

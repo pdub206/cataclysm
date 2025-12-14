@@ -268,17 +268,19 @@ void roll_real_abils(struct char_data *ch)
   ch->aff_abils = ch->real_abils;
 }
 
-/* Some initializations for characters, including initial skills */
-void do_start(struct char_data *ch)
+void grant_class_skills(struct char_data *ch, bool reset)
 {
-  GET_LEVEL(ch) = 1;
-  GET_EXP(ch) = 1;
+  int i;
 
-  roll_real_abils(ch);
+  if (!ch)
+    return;
 
-  GET_MAX_HIT(ch)  = 90;
-  GET_MAX_MANA(ch) = 100;
-  GET_MAX_MOVE(ch) = 90;
+  if (reset)
+    for (i = 1; i <= MAX_SKILLS; i++)
+      SET_SKILL(ch, i, 0);
+
+  if (GET_CLASS(ch) < CLASS_SORCEROR || GET_CLASS(ch) >= NUM_CLASSES)
+    return;
 
   switch (GET_CLASS(ch)) {
 
@@ -420,6 +422,21 @@ void do_start(struct char_data *ch)
     SET_SKILL(ch, SKILL_PERCEPTION, 5);
     break;
   }
+}
+
+/* Some initializations for characters, including initial skills */
+void do_start(struct char_data *ch)
+{
+  GET_LEVEL(ch) = 1;
+  GET_EXP(ch) = 1;
+
+  roll_real_abils(ch);
+
+  GET_MAX_HIT(ch)  = 90;
+  GET_MAX_MANA(ch) = 100;
+  GET_MAX_MOVE(ch) = 90;
+
+  grant_class_skills(ch, TRUE);
 
   advance_level(ch);
 
@@ -785,4 +802,3 @@ int level_exp(int chclass, int level)
   log("SYSERR: XP tables not set up correctly in class.c!");
   return 123456;
 }
-
