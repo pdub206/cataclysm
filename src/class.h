@@ -21,6 +21,7 @@ int invalid_class(struct char_data *ch, struct obj_data *obj);
 int level_exp(int chclass, int level);
 int parse_class(char arg);
 void roll_real_abils(struct char_data *ch);
+bool has_save_proficiency(int class_num, int ability);
 
 /* Global variables */
 

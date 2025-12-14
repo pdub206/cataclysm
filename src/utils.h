@@ -95,6 +95,10 @@ struct ac_breakdown {
 
 int GET_ABILITY_MOD(int score);
 int GET_PROFICIENCY(int pct);
+int get_level_proficiency_bonus(struct char_data *ch);
+int get_total_proficiency_bonus(struct char_data *ch);
+int get_save_mod(struct char_data *ch, int ability);
+int compute_save_dc(struct char_data *caster, int level, int spellnum);
 int compute_ascending_ac(struct char_data *ch);
 int GET_SITUATIONAL_AC(struct char_data *ch);
 int compute_armor_class_asc(struct char_data *ch);

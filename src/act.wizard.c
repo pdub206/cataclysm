@@ -1274,14 +1274,15 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
 	  CCCYN(ch, C_NRM), GET_DEX(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_CON(k), CCNRM(ch, C_NRM),
 	  CCCYN(ch, C_NRM), GET_CHA(k), CCNRM(ch, C_NRM));
-  send_to_char(ch, "Saving Throws: Str: [%s%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
-	  "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
-    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_STR), CCNRM(ch, C_NRM),
-    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_DEX), CCNRM(ch, C_NRM),
-    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_CON), CCNRM(ch, C_NRM),
-    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_INT), CCNRM(ch, C_NRM),
-    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_WIS), CCNRM(ch, C_NRM),
-    CCCYN(ch, C_NRM), GET_SAVE(k, ABIL_CHA), CCNRM(ch, C_NRM));
+  send_to_char(ch, "Saving Throws: Str: [%s%+d%s (%+d)]  Dex: [%s%+d%s (%+d)]  "
+      "Con: [%s%+d%s (%+d)]  Int: [%s%+d%s (%+d)]  Wis: [%s%+d%s (%+d)]  "
+      "Cha: [%s%+d%s (%+d)]\r\n",
+      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_STR), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_STR),
+      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_DEX), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_DEX),
+      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_CON), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_CON),
+      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_INT), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_INT),
+      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_WIS), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_WIS),
+      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_CHA), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_CHA));
 
   send_to_char(ch, "Hit p.:[%s%d/%d+%d%s]  Mana p.:[%s%d/%d+%d%s]  Move p.:[%s%d/%d+%d%s]\r\n",
 	  CCGRN(ch, C_NRM), GET_HIT(k), GET_MAX_HIT(k), hit_gain(k), CCNRM(ch, C_NRM),

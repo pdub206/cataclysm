@@ -1640,6 +1640,70 @@ int GET_ABILITY_MOD(int score) {
   return mod;
 }
 
+/* Helper: derive a class-level proficiency bonus (no situational modifiers). */
+int get_level_proficiency_bonus(struct char_data *ch)
+{
+  int level;
+  int bonus;
+
+  if (!ch)
+    return 0;
+
+  level = MAX(1, GET_LEVEL(ch));
+  bonus = 2 + ((level - 1) / 4);
+  if (bonus > 6)
+    bonus = 6;
+  return bonus;
+}
+
+int get_total_proficiency_bonus(struct char_data *ch)
+{
+  if (!ch)
+    return 0;
+  return get_level_proficiency_bonus(ch) + GET_PROF_MOD(ch);
+}
+
+static int get_ability_mod_from_index(struct char_data *ch, int ability)
+{
+  if (!ch)
+    return 0;
+
+  switch (ability) {
+    case ABIL_STR: return GET_ABILITY_MOD(GET_STR(ch));
+    case ABIL_DEX: return GET_ABILITY_MOD(GET_DEX(ch));
+    case ABIL_CON: return GET_ABILITY_MOD(GET_CON(ch));
+    case ABIL_INT: return GET_ABILITY_MOD(GET_INT(ch));
+    case ABIL_WIS: return GET_ABILITY_MOD(GET_WIS(ch));
+    case ABIL_CHA: return GET_ABILITY_MOD(GET_CHA(ch));
+    default:       return 0;
+  }
+}
+
+int get_save_mod(struct char_data *ch, int ability)
+{
+  int mod;
+
+  if (!ch)
+    return 0;
+
+  mod = GET_SAVE(ch, ability);
+  mod += get_ability_mod_from_index(ch, ability);
+
+  if (has_save_proficiency(GET_CLASS(ch), ability))
+    mod += get_total_proficiency_bonus(ch);
+
+  return mod;
+}
+
+int compute_save_dc(struct char_data *caster, int level, int spellnum)
+{
+  if (caster)
+    return GET_SPELL_SAVE_DC(caster, spellnum, 0);
+
+  /* Non-caster fallback for scrolls/wands/etc. */
+  return MAX(1, 8 + (level / 2));
+}
+
 /* Converts a skill percentage (0-100) into a 5e-like proficiency bonus. */
 int GET_PROFICIENCY(int pct) {
   if (pct <= 14) return 0;

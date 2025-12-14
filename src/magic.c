@@ -29,29 +29,22 @@ static int mag_materials(struct char_data *ch, IDXTYPE item0, IDXTYPE item1, IDX
 static void perform_mag_groups(int level, struct char_data *ch, struct char_data *tch, int spellnum, int savetype);
 
 
-/* Negative apply_saving_throw[] values make saving throws better! So do
- * negative modifiers.  Though people may be used to the reverse of that.
- * It's due to the code modifying the target saving throw instead of the
- * random number of the character as in some other systems. */
-int mag_savingthrow(struct char_data *ch, int type, int modifier)
+/* Roll a 5e-style saving throw: d20 + ability mod + proficiency vs DC. */
+int mag_savingthrow(struct char_data *ch, int ability, int dc)
 {
-  /* NPCs use fighter tables according to some book */
-  int class_sav = CLASS_FIGHTER;
-  int save;
+  int roll, total, target;
 
-  if (!IS_NPC(ch))
-    class_sav = GET_CLASS(ch);
+  if (!ch)
+    return FALSE;
 
-  save = GET_SAVE(ch, type);
-  save += GET_SAVE(ch, type);
-  save += modifier;
+  roll = roll_d20();
+  total = roll + get_save_mod(ch, ability);
+  target = MAX(1, dc);
 
-  /* Throwing a 0 is always a failure. */
-  if (MAX(1, save) < rand_number(0, 99))
-    return (TRUE);
+  if (total >= target)
+    return TRUE;
 
-  /* Oops, failed. Sorry. */
-  return (FALSE);
+  return FALSE;
 }
 
 /* affect_update: called from comm.c (causes spells to wear off) */
@@ -287,7 +280,7 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
 
 
   /* divide damage by two if victim makes his saving throw */
-  if (mag_savingthrow(victim, savetype, 0))
+  if (mag_savingthrow(victim, savetype, compute_save_dc(ch, level, spellnum)))
     dam /= 2;
 
   /* and finally, inflict the damage */
@@ -307,10 +300,13 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
   bool accum_affect = FALSE, accum_duration = FALSE;
   const char *to_vict = NULL, *to_room = NULL;
   int i, j;
+  int save_dc;
 
 
   if (victim == NULL || ch == NULL)
     return;
+
+  save_dc = compute_save_dc(ch, level, spellnum);
 
   for (i = 0; i < MAX_SPELL_AFFECTS; i++) {
     new_affect(&(af[i]));
@@ -321,7 +317,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
   case SPELL_CHILL_TOUCH:
     af[0].location = APPLY_STR;
-    if (mag_savingthrow(victim, ABIL_CON, savetype))
+    if (mag_savingthrow(victim, ABIL_CON, save_dc))
       af[0].duration = 1;    /* resisted: brief weakening */
     else
       af[0].duration = 4;    /* failed: longer effect */
@@ -354,7 +350,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
 
   case SPELL_BLINDNESS:
     if (MOB_FLAGGED(victim, MOB_NOBLIND) || GET_LEVEL(victim) >= LVL_IMMORT ||
-        mag_savingthrow(victim, ABIL_CON, savetype)) {
+        mag_savingthrow(victim, ABIL_CON, save_dc)) {
       send_to_char(ch, "You fail.\r\n");
       return;
     }
@@ -374,7 +370,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_CURSE:
-    if (mag_savingthrow(victim, ABIL_WIS, savetype)) {
+    if (mag_savingthrow(victim, ABIL_WIS, save_dc)) {
       send_to_char(ch, "%s", CONFIG_NOEFFECT);
       return;
     }
@@ -445,7 +441,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_POISON:
-    if (mag_savingthrow(victim, ABIL_CON, savetype)) {
+    if (mag_savingthrow(victim, ABIL_CON, save_dc)) {
       send_to_char(ch, "%s", CONFIG_NOEFFECT);
       return;
     }
@@ -478,7 +474,7 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
       return;
     if (MOB_FLAGGED(victim, MOB_NOSLEEP))
       return;
-    if (mag_savingthrow(victim, ABIL_WIS, savetype))
+    if (mag_savingthrow(victim, ABIL_WIS, save_dc))
       return;
 
     af[0].duration = 4 + (GET_LEVEL(ch) / 4);

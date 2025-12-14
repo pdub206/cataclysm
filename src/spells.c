@@ -106,8 +106,12 @@ ASPELL(spell_teleport)
 #define SUMMON_FAIL "You failed.\r\n"
 ASPELL(spell_summon)
 {
+  int save_dc;
+
   if (ch == NULL || victim == NULL)
     return;
+
+  save_dc = compute_save_dc(ch, level, SPELL_SUMMON);
 
   if (GET_LEVEL(victim) > MIN(LVL_IMMORT - 1, level + 3)) {
     send_to_char(ch, "%s", SUMMON_FAIL);
@@ -143,7 +147,7 @@ ASPELL(spell_summon)
   }
 
   if (MOB_FLAGGED(victim, MOB_NOSUMMON) ||
-      (IS_NPC(victim) && mag_savingthrow(victim, SAVING_CHA, 0))) {
+      (IS_NPC(victim) && mag_savingthrow(victim, SAVING_CHA, save_dc))) {
     send_to_char(ch, "%s", SUMMON_FAIL);
     return;
   }
@@ -248,9 +252,12 @@ ASPELL(spell_locate_object)
 ASPELL(spell_charm)
 {
   struct affected_type af;
+  int save_dc;
 
   if (victim == NULL || ch == NULL)
     return;
+
+  save_dc = compute_save_dc(ch, level, SPELL_CHARM);
 
   if (victim == ch)
     send_to_char(ch, "You like yourself even better!\r\n");
@@ -269,7 +276,7 @@ ASPELL(spell_charm)
     send_to_char(ch, "You fail - shouldn't be doing it anyway.\r\n");
   else if (circle_follow(victim, ch))
     send_to_char(ch, "Sorry, following in circles is not allowed.\r\n");
-  else if (mag_savingthrow(victim, SAVING_WIS, 0))
+  else if (mag_savingthrow(victim, SAVING_WIS, save_dc))
     send_to_char(ch, "Your victim resists!\r\n");
   else {
     if (victim->master)

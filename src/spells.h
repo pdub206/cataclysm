@@ -286,7 +286,7 @@ void init_spell_levels(void);
 const char *skill_name(int num);
 
 /* From magic.c */
-int mag_savingthrow(struct char_data *ch, int type, int modifier);
+int mag_savingthrow(struct char_data *ch, int ability, int dc);
 void affect_update(void);
 
 /* from spell_parser.c */
