@@ -1642,7 +1642,20 @@ void remove_from_string(char *string, const char *to_remove)
             i--;
         }
     }
-    
+}
+
+const char *get_char_sdesc(const struct char_data *ch)
+{
+  if (!ch)
+    return "someone";
+
+  if (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch))
+    return GET_SHORT_DESC(ch);
+
+  if (GET_NAME(ch))
+    return GET_NAME(ch);
+
+  return "someone";
 }
 
 /* 5e system helpers */

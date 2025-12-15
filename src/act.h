@@ -242,6 +242,7 @@ bool perform_scan_sweep(struct char_data *ch);
 void clear_scan_results(struct char_data *ch);
 bool scan_can_target(struct char_data *ch, struct char_data *tch);
 bool scan_confirm_target(struct char_data *ch, struct char_data *tch);
+void stealth_process_room_movement(struct char_data *ch, room_rnum room, int dir, bool leaving);
 
 
 /*****************************************************************************

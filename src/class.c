@@ -349,8 +349,7 @@ void grant_class_skills(struct char_data *ch, bool reset)
     break;
 
   case CLASS_ROGUE:
-    SET_SKILL(ch, SKILL_SNEAK, 5);
-    SET_SKILL(ch, SKILL_HIDE, 5);
+    SET_SKILL(ch, SKILL_STEALTH, 5);
     SET_SKILL(ch, SKILL_TRACK, 5);
     SET_SKILL(ch, SKILL_STEAL, 5);
     SET_SKILL(ch, SKILL_BACKSTAB, 5);
@@ -386,8 +385,7 @@ void grant_class_skills(struct char_data *ch, bool reset)
     break;
 
   case CLASS_RANGER:
-    SET_SKILL(ch, SKILL_SNEAK, 5);
-    SET_SKILL(ch, SKILL_HIDE, 5);
+    SET_SKILL(ch, SKILL_STEALTH, 5);
     SET_SKILL(ch, SKILL_BANDAGE, 5);
     SET_SKILL(ch, SKILL_TRACK, 5);
     SET_SKILL(ch, SKILL_BASH, 5);
@@ -642,16 +640,15 @@ void init_spell_levels(void)
   spell_level(SKILL_SHIELD_USE, CLASS_CLERIC, 1);
 
   /* ROGUES */
-  spell_level(SKILL_SNEAK, CLASS_ROGUE, 1);
   spell_level(SKILL_PICK_LOCK, CLASS_ROGUE, 1);
   spell_level(SKILL_BACKSTAB, CLASS_ROGUE, 1);
   spell_level(SKILL_STEAL, CLASS_ROGUE, 1);
-  spell_level(SKILL_HIDE, CLASS_ROGUE, 1);
   spell_level(SKILL_TRACK, CLASS_ROGUE, 1);
   spell_level(SKILL_UNARMED, CLASS_ROGUE, 1);
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_ROGUE, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_ROGUE, 1);
   spell_level(SKILL_PERCEPTION, CLASS_ROGUE, 1);
+  spell_level(SKILL_STEALTH, CLASS_ROGUE, 1);
 
   /* FIGHTERS */
   spell_level(SKILL_KICK, CLASS_FIGHTER, 1);
@@ -676,8 +673,6 @@ void init_spell_levels(void)
   spell_level(SKILL_PERCEPTION, CLASS_BARBARIAN, 1);
 
   /* RANGERS */
-  spell_level(SKILL_SNEAK, CLASS_RANGER, 1);
-  spell_level(SKILL_HIDE, CLASS_RANGER, 1);
   spell_level(SKILL_BANDAGE, CLASS_RANGER, 1);
   spell_level(SKILL_TRACK, CLASS_RANGER, 1);
   spell_level(SKILL_BASH, CLASS_RANGER, 1);
@@ -686,6 +681,7 @@ void init_spell_levels(void)
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_RANGER, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_RANGER, 1);
   spell_level(SKILL_PERCEPTION, CLASS_RANGER, 1);
+  spell_level(SKILL_STEALTH, CLASS_RANGER, 1);
 
   /* BARDS */
   spell_level(SPELL_ARMOR, CLASS_BARD, 1);

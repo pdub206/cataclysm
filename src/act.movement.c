@@ -274,8 +274,9 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
     GET_MOVE(ch) -= need_movement;
 
   /* Generate the leave message and display to others in the was_in room. */
-  if (!AFF_FLAGGED(ch, AFF_SNEAK))
-  {
+  if (AFF_FLAGGED(ch, AFF_SNEAK)) {
+    stealth_process_room_movement(ch, was_in, dir, TRUE);
+  } else {
     snprintf(leave_message, sizeof(leave_message), "$n leaves %s.", dirs[dir]);
     act(leave_message, TRUE, ch, 0, 0, TO_ROOM);
   }
@@ -299,7 +300,9 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   }
 
   /* Display arrival information to anyone in the destination room... */
-  if (!AFF_FLAGGED(ch, AFF_SNEAK))
+  if (AFF_FLAGGED(ch, AFF_SNEAK))
+    stealth_process_room_movement(ch, going_to, dir, FALSE);
+  else
     act("$n has arrived.", TRUE, ch, 0, 0, TO_ROOM);
 
   /* ... and the room description to the character. */

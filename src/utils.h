@@ -79,6 +79,7 @@ int count_non_protocol_chars(char * str);
 char *right_trim_whitespace(const char *string);
 void remove_from_string(char *string, const char *to_remove);
 const char *const *obj_value_labels(int item_type);
+const char *get_char_sdesc(const struct char_data *ch);
 
 /* 5e system helpers */
 
@@ -892,15 +893,10 @@ do                                                              \
 
 /* Display name for a character as seen by 'vict'.
  * - If vict can’t see ch: "someone"
- * - If NPC: use short_descr if set, else personal name
- * - If PC: use short_descr if set, else personal name
+ * - Otherwise: prefer short_descr, fall back to NPC name or a generic label
  */
 #define PERS(ch, vict)                                                     \
-  (CAN_SEE((vict), (ch)) ?                                                 \
-    ((GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch)) ?                         \
-      GET_SHORT_DESC(ch) :                                                 \
-      GET_NAME(ch)) :                                                      \
-    "someone")
+  (CAN_SEE((vict), (ch)) ? get_char_sdesc(ch) : "someone")
 
 /** If vict can see obj, return obj short description, else return
  * "something". */

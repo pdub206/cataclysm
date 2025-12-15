@@ -412,12 +412,12 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
 
   /* Otherwise, use short description (PC or NPC) if present, else name. */
   {
-    const char *sdesc = GET_SHORT_DESC(i);
+    const char *sdesc = get_char_sdesc(i);
     if (sdesc && *sdesc) {
       /* Capitalize first letter for room list */
       send_to_char(ch, "%c%s", UPPER(*sdesc), sdesc + 1);
     } else {
-      send_to_char(ch, "%s", GET_NAME(i));
+      send_to_char(ch, "Someone");
     }
   }
 

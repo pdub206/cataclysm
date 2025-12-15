@@ -189,13 +189,74 @@ ACMD(do_not_here)
   send_to_char(ch, "Sorry, but you cannot do that here!\r\n");
 }
 
+#define STEALTH_BASE_DC 10
+
+static int get_stealth_skill_value(struct char_data *ch)
+{
+  int skill = GET_SKILL(ch, SKILL_STEALTH);
+  int legacy = MAX(GET_SKILL(ch, SKILL_HIDE), GET_SKILL(ch, SKILL_SNEAK));
+
+  if (skill <= 0 && legacy > 0) {
+    skill = MIN(legacy, 100);
+    SET_SKILL(ch, SKILL_STEALTH, skill);
+  }
+
+  return skill;
+}
+
+static int roll_stealth_check(struct char_data *ch)
+{
+  int skill = get_stealth_skill_value(ch);
+  int bonus = GET_ABILITY_MOD(GET_DEX(ch)) + GET_PROFICIENCY(skill);
+  bool disadv = has_stealth_disadv(ch) ? TRUE : FALSE;
+  int rolla = rand_number(1, 20);
+  int rollb = rand_number(1, 20);
+  int roll = disadv ? MIN(rolla, rollb) : rolla;
+
+  return roll + bonus;
+}
+
+static int sneak_effect_duration(struct char_data *ch)
+{
+  int skill = get_stealth_skill_value(ch);
+  if (skill <= 0)
+    return 1;
+
+  return MAX(1, skill / 10);
+}
+
+static bool can_scan_for_sneak(struct char_data *ch)
+{
+  if (!AFF_FLAGGED(ch, AFF_SCAN))
+    return FALSE;
+  if (!GET_SKILL(ch, SKILL_PERCEPTION))
+    return FALSE;
+  if (AFF_FLAGGED(ch, AFF_BLIND))
+    return FALSE;
+  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch))
+    return FALSE;
+  return TRUE;
+}
+
+static int roll_scan_perception(struct char_data *ch)
+{
+  int bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
+              GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
+  int total = rand_number(1, 20) + bonus;
+
+  if (FIGHTING(ch))
+    total -= 4;
+
+  return total;
+}
+
 ACMD(do_sneak)
 {
   struct affected_type af;
-  int rolla, rollb, roll, bonus, total, dc;
-  bool disadv = FALSE;
+  int total, dc;
+  int stealth_skill = get_stealth_skill_value(ch);
 
-  if (!GET_SKILL(ch, SKILL_SNEAK)) {
+  if (!stealth_skill) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -212,25 +273,11 @@ ACMD(do_sneak)
     affect_from_char(ch, SKILL_SNEAK);
 
   /* --- 5e-style Stealth check (DEX + proficiency) --- */
-  bonus = GET_ABILITY_MOD(GET_DEX(ch)) +
-          GET_PROFICIENCY(GET_SKILL(ch, SKILL_SNEAK));
-
-  dc = 10;
-
-  disadv = has_stealth_disadv(ch) ? TRUE : FALSE;
-
-  rolla = rand_number(1, 20);
-  if (disadv) {
-    rollb = rand_number(1, 20);
-    roll  = MIN(rolla, rollb);                  /* disadvantage: take lower roll */
-  } else {
-    roll  = rolla;
-  }
-
-  total = roll + bonus;
+  total = roll_stealth_check(ch);
+  dc = STEALTH_BASE_DC;
 
   if (total < dc) {
-    gain_skill(ch, "sneak", FALSE);
+    gain_skill(ch, "stealth", FALSE);
     WAIT_STATE(ch, PULSE_VIOLENCE / 2);
     GET_MOVE(ch) -= 10;
     return;
@@ -241,7 +288,7 @@ ACMD(do_sneak)
   af.spell    = SKILL_SNEAK;
   af.location = APPLY_NONE;
   af.modifier = 0;
-  af.duration = GET_LEVEL(ch);               /* keep stock duration; adjust if desired */
+  af.duration = sneak_effect_duration(ch);
   memset(af.bitvector, 0, sizeof(af.bitvector));
   SET_BIT_AR(af.bitvector, AFF_SNEAK);
   affect_to_char(ch, &af);
@@ -250,16 +297,16 @@ ACMD(do_sneak)
   /* If you’ve already hidden with a higher roll, keep the stronger value. */
   SET_STEALTH_CHECK(ch, MAX(GET_STEALTH_CHECK(ch), total));
 
-  gain_skill(ch, "sneak", TRUE);
+  gain_skill(ch, "stealth", TRUE);
   GET_MOVE(ch) -= 10;
 }
 
 ACMD(do_hide)
 {
-  int rolla, rollb, roll, bonus, total, dc;
-  bool disadv = FALSE;
+  int total, dc;
+  int stealth_skill = get_stealth_skill_value(ch);
 
-  if (!GET_SKILL(ch, SKILL_HIDE)) {
+  if (!stealth_skill) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -278,28 +325,14 @@ ACMD(do_hide)
   }    /* you can't hide while in active melee */
 
   /* --- 5e Stealth (DEX) ability check --- */
-  bonus = GET_ABILITY_MOD(GET_DEX(ch)) + GET_PROFICIENCY(GET_SKILL(ch, SKILL_HIDE));
-
   /* Baseline difficulty: hiding in general */
   /* TODO: Maybe change dc based on terrain/populated rooms in the future */
-  dc = 10;
-
-  /* Armor/gear can impose disadvantage */
-  disadv = has_stealth_disadv(ch) ? TRUE : FALSE;
-
-  rolla = rand_number(1, 20);
-  if (disadv) {
-    rollb = rand_number(1, 20);
-    roll  = MIN(rolla, rollb);      /* disadvantage: take the lower */
-  } else {
-    roll  = rolla;
-  }
-
-  total = roll + bonus;
+  dc = STEALTH_BASE_DC;
+  total = roll_stealth_check(ch);
 
   if (total < dc) {
     /* Failure */
-    gain_skill(ch, "hide", FALSE);
+    gain_skill(ch, "stealth", FALSE);
     WAIT_STATE(ch, PULSE_VIOLENCE / 2);
     GET_MOVE(ch) -= 10;
     return;
@@ -310,7 +343,7 @@ ACMD(do_hide)
   GET_STEALTH_CHECK(ch) = total;
 
   send_to_char(ch, "You hide yourself as best you can.\r\n");
-  gain_skill(ch, "hide", TRUE);
+  gain_skill(ch, "stealth", TRUE);
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
   GET_MOVE(ch) -= 10;
 }
@@ -362,6 +395,78 @@ static void forget_scan_target(struct char_data *ch, struct char_data *tch)
       free(old);
       return;
     }
+  }
+}
+
+void stealth_process_room_movement(struct char_data *ch, room_rnum room, int dir, bool leaving)
+{
+  struct char_data *viewer;
+  int stealth_total;
+  bool base_failure;
+  const char *dir_word;
+  char msg[MAX_INPUT_LENGTH];
+  char sdesc_buf[MAX_INPUT_LENGTH];
+  const char *name_desc;
+  const char *format;
+
+  if (!ch || room == NOWHERE)
+    return;
+
+  stealth_total = roll_stealth_check(ch);
+  base_failure = (stealth_total < STEALTH_BASE_DC);
+
+  if (dir >= 0 && dir < NUM_OF_DIRS) {
+    dir_word = leaving ? dirs[dir] : dirs[rev_dir[dir]];
+  } else {
+    dir_word = "somewhere";
+  }
+
+  if (get_char_sdesc(ch) && *get_char_sdesc(ch)) {
+    strlcpy(sdesc_buf, get_char_sdesc(ch), sizeof(sdesc_buf));
+    if (*sdesc_buf)
+      sdesc_buf[0] = UPPER(sdesc_buf[0]);
+    name_desc = sdesc_buf;
+  } else {
+    name_desc = "Someone";
+  }
+
+  format = leaving ?
+    "%s tries to stealthily move to the %s." :
+    "%s stealthily moves in from the %s.";
+  snprintf(msg, sizeof(msg), format, name_desc, dir_word);
+
+  for (viewer = world[room].people; viewer; viewer = viewer->next_in_room) {
+    bool viewer_can_scan, saw_with_scan = FALSE, send_echo = FALSE;
+
+    if (viewer == ch)
+      continue;
+
+    viewer_can_scan = can_scan_for_sneak(viewer);
+
+    if (viewer_can_scan) {
+      int perception_total = roll_scan_perception(viewer);
+
+      if (perception_total >= stealth_total) {
+        saw_with_scan = TRUE;
+        send_echo = TRUE;
+        remember_scan_target(viewer, ch);
+      } else if (!base_failure) {
+        forget_scan_target(viewer, ch);
+      }
+
+      gain_skill(viewer, "perception", saw_with_scan ? TRUE : FALSE);
+    }
+
+    if (!send_echo && base_failure) {
+      if (!viewer_can_scan && !CAN_SEE(viewer, ch))
+        continue;
+      send_echo = TRUE;
+      if (viewer_can_scan)
+        remember_scan_target(viewer, ch);
+    }
+
+    if (send_echo)
+      send_to_char(viewer, "%s\r\n", msg);
   }
 }
 

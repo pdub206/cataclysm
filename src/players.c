@@ -442,10 +442,22 @@ int load_char(const char *name, struct char_data *ch)
   else if (!strcmp(tag, "ScrW"))  GET_SCREEN_WIDTH(ch) = atoi(line);
 	else if (!strcmp(tag, "Skil"))	load_skills(fl, ch);
   else if (!strcmp(tag, "SkGt")) {  /* Skill Gain Timers */
+    char *p = line;
     for (int i = 1; i <= MAX_SKILLS; i++) {
       long t = 0;
-      if (fscanf(fl, " %ld", &t) != 1)
-        t = 0;
+
+      while (*p && isspace((unsigned char)*p))
+        ++p;
+
+      if (*p) {
+        char *endptr = p;
+        t = strtol(p, &endptr, 10);
+        if (endptr == p)
+          t = 0;
+        else
+          p = endptr;
+      }
+
       GET_SKILL_NEXT_GAIN(ch, i) = (time_t)t;
     }
   }

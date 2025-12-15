@@ -935,5 +935,5 @@ void mag_assign_spells(void) {
   skillo(SKILL_SLASHING_WEAPONS, "slashing weapons");
   skillo(SKILL_BLUDGEONING_WEAPONS, "bludgeoning weapons");
   skillo(SKILL_PERCEPTION, "perception");
+  skillo(SKILL_STEALTH, "stealth");
 }
-
