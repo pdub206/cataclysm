@@ -427,6 +427,82 @@ void sprintbitarray(int bitvector[], const char *names[], int maxar, char *resul
     strcpy(result, "NOBITS ");
 }
 
+/* Shared object value labels (used anywhere we need human readable value slots) */
+static const char *const light_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "unused0", "unused1", "hours_left", "unused3",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const scroll_potion_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "spell_level", "spell1", "spell2", "spell3",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const wand_staff_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "level", "max_charges", "remaining_charges", "spell",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const weapon_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "dice_num", "dice_size", "weapon_type", "message_type",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const armor_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "piece_ac", "bulk", "magic_bonus", "stealth_disadv",
+  "durability", "str_requirement", "Value[6]", "Value[7]"
+};
+
+static const char *const container_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "capacity", "flags", "key_vnum", "corpse",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const drink_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "capacity", "contains", "liquid_type", "poisoned",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const food_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "bites_capacity", "bites_left", "hours_full_per_bite", "poisoned",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const money_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "coins", "unused1", "unused2", "unused3",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const furniture_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "max_seats", "current_occupants", "allowed_pos", "Value[3]",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const generic_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "Value[0]", "Value[1]", "Value[2]", "Value[3]",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+const char *const *obj_value_labels(int item_type)
+{
+  switch (item_type) {
+    case ITEM_LIGHT:     return light_val_labels;
+    case ITEM_SCROLL:
+    case ITEM_POTION:    return scroll_potion_val_labels;
+    case ITEM_WAND:
+    case ITEM_STAFF:     return wand_staff_val_labels;
+    case ITEM_WEAPON:    return weapon_val_labels;
+    case ITEM_ARMOR:     return armor_val_labels;
+    case ITEM_CONTAINER: return container_val_labels;
+    case ITEM_DRINKCON:
+    case ITEM_FOUNTAIN:  return drink_val_labels;
+    case ITEM_FOOD:      return food_val_labels;
+    case ITEM_MONEY:     return money_val_labels;
+    case ITEM_FURNITURE: return furniture_val_labels;
+    default:             return generic_val_labels;
+  }
+}
+
 /** Calculate the REAL time passed between two time invervals.
  * @todo Recommend making this function foresightedly useful by calculating
  * real months and years, too.

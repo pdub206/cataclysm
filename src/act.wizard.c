@@ -40,7 +40,6 @@
 /* local utility functions with file scope */
 static int perform_set(struct char_data *ch, struct char_data *vict, int mode, char *val_arg);
 static void perform_immort_invis(struct char_data *ch, int level);
-static void list_zone_commands_room(struct char_data *ch, room_vnum rvnum);
 static void do_stat_room(struct char_data *ch, struct room_data *rm);
 static void do_stat_object(struct char_data *ch, struct obj_data *j);
 static void do_stat_character(struct char_data *ch, struct char_data *k);
@@ -57,8 +56,493 @@ static struct recent_player *create_recent(void);
 const char *get_spec_func_name(SPECIAL(*func));
 bool zedit_get_levels(struct descriptor_data *d, char *buf);
 
+/* Modern stat table helpers */
+#define STAT_LABEL_WIDTH 18
+#define STAT_VALUE_WIDTH 55
+
+static const char *stat_border_line(void);
+static void stat_table_border(struct char_data *ch);
+static void stat_table_row(struct char_data *ch, const char *label, const char *value);
+static void stat_table_row_fmt(struct char_data *ch, const char *label, const char *fmt, ...) __attribute__((format(printf,3,4)));
+static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fmt, ...) __attribute__((format(printf,4,5)));
+static void stat_format_script_triggers(struct script_data *sc, char *buf, size_t buf_size);
+static void stat_format_script_globals(struct script_data *sc, char *buf, size_t buf_size);
+static void stat_format_script_memory(struct script_memory *mem, char *buf, size_t buf_size);
+static void stat_format_character_list(struct char_data *viewer, struct char_data *list, char *buf, size_t buf_size);
+static void stat_format_object_list(struct char_data *viewer, struct obj_data *list, char *buf, size_t buf_size);
+static void stat_format_exit_summary(struct room_data *rm, char *buf, size_t buf_size);
+static void stat_format_char_effects(struct char_data *k, char *buf, size_t buf_size);
+static void stat_format_obj_affects(struct obj_data *j, char *buf, size_t buf_size);
+static void stat_format_obj_special(struct obj_data *j, char *buf, size_t buf_size);
+static void stat_format_zone_cmds_room(room_vnum rvnum, char *buf, size_t buf_size);
+
 /* Local Globals */
 static struct recent_player *recent_list = NULL;  /** Global list of recent players */
+
+static const char *stat_border_line(void)
+{
+  static char border[STAT_LABEL_WIDTH + STAT_VALUE_WIDTH + 16];
+  if (!*border) {
+    size_t pos = 0;
+    border[pos++] = '+';
+    for (int i = 0; i < STAT_LABEL_WIDTH + 2 && pos < sizeof(border) - 1; i++)
+      border[pos++] = '-';
+    border[pos++] = '+';
+    for (int i = 0; i < STAT_VALUE_WIDTH + 2 && pos < sizeof(border) - 1; i++)
+      border[pos++] = '-';
+    border[pos++] = '+';
+    border[pos++] = '\r';
+    border[pos++] = '\n';
+    border[pos] = '\0';
+  }
+  return border;
+}
+
+static void stat_table_border(struct char_data *ch)
+{
+  send_to_char(ch, "%s", stat_border_line());
+}
+
+static const char *stat_next_chunk(const char *text, char *chunk, size_t width)
+{
+  const char *ptr = text;
+  size_t chunk_len = 0;
+
+  chunk[0] = '\0';
+
+  while (*ptr == ' ')
+    ptr++;
+
+  while (*ptr && *ptr != '\n' && *ptr != '\r') {
+    const char *word_start = ptr;
+    size_t word_len = 0;
+
+    while (word_start[word_len] &&
+           word_start[word_len] != ' ' &&
+           word_start[word_len] != '\n' &&
+           word_start[word_len] != '\r')
+      word_len++;
+
+    if (word_len == 0)
+      break;
+
+    if (chunk_len == 0 && word_len > width) {
+      word_len = width;
+      memcpy(chunk, word_start, word_len);
+      chunk_len = word_len;
+      chunk[chunk_len] = '\0';
+      ptr = word_start + word_len;
+      return ptr;
+    }
+
+    size_t needed = word_len + (chunk_len ? 1 : 0);
+    if (chunk_len + needed > width)
+      break;
+
+    if (chunk_len)
+      chunk[chunk_len++] = ' ';
+    memcpy(chunk + chunk_len, word_start, word_len);
+    chunk_len += word_len;
+    chunk[chunk_len] = '\0';
+
+    ptr = word_start + word_len;
+
+    while (*ptr == ' ')
+      ptr++;
+  }
+
+  while (*ptr == '\r' || *ptr == '\n')
+    ptr++;
+
+  return ptr;
+}
+
+static void stat_table_row(struct char_data *ch, const char *label, const char *value)
+{
+  const char *text = (value && *value) ? value : "<None>";
+  bool printed = FALSE;
+
+  while (*text) {
+    while (*text == '\r' || *text == '\n')
+      text++;
+    if (!*text)
+      break;
+
+    char chunk[STAT_VALUE_WIDTH + 1];
+    const char *next = stat_next_chunk(text, chunk, STAT_VALUE_WIDTH);
+
+    if (!*chunk) {
+      text = next;
+      continue;
+    }
+
+    send_to_char(ch, "| %-*s | %-*s |\r\n",
+      STAT_LABEL_WIDTH,
+      printed || !label ? "" : label,
+      STAT_VALUE_WIDTH,
+      chunk);
+
+    printed = TRUE;
+    text = next;
+  }
+
+  if (!printed)
+    send_to_char(ch, "| %-*s | %-*s |\r\n",
+      STAT_LABEL_WIDTH,
+      label ? label : "",
+      STAT_VALUE_WIDTH,
+      (value && *value) ? value : "<None>");
+}
+
+static void stat_table_row_fmt(struct char_data *ch, const char *label, const char *fmt, ...)
+{
+  char buf[MAX_STRING_LENGTH];
+  va_list args;
+
+  va_start(args, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+
+  stat_table_row(ch, label, buf);
+}
+
+static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fmt, ...)
+{
+  if (*len >= buf_size)
+    return;
+
+  va_list args;
+  va_start(args, fmt);
+  int wrote = vsnprintf(buf + *len, buf_size - *len, fmt, args);
+  va_end(args);
+
+  if (wrote < 0)
+    return;
+
+  if ((size_t)wrote >= buf_size - *len)
+    *len = buf_size - 1;
+  else
+    *len += wrote;
+}
+
+static void stat_format_script_triggers(struct script_data *sc, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  if (!sc || !TRIGGERS(sc)) {
+    strlcpy(buf, "None", buf_size);
+    return;
+  }
+
+  for (trig_data *t = TRIGGERS(sc); t; t = t->next) {
+    const char *attach = (t->attach_type == OBJ_TRIGGER) ? "obj" :
+                         (t->attach_type == WLD_TRIGGER) ? "room" : "mob";
+    const char **type_names = (t->attach_type == OBJ_TRIGGER) ? otrig_types :
+                              (t->attach_type == WLD_TRIGGER) ? wtrig_types : trig_types;
+    char type_buf[MAX_STRING_LENGTH];
+    sprintbit(GET_TRIG_TYPE(t), type_names, type_buf, sizeof(type_buf));
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    stat_appendf(buf, buf_size, &len, "#%d %s (%s %s) narg=%d arg=%s",
+      GET_TRIG_VNUM(t),
+      GET_TRIG_NAME(t),
+      attach,
+      type_buf,
+      GET_TRIG_NARG(t),
+      (GET_TRIG_ARG(t) && *GET_TRIG_ARG(t)) ? GET_TRIG_ARG(t) : "None");
+
+    if (GET_TRIG_WAIT(t))
+      stat_appendf(buf, buf_size, &len, " [wait]");
+  }
+}
+
+static void stat_format_script_globals(struct script_data *sc, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  if (!sc || !sc->global_vars) {
+    strlcpy(buf, "None", buf_size);
+    return;
+  }
+
+  for (struct trig_var_data *tv = sc->global_vars; tv; tv = tv->next) {
+    char value[MAX_INPUT_LENGTH];
+
+    if (*(tv->value) == UID_CHAR)
+      find_uid_name(tv->value, value, sizeof(value));
+    else
+      strlcpy(value, tv->value, sizeof(value));
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    if (tv->context)
+      stat_appendf(buf, buf_size, &len, "%s:%ld = %s", tv->name, tv->context, value);
+    else
+      stat_appendf(buf, buf_size, &len, "%s = %s", tv->name, value);
+  }
+}
+
+static void stat_format_script_memory(struct script_memory *mem, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  if (!mem) {
+    strlcpy(buf, "None", buf_size);
+    return;
+  }
+
+  for (struct script_memory *cur = mem; cur; cur = cur->next) {
+    struct char_data *mc = find_char(cur->id);
+    const char *name = mc ? GET_NAME(mc) : "**Corrupted**";
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    stat_appendf(buf, buf_size, &len, "%-15s %s",
+      name,
+      cur->cmd ? cur->cmd : "<default>");
+  }
+}
+
+static void stat_format_character_list(struct char_data *viewer, struct char_data *list, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (struct char_data *k = list; k; k = k->next_in_room) {
+    if (viewer && !CAN_SEE(viewer, k))
+      continue;
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, ", ");
+
+    stat_appendf(buf, buf_size, &len, "%s (%s)",
+      GET_NAME(k),
+      !IS_NPC(k) ? "PC" : (!IS_MOB(k) ? "NPC" : "MOB"));
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_object_list(struct char_data *viewer, struct obj_data *list, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (struct obj_data *j = list; j; j = j->next_content) {
+    if (viewer && !CAN_SEE_OBJ(viewer, j))
+      continue;
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, ", ");
+
+    stat_appendf(buf, buf_size, &len, "%s", j->short_description ? j->short_description : "<Unnamed>");
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_exit_summary(struct room_data *rm, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (int i = 0; i < DIR_COUNT; i++) {
+    if (!rm->dir_option[i])
+      continue;
+
+    const char *dir = dirs[i];
+    char exit_buf[MAX_STRING_LENGTH];
+    sprintbit(rm->dir_option[i]->exit_info, exit_bits, exit_buf, sizeof(exit_buf));
+
+    room_rnum to = rm->dir_option[i]->to_room;
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    if (to == NOWHERE)
+      stat_appendf(buf, buf_size, &len, "%s -> NOWHERE (flags: %s)", dir, exit_buf);
+    else
+      stat_appendf(buf, buf_size, &len, "%s -> #%d %s (flags: %s, key: %d, keywords: %s)",
+        dir,
+        GET_ROOM_VNUM(to),
+        world[to].name,
+        exit_buf,
+        rm->dir_option[i]->key == NOTHING ? -1 : rm->dir_option[i]->key,
+        rm->dir_option[i]->keyword ? rm->dir_option[i]->keyword : "None");
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_char_effects(struct char_data *k, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (struct affected_type *aff = k->affected; aff; aff = aff->next) {
+    char flags[MAX_STRING_LENGTH];
+    bool has_flags = FALSE;
+
+    for (int i = 0; i < NUM_AFF_FLAGS; i++) {
+      if (IS_SET_AR(aff->bitvector, i)) {
+        if (!has_flags) {
+          flags[0] = '\0';
+          has_flags = TRUE;
+        }
+        size_t f_len = strlen(flags);
+        snprintf(flags + f_len, sizeof(flags) - f_len, "%s%s",
+          f_len ? " " : "",
+          affected_bits[i]);
+      }
+    }
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    stat_appendf(buf, buf_size, &len, "%s (%dhr)",
+      skill_name(aff->spell),
+      aff->duration + 1);
+
+    if (aff->modifier)
+      stat_appendf(buf, buf_size, &len, " %+d %s",
+        aff->modifier,
+        apply_types[(int)aff->location]);
+
+    if (has_flags)
+      stat_appendf(buf, buf_size, &len, " [sets %s]", flags);
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_obj_affects(struct obj_data *j, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (int i = 0; i < MAX_OBJ_AFFECT; i++) {
+    if (!j->affected[i].modifier)
+      continue;
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    stat_appendf(buf, buf_size, &len, "%+d %s",
+      j->affected[i].modifier,
+      apply_types[j->affected[i].location]);
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_obj_special(struct obj_data *j, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+  struct char_data *tempch;
+
+  switch (GET_OBJ_TYPE(j)) {
+  case ITEM_LIGHT:
+    if (GET_OBJ_VAL(j, 2) == -1)
+      stat_appendf(buf, buf_size, &len, "Infinite light");
+    else
+      stat_appendf(buf, buf_size, &len, "Hours left: %d", GET_OBJ_VAL(j, 2));
+    break;
+  case ITEM_SCROLL:
+  case ITEM_POTION:
+    stat_appendf(buf, buf_size, &len, "Level %d spells: %s, %s, %s",
+      GET_OBJ_VAL(j, 0),
+      skill_name(GET_OBJ_VAL(j, 1)),
+      skill_name(GET_OBJ_VAL(j, 2)),
+      skill_name(GET_OBJ_VAL(j, 3)));
+    break;
+  case ITEM_WAND:
+  case ITEM_STAFF:
+    stat_appendf(buf, buf_size, &len, "%s at level %d, %d/%d charges",
+      skill_name(GET_OBJ_VAL(j, 3)),
+      GET_OBJ_VAL(j, 0),
+      GET_OBJ_VAL(j, 2),
+      GET_OBJ_VAL(j, 1));
+    break;
+  case ITEM_WEAPON:
+    stat_appendf(buf, buf_size, &len, "Damage %dd%d (avg %.1f), type %s",
+      GET_OBJ_VAL(j, 1),
+      GET_OBJ_VAL(j, 2),
+      ((GET_OBJ_VAL(j, 2) + 1) / 2.0) * GET_OBJ_VAL(j, 1),
+      attack_hit_text[GET_OBJ_VAL(j, 3)].singular);
+    break;
+  case ITEM_ARMOR:
+    stat_appendf(buf, buf_size, &len, "Piece AC %d, bulk %d, magic %+d, stealth %s, durability %d, str req %d",
+      GET_OBJ_VAL(j, VAL_ARMOR_PIECE_AC),
+      GET_OBJ_VAL(j, VAL_ARMOR_BULK),
+      GET_OBJ_VAL(j, VAL_ARMOR_MAGIC_BONUS),
+      YESNO(GET_OBJ_VAL(j, VAL_ARMOR_STEALTH_DISADV)),
+      GET_OBJ_VAL(j, VAL_ARMOR_DURABILITY),
+      GET_OBJ_VAL(j, VAL_ARMOR_STR_REQ));
+    break;
+  case ITEM_CONTAINER: {
+    char flags[MAX_STRING_LENGTH];
+    sprintbit(GET_OBJ_VAL(j, 1), container_bits, flags, sizeof(flags));
+    stat_appendf(buf, buf_size, &len, "Capacity %d, Flags %s, Key %d, Corpse %s",
+      GET_OBJ_VAL(j, 0),
+      flags,
+      GET_OBJ_VAL(j, 2),
+      YESNO(GET_OBJ_VAL(j, 3)));
+    break;
+  }
+  case ITEM_DRINKCON:
+  case ITEM_FOUNTAIN: {
+    char drink[MAX_INPUT_LENGTH];
+    sprinttype(GET_OBJ_VAL(j, 2), drinks, drink, sizeof(drink));
+    stat_appendf(buf, buf_size, &len, "Capacity %d, Contains %d, Liquid %s, Poisoned %s",
+      GET_OBJ_VAL(j, 0),
+      GET_OBJ_VAL(j, 1),
+      drink,
+      YESNO(GET_OBJ_VAL(j, 3)));
+    break;
+  }
+  case ITEM_NOTE:
+    stat_appendf(buf, buf_size, &len, "Tongue %d", GET_OBJ_VAL(j, 0));
+    break;
+  case ITEM_FOOD:
+    stat_appendf(buf, buf_size, &len, "Bites %d/%d, Hours full %d, Poisoned %s",
+      GET_OBJ_VAL(j, 1),
+      GET_OBJ_VAL(j, 0),
+      GET_OBJ_VAL(j, 2),
+      YESNO(GET_OBJ_VAL(j, 3)));
+    break;
+  case ITEM_MONEY:
+    stat_appendf(buf, buf_size, &len, "Coins: %d", GET_OBJ_VAL(j, 0));
+    break;
+  case ITEM_FURNITURE:
+    stat_appendf(buf, buf_size, &len, "Seats %d/%d, Allowed pos %d",
+      GET_OBJ_VAL(j, 1),
+      GET_OBJ_VAL(j, 0),
+      GET_OBJ_VAL(j, 2));
+    if (OBJ_SAT_IN_BY(j)) {
+      stat_appendf(buf, buf_size, &len, ", Occupied by:");
+      for (tempch = OBJ_SAT_IN_BY(j); tempch; tempch = NEXT_SITTING(tempch))
+        stat_appendf(buf, buf_size, &len, " %s", GET_NAME(tempch));
+    }
+    break;
+  default:
+    break;
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
 
 static int purge_room(room_rnum room)
 {
@@ -826,20 +1310,21 @@ ACMD(do_vnum)
 
 #define ZOCMD zone_table[zrnum].cmd[subcmd]
 
-static void list_zone_commands_room(struct char_data *ch, room_vnum rvnum)
+static void stat_format_zone_cmds_room(room_vnum rvnum, char *buf, size_t buf_size)
 {
   zone_rnum zrnum = real_zone_by_thing(rvnum);
   room_rnum rrnum = real_room(rvnum), cmd_room = NOWHERE;
   int subcmd = 0, count = 0;
+  size_t len = 0;
+
+  buf[0] = '\0';
 
   if (zrnum == NOWHERE || rrnum == NOWHERE) {
-    send_to_char(ch, "No zone information available.\r\n");
+    strlcpy(buf, "None", buf_size);
     return;
   }
 
-  get_char_colors(ch);
-
-  send_to_char(ch, "Zone commands in this room:%s\r\n", yel);
+#define ZOCMD zone_table[zrnum].cmd[subcmd]
   while (ZOCMD.command != 'S') {
     switch (ZOCMD.command) {
       case 'M':
@@ -853,605 +1338,426 @@ static void list_zone_commands_room(struct char_data *ch, room_vnum rvnum)
         cmd_room = ZOCMD.arg1;
         break;
       default:
+        cmd_room = NOWHERE;
         break;
     }
+
     if (cmd_room == rrnum) {
+      if (len)
+        stat_appendf(buf, buf_size, &len, "\n");
+
       count++;
-      /* start listing */
       switch (ZOCMD.command) {
         case 'M':
-          send_to_char(ch, "%sLoad %s [%s%d%s], Max : %d\r\n",
-                  ZOCMD.if_flag ? " then " : "",
-                  mob_proto[ZOCMD.arg1].player.short_descr, cyn,
-                  mob_index[ZOCMD.arg1].vnum, yel, ZOCMD.arg2
-                  );
+          stat_appendf(buf, buf_size, &len, "%sLoad mob %s (#%d) max %d",
+            ZOCMD.if_flag ? "then " : "",
+            mob_proto[ZOCMD.arg1].player.short_descr,
+            mob_index[ZOCMD.arg1].vnum,
+            ZOCMD.arg2);
           break;
         case 'G':
-          send_to_char(ch, "%sGive it %s [%s%d%s], Max : %d\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg1].short_description,
-    	      cyn, obj_index[ZOCMD.arg1].vnum, yel,
-    	      ZOCMD.arg2
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sGive %s (#%d) max %d",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg1].short_description,
+            obj_index[ZOCMD.arg1].vnum,
+            ZOCMD.arg2);
           break;
         case 'O':
-          send_to_char(ch, "%sLoad %s [%s%d%s], Max : %d\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg1].short_description,
-    	      cyn, obj_index[ZOCMD.arg1].vnum, yel,
-    	      ZOCMD.arg2
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sLoad obj %s (#%d) max %d",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg1].short_description,
+            obj_index[ZOCMD.arg1].vnum,
+            ZOCMD.arg2);
           break;
         case 'E':
-          send_to_char(ch, "%sEquip with %s [%s%d%s], %s, Max : %d\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg1].short_description,
-    	      cyn, obj_index[ZOCMD.arg1].vnum, yel,
-    	      equipment_types[ZOCMD.arg3],
-    	      ZOCMD.arg2
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sEquip %s (#%d) %s max %d",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg1].short_description,
+            obj_index[ZOCMD.arg1].vnum,
+            equipment_types[ZOCMD.arg3],
+            ZOCMD.arg2);
           break;
         case 'P':
-          send_to_char(ch, "%sPut %s [%s%d%s] in %s [%s%d%s], Max : %d\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg1].short_description,
-    	      cyn, obj_index[ZOCMD.arg1].vnum, yel,
-    	      obj_proto[ZOCMD.arg3].short_description,
-    	      cyn, obj_index[ZOCMD.arg3].vnum, yel,
-    	      ZOCMD.arg2
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sPut %s (#%d) in %s (#%d) max %d",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg1].short_description,
+            obj_index[ZOCMD.arg1].vnum,
+            obj_proto[ZOCMD.arg3].short_description,
+            obj_index[ZOCMD.arg3].vnum,
+            ZOCMD.arg2);
           break;
         case 'R':
-          send_to_char(ch, "%sRemove %s [%s%d%s] from room.\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg2].short_description,
-    	      cyn, obj_index[ZOCMD.arg2].vnum, yel
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sRemove %s (#%d)",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg2].short_description,
+            obj_index[ZOCMD.arg2].vnum);
           break;
         case 'D':
-          send_to_char(ch, "%sSet door %s as %s.\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      dirs[ZOCMD.arg2],
-    	      ZOCMD.arg3 ? ((ZOCMD.arg3 == 1) ? "closed" : "locked") : "open"
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sSet door %s %s",
+            ZOCMD.if_flag ? "then " : "",
+            dirs[ZOCMD.arg2],
+            ZOCMD.arg3 ? ((ZOCMD.arg3 == 1) ? "closed" : "locked") : "open");
           break;
         case 'T':
-          send_to_char(ch, "%sAttach trigger %s%s%s [%s%d%s] to %s\r\n",
-            ZOCMD.if_flag ? " then " : "",
-            cyn, trig_index[ZOCMD.arg2]->proto->name, yel,
-            cyn, trig_index[ZOCMD.arg2]->vnum, yel,
-            ((ZOCMD.arg1 == MOB_TRIGGER) ? "mobile" :
-              ((ZOCMD.arg1 == OBJ_TRIGGER) ? "object" :
-                ((ZOCMD.arg1 == WLD_TRIGGER)? "room" : "????"))));
+          stat_appendf(buf, buf_size, &len, "%sAttach trig %s (#%d) to %s",
+            ZOCMD.if_flag ? "then " : "",
+            trig_index[ZOCMD.arg2]->proto->name,
+            trig_index[ZOCMD.arg2]->vnum,
+            (ZOCMD.arg1 == MOB_TRIGGER) ? "mobile" :
+            (ZOCMD.arg1 == OBJ_TRIGGER) ? "object" :
+            (ZOCMD.arg1 == WLD_TRIGGER) ? "room" : "unknown");
           break;
         case 'V':
-          send_to_char(ch, "%sAssign global %s:%d to %s = %s\r\n",
-            ZOCMD.if_flag ? " then " : "",
-            ZOCMD.sarg1, ZOCMD.arg2,
-            ((ZOCMD.arg1 == MOB_TRIGGER) ? "mobile" :
-              ((ZOCMD.arg1 == OBJ_TRIGGER) ? "object" :
-                ((ZOCMD.arg1 == WLD_TRIGGER)? "room" : "????"))),
-            ZOCMD.sarg2);
+          stat_appendf(buf, buf_size, &len, "%sAssign global %s:%d to %s = %s",
+            ZOCMD.if_flag ? "then " : "",
+            ZOCMD.sarg1,
+            ZOCMD.arg2,
+            (ZOCMD.arg1 == MOB_TRIGGER) ? "mobile" :
+            (ZOCMD.arg1 == OBJ_TRIGGER) ? "object" :
+            (ZOCMD.arg1 == WLD_TRIGGER) ? "room" : "unknown",
+            ZOCMD.sarg2 ? ZOCMD.sarg2 : "");
           break;
         default:
-          send_to_char(ch, "<Unknown Command>\r\n");
+          stat_appendf(buf, buf_size, &len, "%s<Unknown command %c>",
+            ZOCMD.if_flag ? "then " : "",
+            ZOCMD.command);
           break;
       }
     }
     subcmd++;
   }
-  send_to_char(ch, "%s", nrm);
-  if (!count)
-    send_to_char(ch, "None!\r\n");
-}
 #undef ZOCMD
+
+  if (!count)
+    strlcpy(buf, "None", buf_size);
+}
 
 static void do_stat_room(struct char_data *ch, struct room_data *rm)
 {
-  char buf2[MAX_STRING_LENGTH];
-  struct extra_descr_data *desc;
-  int i, found, column;
-  struct obj_data *j;
-  struct char_data *k;
+  char buf[MAX_STRING_LENGTH];
+  char chars[MAX_STRING_LENGTH];
+  char objs[MAX_STRING_LENGTH];
+  char exits[MAX_STRING_LENGTH];
+  char triggers[MAX_STRING_LENGTH];
+  char globals[MAX_STRING_LENGTH];
+  char zone_cmds[MAX_STRING_LENGTH];
+  size_t len = 0;
 
-  send_to_char(ch, "Room name: %s%s%s\r\n", CCCYN(ch, C_NRM), rm->name, CCNRM(ch, C_NRM));
+  stat_table_border(ch);
+  stat_table_row(ch, "Name", rm->name ? rm->name : "<None>");
 
-  sprinttype(rm->sector_type, sector_types, buf2, sizeof(buf2));
-  send_to_char(ch, "Zone: [%3d], VNum: [%s%5d%s], RNum: [%5d], IDNum: [%5ld], Type: %s\r\n",
-	  zone_table[rm->zone].number, CCGRN(ch, C_NRM), rm->number,
-	  CCNRM(ch, C_NRM), real_room(rm->number), room_script_id(rm), buf2);
+  stat_table_row_fmt(ch, "Identifiers", "Zone %d (%s), VNum #%d (RNum %d), ID %ld",
+    zone_table[rm->zone].number, zone_table[rm->zone].name,
+    rm->number, real_room(rm->number), room_script_id(rm));
 
-  sprintbitarray(rm->room_flags, room_bits, RF_ARRAY_MAX, buf2);
-  send_to_char(ch, "SpecProc: %s, Flags: %s\r\n", rm->func == NULL ? "None" : get_spec_func_name(rm->func), buf2);
+  sprinttype(rm->sector_type, sector_types, buf, sizeof(buf));
+  stat_table_row_fmt(ch, "Type", "Sector %s, SpecProc %s",
+    buf,
+    rm->func ? get_spec_func_name(rm->func) : "None");
 
-  send_to_char(ch, "Description:\r\n%s", rm->description ? rm->description : "  None.\r\n");
+  sprintbitarray(rm->room_flags, room_bits, RF_ARRAY_MAX, buf);
+  stat_table_row(ch, "Room Flags", buf);
 
-  if (rm->ex_description) {
-    send_to_char(ch, "Extra descs:%s", CCCYN(ch, C_NRM));
-    for (desc = rm->ex_description; desc; desc = desc->next)
-      send_to_char(ch, " [%s]", desc->keyword);
-    send_to_char(ch, "%s\r\n", CCNRM(ch, C_NRM));
-  }
+  buf[0] = '\0';
+  len = 0;
+  for (struct extra_descr_data *desc = rm->ex_description; desc; desc = desc->next)
+    stat_appendf(buf, sizeof(buf), &len, "%s%s", len ? ", " : "", desc->keyword ? desc->keyword : "<None>");
+  if (!len)
+    strlcpy(buf, "None", sizeof(buf));
+  stat_table_row(ch, "Extra Descs", buf);
 
-  send_to_char(ch, "Chars present:%s", CCYEL(ch, C_NRM));
-  column = 14;	/* ^^^ strlen ^^^ */
-  for (found = FALSE, k = rm->people; k; k = k->next_in_room) {
-    if (!CAN_SEE(ch, k))
-      continue;
+  stat_format_character_list(ch, rm->people, chars, sizeof(chars));
+  stat_table_row(ch, "Characters", chars);
 
-    column += send_to_char(ch, "%s %s(%s)", found++ ? "," : "", GET_NAME(k),
-		!IS_NPC(k) ? "PC" : (!IS_MOB(k) ? "NPC" : "MOB"));
-    if (column >= 62) {
-      send_to_char(ch, "%s\r\n", k->next_in_room ? "," : "");
-      found = FALSE;
-      column = 0;
-    }
-  }
-  send_to_char(ch, "%s", CCNRM(ch, C_NRM));
+  stat_format_object_list(ch, rm->contents, objs, sizeof(objs));
+  stat_table_row(ch, "Contents", objs);
 
-  if (rm->contents) {
-    send_to_char(ch, "Contents:%s", CCGRN(ch, C_NRM));
-    column = 9;	/* ^^^ strlen ^^^ */
+  stat_format_exit_summary(rm, exits, sizeof(exits));
+  stat_table_row(ch, "Exits", exits);
 
-    for (found = 0, j = rm->contents; j; j = j->next_content) {
-      if (!CAN_SEE_OBJ(ch, j))
-	continue;
+  stat_format_script_triggers(SCRIPT(rm), triggers, sizeof(triggers));
+  stat_table_row(ch, "Triggers", triggers);
 
-      column += send_to_char(ch, "%s %s", found++ ? "," : "", j->short_description);
-      if (column >= 62) {
-	send_to_char(ch, "%s\r\n", j->next_content ? "," : "");
-	found = FALSE;
-        column = 0;
-      }
-    }
-    send_to_char(ch, "%s", CCNRM(ch, C_NRM));
-  }
+  stat_format_script_globals(SCRIPT(rm), globals, sizeof(globals));
+  stat_table_row(ch, "Script Vars", globals);
 
-  for (i = 0; i < DIR_COUNT; i++) {
-    char buf1[128];
+  stat_format_zone_cmds_room(rm->number, zone_cmds, sizeof(zone_cmds));
+  stat_table_row(ch, "Zone Commands", zone_cmds);
 
-    if (!rm->dir_option[i])
-      continue;
-
-    if (rm->dir_option[i]->to_room == NOWHERE)
-      snprintf(buf1, sizeof(buf1), " %sNONE%s", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
-    else
-      snprintf(buf1, sizeof(buf1), "%s%5d%s", CCCYN(ch, C_NRM), GET_ROOM_VNUM(rm->dir_option[i]->to_room), CCNRM(ch, C_NRM));
-
-    sprintbit(rm->dir_option[i]->exit_info, exit_bits, buf2, sizeof(buf2));
-
-    send_to_char(ch, "Exit %s%-5s%s:  To: [%s], Key: [%5d], Keywords: %s, Type: %s\r\n%s",
-	CCCYN(ch, C_NRM), dirs[i], CCNRM(ch, C_NRM), buf1,
-	rm->dir_option[i]->key == NOTHING ? -1 : rm->dir_option[i]->key,
-	rm->dir_option[i]->keyword ? rm->dir_option[i]->keyword : "None", buf2,
-	rm->dir_option[i]->general_description ? rm->dir_option[i]->general_description : "  No exit description.\r\n");
-  }
-
-  /* check the room for a script */
-  do_sstat_room(ch, rm);
-
-  list_zone_commands_room(ch, rm->number);
+  stat_table_border(ch);
 }
 
 static void do_stat_object(struct char_data *ch, struct obj_data *j)
 {
-  int i, found;
-  obj_vnum vnum;
-  struct obj_data *j2;
-  struct extra_descr_data *desc;
   char buf[MAX_STRING_LENGTH];
-  struct char_data *tempch;
+  char values[MAX_STRING_LENGTH];
+  char affects[MAX_STRING_LENGTH];
+  char contents[MAX_STRING_LENGTH];
+  char triggers[MAX_STRING_LENGTH];
+  char globals[MAX_STRING_LENGTH];
+  const char *const *labels = obj_value_labels(GET_OBJ_TYPE(j));
+  size_t len = 0;
 
-  send_to_char(ch, "Name: '%s%s%s', Keywords: %s\r\n", CCYEL(ch, C_NRM),
-      j->short_description ? j->short_description : "<None>",
-      CCNRM(ch, C_NRM), j->name);
+  stat_table_border(ch);
+  stat_table_row(ch, "Name", j->short_description ? j->short_description : "<None>");
+  stat_table_row(ch, "Keywords", j->name ? j->name : "<None>");
+  stat_table_row(ch, "Long Desc", j->description ? j->description : "<None>");
 
-  vnum = GET_OBJ_VNUM(j);
-  sprinttype(GET_OBJ_TYPE(j), item_types, buf, sizeof(buf));
-  send_to_char(ch, "VNum: [%s%5d%s], RNum: [%5d], Idnum: [%5ld], Type: %s, SpecProc: %s\r\n",
-    CCGRN(ch, C_NRM), vnum, CCNRM(ch, C_NRM), GET_OBJ_RNUM(j), obj_script_id(j), buf,
-    GET_OBJ_SPEC(j) ? (get_spec_func_name(GET_OBJ_SPEC(j))) : "None");
-
-  send_to_char(ch, "L-Desc: '%s%s%s'\r\n", CCYEL(ch, C_NRM),
-      j->description ? j->description : "<None>",
-      CCNRM(ch, C_NRM));
-
-  send_to_char(ch, "A-Desc: '%s%s%s'\r\n", CCYEL(ch, C_NRM),
-      j->main_description ? j->main_description : "<None>",
-      CCNRM(ch, C_NRM));
-
-  if (j->ex_description) {
-    send_to_char(ch, "Extra descs:%s", CCCYN(ch, C_NRM));
-    for (desc = j->ex_description; desc; desc = desc->next)
-      send_to_char(ch, " [%s]", desc->keyword);
-    send_to_char(ch, "%s\r\n", CCNRM(ch, C_NRM));
+  buf[0] = '\0';
+  len = 0;
+  for (struct extra_descr_data *desc = j->ex_description; desc; desc = desc->next) {
+    stat_appendf(buf, sizeof(buf), &len, "%s%s", len ? ", " : "", desc->keyword ? desc->keyword : "<None>");
   }
+  if (!len)
+    strlcpy(buf, "None", sizeof(buf));
+  stat_table_row(ch, "Extra Descs", buf);
+
+  stat_table_row_fmt(ch, "Identifiers", "VNum #%d (RNum %d) ID %ld",
+    GET_OBJ_VNUM(j), GET_OBJ_RNUM(j), obj_script_id(j));
+
+  sprinttype(GET_OBJ_TYPE(j), item_types, buf, sizeof(buf));
+  stat_table_row_fmt(ch, "Type", "%s, SpecProc %s",
+    buf,
+    GET_OBJ_SPEC(j) ? get_spec_func_name(GET_OBJ_SPEC(j)) : "None");
+
+  buf[0] = '\0';
+  len = 0;
+  if (IN_ROOM(j) != NOWHERE)
+    stat_appendf(buf, sizeof(buf), &len, "Room #%d %s",
+      GET_ROOM_VNUM(IN_ROOM(j)), world[IN_ROOM(j)].name);
+  else
+    stat_appendf(buf, sizeof(buf), &len, "Room <None>");
+  stat_appendf(buf, sizeof(buf), &len, ", In Obj %s",
+    j->in_obj ? (j->in_obj->short_description ? j->in_obj->short_description : j->in_obj->name) : "None");
+  stat_appendf(buf, sizeof(buf), &len, ", Carried by %s",
+    j->carried_by ? GET_NAME(j->carried_by) : "Nobody");
+  stat_appendf(buf, sizeof(buf), &len, ", Worn by %s",
+    j->worn_by ? GET_NAME(j->worn_by) : "Nobody");
+  stat_table_row(ch, "Location", buf);
+
+  stat_table_row_fmt(ch, "Stats", "Weight %d, Cost %d",
+    GET_OBJ_WEIGHT(j), GET_OBJ_COST(j));
 
   sprintbitarray(GET_OBJ_WEAR(j), wear_bits, TW_ARRAY_MAX, buf);
-  send_to_char(ch, "Can be worn on: %s\r\n", buf);
-
-  sprintbitarray(GET_OBJ_AFFECT(j), affected_bits, AF_ARRAY_MAX, buf);
-  send_to_char(ch, "Set char bits : %s\r\n", buf);
+  stat_table_row(ch, "Wear Slots", buf);
 
   sprintbitarray(GET_OBJ_EXTRA(j), extra_bits, EF_ARRAY_MAX, buf);
-  send_to_char(ch, "Extra flags   : %s\r\n", buf);
+  stat_table_row(ch, "Extra Flags", buf);
 
-  send_to_char(ch, "Weight: %d, Value: %d, Cost/day: %d, Timer: %d, Min level: %d\r\n",
-     GET_OBJ_WEIGHT(j), GET_OBJ_COST(j), GET_OBJ_RENT(j), GET_OBJ_TIMER(j), GET_OBJ_LEVEL(j));
+  sprintbitarray(GET_OBJ_AFFECT(j), affected_bits, AF_ARRAY_MAX, buf);
+  stat_table_row(ch, "Affect Flags", buf);
 
-  send_to_char(ch, "In room: %d (%s), ", GET_ROOM_VNUM(IN_ROOM(j)),
-    IN_ROOM(j) == NOWHERE ? "Nowhere" : world[IN_ROOM(j)].name);
-
-  send_to_char(ch, "In object: %s, ", j->in_obj ? j->in_obj->short_description : "None");
-  send_to_char(ch, "Carried by: %s, ", j->carried_by ? GET_NAME(j->carried_by) : "Nobody");
-  send_to_char(ch, "Worn by: %s\r\n", j->worn_by ? GET_NAME(j->worn_by) : "Nobody");
-
-  switch (GET_OBJ_TYPE(j)) {
-  case ITEM_LIGHT:
-    if (GET_OBJ_VAL(j, 2) == -1)
-      send_to_char(ch, "Hours left: Infinite\r\n");
-    else
-      send_to_char(ch, "Hours left: [%d]\r\n", GET_OBJ_VAL(j, 2));
-    break;
-
-  case ITEM_SCROLL:
-  case ITEM_POTION:
-    send_to_char(ch, "Spells: (Level %d) %s, %s, %s\r\n", GET_OBJ_VAL(j, 0),
-        skill_name(GET_OBJ_VAL(j, 1)), skill_name(GET_OBJ_VAL(j, 2)),
-        skill_name(GET_OBJ_VAL(j, 3)));
-    break;
-
-  case ITEM_WAND:
-  case ITEM_STAFF:
-    send_to_char(ch, "Spell: %s at level %d, %d (of %d) charges remaining\r\n",
-        skill_name(GET_OBJ_VAL(j, 3)), GET_OBJ_VAL(j, 0),
-        GET_OBJ_VAL(j, 2), GET_OBJ_VAL(j, 1));
-    break;
-
-  case ITEM_WEAPON:
-    send_to_char(ch, "Todam: %dd%d, Avg Damage: %.1f. Message type: %s\r\n",
-        GET_OBJ_VAL(j, 1), GET_OBJ_VAL(j, 2),
-        ((GET_OBJ_VAL(j, 2) + 1) / 2.0) * GET_OBJ_VAL(j, 1),
-        attack_hit_text[GET_OBJ_VAL(j, 3)].singular);
-    break;
-
-  case ITEM_ARMOR: {
-    /* New: show armor-specific semantic fields */
-    int piece_ac   = GET_OBJ_VAL(j, VAL_ARMOR_PIECE_AC);
-    int bulk       = GET_OBJ_VAL(j, VAL_ARMOR_BULK);
-    int magic_bonus= GET_OBJ_VAL(j, VAL_ARMOR_MAGIC_BONUS);
-    int stealth    = GET_OBJ_VAL(j, VAL_ARMOR_STEALTH_DISADV);
-    int durability = GET_OBJ_VAL(j, VAL_ARMOR_DURABILITY);
-    int str_req    = GET_OBJ_VAL(j, VAL_ARMOR_STR_REQ);
-
-    send_to_char(ch,
-      "Armor:\r\n"
-      "  piece_ac       : %d\r\n"
-      "  bulk           : %d\r\n"
-      "  magic_bonus    : %d\r\n"
-      "  stealth_disadv : %s\r\n"
-      "  durability     : %d\r\n"
-      "  str_requirement: %d\r\n",
-      piece_ac, bulk, magic_bonus,
-      YESNO(stealth), durability, str_req);
-    break;
+  values[0] = '\0';
+  len = 0;
+  for (int i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
+    stat_appendf(values, sizeof(values), &len, "%s%s=%d",
+      len ? ", " : "", labels[i], GET_OBJ_VAL(j, i));
   }
+  stat_table_row(ch, "Object Values", values);
 
-  case ITEM_CONTAINER: {
-    sprintbit(GET_OBJ_VAL(j, 1), container_bits, buf, sizeof(buf));
-    send_to_char(ch, "Weight capacity: %d, Lock Type: %s, Key Num: %d, Corpse: %s\r\n",
-        GET_OBJ_VAL(j, 0), buf, GET_OBJ_VAL(j, 2),
-        YESNO(GET_OBJ_VAL(j, 3)));
-    break;
-  }
-
-  case ITEM_DRINKCON:
-  case ITEM_FOUNTAIN: {
-    sprinttype(GET_OBJ_VAL(j, 2), drinks, buf, sizeof(buf));
-    send_to_char(ch, "Capacity: %d, Contains: %d, Poisoned: %s, Liquid: %s\r\n",
-        GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1), YESNO(GET_OBJ_VAL(j, 3)), buf);
-    break;
-  }
-
-  case ITEM_NOTE:
-    send_to_char(ch, "Tongue: %d\r\n", GET_OBJ_VAL(j, 0));
-    break;
-
-  case ITEM_KEY: /* Nothing */
-    break;
-
-  case ITEM_FOOD:
-    send_to_char(ch, "Makes full: %d, Poisoned: %s\r\n", GET_OBJ_VAL(j, 0), YESNO(GET_OBJ_VAL(j, 3)));
-    break;
-
-  case ITEM_MONEY:
-    send_to_char(ch, "Coins: %d\r\n", GET_OBJ_VAL(j, 0));
-    break;
-
-  case ITEM_FURNITURE:
-    send_to_char(ch, "Can hold: [%d] Num. of People in: [%d]\r\n", GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1));
-    send_to_char(ch, "Holding : ");
-    for (tempch = OBJ_SAT_IN_BY(j); tempch; tempch = NEXT_SITTING(tempch))
-      send_to_char(ch, "%s ", GET_NAME(tempch));
-    send_to_char(ch, "\r\n");
-    break;
-
-  default:
-    /* No special pretty-print */
-    break;
-  }
-
-  /* Always show raw values dynamically for debugging/visibility */
-  send_to_char(ch, "Values 0..%d:", NUM_OBJ_VAL_POSITIONS - 1);
-  for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
-    send_to_char(ch, " [%d]", GET_OBJ_VAL(j, i));
-  send_to_char(ch, "\r\n");
+  stat_format_obj_special(j, buf, sizeof(buf));
+  stat_table_row(ch, "Special", buf);
 
   if (j->contains) {
-    int column;
-    send_to_char(ch, "\r\nContents:%s", CCGRN(ch, C_NRM));
-    column = 9;
-    for (found = 0, j2 = j->contains; j2; j2 = j2->next_content) {
-      column += send_to_char(ch, "%s %s", found++ ? "," : "", j2->short_description);
-      if (column >= 62) {
-        send_to_char(ch, "%s\r\n", j2->next_content ? "," : "");
-        found = FALSE;
-        column = 0;
-      }
-    }
-    send_to_char(ch, "%s", CCNRM(ch, C_NRM));
-  }
+    stat_format_object_list(ch, j->contains, contents, sizeof(contents));
+    stat_table_row(ch, "Contains", contents);
+  } else
+    stat_table_row(ch, "Contains", "None");
 
-  found = FALSE;
-  send_to_char(ch, "Affections:");
-  for (i = 0; i < MAX_OBJ_AFFECT; i++)
-    if (j->affected[i].modifier) {
-      sprinttype(j->affected[i].location, apply_types, buf, sizeof(buf));
-      send_to_char(ch, "%s %+d to %s", found++ ? "," : "", j->affected[i].modifier, buf);
-    }
-  if (!found)
-    send_to_char(ch, " None");
+  stat_format_obj_affects(j, affects, sizeof(affects));
+  stat_table_row(ch, "Apply Mods", affects);
 
-  send_to_char(ch, "\r\n");
+  stat_format_script_triggers(SCRIPT(j), triggers, sizeof(triggers));
+  stat_table_row(ch, "Triggers", triggers);
 
-  /* check the object for a script */
-  do_sstat_object(ch, j);
+  stat_format_script_globals(SCRIPT(j), globals, sizeof(globals));
+  stat_table_row(ch, "Script Vars", globals);
+
+  stat_table_border(ch);
 }
 
 static void do_stat_character(struct char_data *ch, struct char_data *k)
 {
   char buf[MAX_STRING_LENGTH];
-  int i, i2, column, found = FALSE;
-  struct obj_data *j;
-  struct follow_type *fol;
-  struct affected_type *aff;
+  char buf2[MAX_STRING_LENGTH];
+  char effects[MAX_STRING_LENGTH];
+  char triggers[MAX_STRING_LENGTH];
+  char globals[MAX_STRING_LENGTH];
+  struct ac_breakdown acb;
+  const char *sex = genders[(int) GET_SEX(k)];
+  const char *ctype = !IS_NPC(k) ? "PC" : (!IS_MOB(k) ? "NPC" : "MOB");
 
-  sprinttype(GET_SEX(k), genders, buf, sizeof(buf));
-  send_to_char(ch, "%s %s '%s'  IDNum: [%5ld], In room [%5d], Loadroom : [%5d]\r\n",
-	  buf, (!IS_NPC(k) ? "PC" : (!IS_MOB(k) ? "NPC" : "MOB")),
-	  GET_NAME(k), IS_NPC(k) ? char_script_id(k) : GET_IDNUM(k), GET_ROOM_VNUM(IN_ROOM(k)), IS_NPC(k) ? NOWHERE : GET_LOADROOM(k));
+  stat_table_border(ch);
+  stat_table_row_fmt(ch, "Name", "%s (%s %s)", GET_NAME(k), sex, ctype);
+
+  if (IS_NPC(k) && k->player.name && *k->player.name)
+    stat_table_row(ch, "Keywords", k->player.name);
+
+  if (k->player.short_descr && *k->player.short_descr)
+    stat_table_row(ch, "Short Desc", k->player.short_descr);
+
+  if (k->player.long_descr && *k->player.long_descr)
+    stat_table_row(ch, "Long Desc", k->player.long_descr);
 
   if (IS_MOB(k)) {
-    send_to_char(ch, "Keywords: %s, VNum: [%5d], RNum: [%5d]\r\n", k->player.name, GET_MOB_VNUM(k), GET_MOB_RNUM(k));
-    send_to_char(ch, "L-Desc: %s", k->player.long_descr ? k->player.long_descr : "<None>\r\n");
+    stat_table_row_fmt(ch, "Identifiers", "VNum #%d (RNum %d) ID %ld",
+      GET_MOB_VNUM(k), GET_MOB_RNUM(k), char_script_id(k));
+  } else {
+    room_vnum loadroom = GET_LOADROOM(k);
+    if (loadroom == NOWHERE)
+      stat_table_row_fmt(ch, "Identifiers", "ID %ld, Loadroom <None>", GET_IDNUM(k));
+    else
+      stat_table_row_fmt(ch, "Identifiers", "ID %ld, Loadroom #%d", GET_IDNUM(k), loadroom);
   }
 
-  send_to_char(ch, "D-Desc:\r\n %s", k->player.description ? k->player.description : "<None>\r\n");
-  send_to_char(ch, "Background:\r\n %s", k->player.background ? k->player.background : "<None>\r\n");
+  if (IN_ROOM(k) == NOWHERE)
+    stat_table_row(ch, "Current Room", "Nowhere");
+  else
+    stat_table_row_fmt(ch, "Current Room", "#%d %s (Zone %d)",
+      GET_ROOM_VNUM(IN_ROOM(k)),
+      world[IN_ROOM(k)].name,
+      zone_table[world[IN_ROOM(k)].zone].number);
 
   if (!IS_NPC(k)) {
-    char buf1[64], buf2[64];
+    char created[64], logon[64], olc[64] = "";
+    strftime(created, sizeof(created), "%b %d %Y", localtime(&(k->player.time.birth)));
+    strftime(logon, sizeof(logon), "%b %d %Y", localtime(&(k->player.time.logon)));
 
-    strftime(buf1, sizeof(buf1), "%a %b %d %Y", localtime(&(k->player.time.birth)));
-    strftime(buf2, sizeof(buf2), "%a %b %d %Y", localtime(&(k->player.time.logon)));
-
-    send_to_char(ch, "Created: [%s], Last Logon: [%s]\r\n", buf1, buf2);
-
-    send_to_char(ch, "Played: [%dh %dm], Age: [%d], per[%d]/NSTL[%d]",
-            k->player.time.played / 3600, (k->player.time.played % 3600) / 60,
-            age(k)->year, GET_ABILITY_MOD(GET_INT(k)),
-	    GET_ABILITY_MOD(GET_WIS(k)));
-    /* Display OLC zone for immorts. */
     if (GET_LEVEL(k) >= LVL_BUILDER) {
-      if (GET_OLC_ZONE(k)==AEDIT_PERMISSION)
-        send_to_char(ch, ", OLC[%sAedit%s]", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
-      else if (GET_OLC_ZONE(k)==HEDIT_PERMISSION)
-        send_to_char(ch, ", OLC[%sHedit%s]", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
+      if (GET_OLC_ZONE(k) == AEDIT_PERMISSION)
+        snprintf(olc, sizeof(olc), ", OLC Aedit");
+      else if (GET_OLC_ZONE(k) == HEDIT_PERMISSION)
+        snprintf(olc, sizeof(olc), ", OLC Hedit");
       else if (GET_OLC_ZONE(k) == ALL_PERMISSION)
-        send_to_char(ch, ", OLC[%sAll%s]", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
-      else if (GET_OLC_ZONE(k)==NOWHERE)
-        send_to_char(ch, ", OLC[%sOFF%s]", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
+        snprintf(olc, sizeof(olc), ", OLC All");
+      else if (GET_OLC_ZONE(k) == NOWHERE)
+        snprintf(olc, sizeof(olc), ", OLC OFF");
       else
-        send_to_char(ch, ", OLC[%s%d%s]", CCCYN(ch, C_NRM), GET_OLC_ZONE(k), CCNRM(ch, C_NRM));
+        snprintf(olc, sizeof(olc), ", OLC %d", GET_OLC_ZONE(k));
     }
-    send_to_char(ch, "\r\n");
+
+    stat_table_row_fmt(ch, "Account", "Created %s, Last %s%s",
+      created, logon, olc);
+    stat_table_row_fmt(ch, "Age/Play", "Age %d, Played %dh %dm",
+      age(k)->year,
+      k->player.time.played / 3600,
+      (k->player.time.played % 3600) / 60);
   }
-  send_to_char(ch, "Attributes: Str: [%s%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
-	  "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
-	  CCCYN(ch, C_NRM), GET_STR(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_INT(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_WIS(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_DEX(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_CON(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_CHA(k), CCNRM(ch, C_NRM));
-  send_to_char(ch, "Saving Throws: Str: [%s%+d%s (%+d)]  Dex: [%s%+d%s (%+d)]  "
-      "Con: [%s%+d%s (%+d)]  Int: [%s%+d%s (%+d)]  Wis: [%s%+d%s (%+d)]  "
-      "Cha: [%s%+d%s (%+d)]\r\n",
-      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_STR), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_STR),
-      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_DEX), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_DEX),
-      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_CON), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_CON),
-      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_INT), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_INT),
-      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_WIS), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_WIS),
-      CCCYN(ch, C_NRM), get_save_mod(k, ABIL_CHA), CCNRM(ch, C_NRM), GET_SAVE(k, ABIL_CHA));
 
-  send_to_char(ch, "Hit p.:[%s%d/%d+%d%s]  Mana p.:[%s%d/%d+%d%s]  Move p.:[%s%d/%d+%d%s]\r\n",
-	  CCGRN(ch, C_NRM), GET_HIT(k), GET_MAX_HIT(k), hit_gain(k), CCNRM(ch, C_NRM),
-	  CCGRN(ch, C_NRM), GET_MANA(k), GET_MAX_MANA(k), mana_gain(k), CCNRM(ch, C_NRM),
-	  CCGRN(ch, C_NRM), GET_MOVE(k), GET_MAX_MOVE(k), move_gain(k), CCNRM(ch, C_NRM));
+  stat_table_row_fmt(ch, "Level", "Level %d %s", GET_LEVEL(k), CLASS_ABBR(k));
 
-  send_to_char(ch, "Gold: [%9d], Bank: [%9d] (Total: %d)\r\n",
-	  GET_GOLD(k), GET_BANK_GOLD(k), GET_GOLD(k) + GET_BANK_GOLD(k));
+  stat_table_row_fmt(ch, "Attributes",
+    "Str %d Int %d Wis %d Dex %d Con %d Cha %d",
+    GET_STR(k), GET_INT(k), GET_WIS(k),
+    GET_DEX(k), GET_CON(k), GET_CHA(k));
 
-  if (!IS_NPC(k))
-    send_to_char(ch, "Screen %s[%s%d%sx%s%d%s]%s\r\n",
-                      CCCYN(ch, C_NRM), CCYEL(ch, C_NRM), GET_SCREEN_WIDTH(k), CCNRM(ch, C_NRM),
-                      CCYEL(ch, C_NRM), GET_PAGE_LENGTH(k), CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
+  stat_table_row_fmt(ch, "Saving Throws",
+    "Str %+d (%+d) Dex %+d (%+d) Con %+d (%+d) Int %+d (%+d) Wis %+d (%+d) Cha %+d (%+d)",
+    get_save_mod(k, ABIL_STR), GET_SAVE(k, ABIL_STR),
+    get_save_mod(k, ABIL_DEX), GET_SAVE(k, ABIL_DEX),
+    get_save_mod(k, ABIL_CON), GET_SAVE(k, ABIL_CON),
+    get_save_mod(k, ABIL_INT), GET_SAVE(k, ABIL_INT),
+    get_save_mod(k, ABIL_WIS), GET_SAVE(k, ABIL_WIS),
+    get_save_mod(k, ABIL_CHA), GET_SAVE(k, ABIL_CHA));
 
-  /* Unified AC display for PCs and NPCs (5e-style ascending AC) */
-  {
-    struct ac_breakdown acb;
+  stat_table_row_fmt(ch, "Vitals",
+    "HP %d/%d (+%d) | Mana %d/%d (+%d) | Move %d/%d (+%d)",
+    GET_HIT(k), GET_MAX_HIT(k), hit_gain(k),
+    GET_MANA(k), GET_MAX_MANA(k), mana_gain(k),
+    GET_MOVE(k), GET_MAX_MOVE(k), move_gain(k));
 
-    /* Use the same calculation as do_score */
-    compute_ac_breakdown(k, &acb);
+  stat_table_row_fmt(ch, "Currency", "Gold %d, Bank %d (Total %d)",
+    GET_GOLD(k), GET_BANK_GOLD(k), GET_GOLD(k) + GET_BANK_GOLD(k));
 
-    send_to_char(ch,
-      "Armor Class: %d (base: %d, armor: %d, armor magic: %+d, DEX (cap %d): %+d, situational: %+d)\r\n",
-      acb.total,
-      acb.base,
-      acb.armor_piece_sum,
-      acb.armor_magic_sum,
-      acb.dex_cap,
-      acb.dex_mod_applied,
-      acb.situational);
+  if (!IS_NPC(k)) {
+    if (GET_QUEST(k) != NOTHING)
+      stat_table_row_fmt(ch, "Quests", "Points %d, Completed %d, Current #%d (%d tics left)",
+        GET_QUESTPOINTS(k), GET_NUM_QUESTS(k), GET_QUEST(k), GET_QUEST_TIME(k));
+    else
+      stat_table_row_fmt(ch, "Quests", "Points %d, Completed %d",
+        GET_QUESTPOINTS(k), GET_NUM_QUESTS(k));
   }
+
+  compute_ac_breakdown(k, &acb);
+  stat_table_row_fmt(ch, "Armor Class",
+    "%d (base %d, armor %d, magic %+d, Dex cap %d => %+d, situ %+d)",
+    acb.total, acb.base, acb.armor_piece_sum, acb.armor_magic_sum,
+    acb.dex_cap, acb.dex_mod_applied, acb.situational);
 
   sprinttype(GET_POS(k), position_types, buf, sizeof(buf));
-  send_to_char(ch, "Pos: %s, Fighting: %s", buf, FIGHTING(k) ? GET_NAME(FIGHTING(k)) : "Nobody");
-
-  if (IS_NPC(k))
-    send_to_char(ch, ", Attack type: %s", attack_hit_text[(int) k->mob_specials.attack_type].singular);
-
-  if (k->desc) {
-    sprinttype(STATE(k->desc), connected_types, buf, sizeof(buf));
-    send_to_char(ch, ", Connected: %s", buf);
-  }
+  const char *fighting = FIGHTING(k) ? GET_NAME(FIGHTING(k)) : "Nobody";
+  buf2[0] = '\0';
+  size_t pos_len = 0;
+  stat_appendf(buf2, sizeof(buf2), &pos_len, "%s, Fighting %s", buf, fighting);
 
   if (IS_NPC(k)) {
     sprinttype(k->mob_specials.default_pos, position_types, buf, sizeof(buf));
-    send_to_char(ch, ", Default position: %s\r\n", buf);
+    stat_appendf(buf2, sizeof(buf2), &pos_len, ", Default %s, Attack %s",
+      buf, attack_hit_text[(int) k->mob_specials.attack_type].singular);
+  } else
+    stat_appendf(buf2, sizeof(buf2), &pos_len, ", Idle %d tics", k->char_specials.timer);
+
+  if (k->desc) {
+    sprinttype(STATE(k->desc), connected_types, buf, sizeof(buf));
+    stat_appendf(buf2, sizeof(buf2), &pos_len, ", Conn %s", buf);
+  }
+
+  stat_table_row(ch, "Position", buf2);
+
+  if (IS_MOB(k)) {
+    stat_table_row_fmt(ch, "SpecProc", "%s",
+      (mob_index[GET_MOB_RNUM(k)].func ? get_spec_func_name(mob_index[GET_MOB_RNUM(k)].func) : "None"));
     sprintbitarray(MOB_FLAGS(k), action_bits, PM_ARRAY_MAX, buf);
-    send_to_char(ch, "NPC flags: %s%s%s\r\n", CCCYN(ch, C_NRM), buf, CCNRM(ch, C_NRM));
+    stat_table_row(ch, "NPC Flags", buf);
   } else {
-    send_to_char(ch, ", Idle Timer (in tics) [%d]\r\n", k->char_specials.timer);
-
     sprintbitarray(PLR_FLAGS(k), player_bits, PM_ARRAY_MAX, buf);
-    send_to_char(ch, "PLR: %s%s%s\r\n", CCCYN(ch, C_NRM), buf, CCNRM(ch, C_NRM));
-
+    stat_table_row(ch, "Player Flags", buf);
     sprintbitarray(PRF_FLAGS(k), preference_bits, PR_ARRAY_MAX, buf);
-    send_to_char(ch, "PRF: %s%s%s\r\n", CCGRN(ch, C_NRM), buf, CCNRM(ch, C_NRM));
-
-    send_to_char(ch, "Quest Points: [%9d] Quests Completed: [%5d]\r\n",
-       GET_QUESTPOINTS(k), GET_NUM_QUESTS(k));
-    if (GET_QUEST(k) != NOTHING)
-      send_to_char(ch, "Current Quest: [%5d] Time Left: [%5d]\r\n",
-      GET_QUEST(k), GET_QUEST_TIME(k));
+    stat_table_row(ch, "Pref Flags", buf);
   }
 
-  if (IS_MOB(k))
-    send_to_char(ch, "Mob Spec-Proc: %s\r\n",
-        (mob_index[GET_MOB_RNUM(k)].func ? get_spec_func_name(mob_index[GET_MOB_RNUM(k)].func) : "None"));
+  int inv_items = 0;
+  for (struct obj_data *j = k->carrying; j; j = j->next_content)
+    inv_items++;
 
-  for (i = 0, j = k->carrying; j; j = j->next_content, i++);
-  send_to_char(ch, "Carried: weight: %d, items: %d; Items in: inventory: %d, ", IS_CARRYING_W(k), IS_CARRYING_N(k), i);
-
-  for (i = 0, i2 = 0; i < NUM_WEARS; i++)
+  int eq_items = 0;
+  for (int i = 0; i < NUM_WEARS; i++)
     if (GET_EQ(k, i))
-      i2++;
-  send_to_char(ch, "eq: %d\r\n", i2);
+      eq_items++;
 
-  if (!IS_NPC(k))
-    send_to_char(ch, "Hunger: %d, Thirst: %d, Drunk: %d\r\n", GET_COND(k, HUNGER), GET_COND(k, THIRST), GET_COND(k, DRUNK));
+  stat_table_row_fmt(ch, "Carry Weight",
+    "Weight %d/%d, Items %d/%d, Inventory %d, Equipped %d",
+    IS_CARRYING_W(k), CAN_CARRY_W(k),
+    IS_CARRYING_N(k), CAN_CARRY_N(k),
+    inv_items, eq_items);
 
-  column = send_to_char(ch, "Master is: %s, Followers are:", k->master ? GET_NAME(k->master) : "<none>");
-  if (!k->followers)
-    send_to_char(ch, " <none>\r\n");
-  else {
-    for (fol = k->followers; fol; fol = fol->next) {
-      column += send_to_char(ch, "%s %s", found++ ? "," : "", PERS(fol->follower, ch));
-      if (column >= 62) {
-        send_to_char(ch, "%s\r\n", fol->next ? "," : "");
-        found = FALSE;
-        column = 0;
-      }
-    }
-    if (column != 0)
-      send_to_char(ch, "\r\n");
-  }
-
-  /* Showing the bitvector */
   sprintbitarray(AFF_FLAGS(k), affected_bits, AF_ARRAY_MAX, buf);
-  send_to_char(ch, "AFF: %s%s%s\r\n", CCYEL(ch, C_NRM), buf, CCNRM(ch, C_NRM));
+  stat_table_row(ch, "Affect Flags", buf);
 
-  /* Routine to show what spells a char is affected by */
-  if (k->affected) {
-    for (aff = k->affected; aff; aff = aff->next) {
-      send_to_char(ch, "SPL: (%3dhr) %s%-21s%s ", aff->duration + 1, CCCYN(ch, C_NRM), skill_name(aff->spell), CCNRM(ch, C_NRM));
+  stat_format_char_effects(k, effects, sizeof(effects));
+  stat_table_row(ch, "Active Effects", effects);
 
-      if (aff->modifier)
-	send_to_char(ch, "%+d to %s", aff->modifier, apply_types[(int) aff->location]);
+  stat_format_script_triggers(SCRIPT(k), triggers, sizeof(triggers));
+  stat_table_row(ch, "Triggers", triggers);
 
-      if (aff->bitvector[0] || aff->bitvector[1] || aff->bitvector[2] || aff->bitvector[3]) {
-        if (aff->modifier)
-          send_to_char(ch, ", ");
-        for (i=1; i<NUM_AFF_FLAGS; i++) {
-          if (IS_SET_AR(aff->bitvector, i)) {
-            send_to_char(ch, "sets %s, ", affected_bits[i]);
-          }
-        }
-      }
-      send_to_char(ch, "\r\n");
-    }
-  }
+  stat_format_script_globals(SCRIPT(k), globals, sizeof(globals));
+  stat_table_row(ch, "Script Vars", globals);
 
-  if (!IS_NPC(k) && (GET_LEVEL(k) >= LVL_IMMORT)) {
-    if (POOFIN(k))
-      send_to_char(ch, "%sPOOFIN:  %s%s %s%s\r\n", QYEL, QCYN, GET_NAME(k), POOFIN(k), QNRM);
-    else
-      send_to_char(ch, "%sPOOFIN:  %s%s appears with an ear-splitting bang.%s\r\n", QYEL, QCYN, GET_NAME(k), QNRM);
-
-    if (POOFOUT(k))
-      send_to_char(ch, "%sPOOFOUT: %s%s %s%s\r\n", QYEL, QCYN, GET_NAME(k), POOFOUT(k), QNRM);
-    else
-      send_to_char(ch, "%sPOOFOUT: %s%s disappears in a puff of smoke.%s\r\n", QYEL, QCYN, GET_NAME(k), QNRM);
-  }
-
-  /* check mobiles for a script */
-  do_sstat_character(ch, k);
   if (SCRIPT_MEM(k)) {
-    struct script_memory *mem = SCRIPT_MEM(k);
-    send_to_char(ch, "Script memory:\r\n  Remember             Command\r\n");
-    while (mem) {
-      struct char_data *mc = find_char(mem->id);
-      if (!mc)
-        send_to_char(ch, "  ** Corrupted!\r\n");
-      else {
-        if (mem->cmd)
-          send_to_char(ch, "  %-20.20s%s\r\n",GET_NAME(mc),mem->cmd);
-        else
-          send_to_char(ch, "  %-20.20s <default>\r\n",GET_NAME(mc));
-      }
-    mem = mem->next;
-    }
+    stat_format_script_memory(SCRIPT_MEM(k), buf, sizeof(buf));
+    stat_table_row(ch, "Script Memory", buf);
   }
-  if (!(IS_NPC(k))) {
-    /* this is a PC, display their global variables */
-    if (k->script && k->script->global_vars) {
-      struct trig_var_data *tv;
-      char uname[MAX_INPUT_LENGTH];
 
-      send_to_char(ch, "Global Variables:\r\n");
-
-      /* currently, variable context for players is always 0, so it is not
-       * displayed here. in the future, this might change */
-      for (tv = k->script->global_vars; tv; tv = tv->next) {
-        if (*(tv->value) == UID_CHAR) {
-          find_uid_name(tv->value, uname, sizeof(uname));
-          send_to_char(ch, "    %10s:  [UID]: %s\r\n", tv->name, uname);
-        } else
-          send_to_char(ch, "    %10s:  %s\r\n", tv->name, tv->value);
-      }
-    }
+  if (!IS_NPC(k) && GET_LEVEL(k) >= LVL_IMMORT) {
+    stat_table_row_fmt(ch, "Poofin", "%s %s",
+      GET_NAME(k),
+      POOFIN(k) ? POOFIN(k) : "appears with an ear-splitting bang.");
+    stat_table_row_fmt(ch, "Poofout", "%s %s",
+      GET_NAME(k),
+      POOFOUT(k) ? POOFOUT(k) : "disappears in a puff of smoke.");
   }
+
+  stat_table_border(ch);
 }
 
 ACMD(do_stat)

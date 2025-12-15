@@ -44,92 +44,9 @@ static void oedit_save_to_disk(int zone_num);
 /* handy macro */
 #define S_PRODUCT(s, i) ((s)->producing[(i)])
 
-/* Label tables for object values by type */
-
-/* Light */
-static const char *light_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "unused0", "unused1", "hours_left", "unused3",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-/* Scroll, Potion */
-static const char *scroll_potion_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "spell_level", "spell1", "spell2", "spell3",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-/* Wand, Staff */
-static const char *wand_staff_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "level", "max_charges", "remaining_charges", "spell",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-/* Weapon */
-static const char *weapon_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "dice_num", "dice_size", "weapon_type", "message_type",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-/* Armor */
-static const char *armor_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "piece_ac", "bulk", "magic_bonus", "stealth_disadv",
-  "durability", "str_requirement", "Value[6]", "Value[7]"
-};
-
-/* Container */
-static const char *container_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "capacity", "flags", "key_vnum", "corpse",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-/* Drinkcon / Fountain */
-static const char *drink_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "capacity", "contains", "liquid_type", "poisoned",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-/* Food */
-static const char *food_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "bites_capacity", "bites_left", "hours_full_per_bite", "poisoned",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-/* Money */
-static const char *money_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "coins", "unused1", "unused2", "unused3",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-/* Furniture */
-static const char *furniture_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "max_seats", "current_occupants", "allowed_pos", "Value[3]",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-/* Generic fallback */
-static const char *generic_val_labels[NUM_OBJ_VAL_POSITIONS] = {
-  "Value[0]", "Value[1]", "Value[2]", "Value[3]",
-  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
-};
-
-static const char **get_val_labels(struct obj_data *obj)
+static const char * const *get_val_labels(struct obj_data *obj)
 {
-  switch (GET_OBJ_TYPE(obj)) {
-    case ITEM_LIGHT:     return light_val_labels;
-    case ITEM_SCROLL:
-    case ITEM_POTION:    return scroll_potion_val_labels;
-    case ITEM_WAND:
-    case ITEM_STAFF:     return wand_staff_val_labels;
-    case ITEM_WEAPON:    return weapon_val_labels;
-    case ITEM_ARMOR:     return armor_val_labels;
-    case ITEM_CONTAINER: return container_val_labels;
-    case ITEM_DRINKCON:
-    case ITEM_FOUNTAIN:  return drink_val_labels;
-    case ITEM_FOOD:      return food_val_labels;
-    case ITEM_MONEY:     return money_val_labels;
-    case ITEM_FURNITURE: return furniture_val_labels;
-    default:             return generic_val_labels;
-  }
+  return obj_value_labels(GET_OBJ_TYPE(obj));
 }
 
 /* Utility and exported functions */
@@ -509,20 +426,7 @@ static void oedit_disp_values_menu(struct descriptor_data *d)
 {
   int i;
   struct obj_data *obj = OLC_OBJ(d);
-  const char **labels;
-
-  /* Select appropriate labels for this item type */
-  switch (GET_OBJ_TYPE(obj)) {
-    case ITEM_ARMOR:      labels = armor_val_labels; break;
-    case ITEM_WEAPON:     labels = weapon_val_labels; break;
-    case ITEM_DRINKCON:
-    case ITEM_FOUNTAIN:   labels = drink_val_labels; break;
-    case ITEM_CONTAINER:  labels = container_val_labels; break;
-    case ITEM_FURNITURE:  labels = furniture_val_labels; break;
-    case ITEM_FOOD:       labels = food_val_labels; break;
-    case ITEM_LIGHT:      labels = light_val_labels; break;
-    default:              labels = generic_val_labels; break;
-  }
+  const char * const *labels = get_val_labels(obj);
 
   write_to_output(d, "\r\n-- Object Values Menu --\r\n");
 
@@ -1024,7 +928,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
         }
         
         OLC_VAL_SLOT(d) = i;
-        const char **labels = get_val_labels(OLC_OBJ(d));
+        const char * const *labels = get_val_labels(OLC_OBJ(d));
 
         if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_WEAPON && i == 2) {
           oedit_disp_weapon_menu(d);
