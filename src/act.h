@@ -235,10 +235,13 @@ ACMD(do_report);
 ACMD(do_save);
 ACMD(do_skills);
 ACMD(do_sneak);
-ACMD(do_perception);
 ACMD(do_split);
 ACMD(do_steal);
 ACMD(do_visible);
+bool perform_scan_sweep(struct char_data *ch);
+void clear_scan_results(struct char_data *ch);
+bool scan_can_target(struct char_data *ch, struct char_data *tch);
+bool scan_confirm_target(struct char_data *ch, struct char_data *tch);
 
 
 /*****************************************************************************

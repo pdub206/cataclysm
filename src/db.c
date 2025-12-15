@@ -3402,6 +3402,9 @@ void free_char(struct char_data *ch)
   int i;
   struct alias_data *a;
 
+  if (!IS_NPC(ch) && ch->player_specials && ch->player_specials != &dummy_mob)
+    clear_scan_results(ch);
+
   if (ch->player_specials != NULL && ch->player_specials != &dummy_mob) {
     while ((a = GET_ALIASES(ch)) != NULL) {
       GET_ALIASES(ch) = (GET_ALIASES(ch))->next;

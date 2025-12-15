@@ -298,7 +298,7 @@
 #define AFF_SCUBA          18   /**< Room for future expansion */
 #define AFF_SNEAK          19   /**< Char can move quietly */
 #define AFF_HIDE           20   /**< Char is hidden */
-#define AFF_FREE           21   /**< Room for future expansion */
+#define AFF_SCAN           21   /**< Actively scanning for hidden threats */
 #define AFF_CHARM          22   /**< Char is charmed */
 #define AFF_BANDAGED       23   /**< Character was bandaged recently */
 /** Total number of affect flags */
@@ -1008,6 +1008,7 @@ struct player_special_data
   int last_olc_mode;     /**< ? Currently Unused ? */
   char *host;            /**< Resolved hostname, or ip, for player. */
   int buildwalk_sector;  /**< Default sector type for buildwalk */
+  struct scan_result_data *scan_results; /**< Hidden figures this player has spotted */
 };
 
 /** Special data used by NPCs, not PCs */
@@ -1045,6 +1046,12 @@ struct mob_loadout {
   sh_int wear_pos;    /* WEAR_* slot (or -1 for inventory) */
   int     quantity;   /* default 1; >1 for stackables or multiple clones */
   struct mob_loadout *next;
+};
+
+struct scan_result_data {
+  long target_uid;          /* char_script_id() value when spotted */
+  room_rnum room;           /* room where the target was seen */
+  struct scan_result_data *next;
 };
 
 /** Master structure for PCs and NPCs. */

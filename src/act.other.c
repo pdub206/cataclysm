@@ -315,84 +315,241 @@ ACMD(do_hide)
   GET_MOVE(ch) -= 10;
 }
 
-/* Perception: scan the room for hidden creatures and objects */
-ACMD(do_perception)
+static void remember_scan_target(struct char_data *ch, struct char_data *tch)
+{
+  struct scan_result_data *node;
+  long uid;
+
+  if (!ch || !tch)
+    return;
+  if (IS_NPC(ch))
+    return;
+  if (!ch->player_specials || ch->player_specials == &dummy_mob)
+    return;
+
+  uid = char_script_id(tch);
+  for (node = GET_SCAN_RESULTS(ch); node; node = node->next) {
+    if (node->target_uid == uid) {
+      node->room = IN_ROOM(ch);
+      return;
+    }
+  }
+
+  CREATE(node, struct scan_result_data, 1);
+  node->target_uid = uid;
+  node->room = IN_ROOM(ch);
+  node->next = GET_SCAN_RESULTS(ch);
+  GET_SCAN_RESULTS(ch) = node;
+}
+
+static void forget_scan_target(struct char_data *ch, struct char_data *tch)
+{
+  struct scan_result_data **node;
+  long uid;
+
+  if (!ch || !tch)
+    return;
+  if (IS_NPC(ch))
+    return;
+  if (!ch->player_specials || ch->player_specials == &dummy_mob)
+    return;
+
+  uid = char_script_id(tch);
+  for (node = &GET_SCAN_RESULTS(ch); *node; node = &((*node)->next)) {
+    if ((*node)->target_uid == uid) {
+      struct scan_result_data *old = *node;
+      *node = old->next;
+      free(old);
+      return;
+    }
+  }
+}
+
+void clear_scan_results(struct char_data *ch)
+{
+  struct scan_result_data *node, *next;
+
+  if (!ch || IS_NPC(ch))
+    return;
+  if (!ch->player_specials || ch->player_specials == &dummy_mob)
+    return;
+
+  for (node = GET_SCAN_RESULTS(ch); node; node = next) {
+    next = node->next;
+    free(node);
+  }
+
+  GET_SCAN_RESULTS(ch) = NULL;
+}
+
+bool scan_can_target(struct char_data *ch, struct char_data *tch)
+{
+  struct scan_result_data *node;
+  long uid;
+
+  if (!ch || !tch)
+    return FALSE;
+  if (IS_NPC(ch))
+    return FALSE;
+  if (!ch->player_specials || ch->player_specials == &dummy_mob)
+    return FALSE;
+  if (!AFF_FLAGGED(ch, AFF_SCAN))
+    return FALSE;
+
+  uid = char_script_id(tch);
+
+  for (node = GET_SCAN_RESULTS(ch); node; node = node->next)
+    if (node->target_uid == uid && node->room == IN_ROOM(ch))
+      return TRUE;
+
+  return FALSE;
+}
+
+static int scan_target_dc(struct char_data *tch)
+{
+  if (GET_STEALTH_CHECK(tch) <= 0)
+    SET_STEALTH_CHECK(tch, 5);
+
+  /* Give hiders a modest buffer so high skill matters but success remains possible. */
+  return GET_STEALTH_CHECK(tch) + 2;
+}
+
+bool scan_confirm_target(struct char_data *ch, struct char_data *tch)
+{
+  int roll, bonus, total;
+
+  if (!ch || !tch)
+    return FALSE;
+  if (!AFF_FLAGGED(ch, AFF_SCAN))
+    return FALSE;
+  if (!GET_SKILL(ch, SKILL_PERCEPTION))
+    return FALSE;
+
+  bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
+          GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
+  roll  = rand_number(1, 20);
+  total = roll + bonus;
+
+  if (FIGHTING(ch))
+    total -= 4;
+
+  if (total >= scan_target_dc(tch)) {
+    remember_scan_target(ch, tch);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static int scan_effect_duration(struct char_data *ch)
+{
+  int skill = GET_SKILL(ch, SKILL_PERCEPTION);
+  int minutes;
+
+  if (skill < 20)
+    minutes = 15;
+  else if (skill < 40)
+    minutes = 20;
+  else if (skill < 60)
+    minutes = 25;
+  else if (skill < 80)
+    minutes = 30;
+  else
+    minutes = 45;
+
+  /* Affect durations tick once per mud hour (75 seconds). */
+  return MAX(1, (minutes * SECS_PER_REAL_MIN) / SECS_PER_MUD_HOUR);
+}
+
+bool perform_scan_sweep(struct char_data *ch)
 {
   struct char_data *tch;
-  struct obj_data  *obj, *next_obj;
   int roll, bonus, total;
-  int found_chars = 0, found_objs = 0;
+  bool had_targets = FALSE;
+  bool found_any   = FALSE;
+
+  if (ch == NULL || IN_ROOM(ch) == NOWHERE)
+    return FALSE;
+  if (!AFF_FLAGGED(ch, AFF_SCAN))
+    return FALSE;
+  if (!GET_SKILL(ch, SKILL_PERCEPTION))
+    return FALSE;
+  if (AFF_FLAGGED(ch, AFF_BLIND))
+    return FALSE;
+  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch))
+    return FALSE;
+
+  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room) {
+    if (tch == ch)
+      continue;
+    if (!AFF_FLAGGED(tch, AFF_HIDE))
+      continue;
+    if (IS_NPC(tch))
+      continue;
+    had_targets = TRUE;
+  }
+
+  if (!had_targets)
+    return FALSE;
+
+  bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
+          GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
+  roll  = rand_number(1, 20);
+  total = roll + bonus;
+
+  if (FIGHTING(ch))
+    total -= 4;
+
+  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room) {
+    if (tch == ch)
+      continue;
+    if (!AFF_FLAGGED(tch, AFF_HIDE))
+      continue;
+    if (IS_NPC(tch))
+      continue;
+
+    if (total >= scan_target_dc(tch)) {
+      send_to_char(ch, "A shadowy figure.\r\n");
+      remember_scan_target(ch, tch);
+      found_any = TRUE;
+    } else {
+      forget_scan_target(ch, tch);
+    }
+  }
+
+  gain_skill(ch, "perception", found_any ? TRUE : FALSE);
+  return found_any;
+}
+
+/* Scan: apply a perception-based buff that auto-checks rooms while it lasts */
+ACMD(do_scan)
+{
+  struct affected_type af;
 
   if (!GET_SKILL(ch, SKILL_PERCEPTION)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
 
-  /* Roll once for this scan (active check) */
-  bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
-          GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
-
-  roll   = rand_number(1, 20);
-  total = roll + bonus;
-
-  /* Optional: it’s harder to actively scan while in melee */
-  if (FIGHTING(ch))
-    total -= 4;
-
-  /* --- Scan characters in the room (PCs & NPCs) --- */
-  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room) {
-    if (tch == ch)
-      continue;
-    if (!AFF_FLAGGED(tch, AFF_HIDE))
-      continue;
-
-    /* Safety default if some legacy code set AFF_HIDE without a stored check */
-    if (GET_STEALTH_CHECK(tch) <= 0)
-      SET_STEALTH_CHECK(tch, 5);
-
-    if (total >= GET_STEALTH_CHECK(tch)) {
-      /* Spotted! Reveal them. */
-      REMOVE_BIT_AR(AFF_FLAGS(tch), AFF_HIDE);
-      SET_STEALTH_CHECK(tch, 0);
-      ++found_chars;
-
-      act("You spot $N hiding!", FALSE, ch, 0, tch, TO_CHAR);
-      act("$n seems to look right at you — you've been spotted!", FALSE, ch, 0, tch, TO_VICT);
-      act("$n spots $N hiding nearby!", FALSE, ch, 0, tch, TO_NOTVICT);
-    }
+  if (AFF_FLAGGED(ch, AFF_SCAN)) {
+    affect_from_char(ch, SKILL_PERCEPTION);
+    send_to_char(ch, "You lower your guard and stop scanning the area.\r\n");
+    act("$n relaxes, no longer scanning so intently.", TRUE, ch, 0, 0, TO_ROOM);
+    return;
   }
 
-  /* --- Scan objects in the room (requires an ITEM_HIDDEN extra flag) --- */
-  for (obj = world[IN_ROOM(ch)].contents; obj; obj = next_obj) {
-    next_obj = obj->next_content;
+  new_affect(&af);
+  af.spell    = SKILL_PERCEPTION;
+  af.location = APPLY_NONE;
+  af.modifier = 0;
+  af.duration = scan_effect_duration(ch);
+  memset(af.bitvector, 0, sizeof(af.bitvector));
+  SET_BIT_AR(af.bitvector, AFF_SCAN);
+  affect_to_char(ch, &af);
 
-    /* If you don't have ITEM_HIDDEN yet, add it to your extra flags table and OBJ flag names. */
-#ifdef ITEM_HIDDEN
-    if (OBJ_FLAGGED(obj, ITEM_HIDDEN)) {
-      /* Simple baseline DC for hidden objects; tune as desired or add per-object difficulty. */
-      int obj_dc = 12;
-      if (FIGHTING(ch)) obj_dc += 2;
+  send_to_char(ch, "You sharpen your senses and begin scanning for hidden threats.\r\n");
+  act("$n studies $s surroundings with a wary gaze.", TRUE, ch, 0, 0, TO_ROOM);
 
-      if (total >= obj_dc) {
-        /* Reveal the object. */
-        REMOVE_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_HIDDEN);
-        ++found_objs;
-
-        act("You spot $p tucked out of sight.", FALSE, ch, obj, 0, TO_CHAR);
-        act("$n notices $p tucked out of sight.", FALSE, ch, obj, 0, TO_ROOM);
-      }
-    }
-#endif
-  }
-
-  if (!found_chars && !found_objs) {
-    send_to_char(ch, "You search carefully but don’t uncover anything hidden.\r\n");
-    gain_skill(ch, "perception", FALSE);
-  } else {
-    gain_skill(ch, "perception", TRUE);
-  }
-
-  /* Small action taxes do disincline players from spamming perception */
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
   GET_MOVE(ch) -= 10;
 }

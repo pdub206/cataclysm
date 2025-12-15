@@ -659,6 +659,7 @@ do                                                              \
 #define GET_PREF(ch)      ((ch)->pref)
 /** Get host name or ip of ch. */
 #define GET_HOST(ch)		CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->host))
+#define GET_SCAN_RESULTS(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->scan_results))
 #define GET_LAST_MOTD(ch)       CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.lastmotd))
 #define GET_LAST_NEWS(ch)       CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.lastnews))
 /** Get channel history i for ch. */

@@ -308,8 +308,9 @@ const char *affected_bits[] =
   "SCUBA",
   "SNEAK",
   "HIDE",
-  "UNUSED",
+  "SCAN",
   "CHARM",
+  "BANDAGED",
   "\n"
 };
 

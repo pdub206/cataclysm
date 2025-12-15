@@ -408,9 +408,20 @@ static void stat_format_char_effects(struct char_data *k, char *buf, size_t buf_
     if (len)
       stat_appendf(buf, buf_size, &len, "\n");
 
-    stat_appendf(buf, buf_size, &len, "%s (%dhr)",
+    const char *dur_unit = "hr";
+    int display_dur = aff->duration + 1;
+
+    if (aff->spell == SKILL_PERCEPTION) {
+      /* convert mud-hours -> real minutes (round up) */
+      int total_seconds = display_dur * SECS_PER_MUD_HOUR;
+      display_dur = (total_seconds + SECS_PER_REAL_MIN - 1) / SECS_PER_REAL_MIN;
+      dur_unit = "min";
+    }
+
+    stat_appendf(buf, buf_size, &len, "%s (%d%s)",
       skill_name(aff->spell),
-      aff->duration + 1);
+      display_dur,
+      dur_unit);
 
     if (aff->modifier)
       stat_appendf(buf, buf_size, &len, " %+d %s",

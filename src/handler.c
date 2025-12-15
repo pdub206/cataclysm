@@ -33,6 +33,7 @@ static int extractions_pending = 0;
 static int apply_ac(struct char_data *ch, int eq_pos);
 static void update_object(struct obj_data *obj, int use);
 static void affect_modify_ar(struct char_data * ch, byte loc, sbyte mod, int bitv[], bool add);
+static bool is_shadow_keyword(const char *name);
 
 char *fname(const char *namelist)
 {
@@ -108,6 +109,13 @@ int isname(const char *str, const char *namelist)
 
   free(newlist);
   return 0;
+}
+
+static bool is_shadow_keyword(const char *name)
+{
+  if (!name || !*name)
+    return FALSE;
+  return isname(name, "shadow shadowy figure");
 }
 
 static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *msg)
@@ -264,6 +272,8 @@ void affect_remove(struct char_data *ch, struct affected_type *af)
 
   affect_modify_ar(ch, af->location, af->modifier, af->bitvector, FALSE);
   REMOVE_FROM_LIST(af, ch->affected, next);
+  if (af->spell == SKILL_PERCEPTION)
+    clear_scan_results(ch);
   free(af);
   affect_total(ch);
 }
@@ -1132,9 +1142,39 @@ struct char_data *get_char_room_vis(struct char_data *ch, char *name, int *numbe
       }
     }
 
-    if (match && CAN_SEE(ch, i))
-      if (--(*number) == 0)
+    if (match) {
+      bool can_target = CAN_SEE(ch, i);
+
+      if (!can_target && GET_LEVEL(ch) >= LVL_IMMORT)
+        can_target = TRUE;
+
+      if (!can_target &&
+          AFF_FLAGGED(ch, AFF_SCAN) &&
+          AFF_FLAGGED(i, AFF_HIDE) &&
+          scan_can_target(ch, i)) {
+        can_target = scan_confirm_target(ch, i);
+      }
+
+      if (can_target && --(*number) == 0)
         return i;
+    }
+  }
+
+  if ((AFF_FLAGGED(ch, AFF_SCAN) || GET_LEVEL(ch) >= LVL_IMMORT) && is_shadow_keyword(name)) {
+    for (i = world[IN_ROOM(ch)].people; i && *number; i = i->next_in_room) {
+      if (i == ch)
+        continue;
+      if (!AFF_FLAGGED(i, AFF_HIDE))
+        continue;
+      if (GET_LEVEL(ch) < LVL_IMMORT && !scan_can_target(ch, i))
+        continue;
+
+      if (--(*number) == 0) {
+        if (GET_LEVEL(ch) >= LVL_IMMORT || scan_confirm_target(ch, i))
+          return i;
+        return NULL;
+      }
+    }
   }
 
   return NULL;
@@ -1177,8 +1217,22 @@ struct char_data *get_char_world_vis(struct char_data *ch, char *name, int *numb
 
     if (!match)
       continue;
-    if (!CAN_SEE(ch, i))
+
+    bool can_target = CAN_SEE(ch, i);
+
+    if (!can_target && GET_LEVEL(ch) >= LVL_IMMORT)
+      can_target = TRUE;
+
+    if (!can_target &&
+        AFF_FLAGGED(ch, AFF_SCAN) &&
+        AFF_FLAGGED(i, AFF_HIDE) &&
+        scan_can_target(ch, i)) {
+      can_target = scan_confirm_target(ch, i);
+    }
+
+    if (!can_target)
       continue;
+
     if (--(*number) != 0)
       continue;
 

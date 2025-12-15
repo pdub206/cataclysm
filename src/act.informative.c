@@ -625,6 +625,7 @@ void look_at_room(struct char_data *ch, int ignore_brief)
   /* now list characters & objects */
   list_obj_to_char(world[IN_ROOM(ch)].contents, ch, SHOW_OBJ_LONG, FALSE);
   list_char_to_char(world[IN_ROOM(ch)].people, ch);
+  perform_scan_sweep(ch);
 }
 
 static void look_in_direction(struct char_data *ch, int dir)
@@ -2658,101 +2659,3 @@ ACMD(do_areas)
   else
     page_string(ch->desc, buf, TRUE);
 }
-
-static void list_scanned_chars(struct char_data * list, struct char_data * ch, int
-distance, int door)
-{
-  char buf[MAX_STRING_LENGTH], buf2[MAX_STRING_LENGTH - 1];
-
-  const char *how_far[] = {
-    "close by",
-    "a ways off",
-    "far off to the"
-  };
-
-  struct char_data *i;
-  int count = 0;
-  *buf = '\0';
-
-/* this loop is a quick, easy way to help make a grammatical sentence
-   (i.e., "You see x, x, y, and z." with commas, "and", etc.) */
-
-  for (i = list; i; i = i->next_in_room)
-
-/* put any other conditions for scanning someone in this if statement -
-   i.e., if (CAN_SEE(ch, i) && condition2 && condition3) or whatever */
-
-    if (CAN_SEE(ch, i))
-     count++;
-
-  if (!count)
-    return;
-
-  for (i = list; i; i = i->next_in_room) {
-
-/* make sure to add changes to the if statement above to this one also, using
-   or's to join them.. i.e.,
-   if (!CAN_SEE(ch, i) || !condition2 || !condition3) */
-
-    if (!CAN_SEE(ch, i))
-      continue;
-    if (!*buf)
-      snprintf(buf, sizeof(buf), "You see %s", GET_NAME(i));
-    else
-      strncat(buf, GET_NAME(i), sizeof(buf) - strlen(buf) - 1);
-    if (--count > 1)
-      strncat(buf, ", ", sizeof(buf) - strlen(buf) - 1);
-    else if (count == 1)
-      strncat(buf, " and ", sizeof(buf) - strlen(buf) - 1);
-    else {
-      snprintf(buf2, sizeof(buf2), " %s %s.\r\n", how_far[distance], dirs[door]);
-      strncat(buf, buf2, sizeof(buf) - strlen(buf) - 1);
-    }
-
-  }
-  send_to_char(ch, "%s", buf);
-}
-
-ACMD(do_scan)
-{
-  int door;
-  bool found=FALSE;
-
-  int range;
-  int maxrange = 3;
-
-  room_rnum scanned_room = IN_ROOM(ch);
-
-  if (IS_AFFECTED(ch, AFF_BLIND)) {
-    send_to_char(ch, "You can't see a damned thing, you're blind!\r\n");
-    return;
-  }
-
-  for (door = 0; door < DIR_COUNT; door++) {
-    for (range = 1; range<= maxrange; range++) {
-      if (world[scanned_room].dir_option[door] && world[scanned_room].dir_option[door]->to_room != NOWHERE &&
-       !IS_SET(world[scanned_room].dir_option[door]->exit_info, EX_CLOSED) &&
-       !IS_SET(world[scanned_room].dir_option[door]->exit_info, EX_HIDDEN)) {
-        scanned_room = world[scanned_room].dir_option[door]->to_room;
-        if (IS_DARK(scanned_room) && !CAN_SEE_IN_DARK(ch)) {
-          if (world[scanned_room].people)
-            send_to_char(ch, "%s: It's too dark to see, but you can hear shuffling.\r\n", dirs[door]);
-          else
-            send_to_char(ch, "%s: It is too dark to see anything.\r\n", dirs[door]);
-          found=TRUE;
-        } else {
-          if (world[scanned_room].people) {
-            list_scanned_chars(world[scanned_room].people, ch, range - 1, door);
-            found=TRUE;
-          }
-        }
-      }                  // end of if
-      else
-        break;
-    }                    // end of range
-    scanned_room = IN_ROOM(ch);
-  }                      // end of directions
-  if (!found) {
-    send_to_char(ch, "You don't see anything nearby!\r\n");
-  }
-} // end of do_scan
