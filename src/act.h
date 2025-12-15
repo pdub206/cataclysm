@@ -243,6 +243,10 @@ void clear_scan_results(struct char_data *ch);
 bool scan_can_target(struct char_data *ch, struct char_data *tch);
 bool scan_confirm_target(struct char_data *ch, struct char_data *tch);
 void stealth_process_room_movement(struct char_data *ch, room_rnum room, int dir, bool leaving);
+int get_stealth_skill_value(struct char_data *ch);
+int roll_stealth_check(struct char_data *ch);
+bool can_scan_for_sneak(struct char_data *ch);
+int roll_scan_perception(struct char_data *ch);
 
 
 /*****************************************************************************
@@ -275,7 +279,7 @@ void perform_immort_vis(struct char_data *ch);
 void snoop_check(struct char_data *ch);
 bool change_player_name(struct char_data *ch, struct char_data *vict, char *new_name);
 bool AddRecentPlayer(char *chname, char *chhost, bool newplr, bool cpyplr);
-void perform_emote(struct char_data *ch, char *argument, bool possessive);
+void perform_emote(struct char_data *ch, char *argument, bool possessive, bool hidden);
 /* Functions with subcommands */
 /* do_date */
 ACMD(do_date);
@@ -287,8 +291,12 @@ ACMD(do_echo);
 /* do emote */
 ACMD(do_emote);
 ACMD(do_pemote);
+ACMD(do_hemote);
+ACMD(do_phemote);
 #define SCMD_EMOTE   0
 #define SCMD_PEMOTE  1
+#define SCMD_HEMOTE  2
+#define SCMD_PHEMOTE 3
 /* do_last */
 ACMD(do_last);
 #define SCMD_LIST_ALL 1

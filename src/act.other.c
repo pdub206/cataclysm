@@ -191,7 +191,7 @@ ACMD(do_not_here)
 
 #define STEALTH_BASE_DC 10
 
-static int get_stealth_skill_value(struct char_data *ch)
+int get_stealth_skill_value(struct char_data *ch)
 {
   int skill = GET_SKILL(ch, SKILL_STEALTH);
   int legacy = MAX(GET_SKILL(ch, SKILL_HIDE), GET_SKILL(ch, SKILL_SNEAK));
@@ -204,7 +204,7 @@ static int get_stealth_skill_value(struct char_data *ch)
   return skill;
 }
 
-static int roll_stealth_check(struct char_data *ch)
+int roll_stealth_check(struct char_data *ch)
 {
   int skill = get_stealth_skill_value(ch);
   int bonus = GET_ABILITY_MOD(GET_DEX(ch)) + GET_PROFICIENCY(skill);
@@ -225,7 +225,7 @@ static int sneak_effect_duration(struct char_data *ch)
   return MAX(1, skill / 10);
 }
 
-static bool can_scan_for_sneak(struct char_data *ch)
+bool can_scan_for_sneak(struct char_data *ch)
 {
   if (!AFF_FLAGGED(ch, AFF_SCAN))
     return FALSE;
@@ -238,7 +238,7 @@ static bool can_scan_for_sneak(struct char_data *ch)
   return TRUE;
 }
 
-static int roll_scan_perception(struct char_data *ch)
+int roll_scan_perception(struct char_data *ch)
 {
   int bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
               GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));

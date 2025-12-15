@@ -867,17 +867,41 @@ static void build_replacement(const struct emote_tok *tok,
   strlcpy(out, "something", outsz);
 }
 
+static bool hidden_emote_can_view(struct char_data *actor,
+                                  struct char_data *viewer,
+                                  int stealth_total) {
+  int opposed;
+
+  if (!viewer || viewer == actor)
+    return TRUE;
+  if (GET_LEVEL(viewer) >= LVL_IMMORT)
+    return TRUE;
+  if (!AWAKE(viewer))
+    return FALSE;
+
+  if (can_scan_for_sneak(viewer))
+    opposed = roll_scan_perception(viewer);
+  else
+    opposed = rand_number(1, 20);
+
+  return opposed >= stealth_total;
+}
+
 /* ===================== Main entry ===================== */
-void perform_emote(struct char_data *ch, char *argument, bool possessive) {
+void perform_emote(struct char_data *ch, char *argument, bool possessive, bool hidden) {
   char base[MAX_STRING_LENGTH];
   char with_placeholders[MAX_STRING_LENGTH];
   int at_count = 0;
+  int stealth_total = 0;
 
   struct emote_tok toks[MAX_EMOTE_TOKENS];
   int tokc = 0;
 
   skip_spaces(&argument);
   if (!*argument) { send_to_char(ch, "Yes... but what?\r\n"); return; }
+
+  if (hidden)
+    stealth_total = roll_stealth_check(ch);
 
   /* Only one '@' allowed (inserts actor name/possessive at that spot) */
   for (const char *c = argument; *c; ++c) if (*c == '@') at_count++;
@@ -973,6 +997,8 @@ void perform_emote(struct char_data *ch, char *argument, bool possessive) {
   for (struct descriptor_data *d = descriptor_list; d; d = d->next) {
     if (STATE(d) != CON_PLAYING || !d->character) continue;
     if (IN_ROOM(d->character) != IN_ROOM(ch))     continue;
+    if (hidden && !hidden_emote_can_view(ch, d->character, stealth_total))
+      continue;
 
     char msg[MAX_STRING_LENGTH];
     strlcpy(msg, with_placeholders, sizeof(msg));
@@ -991,8 +1017,13 @@ void perform_emote(struct char_data *ch, char *argument, bool possessive) {
     collapse_spaces(msg);
     capitalize_sentences(msg);
 
-    if (d->character == ch) act(msg, FALSE, ch, NULL, NULL, TO_CHAR);
-    else                    act(msg, FALSE, ch, NULL, d->character, TO_VICT);
+    if (d->character == ch) {
+      act(msg, FALSE, ch, NULL, NULL, TO_CHAR);
+    } else if (hidden) {
+      send_to_char(d->character, "You notice:\r\n%s\r\n", msg);
+    } else {
+      act(msg, FALSE, ch, NULL, d->character, TO_VICT);
+    }
   }
 }
 /* =================== End emote engine =================== */
@@ -1051,12 +1082,22 @@ ACMD(do_echo)
 
 ACMD(do_emote)
 {
-  perform_emote(ch, argument, FALSE);
+  perform_emote(ch, argument, FALSE, FALSE);
 }
 
 ACMD(do_pemote)
 {
-  perform_emote(ch, argument, TRUE);
+  perform_emote(ch, argument, TRUE, FALSE);
+}
+
+ACMD(do_hemote)
+{
+  perform_emote(ch, argument, FALSE, TRUE);
+}
+
+ACMD(do_phemote)
+{
+  perform_emote(ch, argument, TRUE, TRUE);
 }
 
 ACMD(do_send)
