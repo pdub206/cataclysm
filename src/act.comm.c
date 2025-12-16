@@ -123,6 +123,133 @@ static void trim_whitespace(char *s) {
     s[--len] = '\0';
 }
 
+static bool parse_speech_adornments(struct char_data *ch, char **text,
+                                    char *bracket_raw, size_t bracket_sz, bool *has_bracket,
+                                    char *paren_raw, size_t paren_sz, bool *has_paren)
+{
+  char *p = *text;
+
+  if (bracket_raw && bracket_sz > 0)
+    bracket_raw[0] = '\0';
+  if (paren_raw && paren_sz > 0)
+    paren_raw[0] = '\0';
+  if (has_bracket)
+    *has_bracket = FALSE;
+  if (has_paren)
+    *has_paren = FALSE;
+
+  while (TRUE) {
+    skip_spaces(&p);
+
+    if (*p == '[' && has_bracket && !*has_bracket) {
+      const char *close = strchr(p, ']');
+      if (!close) {
+        send_to_char(ch, "You need a closing ']'.\r\n");
+        return FALSE;
+      }
+      size_t len = (size_t)(close - p - 1);
+      if (len >= bracket_sz)
+        len = bracket_sz - 1;
+      if (len > 0 && bracket_raw) {
+        strncpy(bracket_raw, p + 1, len);
+        bracket_raw[len] = '\0';
+        trim_whitespace(bracket_raw);
+      } else if (bracket_raw && bracket_sz > 0)
+        bracket_raw[0] = '\0';
+      *has_bracket = TRUE;
+      p = (char *)close + 1;
+      continue;
+    }
+
+    if (*p == '(' && has_paren && !*has_paren) {
+      const char *close = strchr(p, ')');
+      if (!close) {
+        send_to_char(ch, "You need a closing ')'.\r\n");
+        return FALSE;
+      }
+      size_t len = (size_t)(close - p - 1);
+      if (len >= paren_sz)
+        len = paren_sz - 1;
+      if (len > 0 && paren_raw) {
+        strncpy(paren_raw, p + 1, len);
+        paren_raw[len] = '\0';
+        trim_whitespace(paren_raw);
+      } else if (paren_raw && paren_sz > 0)
+        paren_raw[0] = '\0';
+      *has_paren = TRUE;
+      p = (char *)close + 1;
+      continue;
+    }
+
+    break;
+  }
+
+  *text = p;
+  return TRUE;
+}
+
+static void wrap_line(const char *src, char *dst, size_t dstsz, int width)
+{
+  size_t out = 0;
+  int col = 0;
+  const char *p = src;
+  bool first_word = TRUE;
+
+  if (!dst || dstsz == 0)
+    return;
+
+  dst[0] = '\0';
+
+  while (*p && out < dstsz - 1) {
+    while (*p && isspace((unsigned char)*p) && *p != '\n' && *p != '\r')
+      p++;
+    if (!*p)
+      break;
+
+    const char *word_start = p;
+    size_t word_len = 0;
+    while (*p && !isspace((unsigned char)*p))
+      word_len++, p++;
+
+    if (word_len == 0)
+      continue;
+
+    if (!first_word && col + 1 + (int)word_len > width) {
+      if (out < dstsz - 2) {
+        dst[out++] = '\r';
+        dst[out++] = '\n';
+      }
+      col = 0;
+      first_word = TRUE;
+    }
+
+    if (!first_word) {
+      if (out < dstsz - 1) {
+        dst[out++] = ' ';
+        col++;
+      }
+    }
+
+    size_t copy = MIN(word_len, dstsz - 1 - out);
+    memcpy(dst + out, word_start, copy);
+    out += copy;
+    col += word_len;
+    first_word = FALSE;
+
+    while (*p && (*p == '\n' || *p == '\r')) {
+      if (out < dstsz - 2) {
+        dst[out++] = '\r';
+        dst[out++] = '\n';
+      }
+      p++;
+      col = 0;
+      first_word = TRUE;
+    }
+  }
+
+  dst[out] = '\0';
+}
+
 ACMD(do_say)
 {
   char *p = argument;
@@ -135,39 +262,10 @@ ACMD(do_say)
   bool has_paren = FALSE;
 
   skip_spaces(&p);
-
-  if (*p == '[') {
-    const char *close = strchr(p, ']');
-    if (!close) {
-      send_to_char(ch, "You need a closing ']'.\r\n");
-      return;
-    }
-    size_t len = (size_t)(close - p - 1);
-    if (len >= sizeof(bracket_raw))
-      len = sizeof(bracket_raw) - 1;
-    strncpy(bracket_raw, p + 1, len);
-    bracket_raw[len] = '\0';
-    trim_whitespace(bracket_raw);
-    p = (char *)close + 1;
-  }
-
-  skip_spaces(&p);
-
-  if (*p == '(') {
-    const char *close = strchr(p, ')');
-    if (!close) {
-      send_to_char(ch, "You need a closing ')'.\r\n");
-      return;
-    }
-    size_t len = (size_t)(close - p - 1);
-    if (len >= sizeof(paren_raw))
-      len = sizeof(paren_raw) - 1;
-    strncpy(paren_raw, p + 1, len);
-    paren_raw[len] = '\0';
-    trim_whitespace(paren_raw);
-    p = (char *)close + 1;
-  }
-
+  if (!parse_speech_adornments(ch, &p,
+                               bracket_raw, sizeof(bracket_raw), &has_bracket,
+                               paren_raw, sizeof(paren_raw), &has_paren))
+    return;
   skip_spaces(&p);
 
   if (!*p) {
@@ -238,11 +336,13 @@ ACMD(do_say)
     }
 
     strlcat(first_line, ":", sizeof(first_line));
-    send_to_char(vict, "%s\r\n   \"%s\"\r\n", first_line, speech);
+    char wrapped_line[MAX_STRING_LENGTH];
+    wrap_line(first_line, wrapped_line, sizeof(wrapped_line), 80);
+    send_to_char(vict, "%s\r\n   \"%s\"\r\n", wrapped_line, speech);
 
     if (!self || !suppress_self) {
       char hist_buf[MAX_STRING_LENGTH];
-      snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", first_line, speech);
+      snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", wrapped_line, speech);
       add_history(vict, hist_buf, HIST_SAY);
     }
   }
@@ -282,38 +382,10 @@ ACMD(do_talk)
   }
 
   skip_spaces(&p);
-  if (*p == '[') {
-    const char *close = strchr(p, ']');
-    if (!close) {
-      send_to_char(ch, "You need a closing ']'.\r\n");
-      return;
-    }
-    size_t len = (size_t)(close - p - 1);
-    if (len >= sizeof(bracket_raw))
-      len = sizeof(bracket_raw) - 1;
-    strncpy(bracket_raw, p + 1, len);
-    bracket_raw[len] = '\0';
-    trim_whitespace(bracket_raw);
-    p = (char *)close + 1;
-  }
-
-  skip_spaces(&p);
-
-  if (*p == '(') {
-    const char *close = strchr(p, ')');
-    if (!close) {
-      send_to_char(ch, "You need a closing ')'.\r\n");
-      return;
-    }
-    size_t len = (size_t)(close - p - 1);
-    if (len >= sizeof(paren_raw))
-      len = sizeof(paren_raw) - 1;
-    strncpy(paren_raw, p + 1, len);
-    paren_raw[len] = '\0';
-    trim_whitespace(paren_raw);
-    p = (char *)close + 1;
-  }
-
+  if (!parse_speech_adornments(ch, &p,
+                               bracket_raw, sizeof(bracket_raw), &has_bracket,
+                               paren_raw, sizeof(paren_raw), &has_paren))
+    return;
   skip_spaces(&p);
 
   if (!*p) {
@@ -386,10 +458,12 @@ ACMD(do_talk)
     snprintf(locbuf, sizeof(locbuf), "at %s,", furn_name);
     strlcat(first_line, locbuf, sizeof(first_line));
 
-    send_to_char(tch, "%s\r\n   \"%s\"\r\n", first_line, speech);
+    char wrapped_line[MAX_STRING_LENGTH];
+    wrap_line(first_line, wrapped_line, sizeof(wrapped_line), 80);
+    send_to_char(tch, "%s\r\n   \"%s\"\r\n", wrapped_line, speech);
 
     char hist_buf[MAX_STRING_LENGTH];
-    snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", first_line, speech);
+    snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", wrapped_line, speech);
     add_history(tch, hist_buf, HIST_SAY);
     delivered = TRUE;
   }
@@ -428,9 +502,11 @@ ACMD(do_talk)
     snprintf(locbuf, sizeof(locbuf), "at %s,", furn_name);
     strlcat(first_line, locbuf, sizeof(first_line));
 
-    send_to_char(ch, "%s\r\n   \"%s\"\r\n", first_line, speech);
+    char wrapped_line[MAX_STRING_LENGTH];
+    wrap_line(first_line, wrapped_line, sizeof(wrapped_line), 80);
+    send_to_char(ch, "%s\r\n   \"%s\"\r\n", wrapped_line, speech);
     char hist_buf[MAX_STRING_LENGTH];
-    snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", first_line, speech);
+    snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", wrapped_line, speech);
     add_history(ch, hist_buf, HIST_SAY);
   }
 
@@ -473,7 +549,9 @@ ACMD(do_talk)
     }
     strlcat(line, ".", sizeof(line));
 
-    send_to_char(onlooker, "%s\r\n", line);
+    char wrapped_line[MAX_STRING_LENGTH];
+    wrap_line(line, wrapped_line, sizeof(wrapped_line), 80);
+    send_to_char(onlooker, "%s\r\n", wrapped_line);
   }
 
   speech_mtrigger(ch, speech);
@@ -716,19 +794,170 @@ ACMD(do_spec_comm)
   else if (vict == ch)
     send_to_char(ch, "You can't get your mouth close enough to your ear...\r\n");
   else {
-    char buf1[MAX_STRING_LENGTH];
+    if (subcmd == SCMD_WHISPER) {
+      char bracket_raw[MAX_INPUT_LENGTH] = "";
+      char paren_raw[MAX_INPUT_LENGTH] = "";
+      struct targeted_phrase bracket_phrase;
+      struct targeted_phrase paren_phrase;
+      bool has_bracket = FALSE, has_paren = FALSE;
+      char speech[MAX_INPUT_LENGTH];
+      char *p = buf2;
 
-    if (CONFIG_SPECIAL_IN_COMM && legal_communication(argument))
-      parse_at(buf2);
+      skip_spaces(&p);
+      if (!parse_speech_adornments(ch, &p,
+                                   bracket_raw, sizeof(bracket_raw), &has_bracket,
+                                   paren_raw, sizeof(paren_raw), &has_paren))
+        return;
+      skip_spaces(&p);
 
-    snprintf(buf1, sizeof(buf1), "$n %s you, '%s'", action_plur, buf2);
-    act(buf1, FALSE, ch, 0, vict, TO_VICT);
+      if (!*p) {
+        send_to_char(ch, "Whisper what?\r\n");
+        return;
+      }
 
-    if ((!IS_NPC(ch)) && (PRF_FLAGGED(ch, PRF_NOREPEAT))) 
-      send_to_char(ch, "%s", CONFIG_OK);
-    else
-      send_to_char(ch, "You %s %s, '%s'\r\n", action_sing, GET_NAME(vict), buf2);
-    act(action_others, FALSE, ch, 0, vict, TO_NOTVICT);
+      strlcpy(speech, p, sizeof(speech));
+
+      if (CONFIG_SPECIAL_IN_COMM && legal_communication(speech))
+        parse_at(speech);
+
+      if (*bracket_raw) {
+        if (!build_targeted_phrase(ch, bracket_raw, FALSE, &bracket_phrase))
+          return;
+        has_bracket = TRUE;
+      }
+      if (*paren_raw) {
+        if (!build_targeted_phrase(ch, paren_raw, FALSE, &paren_phrase))
+          return;
+        has_paren = TRUE;
+      }
+
+      /* Message to victim */
+      {
+        char prefix[MAX_STRING_LENGTH] = "";
+        char suffix[MAX_STRING_LENGTH] = "";
+        char first_line[MAX_STRING_LENGTH];
+
+        if (has_bracket)
+          render_targeted_phrase(ch, &bracket_phrase, FALSE, vict, prefix, sizeof(prefix));
+        if (has_paren)
+          render_targeted_phrase(ch, &paren_phrase, FALSE, vict, suffix, sizeof(suffix));
+
+        const char *speaker = get_char_sdesc(ch);
+        if (*prefix) {
+          char capped[MAX_STRING_LENGTH];
+          strlcpy(capped, prefix, sizeof(capped));
+          CAP(capped);
+          strlcpy(first_line, capped, sizeof(first_line));
+          strlcat(first_line, ", ", sizeof(first_line));
+          strlcat(first_line, speaker ? speaker : PERS(ch, vict), sizeof(first_line));
+        } else {
+          strlcpy(first_line, speaker ? speaker : PERS(ch, vict), sizeof(first_line));
+        }
+
+        strlcat(first_line, " whispers to you", sizeof(first_line));
+        if (*suffix) {
+          strlcat(first_line, ", ", sizeof(first_line));
+          strlcat(first_line, suffix, sizeof(first_line));
+        }
+        strlcat(first_line, ":", sizeof(first_line));
+
+        char wrapped_line[MAX_STRING_LENGTH];
+        wrap_line(first_line, wrapped_line, sizeof(wrapped_line), 80);
+        send_to_char(vict, "%s\r\n   \"%s\"\r\n", wrapped_line, speech);
+      }
+
+      /* Message to self */
+      if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_NOREPEAT)) {
+        send_to_char(ch, "%s", CONFIG_OK);
+      } else {
+        char prefix[MAX_STRING_LENGTH] = "";
+        char suffix[MAX_STRING_LENGTH] = "";
+        char first_line[MAX_STRING_LENGTH];
+
+        if (has_bracket)
+          render_targeted_phrase(ch, &bracket_phrase, FALSE, ch, prefix, sizeof(prefix));
+        if (has_paren)
+          render_targeted_phrase(ch, &paren_phrase, FALSE, ch, suffix, sizeof(suffix));
+
+        if (*prefix) {
+          char capped[MAX_STRING_LENGTH];
+          strlcpy(capped, prefix, sizeof(capped));
+          CAP(capped);
+          strlcpy(first_line, capped, sizeof(first_line));
+          strlcat(first_line, ", you", sizeof(first_line));
+        } else {
+          strlcpy(first_line, "you", sizeof(first_line));
+          CAP(first_line);
+        }
+
+        strlcat(first_line, " whisper to ", sizeof(first_line));
+        strlcat(first_line, get_char_sdesc(vict), sizeof(first_line));
+        if (*suffix) {
+          strlcat(first_line, ", ", sizeof(first_line));
+          strlcat(first_line, suffix, sizeof(first_line));
+        }
+        strlcat(first_line, ":", sizeof(first_line));
+
+        char wrapped_line[MAX_STRING_LENGTH];
+        wrap_line(first_line, wrapped_line, sizeof(wrapped_line), 80);
+        send_to_char(ch, "%s\r\n   \"%s\"\r\n", wrapped_line, speech);
+      }
+
+      /* Onlookers */
+      for (struct char_data *onlooker = world[IN_ROOM(ch)].people; onlooker; onlooker = onlooker->next_in_room) {
+        if (onlooker == ch || onlooker == vict)
+          continue;
+        if (GET_POS(onlooker) <= POS_SLEEPING)
+          continue;
+
+        char prefix[MAX_STRING_LENGTH] = "";
+        char suffix[MAX_STRING_LENGTH] = "";
+        char line[MAX_STRING_LENGTH];
+
+        if (has_bracket)
+          render_targeted_phrase(ch, &bracket_phrase, FALSE, onlooker, prefix, sizeof(prefix));
+        if (has_paren)
+          render_targeted_phrase(ch, &paren_phrase, FALSE, onlooker, suffix, sizeof(suffix));
+
+        if (*prefix) {
+          char capped[MAX_STRING_LENGTH];
+          strlcpy(capped, prefix, sizeof(capped));
+          CAP(capped);
+          strlcpy(line, capped, sizeof(line));
+          strlcat(line, ", ", sizeof(line));
+          strlcat(line, PERS(ch, onlooker), sizeof(line));
+        } else {
+          strlcpy(line, PERS(ch, onlooker), sizeof(line));
+        }
+
+        strlcat(line, " whispers something to ", sizeof(line));
+        strlcat(line, PERS(vict, onlooker), sizeof(line));
+
+        if (*suffix) {
+          strlcat(line, ", ", sizeof(line));
+          strlcat(line, suffix, sizeof(line));
+        }
+        strlcat(line, ".", sizeof(line));
+
+        char wrapped_line[MAX_STRING_LENGTH];
+        wrap_line(line, wrapped_line, sizeof(wrapped_line), 80);
+        send_to_char(onlooker, "%s\r\n", wrapped_line);
+      }
+    } else {
+      char buf1[MAX_STRING_LENGTH];
+
+      if (CONFIG_SPECIAL_IN_COMM && legal_communication(argument))
+        parse_at(buf2);
+
+      snprintf(buf1, sizeof(buf1), "$n %s you, '%s'", action_plur, buf2);
+      act(buf1, FALSE, ch, 0, vict, TO_VICT);
+
+      if ((!IS_NPC(ch)) && (PRF_FLAGGED(ch, PRF_NOREPEAT))) 
+        send_to_char(ch, "%s", CONFIG_OK);
+      else
+        send_to_char(ch, "You %s %s, '%s'\r\n", action_sing, GET_NAME(vict), buf2);
+      act(action_others, FALSE, ch, 0, vict, TO_NOTVICT);
+    }
   }
 }
 
