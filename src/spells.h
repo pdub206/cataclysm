@@ -119,6 +119,7 @@
 #define SKILL_PERCEPTION            147 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_STEALTH               148 /* Shared stealth skill for hide/sneak */
 #define SKILL_LISTEN                149 /* Anchor for the listen affect */
+#define SKILL_SLEIGHT_OF_HAND       150 /* Sleight of hand for palm/slip */
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 

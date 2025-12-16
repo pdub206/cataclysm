@@ -255,6 +255,8 @@ ACMD(do_not_here);
 ACMD(do_report);
 ACMD(do_save);
 ACMD(do_skills);
+ACMD(do_palm);
+ACMD(do_slip);
 ACMD(do_sneak);
 ACMD(do_split);
 ACMD(do_steal);
@@ -266,6 +268,7 @@ bool scan_confirm_target(struct char_data *ch, struct char_data *tch);
 void stealth_process_room_movement(struct char_data *ch, room_rnum room, int dir, bool leaving);
 int get_stealth_skill_value(struct char_data *ch);
 int roll_stealth_check(struct char_data *ch);
+int roll_sleight_check(struct char_data *ch);
 bool can_scan_for_sneak(struct char_data *ch);
 int roll_scan_perception(struct char_data *ch);
 

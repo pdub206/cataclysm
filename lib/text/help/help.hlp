@@ -9244,6 +9244,17 @@ Intelligence - How smart you are. Determines how much mana you gain per level,
    
 See also: AC
 #0
+PALM
+
+Usage: palm <item> <container>
+
+Attempts to quietly remove an item from a container that you are carrying or
+worn yourself. Success is determined by your sleight of hand skill opposed by
+alert onlookers' perception. Anyone in the room may notice with a perception
+check (scan bonuses apply). Palm cannot be used in peaceful rooms.
+
+See also: SLEIGHT OF HAND, SLIP, STEAL
+#0
 STEAL
 
 Thief Only.
@@ -9262,6 +9273,17 @@ Examples:
 
 See also: FLAGS
 #0
+SLIP
+
+Usage: slip <item> <container>
+
+Plants an item into one of your own carried or worn containers without drawing
+attention. The attempt is resolved with your sleight of hand skill against any
+scanning observers' perception. Anyone nearby may notice with a perception
+check (scan bonuses apply). Slip cannot be used in peaceful rooms.
+
+See also: SLEIGHT OF HAND, PALM, STEAL
+#0
 STEALTH SNEAK HIDE DISADVTANGE
 
     Summary: You have Stealth Disadvantage if certain conditions are met,
@@ -9272,6 +9294,16 @@ Your total armor bulk puts you in Heavy (Dex cap 0)
 
 With Stealth Disadvantage, Sneak and Hide roll twice and take the worse result.
 Both success and failure can grant training progress.
+#0
+SLEIGHT OF HAND
+
+Sleight of hand is the shared trickery skill used by rogues, bards, and rangers
+to palm or slip items on their own person without being detected. It rolls
+Dexterity plus your proficiency bonus against any scanning observers'
+perception. Failure alerts whoever spotted you and prevents the action; success
+moves the item silently.
+
+See also: PALM, SLIP
 #0
 STOCK
 

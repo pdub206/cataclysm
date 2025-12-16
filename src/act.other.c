@@ -190,6 +190,7 @@ ACMD(do_not_here)
 }
 
 #define STEALTH_BASE_DC 10
+#define SLEIGHT_BASE_DC 10
 
 int get_stealth_skill_value(struct char_data *ch)
 {
@@ -214,6 +215,184 @@ int roll_stealth_check(struct char_data *ch)
   int roll = disadv ? MIN(rolla, rollb) : rolla;
 
   return roll + bonus;
+}
+
+int roll_sleight_check(struct char_data *ch)
+{
+  int skill = GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND);
+  int bonus = GET_ABILITY_MOD(GET_DEX(ch)) + GET_PROFICIENCY(skill);
+  int total = rand_number(1, 20) + bonus;
+
+  if (FIGHTING(ch))
+    total -= 4;
+
+  return total;
+}
+
+static struct obj_data *find_container_on_character(struct char_data *viewer,
+                                                    struct char_data *vict,
+                                                    const char *name)
+{
+  struct obj_data *obj;
+  int eq;
+
+  if (!viewer || !vict || !name || !*name)
+    return NULL;
+
+  for (obj = vict->carrying; obj; obj = obj->next_content) {
+    if (!CAN_SEE_OBJ(viewer, obj))
+      continue;
+    if (isname(name, obj->name))
+      return obj;
+  }
+
+  for (eq = 0; eq < NUM_WEARS; eq++) {
+    if (!(obj = GET_EQ(vict, eq)))
+      continue;
+    if (!CAN_SEE_OBJ(viewer, obj))
+      continue;
+    if (isname(name, obj->name))
+      return obj;
+  }
+
+  return NULL;
+}
+
+static bool sleight_can_take_obj(struct char_data *ch, struct obj_data *obj)
+{
+  if (!obj)
+    return FALSE;
+
+  if (!CAN_WEAR(obj, ITEM_WEAR_TAKE)) {
+    act("$p: you can't take that!", FALSE, ch, obj, 0, TO_CHAR);
+    return FALSE;
+  }
+
+  if (!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_NOHASSLE)) {
+    if (IS_CARRYING_N(ch) >= CAN_CARRY_N(ch)) {
+      act("$p: you can't carry that many items.", FALSE, ch, obj, 0, TO_CHAR);
+      return FALSE;
+    }
+    if ((IS_CARRYING_W(ch) + GET_OBJ_WEIGHT(obj)) > CAN_CARRY_W(ch)) {
+      act("$p: you can't carry that much weight.", FALSE, ch, obj, 0, TO_CHAR);
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+static void sleight_check_money(struct char_data *ch, struct obj_data *obj)
+{
+  int value;
+
+  if (!obj || GET_OBJ_TYPE(obj) != ITEM_MONEY)
+    return;
+
+  value = GET_OBJ_VAL(obj, 0);
+  if (value <= 0)
+    return;
+
+  extract_obj(obj);
+  increase_gold(ch, value);
+
+  if (value == 1)
+    send_to_char(ch, "There was 1 coin.\r\n");
+  else
+    send_to_char(ch, "There were %d coins.\r\n", value);
+}
+
+static bool sleight_observer_notices(struct char_data *actor,
+                                     struct char_data *viewer,
+                                     int sleight_total)
+{
+  int roll, bonus = 0, total;
+
+  if (!viewer || viewer == actor)
+    return FALSE;
+  if (!AWAKE(viewer))
+    return FALSE;
+
+  if (GET_LEVEL(viewer) >= LVL_IMMORT) {
+    gain_skill(viewer, "perception", TRUE);
+    return TRUE;
+  }
+
+  roll = rand_number(1, 20);
+
+  if (roll == 1) {
+    gain_skill(viewer, "perception", FALSE);
+    return FALSE;
+  }
+
+  if (can_scan_for_sneak(viewer)) {
+    bonus = GET_ABILITY_MOD(GET_WIS(viewer)) +
+            GET_PROFICIENCY(GET_SKILL(viewer, SKILL_PERCEPTION));
+    if (FIGHTING(viewer))
+      bonus -= 4;
+  }
+
+  total = roll + bonus;
+
+  if (roll == 20 || total >= sleight_total) {
+    gain_skill(viewer, "perception", TRUE);
+    return TRUE;
+  }
+
+  gain_skill(viewer, "perception", FALSE);
+  return FALSE;
+}
+
+static void sleight_send_notice(struct char_data *viewer,
+                                struct char_data *actor,
+                                const char *verb,
+                                const char *prep,
+                                const char *item_desc,
+                                const char *container_desc)
+{
+  char line[MAX_STRING_LENGTH];
+  char actor_desc[MAX_INPUT_LENGTH];
+  char item_clean[MAX_STRING_LENGTH];
+  char cont_clean[MAX_STRING_LENGTH];
+
+  strlcpy(actor_desc, PERS(actor, viewer), sizeof(actor_desc));
+  strlcpy(item_clean, item_desc ? item_desc : "something", sizeof(item_clean));
+  strlcpy(cont_clean, container_desc ? container_desc : "something", sizeof(cont_clean));
+
+  if (!strn_cmp(item_clean, "a ", 2))
+    memmove(item_clean, item_clean + 2, strlen(item_clean) - 1);
+  else if (!strn_cmp(item_clean, "an ", 3))
+    memmove(item_clean, item_clean + 3, strlen(item_clean) - 2);
+
+  if (!strn_cmp(cont_clean, "a ", 2))
+    memmove(cont_clean, cont_clean + 2, strlen(cont_clean) - 1);
+  else if (!strn_cmp(cont_clean, "an ", 3))
+    memmove(cont_clean, cont_clean + 3, strlen(cont_clean) - 2);
+
+  snprintf(line, sizeof(line), "%s tries to %s %s %s %s %s.",
+           actor_desc, verb, item_clean, prep, HSHR(actor), cont_clean);
+
+  send_to_char(viewer, "You notice:\r\n  %s\r\n", line);
+}
+
+static void sleight_check_observers(struct char_data *actor,
+                                    int sleight_total,
+                                    const char *verb,
+                                    const char *prep,
+                                    const char *item_desc,
+                                    const char *container_desc)
+{
+  struct char_data *viewer;
+
+  if (!actor || IN_ROOM(actor) == NOWHERE)
+    return;
+
+  for (viewer = world[IN_ROOM(actor)].people; viewer; viewer = viewer->next_in_room) {
+    if (viewer == actor)
+      continue;
+    if (sleight_observer_notices(actor, viewer, sleight_total))
+      sleight_send_notice(viewer, actor, verb, prep, item_desc, container_desc);
+  }
 }
 
 static int sneak_effect_duration(struct char_data *ch)
@@ -697,6 +876,157 @@ ACMD(do_listen)
 
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
   GET_MOVE(ch) -= 10;
+}
+
+ACMD(do_palm)
+{
+  struct obj_data *container, *item;
+  char item_name[MAX_INPUT_LENGTH], cont_name[MAX_INPUT_LENGTH];
+  char item_desc[MAX_STRING_LENGTH], cont_desc[MAX_STRING_LENGTH];
+  int sleight_total;
+  bool base_fail;
+
+  if (!GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND)) {
+    send_to_char(ch, "You have no idea how to do that.\r\n");
+    return;
+  }
+
+  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL)) {
+    send_to_char(ch, "This room just has such a peaceful, easy feeling...\r\n");
+    return;
+  }
+
+  two_arguments(argument, item_name, cont_name);
+
+  if (!*item_name || !*cont_name) {
+    send_to_char(ch, "Usage: palm <item> <container>\r\n");
+    return;
+  }
+
+  if (!(container = find_container_on_character(ch, ch, cont_name))) {
+    send_to_char(ch, "You aren't carrying or wearing anything like that.\r\n");
+    return;
+  }
+
+  if (GET_OBJ_TYPE(container) != ITEM_CONTAINER) {
+    send_to_char(ch, "That's not even a container.\r\n");
+    return;
+  }
+
+  if (OBJVAL_FLAGGED(container, CONT_CLOSED)) {
+    send_to_char(ch, "You'd better open it first.\r\n");
+    return;
+  }
+
+  if (!(item = get_obj_in_list_vis(ch, item_name, NULL, container->contains))) {
+    send_to_char(ch, "You don't see that inside %s.\r\n", OBJS(container, ch));
+    return;
+  }
+
+  if (!sleight_can_take_obj(ch, item))
+    return;
+
+  strlcpy(item_desc, OBJS(item, ch), sizeof(item_desc));
+  strlcpy(cont_desc, OBJS(container, ch), sizeof(cont_desc));
+
+  sleight_total = roll_sleight_check(ch);
+  base_fail = (sleight_total < SLEIGHT_BASE_DC);
+
+  sleight_check_observers(ch, sleight_total,
+                          "palm", "from", item_desc, cont_desc);
+
+  if (!get_otrigger(item, ch))
+    return;
+
+  obj_from_obj(item);
+  obj_to_char(item, ch);
+  sleight_check_money(ch, item);
+
+  if (base_fail)
+    send_to_char(ch, "You get %s from your %s.\r\n", item_desc, cont_desc);
+  else
+    send_to_char(ch, "You quietly palm %s from your %s.\r\n", item_desc, cont_desc);
+
+  gain_skill(ch, "sleight of hand", base_fail ? FALSE : TRUE);
+}
+
+ACMD(do_slip)
+{
+  struct obj_data *container, *obj;
+  char obj_name[MAX_INPUT_LENGTH], cont_name[MAX_INPUT_LENGTH];
+  char item_desc[MAX_STRING_LENGTH], cont_desc[MAX_STRING_LENGTH];
+  int sleight_total;
+  bool base_fail;
+
+  if (!GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND)) {
+    send_to_char(ch, "You have no idea how to do that.\r\n");
+    return;
+  }
+
+  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL)) {
+    send_to_char(ch, "This room just has such a peaceful, easy feeling...\r\n");
+    return;
+  }
+
+  two_arguments(argument, obj_name, cont_name);
+
+  if (!*obj_name || !*cont_name) {
+    send_to_char(ch, "Usage: slip <item> <container>\r\n");
+    return;
+  }
+
+  if (!(container = find_container_on_character(ch, ch, cont_name))) {
+    send_to_char(ch, "You aren't carrying or wearing anything like that.\r\n");
+    return;
+  }
+
+  if (GET_OBJ_TYPE(container) != ITEM_CONTAINER) {
+    send_to_char(ch, "That's not even a container.\r\n");
+    return;
+  }
+
+  if (OBJVAL_FLAGGED(container, CONT_CLOSED)) {
+    send_to_char(ch, "You'd better open it first.\r\n");
+    return;
+  }
+
+  if (!(obj = get_obj_in_list_vis(ch, obj_name, NULL, ch->carrying))) {
+    send_to_char(ch, "You aren't even carrying that.\r\n");
+    return;
+  }
+
+  if (OBJ_FLAGGED(obj, ITEM_NODROP)) {
+    send_to_char(ch, "It refuses to leave your hands.\r\n");
+    return;
+  }
+
+  if ((GET_OBJ_VAL(container, 0) > 0) &&
+      (GET_OBJ_WEIGHT(container) + GET_OBJ_WEIGHT(obj) > GET_OBJ_VAL(container, 0))) {
+    act("$p won't fit inside $P.", FALSE, ch, obj, container, TO_CHAR);
+    return;
+  }
+
+  strlcpy(item_desc, OBJS(obj, ch), sizeof(item_desc));
+  strlcpy(cont_desc, OBJS(container, ch), sizeof(cont_desc));
+
+  sleight_total = roll_sleight_check(ch);
+  base_fail = (sleight_total < SLEIGHT_BASE_DC);
+
+  sleight_check_observers(ch, sleight_total,
+                          "slip", "into", item_desc, cont_desc);
+
+  if (!drop_otrigger(obj, ch))
+    return;
+
+  obj_from_char(obj);
+  obj_to_obj(obj, container);
+
+  if (base_fail)
+    send_to_char(ch, "You put %s in your %s.\r\n", item_desc, cont_desc);
+  else
+    send_to_char(ch, "You quietly slip %s into your %s.\r\n", item_desc, cont_desc);
+
+  gain_skill(ch, "sleight of hand", base_fail ? FALSE : TRUE);
 }
 
 ACMD(do_steal)

@@ -354,6 +354,7 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_STEAL, 5);
     SET_SKILL(ch, SKILL_BACKSTAB, 5);
     SET_SKILL(ch, SKILL_PICK_LOCK, 5);
+    SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
     SET_SKILL(ch, SKILL_UNARMED, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
@@ -389,6 +390,7 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_BANDAGE, 5);
     SET_SKILL(ch, SKILL_TRACK, 5);
     SET_SKILL(ch, SKILL_BASH, 5);
+    SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
     SET_SKILL(ch, SKILL_UNARMED, 5);
     SET_SKILL(ch, SKILL_SLASHING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
@@ -402,6 +404,7 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_BANDAGE, 5);
     SET_SKILL(ch, SKILL_TRACK, 5);
     SET_SKILL(ch, SKILL_PICK_LOCK, 5);
+    SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
     SET_SKILL(ch, SKILL_UNARMED, 5);
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
@@ -648,6 +651,7 @@ void init_spell_levels(void)
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_ROGUE, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_ROGUE, 1);
   spell_level(SKILL_PERCEPTION, CLASS_ROGUE, 1);
+  spell_level(SKILL_SLEIGHT_OF_HAND, CLASS_ROGUE, 1);
   spell_level(SKILL_STEALTH, CLASS_ROGUE, 1);
 
   /* FIGHTERS */
@@ -681,6 +685,7 @@ void init_spell_levels(void)
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_RANGER, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_RANGER, 1);
   spell_level(SKILL_PERCEPTION, CLASS_RANGER, 1);
+  spell_level(SKILL_SLEIGHT_OF_HAND, CLASS_RANGER, 1);
   spell_level(SKILL_STEALTH, CLASS_RANGER, 1);
 
   /* BARDS */
@@ -693,6 +698,7 @@ void init_spell_levels(void)
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_BARD, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_BARD, 1);
   spell_level(SKILL_PERCEPTION, CLASS_BARD, 1);
+  spell_level(SKILL_SLEIGHT_OF_HAND, CLASS_BARD, 1);
 
   /* DRUIDS */
   spell_level(SPELL_DETECT_INVIS, CLASS_DRUID, 1);

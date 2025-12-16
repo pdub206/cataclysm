@@ -937,4 +937,5 @@ void mag_assign_spells(void) {
   skillo(SKILL_PERCEPTION, "perception");
   skillo(SKILL_STEALTH, "stealth");
   skillo(SKILL_LISTEN, "listen");
+  skillo(SKILL_SLEIGHT_OF_HAND, "sleight of hand");
 }
