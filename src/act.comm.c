@@ -110,38 +110,374 @@ static void to_second_person_self(const char *in, char *out, size_t outlen) {
   }
 }
 
+static void trim_whitespace(char *s) {
+  char *start = s;
+  while (*start && isspace((unsigned char)*start))
+    start++;
+
+  if (start != s)
+    memmove(s, start, strlen(start) + 1);
+
+  size_t len = strlen(s);
+  while (len > 0 && isspace((unsigned char)s[len - 1]))
+    s[--len] = '\0';
+}
+
 ACMD(do_say)
 {
-  skip_spaces(&argument);
+  char *p = argument;
+  char bracket_raw[MAX_INPUT_LENGTH] = "";
+  char paren_raw[MAX_INPUT_LENGTH] = "";
+  char speech[MAX_INPUT_LENGTH];
+  struct targeted_phrase bracket_phrase;
+  struct targeted_phrase paren_phrase;
+  bool has_bracket = FALSE;
+  bool has_paren = FALSE;
 
-  if (!*argument)
+  skip_spaces(&p);
+
+  if (*p == '[') {
+    const char *close = strchr(p, ']');
+    if (!close) {
+      send_to_char(ch, "You need a closing ']'.\r\n");
+      return;
+    }
+    size_t len = (size_t)(close - p - 1);
+    if (len >= sizeof(bracket_raw))
+      len = sizeof(bracket_raw) - 1;
+    strncpy(bracket_raw, p + 1, len);
+    bracket_raw[len] = '\0';
+    trim_whitespace(bracket_raw);
+    p = (char *)close + 1;
+  }
+
+  skip_spaces(&p);
+
+  if (*p == '(') {
+    const char *close = strchr(p, ')');
+    if (!close) {
+      send_to_char(ch, "You need a closing ')'.\r\n");
+      return;
+    }
+    size_t len = (size_t)(close - p - 1);
+    if (len >= sizeof(paren_raw))
+      len = sizeof(paren_raw) - 1;
+    strncpy(paren_raw, p + 1, len);
+    paren_raw[len] = '\0';
+    trim_whitespace(paren_raw);
+    p = (char *)close + 1;
+  }
+
+  skip_spaces(&p);
+
+  if (!*p) {
     send_to_char(ch, "Yes, but WHAT do you want to say?\r\n");
-  else {
-    char buf[MAX_INPUT_LENGTH + 14], *msg;
-    struct char_data *vict;
- 
-    if (CONFIG_SPECIAL_IN_COMM && legal_communication(argument))
-      parse_at(argument);
+    return;
+  }
 
-    snprintf(buf, sizeof(buf), "$n\tn says, '%s'", argument);
-    msg = act(buf, FALSE, ch, 0, 0, TO_ROOM | DG_NO_TRIG);
+  strlcpy(speech, p, sizeof(speech));
 
-    for (vict = world[IN_ROOM(ch)].people; vict; vict = vict->next_in_room)
-      if (vict != ch && GET_POS(vict) > POS_SLEEPING)
-        add_history(vict, msg, HIST_SAY);
+  if (CONFIG_SPECIAL_IN_COMM && legal_communication(speech))
+    parse_at(speech);
 
-    if (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_NOREPEAT))
-      send_to_char(ch, "%s", CONFIG_OK);
-    else {
-      sprintf(buf, "You say, '%s'", argument);
-      msg = act(buf, FALSE, ch, 0, 0, TO_CHAR | DG_NO_TRIG);
-      add_history(ch, msg, HIST_SAY);
+  if (*bracket_raw) {
+    if (!build_targeted_phrase(ch, bracket_raw, FALSE, &bracket_phrase))
+      return;
+    has_bracket = TRUE;
+  }
+  if (*paren_raw) {
+    if (!build_targeted_phrase(ch, paren_raw, FALSE, &paren_phrase))
+      return;
+    has_paren = TRUE;
+  }
+
+  bool suppress_self = (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_NOREPEAT));
+  bool use_say = (has_bracket || has_paren);
+
+  for (struct char_data *vict = world[IN_ROOM(ch)].people; vict; vict = vict->next_in_room) {
+    bool self = (vict == ch);
+
+    if (self && suppress_self)
+      continue;
+    if (!self && GET_POS(vict) <= POS_SLEEPING)
+      continue;
+
+    char prefix[MAX_STRING_LENGTH] = "";
+    char suffix[MAX_STRING_LENGTH] = "";
+    char first_line[MAX_STRING_LENGTH];
+    char speaker[MAX_INPUT_LENGTH];
+
+    if (has_bracket)
+      render_targeted_phrase(ch, &bracket_phrase, FALSE, vict, prefix, sizeof(prefix));
+    if (has_paren)
+      render_targeted_phrase(ch, &paren_phrase, FALSE, vict, suffix, sizeof(suffix));
+
+    if (self)
+      strlcpy(speaker, "You", sizeof(speaker));
+    else
+      strlcpy(speaker, PERS(ch, vict), sizeof(speaker));
+
+    first_line[0] = '\0';
+    strlcpy(first_line, "", sizeof(first_line));
+    if (*prefix) {
+      char capped[MAX_STRING_LENGTH];
+      strlcpy(capped, prefix, sizeof(capped));
+      CAP(capped);
+      strlcpy(first_line, capped, sizeof(first_line));
+      strlcat(first_line, ", ", sizeof(first_line));
+      strlcat(first_line, speaker, sizeof(first_line));
+    } else {
+      strlcpy(first_line, speaker, sizeof(first_line));
+    }
+
+    strlcat(first_line, (self && use_say) ? " say" : " says", sizeof(first_line));
+
+    if (*suffix) {
+      strlcat(first_line, ", ", sizeof(first_line));
+      strlcat(first_line, suffix, sizeof(first_line));
+    }
+
+    strlcat(first_line, ":", sizeof(first_line));
+    send_to_char(vict, "%s\r\n   \"%s\"\r\n", first_line, speech);
+
+    if (!self || !suppress_self) {
+      char hist_buf[MAX_STRING_LENGTH];
+      snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", first_line, speech);
+      add_history(vict, hist_buf, HIST_SAY);
     }
   }
 
-  /* Trigger check. */
-  speech_mtrigger(ch, argument);
-  speech_wtrigger(ch, argument);
+  if (suppress_self)
+    send_to_char(ch, "%s", CONFIG_OK);
+
+  speech_mtrigger(ch, speech);
+  speech_wtrigger(ch, speech);
+}
+
+ACMD(do_talk)
+{
+  struct obj_data *furniture = SITTING(ch);
+  int allowed_positions = 0;
+  char *p = argument;
+  char bracket_raw[MAX_INPUT_LENGTH] = "";
+  char paren_raw[MAX_INPUT_LENGTH] = "";
+  struct targeted_phrase bracket_phrase;
+  struct targeted_phrase paren_phrase;
+  bool has_bracket = FALSE, has_paren = FALSE;
+
+  if (!furniture || GET_OBJ_TYPE(furniture) != ITEM_FURNITURE) {
+    send_to_char(ch, "You need to be seated at a piece of furniture to talk there.\r\n");
+    return;
+  }
+
+  if (GET_POS(ch) != POS_SITTING) {
+    send_to_char(ch, "You need to be sitting first.\r\n");
+    return;
+  }
+
+  allowed_positions = GET_OBJ_VAL(furniture, VAL_FURN_POSITIONS);
+  if (allowed_positions > 0 && !(allowed_positions & (1 << 1))) {
+    send_to_char(ch, "That furniture doesn't have any seats.\r\n");
+    return;
+  }
+
+  skip_spaces(&p);
+  if (*p == '[') {
+    const char *close = strchr(p, ']');
+    if (!close) {
+      send_to_char(ch, "You need a closing ']'.\r\n");
+      return;
+    }
+    size_t len = (size_t)(close - p - 1);
+    if (len >= sizeof(bracket_raw))
+      len = sizeof(bracket_raw) - 1;
+    strncpy(bracket_raw, p + 1, len);
+    bracket_raw[len] = '\0';
+    trim_whitespace(bracket_raw);
+    p = (char *)close + 1;
+  }
+
+  skip_spaces(&p);
+
+  if (*p == '(') {
+    const char *close = strchr(p, ')');
+    if (!close) {
+      send_to_char(ch, "You need a closing ')'.\r\n");
+      return;
+    }
+    size_t len = (size_t)(close - p - 1);
+    if (len >= sizeof(paren_raw))
+      len = sizeof(paren_raw) - 1;
+    strncpy(paren_raw, p + 1, len);
+    paren_raw[len] = '\0';
+    trim_whitespace(paren_raw);
+    p = (char *)close + 1;
+  }
+
+  skip_spaces(&p);
+
+  if (!*p) {
+    send_to_char(ch, "Talk what?\r\n");
+    return;
+  }
+
+  char speech[MAX_INPUT_LENGTH];
+  strlcpy(speech, p, sizeof(speech));
+
+  if (CONFIG_SPECIAL_IN_COMM && legal_communication(speech))
+    parse_at(speech);
+
+  if (*bracket_raw) {
+    if (!build_targeted_phrase(ch, bracket_raw, FALSE, &bracket_phrase))
+      return;
+    has_bracket = TRUE;
+  }
+  if (*paren_raw) {
+    if (!build_targeted_phrase(ch, paren_raw, FALSE, &paren_phrase))
+      return;
+    has_paren = TRUE;
+  }
+
+  const char *furn_name = (furniture->short_description && *furniture->short_description)
+                        ? furniture->short_description : "the furniture";
+
+  bool suppress_self = (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_NOREPEAT));
+  bool delivered = FALSE;
+
+  for (struct char_data *tch = OBJ_SAT_IN_BY(furniture); tch; tch = NEXT_SITTING(tch)) {
+    if (tch == ch)
+      continue;
+    if (SITTING(tch) != furniture)
+      continue;
+    if (GET_POS(tch) != POS_SITTING)
+      continue;
+    if (GET_POS(tch) <= POS_SLEEPING)
+      continue;
+
+    char prefix[MAX_STRING_LENGTH] = "";
+    char suffix[MAX_STRING_LENGTH] = "";
+    char first_line[MAX_STRING_LENGTH];
+    const char *speaker = PERS(ch, tch);
+
+    if (has_bracket)
+      render_targeted_phrase(ch, &bracket_phrase, FALSE, tch, prefix, sizeof(prefix));
+    if (has_paren)
+      render_targeted_phrase(ch, &paren_phrase, FALSE, tch, suffix, sizeof(suffix));
+
+    first_line[0] = '\0';
+    if (*prefix) {
+      char capped[MAX_STRING_LENGTH];
+      strlcpy(capped, prefix, sizeof(capped));
+      CAP(capped);
+      strlcpy(first_line, capped, sizeof(first_line));
+      strlcat(first_line, ", ", sizeof(first_line));
+      strlcat(first_line, speaker, sizeof(first_line));
+    } else {
+      strlcpy(first_line, speaker, sizeof(first_line));
+    }
+
+    strlcat(first_line, " says", sizeof(first_line));
+    strlcat(first_line, ", ", sizeof(first_line));
+    if (*suffix) {
+      strlcat(first_line, suffix, sizeof(first_line));
+      strlcat(first_line, ", ", sizeof(first_line));
+    }
+    char locbuf[MAX_INPUT_LENGTH];
+    snprintf(locbuf, sizeof(locbuf), "at %s,", furn_name);
+    strlcat(first_line, locbuf, sizeof(first_line));
+
+    send_to_char(tch, "%s\r\n   \"%s\"\r\n", first_line, speech);
+
+    char hist_buf[MAX_STRING_LENGTH];
+    snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", first_line, speech);
+    add_history(tch, hist_buf, HIST_SAY);
+    delivered = TRUE;
+  }
+
+  if (!delivered)
+    send_to_char(ch, "No one else seated there hears you.\r\n");
+
+  if (suppress_self)
+    send_to_char(ch, "%s", CONFIG_OK);
+  else {
+    char prefix[MAX_STRING_LENGTH] = "";
+    char suffix[MAX_STRING_LENGTH] = "";
+    char first_line[MAX_STRING_LENGTH];
+
+    if (has_bracket)
+      render_targeted_phrase(ch, &bracket_phrase, FALSE, ch, prefix, sizeof(prefix));
+    if (has_paren)
+      render_targeted_phrase(ch, &paren_phrase, FALSE, ch, suffix, sizeof(suffix));
+
+    if (*prefix) {
+      char capped[MAX_STRING_LENGTH];
+      strlcpy(capped, prefix, sizeof(capped));
+      CAP(capped);
+      strlcpy(first_line, capped, sizeof(first_line));
+      strlcat(first_line, ", you", sizeof(first_line));
+    } else
+      strlcpy(first_line, "you", sizeof(first_line));
+
+    strlcat(first_line, " say", sizeof(first_line));
+    strlcat(first_line, ", ", sizeof(first_line));
+    if (*suffix) {
+      strlcat(first_line, suffix, sizeof(first_line));
+      strlcat(first_line, ", ", sizeof(first_line));
+    }
+    char locbuf[MAX_INPUT_LENGTH];
+    snprintf(locbuf, sizeof(locbuf), "at %s,", furn_name);
+    strlcat(first_line, locbuf, sizeof(first_line));
+
+    send_to_char(ch, "%s\r\n   \"%s\"\r\n", first_line, speech);
+    char hist_buf[MAX_STRING_LENGTH];
+    snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", first_line, speech);
+    add_history(ch, hist_buf, HIST_SAY);
+  }
+
+  /* Notify others in the room (not seated at this furniture) with an action cue. */
+  for (struct char_data *onlooker = world[IN_ROOM(ch)].people; onlooker; onlooker = onlooker->next_in_room) {
+    if (onlooker == ch)
+      continue;
+    if (GET_POS(onlooker) <= POS_SLEEPING)
+      continue;
+    if (SITTING(onlooker) == furniture && GET_POS(onlooker) == POS_SITTING)
+      continue; /* already heard the speech */
+
+    char prefix[MAX_STRING_LENGTH] = "";
+    char suffix[MAX_STRING_LENGTH] = "";
+    char line[MAX_STRING_LENGTH];
+    const char *speaker = PERS(ch, onlooker);
+
+    if (has_bracket)
+      render_targeted_phrase(ch, &bracket_phrase, FALSE, onlooker, prefix, sizeof(prefix));
+    if (has_paren)
+      render_targeted_phrase(ch, &paren_phrase, FALSE, onlooker, suffix, sizeof(suffix));
+
+    line[0] = '\0';
+    if (*prefix) {
+      char capped[MAX_STRING_LENGTH];
+      strlcpy(capped, prefix, sizeof(capped));
+      CAP(capped);
+      strlcpy(line, capped, sizeof(line));
+      strlcat(line, ", ", sizeof(line));
+      strlcat(line, speaker, sizeof(line));
+    } else
+      strlcpy(line, speaker, sizeof(line));
+
+    strlcat(line, " says something at ", sizeof(line));
+    strlcat(line, furn_name, sizeof(line));
+
+    if (*suffix) {
+      strlcat(line, ", ", sizeof(line));
+      strlcat(line, suffix, sizeof(line));
+    }
+    strlcat(line, ".", sizeof(line));
+
+    send_to_char(onlooker, "%s\r\n", line);
+  }
+
+  speech_mtrigger(ch, speech);
+  speech_wtrigger(ch, speech);
 }
 
 ACMD(do_ooc)

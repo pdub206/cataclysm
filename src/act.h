@@ -20,6 +20,23 @@
 
 #include "utils.h" /* for the ACMD macro */
 
+#ifndef MAX_EMOTE_TOKENS
+#define MAX_EMOTE_TOKENS 16
+#endif
+
+struct emote_token {
+  char op;
+  char name[MAX_NAME_LENGTH];
+  struct char_data *tch;
+  struct obj_data *tobj;
+};
+
+struct targeted_phrase {
+  char template[MAX_STRING_LENGTH];
+  int token_count;
+  struct emote_token tokens[MAX_EMOTE_TOKENS];
+};
+
 /*****************************************************************************
  * Begin Functions and defines for act.comm.c
  ****************************************************************************/
@@ -44,6 +61,9 @@ ACMD(do_page);
 ACMD(do_reply);
 ACMD(do_tell);
 ACMD(do_write);
+ACMD(do_talk);
+bool build_targeted_phrase(struct char_data *ch, const char *input, bool allow_actor_at, struct targeted_phrase *phrase);
+void render_targeted_phrase(struct char_data *actor, const struct targeted_phrase *phrase, bool actor_possessive_for_at, struct char_data *viewer, char *out, size_t outsz);
 /*****************************************************************************
  * Begin Functions and defines for act.informative.c
  ****************************************************************************/

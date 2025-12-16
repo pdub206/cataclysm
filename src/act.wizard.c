@@ -589,7 +589,7 @@ static int purge_room(room_rnum room)
 /* ===================== Emote engine ===================== */
 
 /* Operators:
- * 
+ *
  *   ~ (name)                   / target sees "you"
  *   ! him/her/them             / target sees "you"
  *   % (name)'s                 / target sees "your"
@@ -600,10 +600,6 @@ static int purge_room(room_rnum room)
  *   + his/hers/theirs          / target sees "yours"
  *   @ moves actor name (or actor's possessive for pemote) to that position
  */
-
-#ifndef MAX_EMOTE_TOKENS
-#define MAX_EMOTE_TOKENS 16
-#endif
 
 /* --- Pronoun & string helpers --- */
 static const char *pron_obj(struct char_data *tch) { /* him/her/them */
@@ -674,6 +670,15 @@ static void replace_all_tokens(char *hay, size_t haysz, const char *needle, cons
     src = pos + nlen;
   }
   strlcpy(hay, work, haysz);
+}
+
+static bool is_token_operator(char c) {
+  switch (c) {
+    case '~': case '!': case '%': case '^': case '#':
+    case '&': case '=': case '+': case '@':
+      return TRUE;
+  }
+  return FALSE;
 }
 
 /* Capitalize the first alphabetic character of every sentence (start and after .?!).
@@ -762,16 +767,8 @@ static bool resolve_reference(struct char_data *actor,
   return false;
 }
 
-/* --- Token model --- */
-struct emote_tok {
-  char op;                                /* one of ~ ! % ^ # & = + or '@' */
-  char name[MAX_NAME_LENGTH];             /* raw token text (empty for '@') */
-  struct char_data *tch;                  /* resolved character (if any) */
-  struct obj_data  *tobj;                 /* resolved object (if any) */
-};
-
 /* Build replacement text for a token as seen by 'viewer'. */
-static void build_replacement(const struct emote_tok *tok,
+static void build_replacement(const struct emote_token *tok,
                               struct char_data *actor,
                               struct char_data *viewer,
                               bool actor_possessive_for_at,
@@ -867,6 +864,130 @@ static void build_replacement(const struct emote_tok *tok,
   strlcpy(out, "something", outsz);
 }
 
+bool build_targeted_phrase(struct char_data *ch, const char *input, bool allow_actor_at, struct targeted_phrase *phrase) {
+  struct emote_token tokens[MAX_EMOTE_TOKENS];
+  int tokc = 0;
+  char out[MAX_STRING_LENGTH];
+  char working[MAX_STRING_LENGTH];
+  const char *p;
+
+  if (!phrase)
+    return FALSE;
+
+  phrase->template[0] = '\0';
+  phrase->token_count = 0;
+
+  if (!input || !*input)
+    return TRUE;
+
+  strlcpy(working, input, sizeof(working));
+  out[0] = '\0';
+  p = working;
+
+  while (*p) {
+    if (is_token_operator(*p)) {
+      char op = *p++;
+      char name[MAX_NAME_LENGTH];
+      int ni = 0;
+
+      if (op == '@' && !allow_actor_at) {
+        send_to_char(ch, "You can't use '@' in that phrase.\r\n");
+        return FALSE;
+      }
+
+      if (op != '@') {
+        const char *q = p;
+
+        while (*q && isdigit((unsigned char)*q) && ni < (int)sizeof(name) - 1)
+          name[ni++] = *q++;
+
+        if (ni > 0 && *q == '.' && ni < (int)sizeof(name) - 1)
+          name[ni++] = *q++;
+
+        while (*q && (isalnum((unsigned char)*q) || *q == '_') && ni < (int)sizeof(name) - 1)
+          name[ni++] = *q++;
+
+        name[ni] = '\0';
+        p = q;
+      } else {
+        name[0] = '\0';
+      }
+
+      if (tokc >= MAX_EMOTE_TOKENS) {
+        send_to_char(ch, "That's too many references for one phrase.\r\n");
+        return FALSE;
+      }
+
+      tokens[tokc].op = op;
+      tokens[tokc].name[0] = '\0';
+      tokens[tokc].tch = NULL;
+      tokens[tokc].tobj = NULL;
+
+      if (op != '@') {
+        if (!*name) {
+          send_to_char(ch, "You need to specify who or what you're referencing.\r\n");
+          return FALSE;
+        }
+        strlcpy(tokens[tokc].name, name, sizeof(tokens[tokc].name));
+        if (!resolve_reference(ch, name, &tokens[tokc].tch, &tokens[tokc].tobj)) {
+          send_to_char(ch, "You can't find one of the references here.\r\n");
+          return FALSE;
+        }
+      }
+
+      char ph[16];
+      snprintf(ph, sizeof(ph), "$T%d", tokc + 1);
+      strlcat(out, ph, sizeof(out));
+      tokc++;
+      continue;
+    }
+
+    char buf[2] = { *p++, '\0' };
+    strlcat(out, buf, sizeof(out));
+  }
+
+  strlcpy(phrase->template, out, sizeof(phrase->template));
+  phrase->token_count = tokc;
+  for (int i = 0; i < tokc; i++)
+    phrase->tokens[i] = tokens[i];
+
+  return TRUE;
+}
+
+void render_targeted_phrase(struct char_data *actor,
+                            const struct targeted_phrase *phrase,
+                            bool actor_possessive_for_at,
+                            struct char_data *viewer,
+                            char *out,
+                            size_t outsz)
+{
+  char msg[MAX_STRING_LENGTH];
+
+  if (!out || !phrase) {
+    if (out && outsz > 0)
+      *out = '\0';
+    return;
+  }
+
+  if (!phrase->template[0]) {
+    if (outsz > 0)
+      *out = '\0';
+    return;
+  }
+
+  strlcpy(msg, phrase->template, sizeof(msg));
+
+  for (int i = 0; i < phrase->token_count; i++) {
+    char token[16], repl[MAX_INPUT_LENGTH];
+    snprintf(token, sizeof(token), "$T%d", i + 1);
+    build_replacement(&phrase->tokens[i], actor, viewer, actor_possessive_for_at, repl, sizeof(repl));
+    replace_all_tokens(msg, sizeof(msg), token, repl);
+  }
+
+  collapse_spaces(msg);
+  strlcpy(out, msg, outsz);
+}
+
 static bool hidden_emote_can_view(struct char_data *actor,
                                   struct char_data *viewer,
                                   int stealth_total) {
@@ -894,7 +1015,7 @@ void perform_emote(struct char_data *ch, char *argument, bool possessive, bool h
   int at_count = 0;
   int stealth_total = 0;
 
-  struct emote_tok toks[MAX_EMOTE_TOKENS];
+  struct emote_token toks[MAX_EMOTE_TOKENS];
   int tokc = 0;
 
   skip_spaces(&argument);
@@ -993,6 +1114,12 @@ void perform_emote(struct char_data *ch, char *argument, bool possessive, bool h
     collapse_spaces(with_placeholders);
   }
 
+  struct targeted_phrase phrase;
+  strlcpy(phrase.template, with_placeholders, sizeof(phrase.template));
+  phrase.token_count = tokc;
+  for (int i = 0; i < tokc && i < MAX_EMOTE_TOKENS; i++)
+    phrase.tokens[i] = toks[i];
+
   /* Deliver personalized message to everyone in the room (including actor) */
   for (struct descriptor_data *d = descriptor_list; d; d = d->next) {
     if (STATE(d) != CON_PLAYING || !d->character) continue;
@@ -1001,17 +1128,7 @@ void perform_emote(struct char_data *ch, char *argument, bool possessive, bool h
       continue;
 
     char msg[MAX_STRING_LENGTH];
-    strlcpy(msg, with_placeholders, sizeof(msg));
-
-    bool actor_poss_for_at = possessive;
-
-    /* Replace each $Tn with viewer-specific text */
-    for (int i = 0; i < tokc; i++) {
-      char token[16], repl[MAX_INPUT_LENGTH];
-      snprintf(token, sizeof(token), "$T%d", i + 1);
-      build_replacement(&toks[i], ch, d->character, actor_poss_for_at, repl, sizeof(repl));
-      replace_all_tokens(msg, sizeof(msg), token, repl);
-    }
+    render_targeted_phrase(ch, &phrase, possessive, d->character, msg, sizeof(msg));
 
     /* Final per-viewer cleanup: spaces + multi-sentence capitalization */
     collapse_spaces(msg);
