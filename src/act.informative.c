@@ -40,11 +40,17 @@ static void look_at_char(struct char_data *i, struct char_data *ch);
 static void look_at_target(struct char_data *ch, char *arg);
 static void look_in_direction(struct char_data *ch, int dir);
 static void look_in_obj(struct char_data *ch, char *arg);
+static void look_at_tables(struct char_data *ch);
 /* do_look, do_inventory utility functions */
 static void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mode, int show);
 /* do_look, do_equipment, do_examine, do_inventory */
 static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mode);
 static void show_obj_modifiers(struct obj_data *obj, struct char_data *ch);
+static const char *seat_phrase(int available, char *buf, size_t buf_size);
+static int sanitize_table_sitters(struct obj_data *table);
+static void show_table_status(struct char_data *ch, struct obj_data *table, const char *label, bool newline_before);
+static const char *item_count_phrase(int count, char *buf, size_t buf_size);
+static int count_object_list(const struct obj_data *list);
 /* do_where utility functions */
 static void perform_immort_where(char_data *ch, const char *arg);
 static void perform_mortal_where(struct char_data *ch, char *arg);
@@ -125,26 +131,17 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
       
       /* For furniture, also show items on it after the main description */
       if (GET_OBJ_TYPE(obj) == ITEM_FURNITURE) {
-        /* Show seat availability */
         if (GET_OBJ_VAL(obj, 0) > 0) {
-          int current_occupants = GET_OBJ_VAL(obj, 1);
-          int max_occupants = GET_OBJ_VAL(obj, 0);
-          int available_seats = max_occupants - current_occupants;
-          
-          if (available_seats > 0) {
-            send_to_char(ch, "\r\n%s(%d seat%s available)%s", 
-                         CCYEL(ch, C_NRM), available_seats, 
-                         available_seats == 1 ? "" : "s", 
-                         CCNRM(ch, C_NRM));
-          } else {
-            send_to_char(ch, "\r\n%s(no seats available)%s", 
-                         CCRED(ch, C_NRM), CCNRM(ch, C_NRM));
-          }
+          show_table_status(ch, obj, obj->short_description, TRUE);
         }
-        
+
         /* Show items on furniture */
         if (obj->contains) {
-          send_to_char(ch, "\r\nOn %s you see:\r\n", obj->short_description);
+          char count_buf[64];
+          int item_count = count_object_list(obj->contains);
+          send_to_char(ch, "\r\nOn %s you see %s:\r\n",
+                       obj->short_description,
+                       item_count_phrase(item_count, count_buf, sizeof(count_buf)));
           list_obj_to_char(obj->contains, ch, SHOW_OBJ_SHORT, TRUE);
         } else {
           send_to_char(ch, "\r\nYou see nothing on %s.", obj->short_description);
@@ -170,26 +167,17 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
       break;
 
     case ITEM_FURNITURE:
-      /* Show seat availability */
       if (GET_OBJ_VAL(obj, 0) > 0) {
-        int current_occupants = GET_OBJ_VAL(obj, 1);
-        int max_occupants = GET_OBJ_VAL(obj, 0);
-        int available_seats = max_occupants - current_occupants;
-        
-        if (available_seats > 0) {
-          send_to_char(ch, "%s(%d seat%s available)%s ", 
-                       CCYEL(ch, C_NRM), available_seats, 
-                       available_seats == 1 ? "" : "s", 
-                       CCNRM(ch, C_NRM));
-        } else {
-          send_to_char(ch, "%s(no seats available)%s ", 
-                       CCRED(ch, C_NRM), CCNRM(ch, C_NRM));
-        }
+        show_table_status(ch, obj, obj->short_description, FALSE);
       }
-      
+
       /* Show items on furniture */
       if (obj->contains) {
-        send_to_char(ch, "On %s you see:\r\n", obj->short_description);
+        char count_buf[64];
+        int item_count = count_object_list(obj->contains);
+        send_to_char(ch, "On %s you see %s:\r\n",
+                     obj->short_description,
+                     item_count_phrase(item_count, count_buf, sizeof(count_buf)));
         list_obj_to_char(obj->contains, ch, SHOW_OBJ_SHORT, TRUE);
       } else {
         send_to_char(ch, "You see nothing on %s.", obj->short_description);
@@ -237,6 +225,165 @@ static void show_obj_modifiers(struct obj_data *obj, struct char_data *ch)
 
   if (OBJ_FLAGGED(obj, ITEM_HUM))
     send_to_char(ch, " ..It emits a faint humming sound!");
+}
+
+static const char *seat_phrase(int available, char *buf, size_t buf_size)
+{
+  if (available <= 0)
+    strlcpy(buf, "no empty seats", buf_size);
+  else if (available == 1)
+    strlcpy(buf, "one empty seat", buf_size);
+  else if (available == 2)
+    strlcpy(buf, "a couple of empty seats", buf_size);
+  else if (available <= 4)
+    strlcpy(buf, "a few empty seats", buf_size);
+  else
+    strlcpy(buf, "some empty seats", buf_size);
+
+  return buf;
+}
+
+static const char *item_count_phrase(int count, char *buf, size_t buf_size)
+{
+  if (count <= 0)
+    strlcpy(buf, "nothing", buf_size);
+  else if (count == 1)
+    strlcpy(buf, "one item", buf_size);
+  else if (count == 2)
+    strlcpy(buf, "a couple of items", buf_size);
+  else if (count <= 4)
+    strlcpy(buf, "a few items", buf_size);
+  else
+    strlcpy(buf, "several items", buf_size);
+
+  return buf;
+}
+
+static int count_object_list(const struct obj_data *list)
+{
+  int count = 0;
+  const struct obj_data *i;
+
+  for (i = list; i; i = i->next_content)
+    count++;
+
+  return count;
+}
+
+static int sanitize_table_sitters(struct obj_data *table)
+{
+  struct char_data *curr, *prev = NULL, *next;
+  int count = 0;
+
+  for (curr = OBJ_SAT_IN_BY(table); curr; curr = next) {
+    next = NEXT_SITTING(curr);
+    if (SITTING(curr) != table) {
+      if (prev)
+        NEXT_SITTING(prev) = next;
+      else
+        OBJ_SAT_IN_BY(table) = next;
+      continue;
+    }
+    prev = curr;
+    count++;
+  }
+
+  if (GET_OBJ_VAL(table, 1) != count)
+    GET_OBJ_VAL(table, 1) = count;
+
+  return count;
+}
+
+static void show_table_status(struct char_data *ch, struct obj_data *table, const char *label, bool newline_before)
+{
+  char header_buf[MAX_STRING_LENGTH];
+  const char *table_label = (label && *label) ? label :
+    (table->short_description && *table->short_description) ? table->short_description : "this table";
+  int max_seats = MAX(0, GET_OBJ_VAL(table, 0));
+
+  if (max_seats <= 0)
+    return;
+
+  int occupant_count = sanitize_table_sitters(table);
+  int available = MAX(0, max_seats - occupant_count);
+
+  char seat_buf[64];
+  const char *seat_text = seat_phrase(available, seat_buf, sizeof(seat_buf));
+  bool include_seat = (*seat_text != '\0');
+  int total_parts = occupant_count + (include_seat ? 1 : 0);
+
+  if (total_parts == 0)
+    return;
+
+  if (newline_before)
+    send_to_char(ch, "\r\n");
+
+  snprintf(header_buf, sizeof(header_buf), "At %s are:", table_label);
+  send_to_char(ch, "%s\r\n", header_buf);
+
+  char line[MAX_STRING_LENGTH];
+  int line_entries = 0;
+  int idx = 0;
+  struct char_data *tch;
+
+  line[0] = '\0';
+
+  #define FLUSH_LINE(is_last)                                          \
+    do {                                                               \
+      if (!(is_last))                                                  \
+        strlcat(line, ",", sizeof(line));                              \
+      else                                                             \
+        strlcat(line, ".", sizeof(line));                              \
+      send_to_char(ch, "%s\r\n", line);                                \
+      line[0] = '\0';                                                  \
+      line_entries = 0;                                                \
+    } while (0)
+
+  for (tch = OBJ_SAT_IN_BY(table); tch; tch = NEXT_SITTING(tch)) {
+    if (SITTING(tch) != table)
+      continue;
+    const char *entry = PERS(tch, ch);
+    bool is_last = (idx == total_parts - 1);
+
+    if (line_entries == 0) {
+      if (idx > 0 && is_last)
+        snprintf(line, sizeof(line), "and %s", entry);
+      else
+        strlcpy(line, entry, sizeof(line));
+    } else {
+      strlcat(line, (is_last ? ", and " : ", "), sizeof(line));
+      strlcat(line, entry, sizeof(line));
+    }
+
+    line_entries++;
+    idx++;
+
+    if (line_entries == 2 || is_last)
+      FLUSH_LINE(is_last);
+  }
+
+  if (!include_seat && line_entries > 0)
+    FLUSH_LINE(true);
+
+  if (include_seat) {
+    bool is_last = (idx == total_parts - 1);
+
+    if (line_entries == 0) {
+      if (idx > 0 && is_last)
+        snprintf(line, sizeof(line), "and %s", seat_text);
+      else
+        strlcpy(line, seat_text, sizeof(line));
+    } else {
+      strlcat(line, (is_last ? ", and " : ", "), sizeof(line));
+      strlcat(line, seat_text, sizeof(line));
+    }
+    line_entries++;
+    idx++;
+    if (line_entries == 2 || is_last)
+      FLUSH_LINE(is_last);
+  }
+
+  #undef FLUSH_LINE
 }
 
 static void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mode, int show)
@@ -809,6 +956,37 @@ static void look_at_target(struct char_data *ch, char *arg)
     send_to_char(ch, "You do not see that here.\r\n");
 }
 
+static void look_at_tables(struct char_data *ch)
+{
+  struct obj_data *obj;
+  int count = 0;
+
+  if (!ch->desc)
+    return;
+
+  for (obj = world[IN_ROOM(ch)].contents; obj; obj = obj->next_content) {
+    if (GET_OBJ_TYPE(obj) != ITEM_FURNITURE)
+      continue;
+    if (GET_OBJ_VAL(obj, 0) <= 0)
+      continue;
+    if (!CAN_SEE_OBJ(ch, obj))
+      continue;
+
+    if (count == 0)
+      send_to_char(ch, "You look around the room and see:\r\n\r\n");
+
+    count++;
+
+    char label[MAX_INPUT_LENGTH];
+    const char *sdesc = obj->short_description ? obj->short_description : "a table";
+    snprintf(label, sizeof(label), "%d) %s", count, sdesc);
+    show_table_status(ch, obj, label, FALSE);
+  }
+
+  if (!count)
+    send_to_char(ch, "You don't see any tables here.\r\n");
+}
+
 ACMD(do_look)
 {
   int look_type;
@@ -858,7 +1036,9 @@ ACMD(do_look)
       }
       if (!found)
          send_to_char(ch, "You couldn't find anything noticeable.\r\n");
-    } else
+    } else if (!str_cmp(arg, "tables"))
+      look_at_tables(ch);
+    else
       look_at_target(ch, strcpy(tempsave, arg));
   }
 }
