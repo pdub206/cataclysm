@@ -960,6 +960,7 @@ static void look_at_tables(struct char_data *ch)
 {
   struct obj_data *obj;
   int count = 0;
+  int allowed_positions = 0;
 
   if (!ch->desc)
     return;
@@ -967,9 +968,12 @@ static void look_at_tables(struct char_data *ch)
   for (obj = world[IN_ROOM(ch)].contents; obj; obj = obj->next_content) {
     if (GET_OBJ_TYPE(obj) != ITEM_FURNITURE)
       continue;
-    if (GET_OBJ_VAL(obj, 0) <= 0)
+    if (GET_OBJ_VAL(obj, VAL_FURN_CAPACITY) <= 0)
       continue;
     if (!CAN_SEE_OBJ(ch, obj))
+      continue;
+    allowed_positions = GET_OBJ_VAL(obj, VAL_FURN_POSITIONS);
+    if (allowed_positions > 0 && !(allowed_positions & (1 << 1)))
       continue;
 
     if (count == 0)
@@ -985,6 +989,8 @@ static void look_at_tables(struct char_data *ch)
 
   if (!count)
     send_to_char(ch, "You don't see any tables here.\r\n");
+  else
+    send_to_char(ch, "\r\nUse 'sit at <number>' to move to one of them.\r\n");
 }
 
 ACMD(do_look)
