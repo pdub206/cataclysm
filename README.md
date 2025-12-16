@@ -22,6 +22,7 @@ Features in Dark Sun MUD Alpha release:
  - [ ] Saving throws are based on 5e rules (if your class has them, you do)
  - [ ] Your spell save DC is 8 + skill profiency + ability mod for your class
  - [ ] AC and to hit d20 rolls typical of 5e, capped at +10 to hit and +8 to AC
+ - [ ] Introduction of basic 5e skills which are used for multiple commands
  * QUIT room flags to designate a room safe to quit in, as well as quit ooc <message>
  * SAVE room flags for players to drop their loot in (such as an apartment or barracks)
  * NPC's can be equipped with items and their prototypes saved for quick future loading
@@ -30,7 +31,17 @@ Features in Dark Sun MUD Alpha release:
  * Mapping command now supports new terrain types
  * Rent system has been removed so players do not need to pay to keep their items
  * Furniture items now allow items to be placed on top of them (a mug on top of the bar)
+ * Furniture items can now be stood at, sat on, rested on, and slept on
+ * Furniture items in rooms can be reviewed with "look tables"
  * Think, feel, and OOC commands for roleplay purposes
+ * Expanded say, talk, and whisper commands to allow for greater roleplay
+ * Sneak/Hide have been updated and an opposed roll against observers occurs
+ * Ability to stealthily put or get items from containers via Palm/Slip commands
+ * Listening in on conversations nearby is possible
+ * Modernized stat output for immortals
+ * NPC's can now be assigned a class like a PC and inherit the relevant skills
+ * PC's now use a short description for identification instead of name
+ * Backgrounds are now available for PC's and NPC's
 
 Features to be implemented in the next few releases:
 
