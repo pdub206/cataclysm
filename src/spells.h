@@ -118,6 +118,7 @@
 #define SKILL_BLUDGEONING_WEAPONS   146 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_PERCEPTION            147 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_STEALTH               148 /* Shared stealth skill for hide/sneak */
+#define SKILL_LISTEN                149 /* Anchor for the listen affect */
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 

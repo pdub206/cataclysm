@@ -17,6 +17,8 @@
 #include "handler.h"
 #include "db.h"
 #include "screen.h"
+#include "constants.h"
+#include "spells.h"
 #include "improved-edit.h"
 #include "dg_scripts.h"
 #include "act.h"
@@ -250,6 +252,291 @@ static void wrap_line(const char *src, char *dst, size_t dstsz, int width)
   dst[out] = '\0';
 }
 
+static void capitalize_leading_you(char *line)
+{
+  if (!line)
+    return;
+  if (strn_cmp(line, "you", 3) != 0)
+    return;
+
+  char next = line[3];
+  if (next && !isspace((unsigned char)next) && next != ',' && next != ':' && next != ';')
+    return;
+
+  line[0] = UPPER(line[0]);
+}
+
+#define LISTEN_DC_TABLE             10
+#define LISTEN_DC_TABLE_REMOTE      21
+#define LISTEN_DC_TABLE_REMOTE_CLOSED 26
+#define LISTEN_DC_WHISPER           15
+#define LISTEN_DC_ROOM              18
+#define LISTEN_DC_CLOSED            23
+#define LISTEN_MASTERY_MIN          81
+
+static void compose_history_entry(char *out, size_t outsz,
+                                  const char *first_line,
+                                  const char *speech)
+{
+  if (!out || outsz == 0)
+    return;
+
+  out[0] = '\0';
+  if (first_line && *first_line)
+    strlcpy(out, first_line, outsz);
+
+  strlcat(out, "\r\n   \"", outsz);
+  if (speech && *speech)
+    strlcat(out, speech, outsz);
+  strlcat(out, "\"", outsz);
+}
+
+static bool can_attempt_listen(struct char_data *ch)
+{
+  if (!ch)
+    return FALSE;
+  if (!AFF_FLAGGED(ch, AFF_LISTEN))
+    return FALSE;
+  if (GET_POS(ch) <= POS_SLEEPING)
+    return FALSE;
+  if (!GET_SKILL(ch, SKILL_PERCEPTION))
+    return FALSE;
+  return TRUE;
+}
+
+static int roll_listen_total(struct char_data *ch)
+{
+  int bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
+              GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
+  int total = rand_number(1, 20) + bonus;
+
+  if (FIGHTING(ch))
+    total -= 4;
+
+  return total;
+}
+
+static bool perform_listen_check(struct char_data *ch, int difficulty, bool require_mastery)
+{
+  bool success;
+
+  if (!can_attempt_listen(ch))
+    return FALSE;
+  if (require_mastery && GET_SKILL(ch, SKILL_PERCEPTION) < LISTEN_MASTERY_MIN)
+    return FALSE;
+
+  success = (roll_listen_total(ch) >= difficulty);
+  gain_skill(ch, "perception", success);
+  return success;
+}
+
+static void deliver_listen_output(struct char_data *listener, const char *first_line, const char *speech)
+{
+  char wrapped_line[MAX_STRING_LENGTH];
+  char hist_buf[MAX_STRING_LENGTH];
+
+  wrap_line(first_line, wrapped_line, sizeof(wrapped_line), 80);
+  send_to_char(listener, "%s\r\n   \"%s\"\r\n", wrapped_line, speech);
+
+  compose_history_entry(hist_buf, sizeof(hist_buf), wrapped_line, speech);
+  add_history(listener, hist_buf, HIST_SAY);
+}
+
+static void send_overheard_table(struct char_data *listener,
+                                 struct char_data *speaker,
+                                 const char *furn_name,
+                                 const char *speech,
+                                 const struct targeted_phrase *bracket_phrase,
+                                 const struct targeted_phrase *paren_phrase)
+{
+  char prefix[MAX_STRING_LENGTH] = "";
+  char suffix[MAX_STRING_LENGTH] = "";
+  char first_line[MAX_STRING_LENGTH];
+  const char *label = (furn_name && *furn_name) ? furn_name : "the table";
+
+  if (bracket_phrase)
+    render_targeted_phrase(speaker, bracket_phrase, FALSE, listener, prefix, sizeof(prefix));
+  if (paren_phrase)
+    render_targeted_phrase(speaker, paren_phrase, FALSE, listener, suffix, sizeof(suffix));
+
+  strlcpy(first_line, "You overhear ", sizeof(first_line));
+  if (*prefix) {
+    char capped[MAX_STRING_LENGTH];
+    strlcpy(capped, prefix, sizeof(capped));
+    CAP(capped);
+    strlcat(first_line, capped, sizeof(first_line));
+    strlcat(first_line, ", ", sizeof(first_line));
+  }
+
+  strlcat(first_line, get_char_sdesc(speaker), sizeof(first_line));
+  strlcat(first_line, " at ", sizeof(first_line));
+  strlcat(first_line, label, sizeof(first_line));
+
+  if (*suffix) {
+    strlcat(first_line, ", ", sizeof(first_line));
+    strlcat(first_line, suffix, sizeof(first_line));
+  }
+
+  strlcat(first_line, ":", sizeof(first_line));
+  deliver_listen_output(listener, first_line, speech);
+}
+
+static void send_overheard_whisper(struct char_data *listener,
+                                   struct char_data *speaker,
+                                   struct char_data *vict,
+                                   const char *speech,
+                                   const struct targeted_phrase *bracket_phrase,
+                                   const struct targeted_phrase *paren_phrase)
+{
+  char prefix[MAX_STRING_LENGTH] = "";
+  char suffix[MAX_STRING_LENGTH] = "";
+  char first_line[MAX_STRING_LENGTH];
+
+  if (bracket_phrase)
+    render_targeted_phrase(speaker, bracket_phrase, FALSE, listener, prefix, sizeof(prefix));
+  if (paren_phrase)
+    render_targeted_phrase(speaker, paren_phrase, FALSE, listener, suffix, sizeof(suffix));
+
+  strlcpy(first_line, "You overhear ", sizeof(first_line));
+  if (*prefix) {
+    char capped[MAX_STRING_LENGTH];
+    strlcpy(capped, prefix, sizeof(capped));
+    CAP(capped);
+    strlcat(first_line, capped, sizeof(first_line));
+    strlcat(first_line, ", ", sizeof(first_line));
+  }
+
+  strlcat(first_line, get_char_sdesc(speaker), sizeof(first_line));
+  strlcat(first_line, " whisper to ", sizeof(first_line));
+  strlcat(first_line, get_char_sdesc(vict), sizeof(first_line));
+
+  if (*suffix) {
+    strlcat(first_line, ", ", sizeof(first_line));
+    strlcat(first_line, suffix, sizeof(first_line));
+  }
+
+  strlcat(first_line, ":", sizeof(first_line));
+  deliver_listen_output(listener, first_line, speech);
+}
+
+static void send_overheard_room(struct char_data *listener,
+                                struct char_data *speaker,
+                                const char *context_label,
+                                const char *dir_name,
+                                bool closed_door,
+                                const char *speech,
+                                const struct targeted_phrase *bracket_phrase,
+                                const struct targeted_phrase *paren_phrase)
+{
+  char prefix[MAX_STRING_LENGTH] = "";
+  char suffix[MAX_STRING_LENGTH] = "";
+  char first_line[MAX_STRING_LENGTH];
+
+  if (bracket_phrase)
+    render_targeted_phrase(speaker, bracket_phrase, FALSE, listener, prefix, sizeof(prefix));
+  if (paren_phrase)
+    render_targeted_phrase(speaker, paren_phrase, FALSE, listener, suffix, sizeof(suffix));
+
+  strlcpy(first_line, "You overhear ", sizeof(first_line));
+  if (*prefix) {
+    char capped[MAX_STRING_LENGTH];
+    strlcpy(capped, prefix, sizeof(capped));
+    CAP(capped);
+    strlcat(first_line, capped, sizeof(first_line));
+    strlcat(first_line, ", ", sizeof(first_line));
+  }
+
+  strlcat(first_line, get_char_sdesc(speaker), sizeof(first_line));
+  if (context_label && *context_label) {
+    strlcat(first_line, " at ", sizeof(first_line));
+    strlcat(first_line, context_label, sizeof(first_line));
+  }
+  if (closed_door) {
+    strlcat(first_line, " through a closed door to the ", sizeof(first_line));
+  } else {
+    strlcat(first_line, " from the ", sizeof(first_line));
+  }
+  strlcat(first_line, dir_name ? dir_name : "unknown", sizeof(first_line));
+
+  if (*suffix) {
+    strlcat(first_line, ", ", sizeof(first_line));
+    strlcat(first_line, suffix, sizeof(first_line));
+  }
+
+  strlcat(first_line, ":", sizeof(first_line));
+  deliver_listen_output(listener, first_line, speech);
+}
+
+static void notify_adjacent_listeners_internal(struct char_data *speaker,
+                                               const char *speech,
+                                               const struct targeted_phrase *bracket_phrase,
+                                               const struct targeted_phrase *paren_phrase,
+                                               int open_dc,
+                                               int closed_dc,
+                                               bool closed_requires_mastery,
+                                               const char *context_label)
+{
+  room_rnum origin;
+
+  if (!speaker || !speech || !*speech)
+    return;
+
+  origin = IN_ROOM(speaker);
+  if (origin == NOWHERE)
+    return;
+
+  for (int dir = 0; dir < NUM_OF_DIRS; dir++) {
+    struct room_direction_data *exit = world[origin].dir_option[dir];
+    room_rnum other_room;
+    bool closed_door;
+
+    if (!exit || exit->to_room == NOWHERE)
+      continue;
+
+    other_room = exit->to_room;
+    if (ROOM_FLAGGED(origin, ROOM_SOUNDPROOF) || ROOM_FLAGGED(other_room, ROOM_SOUNDPROOF))
+      continue;
+
+    closed_door = EXIT_FLAGGED(exit, EX_CLOSED) && EXIT_FLAGGED(exit, EX_ISDOOR);
+
+    for (struct char_data *listener = world[other_room].people; listener; listener = listener->next_in_room) {
+      if (!perform_listen_check(listener,
+                                closed_door ? closed_dc : open_dc,
+                                closed_requires_mastery && closed_door))
+        continue;
+      send_overheard_room(listener, speaker, context_label, dirs[dir], closed_door,
+                          speech, bracket_phrase, paren_phrase);
+    }
+  }
+}
+
+static void notify_adjacent_listeners(struct char_data *speaker,
+                                      const char *speech,
+                                      const struct targeted_phrase *bracket_phrase,
+                                      const struct targeted_phrase *paren_phrase)
+{
+  notify_adjacent_listeners_internal(speaker, speech,
+                                     bracket_phrase, paren_phrase,
+                                     LISTEN_DC_ROOM, LISTEN_DC_CLOSED, TRUE, NULL);
+}
+
+static void notify_adjacent_table_listeners(struct char_data *speaker,
+                                            const char *furn_name,
+                                            const char *speech,
+                                            const struct targeted_phrase *bracket_phrase,
+                                            const struct targeted_phrase *paren_phrase)
+{
+  if (!furn_name)
+    furn_name = "the table";
+
+  notify_adjacent_listeners_internal(speaker, speech,
+                                     bracket_phrase, paren_phrase,
+                                     LISTEN_DC_TABLE_REMOTE,
+                                     LISTEN_DC_TABLE_REMOTE_CLOSED,
+                                     TRUE,
+                                     furn_name);
+}
+
 ACMD(do_say)
 {
   char *p = argument;
@@ -311,7 +598,7 @@ ACMD(do_say)
       render_targeted_phrase(ch, &paren_phrase, FALSE, vict, suffix, sizeof(suffix));
 
     if (self)
-      strlcpy(speaker, "You", sizeof(speaker));
+      strlcpy(speaker, "you", sizeof(speaker));
     else
       strlcpy(speaker, PERS(ch, vict), sizeof(speaker));
 
@@ -336,16 +623,22 @@ ACMD(do_say)
     }
 
     strlcat(first_line, ":", sizeof(first_line));
+    if (self)
+      capitalize_leading_you(first_line);
     char wrapped_line[MAX_STRING_LENGTH];
     wrap_line(first_line, wrapped_line, sizeof(wrapped_line), 80);
     send_to_char(vict, "%s\r\n   \"%s\"\r\n", wrapped_line, speech);
 
     if (!self || !suppress_self) {
       char hist_buf[MAX_STRING_LENGTH];
-      snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", wrapped_line, speech);
+      compose_history_entry(hist_buf, sizeof(hist_buf), wrapped_line, speech);
       add_history(vict, hist_buf, HIST_SAY);
     }
   }
+
+  notify_adjacent_listeners(ch, speech,
+                            has_bracket ? &bracket_phrase : NULL,
+                            has_paren ? &paren_phrase : NULL);
 
   if (suppress_self)
     send_to_char(ch, "%s", CONFIG_OK);
@@ -414,7 +707,6 @@ ACMD(do_talk)
                         ? furniture->short_description : "the furniture";
 
   bool suppress_self = (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_NOREPEAT));
-  bool delivered = FALSE;
 
   for (struct char_data *tch = OBJ_SAT_IN_BY(furniture); tch; tch = NEXT_SITTING(tch)) {
     if (tch == ch)
@@ -463,13 +755,9 @@ ACMD(do_talk)
     send_to_char(tch, "%s\r\n   \"%s\"\r\n", wrapped_line, speech);
 
     char hist_buf[MAX_STRING_LENGTH];
-    snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", wrapped_line, speech);
+    compose_history_entry(hist_buf, sizeof(hist_buf), wrapped_line, speech);
     add_history(tch, hist_buf, HIST_SAY);
-    delivered = TRUE;
   }
-
-  if (!delivered)
-    send_to_char(ch, "No one else seated there hears you.\r\n");
 
   if (suppress_self)
     send_to_char(ch, "%s", CONFIG_OK);
@@ -489,8 +777,9 @@ ACMD(do_talk)
       CAP(capped);
       strlcpy(first_line, capped, sizeof(first_line));
       strlcat(first_line, ", you", sizeof(first_line));
-    } else
+    } else {
       strlcpy(first_line, "you", sizeof(first_line));
+    }
 
     strlcat(first_line, " say", sizeof(first_line));
     strlcat(first_line, ", ", sizeof(first_line));
@@ -501,12 +790,13 @@ ACMD(do_talk)
     char locbuf[MAX_INPUT_LENGTH];
     snprintf(locbuf, sizeof(locbuf), "at %s,", furn_name);
     strlcat(first_line, locbuf, sizeof(first_line));
+    capitalize_leading_you(first_line);
 
     char wrapped_line[MAX_STRING_LENGTH];
     wrap_line(first_line, wrapped_line, sizeof(wrapped_line), 80);
     send_to_char(ch, "%s\r\n   \"%s\"\r\n", wrapped_line, speech);
     char hist_buf[MAX_STRING_LENGTH];
-    snprintf(hist_buf, sizeof(hist_buf), "%s\r\n   \"%s\"", wrapped_line, speech);
+    compose_history_entry(hist_buf, sizeof(hist_buf), wrapped_line, speech);
     add_history(ch, hist_buf, HIST_SAY);
   }
 
@@ -518,6 +808,13 @@ ACMD(do_talk)
       continue;
     if (SITTING(onlooker) == furniture && GET_POS(onlooker) == POS_SITTING)
       continue; /* already heard the speech */
+
+    if (perform_listen_check(onlooker, LISTEN_DC_TABLE, FALSE)) {
+      send_overheard_table(onlooker, ch, furn_name, speech,
+                           has_bracket ? &bracket_phrase : NULL,
+                           has_paren ? &paren_phrase : NULL);
+      continue;
+    }
 
     char prefix[MAX_STRING_LENGTH] = "";
     char suffix[MAX_STRING_LENGTH] = "";
@@ -556,6 +853,10 @@ ACMD(do_talk)
 
   speech_mtrigger(ch, speech);
   speech_wtrigger(ch, speech);
+
+  notify_adjacent_table_listeners(ch, furn_name, speech,
+                                  has_bracket ? &bracket_phrase : NULL,
+                                  has_paren ? &paren_phrase : NULL);
 }
 
 ACMD(do_ooc)
@@ -909,6 +1210,13 @@ ACMD(do_spec_comm)
           continue;
         if (GET_POS(onlooker) <= POS_SLEEPING)
           continue;
+
+        if (perform_listen_check(onlooker, LISTEN_DC_WHISPER, FALSE)) {
+          send_overheard_whisper(onlooker, ch, vict, speech,
+                                 has_bracket ? &bracket_phrase : NULL,
+                                 has_paren ? &paren_phrase : NULL);
+          continue;
+        }
 
         char prefix[MAX_STRING_LENGTH] = "";
         char suffix[MAX_STRING_LENGTH] = "";

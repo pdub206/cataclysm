@@ -250,6 +250,16 @@ int roll_scan_perception(struct char_data *ch)
   return total;
 }
 
+static int listen_effect_duration(struct char_data *ch)
+{
+  int skill = GET_SKILL(ch, SKILL_PERCEPTION);
+
+  if (skill <= 0)
+    return 1;
+
+  return MAX(1, skill / 10);
+}
+
 ACMD(do_sneak)
 {
   struct affected_type af;
@@ -654,6 +664,36 @@ ACMD(do_scan)
 
   send_to_char(ch, "You sharpen your senses and begin scanning for hidden threats.\r\n");
   act("$n studies $s surroundings with a wary gaze.", TRUE, ch, 0, 0, TO_ROOM);
+
+  WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+  GET_MOVE(ch) -= 10;
+}
+
+ACMD(do_listen)
+{
+  struct affected_type af;
+
+  if (!GET_SKILL(ch, SKILL_PERCEPTION)) {
+    send_to_char(ch, "You have no idea how to do that.\r\n");
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_LISTEN)) {
+    affect_from_char(ch, SKILL_LISTEN);
+    send_to_char(ch, "You stop actively listening for hushed voices.\r\n");
+    return;
+  }
+
+  new_affect(&af);
+  af.spell    = SKILL_LISTEN;
+  af.location = APPLY_NONE;
+  af.modifier = 0;
+  af.duration = listen_effect_duration(ch);
+  memset(af.bitvector, 0, sizeof(af.bitvector));
+  SET_BIT_AR(af.bitvector, AFF_LISTEN);
+  affect_to_char(ch, &af);
+
+  send_to_char(ch, "You focus entirely on every whisper and distant sound.\r\n");
 
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
   GET_MOVE(ch) -= 10;

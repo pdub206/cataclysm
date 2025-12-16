@@ -311,6 +311,7 @@ const char *affected_bits[] =
   "SCAN",
   "CHARM",
   "BANDAGED",
+  "LISTEN",
   "\n"
 };
 

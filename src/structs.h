@@ -301,8 +301,9 @@
 #define AFF_SCAN           21   /**< Actively scanning for hidden threats */
 #define AFF_CHARM          22   /**< Char is charmed */
 #define AFF_BANDAGED       23   /**< Character was bandaged recently */
+#define AFF_LISTEN         24   /**< Actively eavesdropping */
 /** Total number of affect flags */
-#define NUM_AFF_FLAGS   24
+#define NUM_AFF_FLAGS   25
 
 /* Modes of connectedness: used by descriptor_data.state 		*/
 #define CON_PLAYING       0 /**< Playing - Nominal state 		*/

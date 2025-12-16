@@ -250,6 +250,7 @@ ACMD(do_use);
 ACMD(do_display);
 ACMD(do_group);
 ACMD(do_hide);
+ACMD(do_listen);
 ACMD(do_not_here);
 ACMD(do_report);
 ACMD(do_save);

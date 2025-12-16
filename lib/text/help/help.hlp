@@ -4623,6 +4623,21 @@ Examples:
  
 See also: BUY, SELL, SHOPS, VALUE
 #0
+LISTEN
+
+Usage: listen
+
+Focus all of your senses on the subtle sounds around you. While LISTEN is
+active you can overhear table talk even when you are seated elsewhere, catch
+pieces of whispered conversations, and sometimes pick up what is being said
+in a nearby room. Closed doors make the task much harder and only master
+perceptionists (81%+) can pierce them.
+
+Issuing LISTEN again stops the effect early. Its duration scales with your
+PERCEPTION skill, much like HIDE or SNEAK.
+
+See also: PERCEPTION, SCAN, SAY, TALK, WHISPER
+#0
 LITTERING
 
 Do not load mobiles or objects in other people's zones. Especially in TBA zone
