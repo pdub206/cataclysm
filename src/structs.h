@@ -445,8 +445,9 @@
 #define ITEM_NOSELL           20   /**< Shopkeepers won't touch it */
 #define ITEM_QUEST            21   /**< Item is a quest item         */
 #define ITEM_HOOD_UP          22   /**< WORN item hood is currently up */
+#define ITEM_SKINNED          23   /* Item/corpse can be skinned */
 /** Total number of item flags */
-#define NUM_ITEM_FLAGS        23
+#define NUM_ITEM_FLAGS        24
 
 /* Modifier constants used with obj affects ('A' fields) */
 #define APPLY_NONE              0	/**< No effect			*/
@@ -753,6 +754,8 @@ struct obj_data
   struct char_data *sitting_here; /**< For furniture, who is sitting in it */
   
   struct list_data *events;      /**< Used for object events */
+
+  mob_vnum corpse_mob_vnum;
 };
 
 /** Instance info for an object that gets saved to disk.
@@ -1262,6 +1265,7 @@ struct index_data
 
   char *farg; /**< String argument for special function. */
   struct trig_data *proto; /**< Points to the trigger prototype. */
+  struct skin_yield_entry *skin_yields;
 };
 
 /** Master linked list for the mob/object prototype trigger lists. */
@@ -1337,6 +1341,14 @@ struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src);
 #define VAL_FOOD_BITES_LEFT       1
 #define VAL_FOOD_HOURS_PER_BITE   2
 #define VAL_FOOD_POISONED         3
+
+/* For skinning/survival skill usage */
+struct skin_yield_entry {
+  mob_vnum mob_vnum;      /* redundant but useful for debugging */
+  obj_vnum obj_vnum;      /* object to create on success */
+  int dc;                 /* DC required */
+  struct skin_yield_entry *next;
+};
 
 /* Config structs */
 

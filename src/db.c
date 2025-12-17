@@ -1765,6 +1765,7 @@ void parse_mobile(FILE *mob_f, int nr)
   mob_index[i].vnum = nr;
   mob_index[i].number = 0;
   mob_index[i].func = NULL;
+  mob_index[i].skin_yields = NULL;
 
   clear_char(mob_proto + i);
 
@@ -1928,10 +1929,75 @@ void parse_mobile(FILE *mob_f, int nr)
   }
   ungetc(letter, mob_f);
 
+    /* ---- Skinning yields (Y block): allow before triggers ---- */
+  letter = fread_letter(mob_f);
+  while (letter == 'Y') {
+    obj_vnum ovnum;
+    int dc;
+
+    for (;;) {
+      if (!get_line(mob_f, line)) {
+        log("SYSERR: Unexpected EOF while reading 'Y' block in mob #%d.", nr);
+        break;
+      }
+      if (sscanf(line, "%d %d", &ovnum, &dc) != 2) {
+        log("SYSERR: Bad 'Y' line in mob #%d: '%s' (need <obj_vnum> <dc>).", nr, line);
+        continue;
+      }
+      if (ovnum == 0 && dc == 0)
+        break;
+
+      /* add entry to mob_index[i].skin_yields */
+      struct skin_yield_entry *e;
+      CREATE(e, struct skin_yield_entry, 1);
+      e->mob_vnum = mob_index[i].vnum;
+      e->obj_vnum = ovnum;
+      e->dc = dc;
+      e->next = mob_index[i].skin_yields;
+      mob_index[i].skin_yields = e;
+    }
+
+    /* look ahead for another Y block (rare but harmless to support) */
+    letter = fread_letter(mob_f);
+  }
+  ungetc(letter, mob_f);
+
   /* ---- DG triggers: script info follows mob S/E section ---- */
   letter = fread_letter(mob_f);
   while (letter == 'T') {
     dg_read_trigger(mob_f, &mob_proto[i], MOB_TRIGGER);
+    letter = fread_letter(mob_f);
+  }
+  ungetc(letter, mob_f);
+
+  /* ---- Skinning yields (Y block): allow after triggers ---- */
+  letter = fread_letter(mob_f);
+  while (letter == 'Y') {
+    obj_vnum ovnum;
+    int dc;
+
+    for (;;) {
+      if (!get_line(mob_f, line)) {
+        log("SYSERR: Unexpected EOF while reading 'Y' block in mob #%d.", nr);
+        break;
+      }
+      if (sscanf(line, "%d %d", &ovnum, &dc) != 2) {
+        log("SYSERR: Bad 'Y' line in mob #%d: '%s' (need <obj_vnum> <dc>).", nr, line);
+        continue;
+      }
+      if (ovnum == 0 && dc == 0)
+        break;
+
+      struct skin_yield_entry *e;
+      CREATE(e, struct skin_yield_entry, 1);
+      e->mob_vnum = mob_index[i].vnum;
+      e->obj_vnum = ovnum;
+      e->dc = dc;
+      e->next = mob_index[i].skin_yields;
+      mob_index[i].skin_yields = e;
+    }
+
+    /* look ahead for another Y block (optional) */
     letter = fread_letter(mob_f);
   }
   ungetc(letter, mob_f);
@@ -4347,4 +4413,29 @@ void load_config( void )
   }
 
   fclose(fl);
+}
+
+void free_skin_yields(struct skin_yield_entry *list)
+{
+  struct skin_yield_entry *e, *next;
+  for (e = list; e; e = next) {
+    next = e->next;
+    free(e);
+  }
+}
+
+struct skin_yield_entry *copy_skin_yields(struct skin_yield_entry *src)
+{
+  struct skin_yield_entry *head = NULL, *tail = NULL, *e;
+
+  for (; src; src = src->next) {
+    CREATE(e, struct skin_yield_entry, 1);
+    *e = *src;
+    e->next = NULL;
+
+    if (!head) head = e;
+    else tail->next = e;
+    tail = e;
+  }
+  return head;
 }

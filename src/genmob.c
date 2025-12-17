@@ -479,6 +479,19 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
   /* --- DG Scripts --- */
   script_save_to_disk(fd, mob, MOB_TRIGGER);
 
+  /* --- Skinning yields --- */
+  {
+    mob_rnum rmob = real_mobile(mvnum);
+    struct skin_yield_entry *sy;
+
+    if (rmob != NOBODY && mob_index[rmob].skin_yields) {
+      fprintf(fd, "Y\n");
+      for (sy = mob_index[rmob].skin_yields; sy; sy = sy->next)
+        fprintf(fd, "%d %d\n", sy->obj_vnum, sy->dc);
+      fprintf(fd, "0 0\n");
+    }
+  }
+
 #if CONFIG_GENOLC_MOBPROG
   if (write_mobile_mobprog(mvnum, mob, fd) < 0)
     log("SYSERR: GenOLC: Error writing MobProgs for mobile #%d.", mvnum);

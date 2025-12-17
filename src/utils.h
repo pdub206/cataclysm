@@ -82,6 +82,7 @@ const char *const *obj_value_labels(int item_type);
 const char *get_char_sdesc(const struct char_data *ch);
 int obj_is_storage(const struct obj_data *obj);
 int obj_storage_is_closed(const struct obj_data *obj);
+int roll_survival_check(struct char_data *ch, int mode, int *out_d20);
 
 /* 5e system helpers */
 

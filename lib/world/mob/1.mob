@@ -12,6 +12,7 @@ call his stature bulky, as he has quite a bit of muscle.
 B
 
 
+
 ~
 6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
@@ -30,17 +31,17 @@ Skill 145 5
 Skill 146 5
 Skill 147 5
 E
-L 3 118 1
-L 5 131 1
-L 6 110 1
-L 7 108 1
-L 8 115 1
-L 9 124 1
-L 10 107 1
-L 11 111 1
-L 15 117 1
-L 16 117 1
 L 17 127 1
+L 16 117 1
+L 15 117 1
+L 11 111 1
+L 10 107 1
+L 9 124 1
+L 8 115 1
+L 7 108 1
+L 6 110 1
+L 5 131 1
+L 3 118 1
 #101
 Sally~
 slim lanky human soldier guard~
@@ -54,6 +55,7 @@ dark hair has been pulled back behind her head, intensifying the sharpness of
 her nose.
 ~
 B
+
 
 
 ~
@@ -71,17 +73,17 @@ Skill 145 5
 Skill 146 5
 Skill 147 5
 E
-L 17 127 1
-L 16 117 1
-L 15 117 1
-L 11 111 1
-L 10 107 1
-L 9 124 1
-L 8 115 1
-L 7 108 1
-L 6 110 1
-L 5 131 1
 L 3 118 1
+L 5 131 1
+L 6 110 1
+L 7 108 1
+L 8 115 1
+L 9 124 1
+L 10 107 1
+L 11 111 1
+L 15 117 1
+L 16 117 1
+L 17 127 1
 #102
 Baldy~
 barkeep stocky bald~
@@ -97,13 +99,14 @@ others.
 B
 
 
+
 ~
 10 0 0 0 0 0 0 0 0 E
 1 3d12+60
 8 8 1
 E
-L 14 113 1
 L 9 112 1
+L 14 113 1
 #103
 Lanky~
 woman lanky scarred~
@@ -120,6 +123,7 @@ appear slightly bloodshot.
 B
 
 
+
 ~
 10 0 0 0 0 0 0 0 0 E
 1 3d8+60
@@ -134,5 +138,23 @@ Skill 142 5
 Skill 143 5
 Skill 144 5
 Skill 147 5
+E
+#104
+Rat~
+rat small furry~
+a small, furry rat~
+Keeping low to the ground, a small, furry rat wanders around here.
+~
+   This small rat is covered in thick fur.  The fur itself appears matted and
+has grime coating it.  Two beady black eyes look around, constantly shifting.  
+Its tail is four, perhaps five inches long and grey in color.  Both hindlings
+appear thick and ready to propel the animal if it feels threatened.
+~
+B
+It's a rat.
+~
+8 0 0 0 0 0 0 0 0 E
+1 0d0+10
+8 8 2
 E
 $

@@ -486,6 +486,8 @@ const char *extra_bits[] = {
   "ANTI_DRUID",
   "NO_SELL",
   "QUEST_ITEM",
+  "HOOD_UP",
+  "SKINNED",
   "\n"
 };
 

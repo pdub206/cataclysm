@@ -115,6 +115,7 @@ ACMD(do_oasis_medit)
   }
 
   CREATE(d->olc, struct oasis_olc_data, 1);
+  d->olc->skin_yields = NULL;
 
   /* Find the zone. */
   OLC_ZNUM(d) = save ? real_zone(number) : real_zone_by_thing(number);
@@ -221,6 +222,9 @@ void medit_setup_existing(struct descriptor_data *d, int rmob_num)
    */
   SCRIPT(mob) = NULL;
   OLC_MOB(d)->proto_script = NULL;
+
+  /* Copy skinning yields from the prototype index into OLC working storage. */
+  d->olc->skin_yields = copy_skin_yields(mob_index[rmob_num].skin_yields);
 }
 
 /* Ideally, this function should be in db.c, but I'll put it here for portability. */
@@ -448,6 +452,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  "%s8%s) Default   : %s%s\r\n"
 	  "%s9%s) Attack    : %s%s\r\n"
     "%sD%s) Class     : %s%s\r\n"
+	  "%sK%s) Skinning Menu...\r\n"
     "%s0%s) Stats Menu...\r\n"
 	  "%s-%s) Skills Menu...\r\n"
 	  "%sA%s) NPC Flags : %s%s\r\n"
@@ -463,6 +468,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  grn, nrm, yel, position_types[(int)GET_DEFAULT_POS(mob)],
 	  grn, nrm, yel, attack_hit_text[(int)GET_ATTACK(mob)].singular,
     grn, nrm, yel, classname,
+	  grn, nrm,
 	  grn, nrm,
 	  grn, nrm,
 	  grn, nrm, cyn, flags,
@@ -618,6 +624,27 @@ static void medit_disp_skill_menu(struct descriptor_data *d)
   OLC_MODE(d) = MEDIT_SKILL_MENU;
 }
 
+static void medit_disp_skin_menu(struct descriptor_data *d)
+{
+  struct skin_yield_entry *e;
+  int n = 1;
+
+  write_to_output(d, "\r\n-- Skinning Yields --\r\n");
+
+  if (!d->olc->skin_yields) {
+    write_to_output(d, "  <none>\r\n");
+  } else {
+    for (e = d->olc->skin_yields; e; e = e->next)
+      write_to_output(d, "%2d) obj %d  dc %d\r\n", n++, e->obj_vnum, e->dc);
+  }
+
+  write_to_output(d,
+    "\r\nA) Add yield\r\n"
+    "D) Delete yield\r\n"
+    "Q) Quit to main menu\r\n"
+    "Enter choice: ");
+}
+
 void medit_parse(struct descriptor_data *d, char *arg)
 {
   int i = -1, j;
@@ -640,6 +667,14 @@ void medit_parse(struct descriptor_data *d, char *arg)
     switch (*arg) {
     case 'y':
     case 'Y':
+      /* Commit skinning yields from OLC working copy into the prototype index. */
+      {
+        mob_rnum rmob = real_mobile(OLC_NUM(d));
+        if (rmob != NOBODY) {
+          free_skin_yields(mob_index[rmob].skin_yields);
+          mob_index[rmob].skin_yields = copy_skin_yields(d->olc->skin_yields);
+        }
+      }
       /* Save the mob in memory and to disk. */
       medit_save_internally(d);
       mudlog(CMP, MAX(LVL_BUILDER, GET_INVIS_LEV(d->character)), TRUE, "OLC: %s edits mob %d", GET_NAME(d->character), OLC_NUM(d));
@@ -752,6 +787,11 @@ void medit_parse(struct descriptor_data *d, char *arg)
       string_write(d, &OLC_MOB(d)->player.background, MAX_MOB_DESC, 0, oldtext);
       OLC_VAL(d) = 1;
       return;
+    case 'k':
+    case 'K':
+      medit_disp_skin_menu(d);
+      OLC_MODE(d) = MEDIT_SKIN_MENU;
+      return;
     case 'w':
     case 'W':
       write_to_output(d, "Copy what mob? ");
@@ -780,6 +820,92 @@ void medit_parse(struct descriptor_data *d, char *arg)
     else
       write_to_output(d, "Oops...\r\n");
     return;
+
+  case MEDIT_SKIN_MENU:
+    switch (UPPER(*arg)) {
+      case 'A':
+        write_to_output(d, "Enter object vnum: ");
+        OLC_MODE(d) = MEDIT_SKIN_ADD_VNUM;
+        return;
+
+      case 'D':
+        write_to_output(d, "Delete which entry number? ");
+        OLC_MODE(d) = MEDIT_SKIN_DELETE;
+        return;
+
+      case 'Q':
+        medit_disp_menu(d);
+        OLC_MODE(d) = MEDIT_MAIN_MENU;
+        return;
+
+      default:
+        medit_disp_skin_menu(d);
+        return;
+    }
+    /* not reached */
+
+  case MEDIT_SKIN_ADD_VNUM: {
+    obj_vnum ovnum = (obj_vnum)atoi(arg);
+
+    if (ovnum <= 0) {
+      write_to_output(d, "Invalid object vnum. Enter object vnum: ");
+      return;
+    }
+
+    OLC_VAL(d) = (int)ovnum; /* stash temporarily (note: OLC_VAL is also your dirty flag) */
+    write_to_output(d, "Enter DC required: ");
+    OLC_MODE(d) = MEDIT_SKIN_ADD_DC;
+    return;
+  }
+
+  case MEDIT_SKIN_ADD_DC: {
+    int dc = atoi(arg);
+    struct skin_yield_entry *e;
+
+    CREATE(e, struct skin_yield_entry, 1);
+    e->mob_vnum = OLC_NUM(d);              /* mob vnum being edited */
+    e->obj_vnum = (obj_vnum)OLC_VAL(d);    /* vnum captured in prior step */
+    e->dc = MAX(0, dc);
+    e->next = d->olc->skin_yields;
+    d->olc->skin_yields = e;
+
+    /* Mark the mob as changed */
+    OLC_VAL(d) = TRUE;
+
+    medit_disp_skin_menu(d);
+    OLC_MODE(d) = MEDIT_SKIN_MENU;
+    return;
+  }
+
+  case MEDIT_SKIN_DELETE: {
+    int target = atoi(arg);
+    struct skin_yield_entry *e, *prev = NULL;
+    int n = 1;
+
+    if (target < 1) {
+      medit_disp_skin_menu(d);
+      OLC_MODE(d) = MEDIT_SKIN_MENU;
+      return;
+    }
+
+    for (e = d->olc->skin_yields; e; prev = e, e = e->next, n++) {
+      if (n == target) {
+        if (prev)
+          prev->next = e->next;
+        else
+          d->olc->skin_yields = e->next;
+        free(e);
+
+        /* Mark the mob as changed */
+        OLC_VAL(d) = TRUE;
+        break;
+      }
+    }
+
+    medit_disp_skin_menu(d);
+    OLC_MODE(d) = MEDIT_SKIN_MENU;
+    return;
+  }
 
   case MEDIT_STATS_MENU:
     i=0;

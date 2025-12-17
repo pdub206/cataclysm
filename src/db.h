@@ -258,6 +258,8 @@ void  free_player_index(void);
 void  load_help(FILE *fl, char *name);
 void  new_mobile_data(struct char_data *ch);
 void  equip_mob_from_loadout(struct char_data *mob);
+void free_skin_yields(struct skin_yield_entry *list);
+struct skin_yield_entry *copy_skin_yields(struct skin_yield_entry *src);
 
 zone_rnum real_zone(zone_vnum vnum);
 room_rnum real_room(room_vnum vnum);

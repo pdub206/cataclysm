@@ -1707,6 +1707,40 @@ int roll_d20(void)            { return rand_number(1, 20); }
 int roll_d20_adv(void)        { int a=roll_d20(), b=roll_d20(); return (a>b)?a:b; }
 int roll_d20_disadv(void)     { int a=roll_d20(), b=roll_d20(); return (a<b)?a:b; }
 
+int roll_survival_check(struct char_data *ch, int mode, int *out_d20)
+{
+  int d20, total;
+
+  if (!ch) {
+    if (out_d20) *out_d20 = 0;
+    return 0;
+  }
+
+  if (mode > 0)
+    d20 = roll_d20_adv();
+  else if (mode < 0)
+    d20 = roll_d20_disadv();
+  else
+    d20 = roll_d20();
+
+  if (out_d20)
+    *out_d20 = d20;
+
+  /* Base: d20 + WIS mod */
+  total = d20 + GET_ABILITY_MOD(GET_WIS(ch));
+
+  /*
+   * Proficiency: Fighters/Rangers/Druids are proficient in Survival.
+   * This uses your existing proficiency bonus helper.
+   */
+  if (GET_CLASS(ch) == CLASS_FIGHTER ||
+      GET_CLASS(ch) == CLASS_RANGER ||
+      GET_CLASS(ch) == CLASS_DRUID)
+    total += get_total_proficiency_bonus(ch);
+
+  return total;
+}
+
 /* Percent style (for legacy percent-based skill checks) */
 bool percent_success(int chance_pct) {
   if (chance_pct <= 0) return FALSE;

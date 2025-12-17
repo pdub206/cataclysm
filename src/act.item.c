@@ -1927,3 +1927,124 @@ ACMD(do_raise_lower_hood)
   send_to_char(ch, "You lower your hood.\r\n");
   act("$n lowers $s hood.", FALSE, ch, 0, 0, TO_ROOM);
 }
+
+static void dump_obj_contents_to_room(struct obj_data *container, room_rnum room)
+{
+  struct obj_data *obj, *next_obj;
+
+  if (!container || room == NOWHERE)
+    return;
+
+  for (obj = container->contains; obj; obj = next_obj) {
+    next_obj = obj->next_content;
+    obj_from_obj(obj);
+    obj_to_room(obj, room);
+  }
+}
+
+static int is_corpse_obj(struct obj_data *obj)
+{
+  if (!obj)
+    return 0;
+  return (GET_OBJ_TYPE(obj) == ITEM_CONTAINER && GET_OBJ_VAL(obj, 3) == 1);
+}
+
+ACMD(do_skin)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct obj_data *corpse = NULL;
+  struct skin_yield_entry *y;
+  room_rnum room;
+  mob_vnum mvnum;
+  mob_rnum mrnum;
+  int d20, total, successes = 0;
+  int number = 1;
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch, "Skin what?\r\n");
+    return;
+  }
+
+  /* Prefer room first, then inventory. */
+  number = 1;
+  corpse = get_obj_in_list_vis(ch, arg, &number, world[IN_ROOM(ch)].contents);
+
+  if (!corpse) {
+    number = 1;
+    corpse = get_obj_in_list_vis(ch, arg, &number, ch->carrying);
+  }
+
+  if (!corpse) {
+    send_to_char(ch, "You don't see that here.\r\n");
+    return;
+  }
+
+  if (!is_corpse_obj(corpse)) {
+    send_to_char(ch, "You can't skin that.\r\n");
+    return;
+  }
+
+  room = IN_ROOM(ch);
+  if (room == NOWHERE) {
+    send_to_char(ch, "You can't do that here.\r\n");
+    return;
+  }
+
+  mvnum = corpse->corpse_mob_vnum;
+  if (mvnum <= 0) {
+    send_to_char(ch, "You aren't able to cut anything useful from the corpse.\r\n");
+    dump_obj_contents_to_room(corpse, room);
+    extract_obj(corpse);
+    return;
+  }
+
+  mrnum = real_mobile(mvnum);
+  if (mrnum < 0 || !mob_index[mrnum].skin_yields) {
+    send_to_char(ch, "You aren't able to cut anything useful from the corpse.\r\n");
+    dump_obj_contents_to_room(corpse, room);
+    extract_obj(corpse);
+    return;
+  }
+
+  d20 = dice(1, 20);
+
+  if (d20 == 1) {
+    send_to_char(ch, "You aren't able to cut anything useful from the corpse.\r\n");
+    dump_obj_contents_to_room(corpse, room);
+    extract_obj(corpse);
+    return;
+  }
+
+  total = roll_survival_check(ch, 0, &d20);
+
+  if (d20 == 1) {
+    send_to_char(ch, "You aren't able to cut anything useful from the corpse.\r\n");
+    dump_obj_contents_to_room(corpse, room);
+    extract_obj(corpse);
+    return;
+  }
+
+  /* Evaluate configured yields (if any). */
+  for (y = mob_index[mrnum].skin_yields; y; y = y->next) {
+    if (total >= y->dc) {
+      struct obj_data *o = read_object(y->obj_vnum, VIRTUAL);
+      if (o) {
+        obj_to_room(o, room);
+        successes++;
+      }
+    }
+  }
+
+  if (successes == 0) {
+    send_to_char(ch, "You aren't able to cut anything useful from the corpse.\r\n");
+  } else {
+    act("You skin $p, cutting away anything useful.", FALSE, ch, corpse, 0, TO_CHAR);
+    act("$n skins $p, cutting away anything useful.", FALSE, ch, corpse, 0, TO_ROOM);
+  }
+
+  dump_obj_contents_to_room(corpse, room);
+
+  extract_obj(corpse);
+}

@@ -158,6 +158,7 @@ ACMD(do_put);
 ACMD(do_remove);
 ACMD(do_wear);
 ACMD(do_wield);
+ACMD(do_skin);
 
 /*****************************************************************************
  * Begin Functions and defines for act.movement.c

@@ -13,6 +13,7 @@
 #define _OASIS_H_
 
 #include "utils.h" /* for ACMD macro */
+#include "structs.h"
 
 #define _OASISOLC	0x206   /* 2.0.6 */
 
@@ -110,6 +111,7 @@ struct oasis_olc_data {
   int item_type;
   struct trig_proto_list *script; /* for assigning triggers in [r|o|m]edit*/
   struct help_index_element*help;   /* Hedit uses this */
+  struct skin_yield_entry *skin_yields;
 };
 
 /* Exported globals. */
@@ -293,6 +295,12 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define MEDIT_SAVE_WIS                  36
 #define MEDIT_SAVE_CHA                  37
 #define MEDIT_SKILL_VALUE               38
+
+/* Skinning yield editor */
+#define MEDIT_SKIN_MENU                 39
+#define MEDIT_SKIN_ADD_VNUM             40
+#define MEDIT_SKIN_ADD_DC               41
+#define MEDIT_SKIN_DELETE               42
 
 /* Submodes of SEDIT connectedness. */
 #define SEDIT_MAIN_MENU              	0

@@ -238,6 +238,8 @@ static void make_corpse(struct char_data *ch)
 
   corpse = create_obj();
 
+  corpse->corpse_mob_vnum = IS_NPC(ch) ? GET_MOB_VNUM(ch) : 0;
+
   corpse->item_number = NOTHING;
   IN_ROOM(corpse) = NOWHERE;
   corpse->name = strdup("corpse");
