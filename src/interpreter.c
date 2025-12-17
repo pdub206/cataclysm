@@ -187,6 +187,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "kick"     , "ki"      , POS_FIGHTING, do_kick     , 1, 0 },
 
   { "look"     , "l"       , POS_RESTING , do_look     , 0, SCMD_LOOK },
+  { "lower"    , "low"     , POS_SITTING , do_raise_lower_hood, 0, SCMD_LOWER_HOOD },
   { "last"     , "last"    , POS_DEAD    , do_last     , LVL_GOD, 0 },
   { "leave"    , "lea"     , POS_STANDING, do_leave    , 0, 0 },
   { "list"     , "lis"     , POS_STANDING, do_not_here , 0, 0 },
@@ -246,6 +247,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "qui"      , "qui"     , POS_DEAD    , do_quit     , 0, 0 },
   { "quit"     , "quit"    , POS_DEAD    , do_quit     , 0, SCMD_QUIT },
 
+  { "raise"    , "rai"     , POS_SITTING , do_raise_lower_hood, 0, SCMD_RAISE_HOOD },
   { "reply"    , "r"       , POS_SLEEPING, do_reply    , LVL_IMMORT, 0 },
   { "rest"     , "res"     , POS_RESTING , do_rest     , 0, 0 },
   { "read"     , "rea"     , POS_RESTING , do_look     , 0, SCMD_READ },
@@ -267,7 +269,7 @@ cpp_extern const struct command_info cmd_info[] = {
 
   { "say"      , "s"       , POS_RESTING , do_say      , 0, 0 },
   { "score"    , "sc"      , POS_DEAD    , do_score    , 0, 0 },
-{ "scan"     , "sca"     , POS_RESTING , do_scan     , 0, 0 },
+  { "scan"     , "sca"     , POS_RESTING , do_scan     , 0, 0 },
   { "scopy"    , "scopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_SEDIT },
   { "sit"      , "si"      , POS_RESTING , do_sit      , 0, 0 },
   { "'"        , "'"       , POS_RESTING , do_say      , 0, 0 },

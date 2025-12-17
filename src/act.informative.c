@@ -803,12 +803,14 @@ static void look_in_obj(struct char_data *ch, char *arg)
                  FIND_OBJ_EQUIP, ch, &dummy, &obj))) {
     send_to_char(ch, "There doesn't seem to be %s %s here.\r\n", AN(arg), arg);
   } else if ((GET_OBJ_TYPE(obj) != ITEM_DRINKCON) &&
-         (GET_OBJ_TYPE(obj) != ITEM_FOUNTAIN) &&
-         (GET_OBJ_TYPE(obj) != ITEM_CONTAINER))
+             (GET_OBJ_TYPE(obj) != ITEM_FOUNTAIN) &&
+             !obj_is_storage(obj)) {
     send_to_char(ch, "There's nothing inside that!\r\n");
-  else {
-    if (GET_OBJ_TYPE(obj) == ITEM_CONTAINER) {
-      if (OBJVAL_FLAGGED(obj, CONT_CLOSED) && (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE)))
+  } else {
+    /* Storage-like objects: containers + storage-capable worn items */
+    if (obj_is_storage(obj) && GET_OBJ_TYPE(obj) != ITEM_DRINKCON && GET_OBJ_TYPE(obj) != ITEM_FOUNTAIN) {
+      if (obj_storage_is_closed(obj) &&
+          (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE)))
         send_to_char(ch, "It is closed.\r\n");
       else {
         /* Choose a label for the container:
@@ -817,11 +819,31 @@ static void look_in_obj(struct char_data *ch, char *arg)
          *  - Otherwise, fall back to the first keyword (fname(obj->name))
          */
         const char *label;
+        const char *sd;
 
-        if (GET_OBJ_VAL(obj, 3) == 1 && obj->short_description && *obj->short_description)
+        /* Containers: keep corpse behavior exactly as-is */
+        if (GET_OBJ_TYPE(obj) == ITEM_CONTAINER &&
+            GET_OBJ_VAL(obj, 3) == 1 &&
+            obj->short_description && *obj->short_description) {
           label = obj->short_description;
-        else
+        }
+        /* WORN storage: use short_description, strip leading article */
+        else if (GET_OBJ_TYPE(obj) == ITEM_WORN &&
+                obj->short_description && *obj->short_description) {
+
+          sd = obj->short_description;
+
+          if (!strn_cmp(sd, "a ", 2))
+            label = sd + 2;
+          else if (!strn_cmp(sd, "an ", 3))
+            label = sd + 3;
+          else
+            label = sd;
+        }
+        /* Fallback */
+        else {
           label = fname(obj->name);
+        }
 
         send_to_char(ch, "%s", label);
 

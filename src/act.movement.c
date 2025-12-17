@@ -785,6 +785,32 @@ static int ok_pick(struct char_data *ch, obj_vnum keynum, int pickproof, int scm
 #define DOOR_KEY(ch, obj, door)	((obj) ? (GET_OBJ_VAL(obj, 2)) : \
     (EXIT(ch, door)->key))
 
+/* For worn items like backpacks, cloaks, etc */
+static void do_worn_openclose(struct char_data *ch, struct obj_data *obj, int subcmd)
+{
+  if (subcmd == SCMD_OPEN) {
+    if (GET_OBJ_VAL(obj, WORN_IS_CLOSED) == 0) {
+      send_to_char(ch, "But it's currently open!\r\n");
+      return;
+    }
+    GET_OBJ_VAL(obj, WORN_IS_CLOSED) = 0;
+    send_to_char(ch, "%s", CONFIG_OK);
+    act("$n opens $p.", FALSE, ch, obj, 0, TO_ROOM);
+    return;
+  }
+
+  if (subcmd == SCMD_CLOSE) {
+    if (GET_OBJ_VAL(obj, WORN_IS_CLOSED) == 1) {
+      send_to_char(ch, "But it's already closed!\r\n");
+      return;
+    }
+    GET_OBJ_VAL(obj, WORN_IS_CLOSED) = 1;
+    send_to_char(ch, "%s", CONFIG_OK);
+    act("$n closes $p.", FALSE, ch, obj, 0, TO_ROOM);
+    return;
+  }
+}
+
 ACMD(do_gen_door)
 {
   int door = -1;
@@ -799,8 +825,22 @@ ACMD(do_gen_door)
     return;
   }
   two_arguments(argument, type, dir);
-  if (!generic_find(type, FIND_OBJ_INV | FIND_OBJ_ROOM, ch, &victim, &obj))
+  if (!generic_find(type, FIND_OBJ_INV | FIND_OBJ_ROOM | FIND_OBJ_EQUIP, ch, &victim, &obj))
     door = find_door(ch, type, dir, cmd_door[subcmd]);
+
+  if (obj && GET_OBJ_TYPE(obj) == ITEM_WORN &&
+      GET_OBJ_VAL(obj, WORN_CAN_OPEN_CLOSE) == 1) {
+
+    if (subcmd == SCMD_OPEN || subcmd == SCMD_CLOSE) {
+      do_worn_openclose(ch, obj, subcmd);
+      return;
+    }
+
+    /* lock/unlock/pick on closable worn items: treat as not applicable */
+    /* fall through to door search by discarding obj */
+    obj = NULL;
+    door = find_door(ch, type, dir, cmd_door[subcmd]);
+  }
 
   if ((obj) && (GET_OBJ_TYPE(obj) != ITEM_CONTAINER)) {
     obj = NULL;

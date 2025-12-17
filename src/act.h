@@ -144,6 +144,11 @@ ACMD(do_eat);
 ACMD(do_pour);
 #define SCMD_POUR  0
 #define SCMD_FILL  1
+/* do_raise_lower_hood */
+ACMD(do_raise_lower_hood);
+#define SCMD_RAISE_HOOD  0
+#define SCMD_LOWER_HOOD  1
+
 /* functions without subcommands */
 ACMD(do_drink);
 ACMD(do_get);
@@ -153,7 +158,6 @@ ACMD(do_put);
 ACMD(do_remove);
 ACMD(do_wear);
 ACMD(do_wield);
-
 
 /*****************************************************************************
  * Begin Functions and defines for act.movement.c

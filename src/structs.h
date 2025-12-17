@@ -444,8 +444,9 @@
 #define ITEM_ANTI_DRUID       19   /**< Not usable by druids */
 #define ITEM_NOSELL           20   /**< Shopkeepers won't touch it */
 #define ITEM_QUEST            21   /**< Item is a quest item         */
+#define ITEM_HOOD_UP          22   /**< WORN item hood is currently up */
 /** Total number of item flags */
-#define NUM_ITEM_FLAGS    22
+#define NUM_ITEM_FLAGS        23
 
 /* Modifier constants used with obj affects ('A' fields) */
 #define APPLY_NONE              0	/**< No effect			*/
@@ -475,7 +476,7 @@
 #define APPLY_SAVE_CHA         24  /**< Apply to CHA saving throws */
 
 /** Total number of applies */
-#define NUM_APPLIES   25
+#define NUM_APPLIES            25
 
 /* Equals the total number of SAVING_* defines in spells.h */
 #define NUM_OF_SAVING_THROWS  5
@@ -485,6 +486,13 @@
 #define CONT_PICKPROOF      (1 << 1)	/**< Container is pickproof	*/
 #define CONT_CLOSED         (1 << 2)	/**< Container is closed		*/
 #define CONT_LOCKED         (1 << 3)	/**< Container is locked		*/
+
+/* ITEM_WORN value[] layout */
+#define WORN_CAN_OPEN_CLOSE   0  /* 0/1: supports open/close */
+#define WORN_CAN_HOOD         1  /* 0/1: supports hood up/down */
+#define WORN_IS_CLOSED        2  /* runtime: 0/1 */
+#define WORN_CAPACITY         3  /* max weight/units it can hold; 0 = cannot hold */
+#define WORN_HOOD_UP_STATE    4  /* runtime 0/1, persisted */
 
 /* Some different kind of liquids for use in values of drink containers */
 #define LIQ_WATER      0   /**< Liquid type water */

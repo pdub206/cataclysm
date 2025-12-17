@@ -50,6 +50,7 @@ static void wear_message(struct char_data *ch, struct obj_data *obj, int where);
 static void perform_put(struct char_data *ch, struct obj_data *obj, struct obj_data *cont)
 {
   long object_id = obj_script_id(obj);
+  int cap = 0;
 
   if (!drop_otrigger(obj, ch))
     return;
@@ -57,8 +58,26 @@ static void perform_put(struct char_data *ch, struct obj_data *obj, struct obj_d
   if (!has_obj_by_uid_in_lookup_table(object_id)) /* object might be extracted by drop_otrigger */
     return;
 
-  if ((GET_OBJ_VAL(cont, 0) > 0) &&
-      (GET_OBJ_WEIGHT(cont) + GET_OBJ_WEIGHT(obj) > GET_OBJ_VAL(cont, 0)))
+  /* --- Storage target validation (containers + storage WORN) --- */
+  if (!obj_is_storage(cont)) {
+    act("$P is not a container.", FALSE, ch, obj, cont, TO_CHAR);
+    return;
+  }
+
+  /* Prevent putting items into closed storage (matches container UX). */
+  if (obj_storage_is_closed(cont) &&
+      (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE))) {
+    act("$P seems to be closed.", FALSE, ch, obj, cont, TO_CHAR);
+    return;
+  }
+
+  /* Capacity: containers use value[0]; worn storage uses WORN_CAPACITY. */
+  if (GET_OBJ_TYPE(cont) == ITEM_WORN)
+    cap = GET_OBJ_VAL(cont, WORN_CAPACITY);
+  else
+    cap = GET_OBJ_VAL(cont, 0);
+
+  if ((cap > 0) && (GET_OBJ_WEIGHT(cont) + GET_OBJ_WEIGHT(obj) > cap))
     act("$p won't fit in $P.", FALSE, ch, obj, cont, TO_CHAR);
   else if (OBJ_FLAGGED(obj, ITEM_NODROP) && IN_ROOM(cont) != NOWHERE)
     act("You can't get $p out of your hand.", FALSE, ch, obj, NULL, TO_CHAR);
@@ -142,12 +161,13 @@ ACMD(do_put)
     generic_find(thecont, FIND_OBJ_INV | FIND_OBJ_ROOM | FIND_OBJ_EQUIP, ch, &tmp_char, &cont);
     if (!cont)
       send_to_char(ch, "You don't see %s %s here.\r\n", AN(thecont), thecont);
-    else if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER) {
-      /* Handle container logic */
-      if (OBJVAL_FLAGGED(cont, CONT_CLOSED) && (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE)))
+    else if (obj_is_storage(cont)) {
+      /* Handle container-like logic (containers + storage WORN) */
+      if (obj_storage_is_closed(cont) &&
+          (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE))) {
         send_to_char(ch, "You'd better open it first!\r\n");
-      else {
-        if (obj_dotmode == FIND_INDIV) {	/* put <obj> <container> */
+      } else {
+        if (obj_dotmode == FIND_INDIV) {  /* put <obj> <container> */
           if (!(obj = get_obj_in_list_vis(ch, theobj, NULL, ch->carrying)))
             send_to_char(ch, "You aren't carrying %s %s.\r\n", AN(theobj), theobj);
           else if (obj == cont && howmany == 1)
@@ -157,7 +177,7 @@ ACMD(do_put)
               next_obj = obj->next_content;
               if (obj != cont) {
                 howmany--;
-                perform_put(ch, obj, cont);
+                perform_put(ch, obj, cont);  /* must be updated to accept storage WORN */
               }
               obj = get_obj_in_list_vis(ch, theobj, NULL, next_obj);
             }
@@ -168,13 +188,13 @@ ACMD(do_put)
             if (obj != cont && CAN_SEE_OBJ(ch, obj) &&
                 (obj_dotmode == FIND_ALL || isname(theobj, obj->name))) {
               found = 1;
-              perform_put(ch, obj, cont);
+              perform_put(ch, obj, cont);  /* must be updated to accept storage WORN */
             }
           }
           if (!found)
-            send_to_char(ch, "You don't seem to have %s %s.\r\n", 
-                         obj_dotmode == FIND_ALL ? "any" : "any", 
-                         obj_dotmode == FIND_ALL ? "items" : theobj);
+            send_to_char(ch, "You don't seem to have %s %s.\r\n",
+                        obj_dotmode == FIND_ALL ? "any" : "any",
+                        obj_dotmode == FIND_ALL ? "items" : theobj);
         }
       }
     } else if (GET_OBJ_TYPE(cont) == ITEM_FURNITURE) {
@@ -273,14 +293,21 @@ static void perform_get_from_container(struct char_data *ch, struct obj_data *ob
 }
 
 void get_from_container(struct char_data *ch, struct obj_data *cont,
-			     char *arg, int mode, int howmany)
+                             char *arg, int mode, int howmany)
 {
   struct obj_data *obj, *next_obj;
   int obj_dotmode, found = 0;
 
   obj_dotmode = find_all_dots(arg);
 
-  if (OBJVAL_FLAGGED(cont, CONT_CLOSED) && (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE)))
+  /* Allow both ITEM_CONTAINER and storage-capable ITEM_WORN */
+  if (!obj_is_storage(cont)) {
+    act("$p is not a container.", FALSE, ch, cont, 0, TO_CHAR);
+    return;
+  }
+
+  if (obj_storage_is_closed(cont) &&
+      (GET_LEVEL(ch) < LVL_IMMORT || !PRF_FLAGGED(ch, PRF_NOHASSLE)))
     act("$p is closed.", FALSE, ch, cont, 0, TO_CHAR);
   else if (obj_dotmode == FIND_INDIV) {
     if (!(obj = get_obj_in_list_vis(ch, arg, NULL, cont->contains))) {
@@ -304,19 +331,19 @@ void get_from_container(struct char_data *ch, struct obj_data *cont,
     for (obj = cont->contains; obj; obj = next_obj) {
       next_obj = obj->next_content;
       if (CAN_SEE_OBJ(ch, obj) &&
-	  (obj_dotmode == FIND_ALL || isname(arg, obj->name))) {
-	found = 1;
-	perform_get_from_container(ch, obj, cont, mode);
+          (obj_dotmode == FIND_ALL || isname(arg, obj->name))) {
+        found = 1;
+        perform_get_from_container(ch, obj, cont, mode);
       }
     }
     if (!found) {
       if (obj_dotmode == FIND_ALL)
-	act("$p seems to be empty.", FALSE, ch, cont, 0, TO_CHAR);
+        act("$p seems to be empty.", FALSE, ch, cont, 0, TO_CHAR);
       else {
         char buf[MAX_STRING_LENGTH];
 
-	snprintf(buf, sizeof(buf), "You can't seem to find any %ss in $p.", arg);
-	act(buf, FALSE, ch, cont, 0, TO_CHAR);
+        snprintf(buf, sizeof(buf), "You can't seem to find any %ss in $p.", arg);
+        act(buf, FALSE, ch, cont, 0, TO_CHAR);
       }
     }
   }
@@ -409,11 +436,11 @@ ACMD(do_get)
     if (cont_dotmode == FIND_INDIV) {
       mode = generic_find(arg2, FIND_OBJ_INV | FIND_OBJ_ROOM | FIND_OBJ_EQUIP, ch, &tmp_char, &cont);
       if (!cont)
-	send_to_char(ch, "You don't have %s %s.\r\n", AN(arg2), arg2);
-      else if (GET_OBJ_TYPE(cont) != ITEM_CONTAINER && GET_OBJ_TYPE(cont) != ITEM_FURNITURE)
-	act("$p is not a container or furniture.", FALSE, ch, cont, 0, TO_CHAR);
+	      send_to_char(ch, "You don't have %s %s.\r\n", AN(arg2), arg2);
+      else if (!obj_is_storage(cont) && GET_OBJ_TYPE(cont) != ITEM_FURNITURE)
+        act("$p is not a container or furniture.", FALSE, ch, cont, 0, TO_CHAR);
       else
-	get_from_container(ch, cont, arg1, mode, amount);
+        get_from_container(ch, cont, arg1, mode, amount);  /* must be updated */
     } else {
       if (cont_dotmode == FIND_ALLDOT && !*arg2) {
 	send_to_char(ch, "Get from all of what?\r\n");
@@ -421,7 +448,7 @@ ACMD(do_get)
       }
       for (cont = ch->carrying; cont; cont = cont->next_content)
         if (CAN_SEE_OBJ(ch, cont) && (cont_dotmode == FIND_ALL || isname(arg2, cont->name))) {
-          if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER || GET_OBJ_TYPE(cont) == ITEM_FURNITURE) {
+          if (obj_is_storage(cont) || GET_OBJ_TYPE(cont) == ITEM_FURNITURE) {
             found = 1;
             get_from_container(ch, cont, arg1, FIND_OBJ_INV, amount);
           } else if (cont_dotmode == FIND_ALLDOT) {
@@ -452,7 +479,7 @@ ACMD(do_get)
       for (cont = world[IN_ROOM(ch)].contents; cont; cont = cont->next_content)
 	if (CAN_SEE_OBJ(ch, cont) &&
 	    (cont_dotmode == FIND_ALL || isname(arg2, cont->name))) {
-	  if (GET_OBJ_TYPE(cont) == ITEM_CONTAINER || GET_OBJ_TYPE(cont) == ITEM_FURNITURE) {
+	  if (obj_is_storage(cont) || GET_OBJ_TYPE(cont) == ITEM_FURNITURE) {
 	    get_from_container(ch, cont, arg1, FIND_OBJ_ROOM, amount);
 	    found = 1;
 	  } else if (cont_dotmode == FIND_ALLDOT) {
@@ -1813,4 +1840,90 @@ ACMD(do_remove)
     else
       perform_remove(ch, i);
   }
+}
+
+ACMD(do_raise_lower_hood)
+{
+  char arg1[MAX_INPUT_LENGTH], arg2[MAX_INPUT_LENGTH];
+  struct obj_data *obj = NULL;
+  int j;
+
+  two_arguments(argument, arg1, arg2);
+
+  /* Must be exactly: "raise hood" or "lower hood" */
+  if (!*arg1 || str_cmp(arg1, "hood")) {
+    send_to_char(ch, "Usage: %s hood\r\n", (subcmd == SCMD_RAISE_HOOD) ? "raise" : "lower");
+    return;
+  }
+
+  /* Find a hooded worn item in equipment. Prefer:
+     - for lower: one that is currently up
+     - for raise: one that is currently down
+  */
+  if (subcmd == SCMD_LOWER_HOOD) {
+    for (j = 0; j < NUM_WEARS; j++) {
+      obj = GET_EQ(ch, j);
+      if (!obj) continue;
+      if (GET_OBJ_TYPE(obj) != ITEM_WORN) continue;
+      if (GET_OBJ_VAL(obj, WORN_CAN_HOOD) != 1) continue;
+      if (IS_SET_AR(GET_OBJ_EXTRA(obj), ITEM_HOOD_UP))
+        break;
+      obj = NULL;
+    }
+  }
+
+  if (!obj && subcmd == SCMD_RAISE_HOOD) {
+    for (j = 0; j < NUM_WEARS; j++) {
+      obj = GET_EQ(ch, j);
+      if (!obj) continue;
+      if (GET_OBJ_TYPE(obj) != ITEM_WORN) continue;
+      if (GET_OBJ_VAL(obj, WORN_CAN_HOOD) != 1) continue;
+      if (!IS_SET_AR(GET_OBJ_EXTRA(obj), ITEM_HOOD_UP))
+        break;
+      obj = NULL;
+    }
+  }
+
+  /* If we didn’t find an ideal target, fall back to any hooded worn item. */
+  if (!obj) {
+    for (j = 0; j < NUM_WEARS; j++) {
+      obj = GET_EQ(ch, j);
+      if (!obj) continue;
+      if (GET_OBJ_TYPE(obj) != ITEM_WORN) continue;
+      if (GET_OBJ_VAL(obj, WORN_CAN_HOOD) != 1) continue;
+      break;
+    }
+    if (j >= NUM_WEARS) obj = NULL;
+  }
+
+  if (!obj) {
+    send_to_char(ch, "You aren't wearing anything with a hood.\r\n");
+    return;
+  }
+
+  if (subcmd == SCMD_RAISE_HOOD) {
+    if (GET_OBJ_VAL(obj, WORN_HOOD_UP_STATE) == 1) {
+      send_to_char(ch, "Your hood is already up.\r\n");
+      return;
+    }
+
+    GET_OBJ_VAL(obj, WORN_HOOD_UP_STATE) = 1;
+    SET_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_HOOD_UP); /* optional mirror */
+
+    send_to_char(ch, "You raise your hood.\r\n");
+    act("$n raises $s hood.", FALSE, ch, 0, 0, TO_ROOM);
+    return;
+  }
+
+  /* SCMD_LOWER_HOOD */
+  if (GET_OBJ_VAL(obj, WORN_HOOD_UP_STATE) == 0) {
+    send_to_char(ch, "Your hood is already down.\r\n");
+    return;
+  }
+
+  GET_OBJ_VAL(obj, WORN_HOOD_UP_STATE) = 0;
+  REMOVE_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_HOOD_UP); /* optional mirror */
+
+  send_to_char(ch, "You lower your hood.\r\n");
+  act("$n lowers $s hood.", FALSE, ch, 0, 0, TO_ROOM);
 }

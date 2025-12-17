@@ -992,6 +992,40 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       }
     }
 
+    /* --- Worn-specific semantics (clothing, rings, etc) --- */
+    if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_WORN) {
+
+      /* oval 1: closable (0/1) */
+      if (i == WORN_CAN_OPEN_CLOSE) {
+        if (number != 0 && number != 1) {
+          write_to_output(d, "Enter 0 or 1 to set closable: ");
+          return; /* stay in OEDIT_VALUE_X */
+        }
+        GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+        OLC_DIRTY(d) = 1;
+        oedit_disp_values_menu(d);
+        return;
+      }
+
+      /* oval 2: hooded (0/1) */
+      if (i == WORN_CAN_HOOD) {
+        if (number != 0 && number != 1) {
+          write_to_output(d, "Enter 0 or 1 to set hooded: ");
+          return; /* stay in OEDIT_VALUE_X */
+        }
+        GET_OBJ_VAL(OLC_OBJ(d), i) = number;
+
+        /* If it can no longer have a hood, force hood state down. */
+        if (number == 0) {
+          REMOVE_BIT_AR(GET_OBJ_EXTRA(OLC_OBJ(d)), ITEM_HOOD_UP);
+        }
+
+        OLC_DIRTY(d) = 1;
+        oedit_disp_values_menu(d);
+        return;
+      }
+    }
+
     /* --- Existing special cases (weapon/liquid/spells/container) remain here --- */
     if (GET_OBJ_TYPE(OLC_OBJ(d)) == ITEM_WEAPON && i == 2) {
       if (number < 0 || number >= NUM_ATTACK_TYPES) {

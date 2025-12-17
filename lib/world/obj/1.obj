@@ -175,7 +175,7 @@ A small bag made of cloth lies here.~
 15 0 0 0
 1 25 0 0 0
 #122
-large bag~
+bag large~
 a large bag~
 A large bag made of cloth is lying here.~
 ~
@@ -563,7 +563,7 @@ to form a receptacle that can hold water.
 ~
 17 0 0 0 0 ap 0 0 0 0 0 0 0
 4 4 0 0
-1 40 0 0 0
+9 40 0 0 0
 #161
 waterpouch pouch leather~
 a leather waterpouch~
@@ -574,5 +574,17 @@ prevent water spilling out.
 ~
 17 0 0 0 0 ap 0 0 0 0 0 0 0
 4 4 0 0
-1 40 0 0 0
+9 40 0 0 0
+#162
+cloak dark hooded~
+a dark, hooded cloak~
+A piece of dark fabric lays here in a heap.~
+   This piece of fabric is made of linen and has been dyed a dark, blackish-blue
+color.  It has a few small pockets sewn inside and a clasp near the neck to
+close it.  A large hood has been attached, allowing the wearer to partially
+cover their face.
+~
+11 0 0 0 0 al 0 0 0 0 0 0 0
+1 1 0 10
+1 10 0 0 0
 $~

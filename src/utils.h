@@ -80,6 +80,8 @@ char *right_trim_whitespace(const char *string);
 void remove_from_string(char *string, const char *to_remove);
 const char *const *obj_value_labels(int item_type);
 const char *get_char_sdesc(const struct char_data *ch);
+int obj_is_storage(const struct obj_data *obj);
+int obj_storage_is_closed(const struct obj_data *obj);
 
 /* 5e system helpers */
 

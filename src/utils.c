@@ -478,6 +478,11 @@ static const char *const furniture_val_labels[NUM_OBJ_VAL_POSITIONS] = {
   "Value[4]", "Value[5]", "Value[6]", "Value[7]"
 };
 
+static const char *const worn_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "closable", "hooded", "is_closed", "capacity",
+  "hood_raised", "Value[5]", "Value[6]", "Value[7]"
+};
+
 static const char *const generic_val_labels[NUM_OBJ_VAL_POSITIONS] = {
   "Value[0]", "Value[1]", "Value[2]", "Value[3]",
   "Value[4]", "Value[5]", "Value[6]", "Value[7]"
@@ -494,6 +499,7 @@ const char *const *obj_value_labels(int item_type)
     case ITEM_WEAPON:    return weapon_val_labels;
     case ITEM_ARMOR:     return armor_val_labels;
     case ITEM_CONTAINER: return container_val_labels;
+    case ITEM_WORN:      return worn_val_labels;
     case ITEM_DRINKCON:
     case ITEM_FOUNTAIN:  return drink_val_labels;
     case ITEM_FOOD:      return food_val_labels;
@@ -1644,10 +1650,42 @@ void remove_from_string(char *string, const char *to_remove)
     }
 }
 
+static struct obj_data *find_raised_hood_item(const struct char_data *ch)
+{
+  int j;
+
+  if (!ch)
+    return NULL;
+
+  for (j = 0; j < NUM_WEARS; j++) {
+    struct obj_data *obj = GET_EQ((struct char_data *)ch, j); /* GET_EQ not const-safe */
+    if (!obj)
+      continue;
+
+    if (GET_OBJ_TYPE(obj) == ITEM_WORN &&
+        GET_OBJ_VAL(obj, WORN_CAN_HOOD) == 1 &&
+        GET_OBJ_VAL(obj, WORN_HOOD_UP_STATE) == 1) {
+      return obj;
+    }
+  }
+
+  return NULL;
+}
+
 const char *get_char_sdesc(const struct char_data *ch)
 {
+  static char buf[MAX_STRING_LENGTH];
+  struct obj_data *hood;
+
   if (!ch)
     return "someone";
+
+  /* Hood override: temporary display only (does not mutate stored sdesc). */
+  hood = find_raised_hood_item(ch);
+  if (hood && hood->short_description && *hood->short_description) {
+    snprintf(buf, sizeof(buf), "the figure in %s", hood->short_description);
+    return buf;
+  }
 
   if (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch))
     return GET_SHORT_DESC(ch);
@@ -1952,4 +1990,32 @@ struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src) {
     else { tail->next = n; tail = n; }
   }
   return head;
+}
+
+/* Worn item helpers */
+int obj_is_storage(const struct obj_data *obj)
+{
+  if (!obj) return 0;
+
+  if (GET_OBJ_TYPE(obj) == ITEM_CONTAINER)
+    return 1;
+
+  if (GET_OBJ_TYPE(obj) == ITEM_WORN && GET_OBJ_VAL(obj, WORN_CAPACITY) > 0)
+    return 1;
+
+  return 0;
+}
+
+int obj_storage_is_closed(const struct obj_data *obj)
+{
+  if (!obj) return 0;
+
+  if (GET_OBJ_TYPE(obj) == ITEM_CONTAINER)
+    return IS_SET(GET_OBJ_VAL(obj, 1), CONT_CLOSED);
+
+  if (GET_OBJ_TYPE(obj) == ITEM_WORN &&
+      GET_OBJ_VAL(obj, WORN_CAN_OPEN_CLOSE) == 1)
+    return (GET_OBJ_VAL(obj, WORN_IS_CLOSED) == 1);
+
+  return 0;
 }
