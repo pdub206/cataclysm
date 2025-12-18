@@ -1733,7 +1733,6 @@ static void parse_enhanced_mob(FILE *mob_f, int i, int nr)
       exit(1);
     }
 
-    /* --- Begin NPC Skill Extension --- */
     else if (!strncmp(line, "Skill", 5)) {
       int snum = 0, sval = 0;
       if (sscanf(line, "Skill %d %d", &snum, &sval) == 2) {
@@ -1745,7 +1744,22 @@ static void parse_enhanced_mob(FILE *mob_f, int i, int nr)
         log("SYSERR: Malformed Skill line in mob #%d: '%s'", nr, line);
       continue;
     }
-    /* --- End NPC Skill Extension --- */
+
+    else if (!strncmp(line, "AtkT", 4)) {
+      int atkt = 0;
+
+      if (sscanf(line, "AtkT %d", &atkt) == 1) {
+
+        /* If stored as TYPE_* (e.g., 304), convert to index (e.g., 4). */
+        if (atkt >= TYPE_HIT && atkt < (TYPE_HIT + NUM_ATTACK_TYPES))
+          atkt -= TYPE_HIT;
+
+        /* Store only the index. */
+        if (atkt >= 0 && atkt < NUM_ATTACK_TYPES)
+          mob_proto[i].mob_specials.attack_type = atkt;
+      }
+      continue;
+    }
 
     else
       parse_espec(line, i, nr); /* interpret Str:, Dex:, Save*, etc. */

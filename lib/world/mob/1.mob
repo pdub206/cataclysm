@@ -13,6 +13,8 @@ B
 
 
 
+
+
 ~
 6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
@@ -58,6 +60,8 @@ B
 
 
 
+
+
 ~
 6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
@@ -100,6 +104,8 @@ B
 
 
 
+
+
 ~
 10 0 0 0 0 0 0 0 0 E
 1 3d12+60
@@ -121,6 +127,8 @@ descending to just above her shoulders.  Her eyes are a light blue color and
 appear slightly bloodshot.
 ~
 B
+
+
 
 
 
@@ -151,10 +159,19 @@ Its tail is four, perhaps five inches long and grey in color.  Both hindlings
 appear thick and ready to propel the animal if it feels threatened.
 ~
 B
+
+
 It's a rat.
 ~
 8 0 0 0 0 0 0 0 0 E
 1 0d0+10
 8 8 2
+Str: 6
+Dex: 10
+Int: 4
+Wis: 4
+Con: 6
+Cha: 3
+AtkT 4
 E
 $

@@ -465,6 +465,10 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
       fprintf(fd, "Skill %d %d\n", s, mob->mob_specials.skills[s]);
   }
 
+  /* Write attack type (if set) */
+  if (mob->mob_specials.attack_type > 0)
+    fprintf(fd, "AtkT %d\n", mob->mob_specials.attack_type);
+
   /* Single proper terminator */
   fprintf(fd, "E\n");
 
