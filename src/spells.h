@@ -120,6 +120,21 @@
 #define SKILL_STEALTH               148 /* Shared stealth skill for hide/sneak */
 #define SKILL_LISTEN                149 /* Anchor for the listen affect */
 #define SKILL_SLEIGHT_OF_HAND       150 /* Sleight of hand for palm/slip */
+#define SKILL_ACROBATICS            151 /* DEX */
+#define SKILL_ANIMAL_HANDLING       152 /* WIS */
+#define SKILL_ARCANA                153 /* INT */
+#define SKILL_ATHLETICS             154 /* STR */
+#define SKILL_DECEPTION             155 /* CHA */
+#define SKILL_HISTORY               156 /* INT */
+#define SKILL_INSIGHT               157 /* WIS */
+#define SKILL_INTIMIDATION          158 /* CHA */
+#define SKILL_INVESTIGATION         159 /* INT */
+#define SKILL_MEDICINE              160 /* WIS */
+#define SKILL_NATURE                161 /* INT */
+#define SKILL_PERFORMANCE           162 /* CHA */
+#define SKILL_PERSUASION            163 /* CHA */
+#define SKILL_RELIGION              164 /* INT */
+#define SKILL_SURVIVAL              165 /* WIS */
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 

@@ -938,4 +938,20 @@ void mag_assign_spells(void) {
   skillo(SKILL_STEALTH, "stealth");
   skillo(SKILL_LISTEN, "listen");
   skillo(SKILL_SLEIGHT_OF_HAND, "sleight of hand");
+  skillo(SKILL_ACROBATICS, "acrobatics");
+  skillo(SKILL_ANIMAL_HANDLING, "animal handling");
+  skillo(SKILL_ARCANA, "arcana");
+  skillo(SKILL_ATHLETICS, "athletics");
+  skillo(SKILL_DECEPTION, "deception");
+  skillo(SKILL_HISTORY, "history");
+  skillo(SKILL_INSIGHT, "insight");
+  skillo(SKILL_INTIMIDATION, "intimidation");
+  skillo(SKILL_INVESTIGATION, "investigation");
+  skillo(SKILL_MEDICINE, "medicine");
+  skillo(SKILL_NATURE, "nature");
+  skillo(SKILL_PERFORMANCE, "performance");
+  skillo(SKILL_PERSUASION, "persuasion");
+  skillo(SKILL_RELIGION, "religion");
+  skillo(SKILL_SURVIVAL, "survival");
+
 }

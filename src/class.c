@@ -311,6 +311,9 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SPELL_ENCHANT_WEAPON, 5);
     SET_SKILL(ch, SPELL_CLONE, 5);
     SET_SKILL(ch, SKILL_UNARMED, 5);
+    SET_SKILL(ch, SKILL_ARCANA, 5);
+    SET_SKILL(ch, SKILL_HISTORY, 5);
+    SET_SKILL(ch, SKILL_INSIGHT, 5);
     break;
 
   case CLASS_CLERIC:
@@ -346,6 +349,9 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SPELL_GROUP_HEAL, 5);
     SET_SKILL(ch, SPELL_REMOVE_CURSE, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_ACROBATICS, 5);
+    SET_SKILL(ch, SKILL_ARCANA, 5);
+    SET_SKILL(ch, SKILL_RELIGION, 5);
     break;
 
   case CLASS_ROGUE:
@@ -359,6 +365,9 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ACROBATICS, 5);
+    SET_SKILL(ch, SKILL_DECEPTION, 5);
+    SET_SKILL(ch, SKILL_INVESTIGATION, 5);
     break;
 
   case CLASS_FIGHTER:
@@ -372,6 +381,9 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_BLUDGEONING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
     SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ATHLETICS, 5);
+    SET_SKILL(ch, SKILL_INTIMIDATION, 5);
+    SET_SKILL(ch, SKILL_SURVIVAL, 5);
     break;
 
   case CLASS_BARBARIAN:
@@ -383,6 +395,8 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_BLUDGEONING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ATHLETICS, 5);
+    SET_SKILL(ch, SKILL_INTIMIDATION, 5);
     break;
 
   case CLASS_RANGER:
@@ -396,6 +410,11 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
     SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_NATURE, 5);
+    SET_SKILL(ch, SKILL_ANIMAL_HANDLING, 5);
+    SET_SKILL(ch, SKILL_SURVIVAL, 5);
+    SET_SKILL(ch, SKILL_ATHLETICS, 5);
+    SET_SKILL(ch, SKILL_PERSUASION, 5);
     break;
 
   case CLASS_BARD:
@@ -409,6 +428,11 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
     SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ACROBATICS, 5);
+    SET_SKILL(ch, SKILL_HISTORY, 5);
+    SET_SKILL(ch, SKILL_INVESTIGATION, 5);
+    SET_SKILL(ch, SKILL_SURVIVAL, 5);
+    SET_SKILL(ch, SKILL_STEALTH, 5);
     break;
 
   case CLASS_DRUID:
@@ -421,6 +445,14 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
     SET_SKILL(ch, SKILL_SHIELD_USE, 5);
     SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ACROBATICS, 5);
+    SET_SKILL(ch, SKILL_ARCANA, 5);
+    SET_SKILL(ch, SKILL_HISTORY, 5);
+    SET_SKILL(ch, SKILL_INSIGHT, 5);
+    SET_SKILL(ch, SKILL_INVESTIGATION, 5);
+    SET_SKILL(ch, SKILL_PERSUASION, 5);
+    SET_SKILL(ch, SKILL_RELIGION, 5);
+    SET_SKILL(ch, SKILL_SURVIVAL, 5);
     break;
   }
 }
@@ -607,6 +639,9 @@ void init_spell_levels(void)
   spell_level(SPELL_ENCHANT_WEAPON, CLASS_SORCEROR, 1);
   spell_level(SPELL_CLONE, CLASS_SORCEROR, 1);
   spell_level(SKILL_UNARMED, CLASS_SORCEROR, 1);
+  spell_level(SKILL_ARCANA, CLASS_SORCEROR, 1);
+  spell_level(SKILL_HISTORY, CLASS_SORCEROR, 1);
+  spell_level(SKILL_INSIGHT, CLASS_SORCEROR, 1);
 
   /* CLERICS */
   spell_level(SPELL_CURE_LIGHT, CLASS_CLERIC, 1);
@@ -641,6 +676,9 @@ void init_spell_levels(void)
   spell_level(SPELL_GROUP_HEAL, CLASS_CLERIC, 1);
   spell_level(SPELL_REMOVE_CURSE, CLASS_CLERIC, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_CLERIC, 1);
+  spell_level(SKILL_ACROBATICS, CLASS_CLERIC, 1);
+  spell_level(SKILL_ARCANA, CLASS_CLERIC, 1);
+  spell_level(SKILL_RELIGION, CLASS_CLERIC, 1);
 
   /* ROGUES */
   spell_level(SKILL_PICK_LOCK, CLASS_ROGUE, 1);
@@ -653,6 +691,9 @@ void init_spell_levels(void)
   spell_level(SKILL_PERCEPTION, CLASS_ROGUE, 1);
   spell_level(SKILL_SLEIGHT_OF_HAND, CLASS_ROGUE, 1);
   spell_level(SKILL_STEALTH, CLASS_ROGUE, 1);
+  spell_level(SKILL_ACROBATICS, CLASS_ROGUE, 1);
+  spell_level(SKILL_DECEPTION, CLASS_ROGUE, 1);
+  spell_level(SKILL_INVESTIGATION, CLASS_ROGUE, 1);
 
   /* FIGHTERS */
   spell_level(SKILL_KICK, CLASS_FIGHTER, 1);
@@ -665,6 +706,9 @@ void init_spell_levels(void)
   spell_level(SKILL_BLUDGEONING_WEAPONS, CLASS_FIGHTER, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_FIGHTER, 1);
   spell_level(SKILL_PERCEPTION, CLASS_FIGHTER, 1);
+  spell_level(SKILL_ATHLETICS, CLASS_FIGHTER, 1);
+  spell_level(SKILL_INTIMIDATION, CLASS_FIGHTER, 1);
+  spell_level(SKILL_SURVIVAL, CLASS_FIGHTER, 1);
 
   /* BARBARIANS */
   spell_level(SKILL_KICK, CLASS_BARBARIAN, 1);
@@ -675,6 +719,8 @@ void init_spell_levels(void)
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_BARBARIAN, 1);
   spell_level(SKILL_BLUDGEONING_WEAPONS, CLASS_BARBARIAN, 1);
   spell_level(SKILL_PERCEPTION, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_ATHLETICS, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_INTIMIDATION, CLASS_BARBARIAN, 1);
 
   /* RANGERS */
   spell_level(SKILL_BANDAGE, CLASS_RANGER, 1);
@@ -687,6 +733,11 @@ void init_spell_levels(void)
   spell_level(SKILL_PERCEPTION, CLASS_RANGER, 1);
   spell_level(SKILL_SLEIGHT_OF_HAND, CLASS_RANGER, 1);
   spell_level(SKILL_STEALTH, CLASS_RANGER, 1);
+  spell_level(SKILL_NATURE, CLASS_RANGER, 1);
+  spell_level(SKILL_ANIMAL_HANDLING, CLASS_RANGER, 1);
+  spell_level(SKILL_SURVIVAL, CLASS_RANGER, 1);
+  spell_level(SKILL_ATHLETICS, CLASS_RANGER, 1);
+  spell_level(SKILL_PERSUASION, CLASS_RANGER, 1);
 
   /* BARDS */
   spell_level(SPELL_ARMOR, CLASS_BARD, 1);
@@ -699,6 +750,11 @@ void init_spell_levels(void)
   spell_level(SKILL_SHIELD_USE, CLASS_BARD, 1);
   spell_level(SKILL_PERCEPTION, CLASS_BARD, 1);
   spell_level(SKILL_SLEIGHT_OF_HAND, CLASS_BARD, 1);
+  spell_level(SKILL_ACROBATICS, CLASS_BARD, 1);
+  spell_level(SKILL_HISTORY, CLASS_BARD, 1);
+  spell_level(SKILL_INVESTIGATION, CLASS_BARD, 1);
+  spell_level(SKILL_SURVIVAL, CLASS_BARD, 1);
+  spell_level(SKILL_STEALTH, CLASS_BARD, 1);
 
   /* DRUIDS */
   spell_level(SPELL_DETECT_INVIS, CLASS_DRUID, 1);
@@ -710,6 +766,14 @@ void init_spell_levels(void)
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_DRUID, 1);
   spell_level(SKILL_SHIELD_USE, CLASS_DRUID, 1);
   spell_level(SKILL_PERCEPTION, CLASS_DRUID, 1);
+  spell_level(SKILL_ACROBATICS, CLASS_DRUID, 1);
+  spell_level(SKILL_ARCANA, CLASS_DRUID, 1);
+  spell_level(SKILL_HISTORY, CLASS_DRUID, 1);
+  spell_level(SKILL_INSIGHT, CLASS_DRUID, 1);
+  spell_level(SKILL_INVESTIGATION, CLASS_DRUID, 1);
+  spell_level(SKILL_PERSUASION, CLASS_DRUID, 1);
+  spell_level(SKILL_RELIGION, CLASS_DRUID, 1);
+  spell_level(SKILL_SURVIVAL, CLASS_DRUID, 1);
 }
 
 /* This is the exp given to implementors -- it must always be greater than the
