@@ -1707,9 +1707,48 @@ int roll_d20(void)            { return rand_number(1, 20); }
 int roll_d20_adv(void)        { int a=roll_d20(), b=roll_d20(); return (a>b)?a:b; }
 int roll_d20_disadv(void)     { int a=roll_d20(), b=roll_d20(); return (a<b)?a:b; }
 
-int roll_survival_check(struct char_data *ch, int mode, int *out_d20)
+/* Map skills to their 5e ability score (ABIL_*). Default is WIS if unknown. */
+static int skill_to_ability(int skillnum)
+{
+  switch (skillnum) {
+    /* 5e skills (including ones you already had) */
+    case SKILL_ACROBATICS:       return ABIL_DEX;
+    case SKILL_SLEIGHT_OF_HAND:  return ABIL_DEX;
+    case SKILL_STEALTH:          return ABIL_DEX;
+
+    case SKILL_ATHLETICS:        return ABIL_STR;
+
+    case SKILL_ARCANA:           return ABIL_INT;
+    case SKILL_HISTORY:          return ABIL_INT;
+    case SKILL_INVESTIGATION:    return ABIL_INT;
+    case SKILL_NATURE:           return ABIL_INT;
+    case SKILL_RELIGION:         return ABIL_INT;
+
+    case SKILL_ANIMAL_HANDLING:  return ABIL_WIS;
+    case SKILL_INSIGHT:          return ABIL_WIS;
+    case SKILL_MEDICINE:         return ABIL_WIS;
+    case SKILL_PERCEPTION:       return ABIL_WIS;
+    case SKILL_SURVIVAL:         return ABIL_WIS;
+
+    case SKILL_DECEPTION:        return ABIL_CHA;
+    case SKILL_INTIMIDATION:     return ABIL_CHA;
+    case SKILL_PERFORMANCE:      return ABIL_CHA;
+    case SKILL_PERSUASION:       return ABIL_CHA;
+
+    /* Legacy overlaps you likely want treated as WIS in the interim */
+    case SKILL_LISTEN:           return ABIL_WIS;
+    case SKILL_TRACK:            return ABIL_WIS;
+
+    default:
+      return ABIL_WIS;
+  }
+}
+
+int roll_skill_check(struct char_data *ch, int skillnum, int mode, int *out_d20)
 {
   int d20, total;
+  int ability;
+  int pct;
 
   if (!ch) {
     if (out_d20) *out_d20 = 0;
@@ -1726,16 +1765,37 @@ int roll_survival_check(struct char_data *ch, int mode, int *out_d20)
   if (out_d20)
     *out_d20 = d20;
 
-  /* Base: d20 + WIS mod */
-  total = d20 + GET_ABILITY_MOD(GET_WIS(ch));
+  /* Base: d20 + relevant ability modifier (5e rules). */
+  ability = skill_to_ability(skillnum);
+  switch (ability) {
+    case ABIL_STR: total = d20 + GET_ABILITY_MOD(GET_STR(ch)); break;
+    case ABIL_DEX: total = d20 + GET_ABILITY_MOD(GET_DEX(ch)); break;
+    case ABIL_CON: total = d20 + GET_ABILITY_MOD(GET_CON(ch)); break;
+    case ABIL_INT: total = d20 + GET_ABILITY_MOD(GET_INT(ch)); break;
+    case ABIL_WIS: total = d20 + GET_ABILITY_MOD(GET_WIS(ch)); break;
+    case ABIL_CHA: total = d20 + GET_ABILITY_MOD(GET_CHA(ch)); break;
+    default:       total = d20; break;
+  }
 
   /*
-   * Proficiency: Fighters/Rangers/Druids are proficient in Survival.
-   * This uses your existing proficiency bonus helper.
+   * Determine whether the character "has" the skill.
+   * We treat skill % <= 0 as "not trained / not present".
    */
-  if (GET_CLASS(ch) == CLASS_FIGHTER ||
-      GET_CLASS(ch) == CLASS_RANGER ||
-      GET_CLASS(ch) == CLASS_DRUID)
+  if (skillnum <= 0 || skillnum > TOP_SPELL_DEFINE)
+    return total;
+
+  pct = GET_SKILL(ch, skillnum);
+  if (pct <= 0) {
+    /* Requirement #4: no skill => regular ability check only. */
+    return total;
+  }
+
+  /*
+   * Requirement #6/#7:
+   * If they have the skill, check proficiency using existing helpers.
+   * We treat GET_PROFICIENCY(pct) > 0 as proficient for this purpose.
+   */
+  if (GET_PROFICIENCY(pct) > 0)
     total += get_total_proficiency_bonus(ch);
 
   return total;

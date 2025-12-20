@@ -2008,16 +2008,7 @@ ACMD(do_skin)
     return;
   }
 
-  d20 = dice(1, 20);
-
-  if (d20 == 1) {
-    send_to_char(ch, "You aren't able to cut anything useful from the corpse.\r\n");
-    dump_obj_contents_to_room(corpse, room);
-    extract_obj(corpse);
-    return;
-  }
-
-  total = roll_survival_check(ch, 0, &d20);
+  total = roll_skill_check(ch, SKILL_SURVIVAL, 0, &d20);
 
   if (d20 == 1) {
     send_to_char(ch, "You aren't able to cut anything useful from the corpse.\r\n");
