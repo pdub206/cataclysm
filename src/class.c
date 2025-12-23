@@ -454,6 +454,7 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_SURVIVAL, 5);
     break;
   }
+
 }
 
 /* Some initializations for characters, including initial skills */

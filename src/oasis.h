@@ -227,6 +227,9 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define REDIT_EXTRADESC_DESCRIPTION   16
 #define REDIT_DELETE			           17
 #define REDIT_COPY			           18
+#define REDIT_FORAGE_MENU             19
+#define REDIT_FORAGE_ADD              20
+#define REDIT_FORAGE_DELETE           21
 
 /* Submodes of ZEDIT connectedness. */
 #define ZEDIT_MAIN_MENU               0

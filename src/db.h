@@ -260,6 +260,8 @@ void  new_mobile_data(struct char_data *ch);
 void  equip_mob_from_loadout(struct char_data *mob);
 void free_skin_yields(struct skin_yield_entry *list);
 struct skin_yield_entry *copy_skin_yields(struct skin_yield_entry *src);
+void free_forage_list(struct forage_entry *list);
+struct forage_entry *copy_forage_list(struct forage_entry *src);
 
 zone_rnum real_zone(zone_vnum vnum);
 room_rnum real_room(room_vnum vnum);

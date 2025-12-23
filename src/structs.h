@@ -816,6 +816,8 @@ struct room_direction_data
   room_rnum to_room; /**< Where direction leads, or NOWHERE if not defined */
 };
 
+struct forage_entry;
+
 /** The Room Structure. */
 struct room_data
 {
@@ -834,6 +836,7 @@ struct room_data
   struct obj_data *contents;  /**< List of items in room */
   struct char_data *people;   /**< List of NPCs / PCs in room */
   
+  struct forage_entry *forage; /**< Forage table entries for this room */
   struct list_data * events;  
 };
 
@@ -1348,6 +1351,13 @@ struct skin_yield_entry {
   obj_vnum obj_vnum;      /* object to create on success */
   int dc;                 /* DC required */
   struct skin_yield_entry *next;
+};
+
+/* Forage table entries attached to rooms */
+struct forage_entry {
+  obj_vnum obj_vnum;      /* object to create on success */
+  int dc;                 /* DC required */
+  struct forage_entry *next;
 };
 
 /* Config structs */

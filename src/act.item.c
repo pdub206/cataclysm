@@ -2039,3 +2039,58 @@ ACMD(do_skin)
 
   extract_obj(corpse);
 }
+
+ACMD(do_forage)
+{
+  room_rnum room;
+  struct forage_entry *entry, *best = NULL;
+  struct obj_data *obj;
+  int total;
+  int best_dc = -1;
+  int prof_bonus, cost;
+  int delay_seconds;
+
+  room = IN_ROOM(ch);
+  if (room == NOWHERE) {
+    send_to_char(ch, "You can't do that here.\r\n");
+    return;
+  }
+
+  prof_bonus = GET_PROFICIENCY(GET_SKILL(ch, SKILL_SURVIVAL));
+  cost = MAX(1, 10 - prof_bonus);
+
+  if (!IS_NPC(ch) && GET_MOVE(ch) < cost) {
+    send_to_char(ch, "You are too exhausted to forage.\r\n");
+    return;
+  }
+
+  delay_seconds = rand_number(8, 12);
+  WAIT_STATE(ch, delay_seconds * PASSES_PER_SEC);
+
+  if (!IS_NPC(ch))
+    GET_MOVE(ch) = MAX(0, GET_MOVE(ch) - cost);
+
+  total = roll_skill_check(ch, SKILL_SURVIVAL, 0, NULL);
+
+  for (entry = world[room].forage; entry; entry = entry->next) {
+    if (total >= entry->dc && entry->dc > best_dc) {
+      best = entry;
+      best_dc = entry->dc;
+    }
+  }
+
+  if (best) {
+    obj = read_object(best->obj_vnum, VIRTUAL);
+    if (obj) {
+      obj_to_char(obj, ch);
+      act("You take some time to look around, and end up finding $p.", FALSE, ch, obj, 0, TO_CHAR);
+      act("$n takes some time to look around, and ends up finding $p.", FALSE, ch, obj, 0, TO_ROOM);
+      gain_skill(ch, "survival", TRUE);
+      return;
+    }
+  }
+
+  send_to_char(ch, "You take some time to look around, but don't find anything.\r\n");
+  act("$n takes some time to look around, but doesn't find anything.", FALSE, ch, 0, 0, TO_ROOM);
+  gain_skill(ch, "survival", FALSE);
+}

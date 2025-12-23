@@ -281,6 +281,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "set"      , "set"     , POS_DEAD    , do_set      , LVL_IMMORT, 0 },
   { "shout"    , "sho"     , POS_RESTING , do_gen_comm , 0, SCMD_SHOUT },
   { "skills"   , "sk"      , POS_SLEEPING, do_skills   , 0, 0 },
+  { "forage"   , "for"     , POS_STANDING, do_forage   , 0, 0 },
   { "skin"     , "skin"    , POS_STANDING, do_skin, 0, 0 },
   { "show"     , "show"    , POS_DEAD    , do_show     , LVL_IMMORT, 0 },
   { "shutdow"  , "shutdow" , POS_DEAD    , do_shutdown , LVL_IMPL, 0 },

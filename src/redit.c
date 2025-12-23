@@ -29,6 +29,7 @@ static void redit_disp_exit_menu(struct descriptor_data *d);
 static void redit_disp_exit_flag_menu(struct descriptor_data *d);
 static void redit_disp_flag_menu(struct descriptor_data *d);
 static void redit_disp_sector_menu(struct descriptor_data *d);
+static void redit_disp_forage_menu(struct descriptor_data *d);
 static void redit_disp_menu(struct descriptor_data *d);
 
 /* Utils and exported functions. */
@@ -161,6 +162,7 @@ static void redit_setup_new(struct descriptor_data *d)
   OLC_ROOM(d)->number = NOWHERE;
   OLC_ITEM_TYPE(d) = WLD_TRIGGER;
   OLC_ROOM(d)->proto_script = OLC_SCRIPT(d) = NULL;
+  OLC_ROOM(d)->forage = NULL;
 
   OLC_VAL(d) = 0;
 }
@@ -220,6 +222,8 @@ void redit_setup_existing(struct descriptor_data *d, int real_num)
 	temp->next = NULL;
     }
   }
+
+  room->forage = copy_forage_list(world[real_num].forage);
 
   /* Attach copy of room to player's descriptor. */
   OLC_ROOM(d) = room;
@@ -412,16 +416,57 @@ static void redit_disp_sector_menu(struct descriptor_data *d)
   OLC_MODE(d) = REDIT_SECTOR;
 }
 
+static int redit_forage_count(struct forage_entry *list)
+{
+  int count = 0;
+  for (; list; list = list->next)
+    count++;
+  return count;
+}
+
+static void redit_disp_forage_menu(struct descriptor_data *d)
+{
+  struct forage_entry *entry;
+  int i = 0;
+
+  get_char_colors(d->character);
+  clear_screen(d);
+  write_to_output(d, "Forage table:\r\n");
+
+  for (entry = OLC_ROOM(d)->forage; entry; entry = entry->next) {
+    obj_rnum rnum = real_object(entry->obj_vnum);
+    const char *sdesc = (rnum != NOTHING) ? obj_proto[rnum].short_description : "Unknown object";
+    write_to_output(d, "%s%2d%s) [%s%d%s] DC %s%d%s - %s%s%s\r\n",
+        grn, ++i, nrm,
+        cyn, entry->obj_vnum, nrm,
+        yel, entry->dc, nrm,
+        yel, sdesc, nrm);
+  }
+
+  if (i == 0)
+    write_to_output(d, "  None.\r\n");
+
+  write_to_output(d,
+      "\r\n%sA%s) Add item\r\n"
+      "%sD%s) Delete item\r\n"
+      "%sQ%s) Quit\r\n"
+      "Enter choice : ",
+      grn, nrm, grn, nrm, grn, nrm);
+  OLC_MODE(d) = REDIT_FORAGE_MENU;
+}
+
 /* The main menu. */
 static void redit_disp_menu(struct descriptor_data *d)
 {
   char buf1[MAX_STRING_LENGTH];
   char buf2[MAX_STRING_LENGTH];
   struct room_data *room;
+  int forage_count;
 
   get_char_colors(d->character);
   clear_screen(d);
   room = OLC_ROOM(d);
+  forage_count = redit_forage_count(room->forage);
 
   sprintbitarray(room->room_flags, room_bits, RF_ARRAY_MAX, buf1);
   sprinttype(room->sector_type, sector_types, buf2, sizeof(buf2));
@@ -493,6 +538,7 @@ static void redit_disp_menu(struct descriptor_data *d)
       "%s9%s) Exit up     : %s%d\r\n"
       "%sA%s) Exit down   : %s%d\r\n"
       "%sF%s) Extra descriptions menu\r\n"
+      "%sG%s) Forage table: %s%d%s entries\r\n"
       "%sS%s) Script      : %s%s\r\n"
        "%sW%s) Copy Room\r\n"
       "%sX%s) Delete Room\r\n"
@@ -505,6 +551,7 @@ static void redit_disp_menu(struct descriptor_data *d)
       room->dir_option[DOWN] && room->dir_option[DOWN]->to_room != NOWHERE ?
       world[room->dir_option[DOWN]->to_room].number : -1,
       grn, nrm,
+      grn, nrm, cyn, forage_count, nrm,
           grn, nrm, cyn, OLC_SCRIPT(d) ? "Set." : "Not Set.",
           grn, nrm,
       grn, nrm,
@@ -655,6 +702,10 @@ void redit_parse(struct descriptor_data *d, char *arg)
       OLC_DESC(d) = OLC_ROOM(d)->ex_description;
       redit_disp_extradesc_menu(d);
       break;
+    case 'g':
+    case 'G':
+      redit_disp_forage_menu(d);
+      break;
     case 'w':
     case 'W':
       write_to_output(d, "Copy what room? ");
@@ -726,6 +777,91 @@ void redit_parse(struct descriptor_data *d, char *arg)
     }
     OLC_ROOM(d)->sector_type = number;
     break;
+
+  case REDIT_FORAGE_MENU:
+    switch (LOWER(*arg)) {
+    case 'a':
+      write_to_output(d, "Enter object vnum and DC: ");
+      OLC_MODE(d) = REDIT_FORAGE_ADD;
+      return;
+    case 'd':
+      if (!OLC_ROOM(d)->forage) {
+        write_to_output(d, "No forage entries to delete.\r\n");
+        redit_disp_forage_menu(d);
+      } else {
+        write_to_output(d, "Delete which entry (number)? ");
+        OLC_MODE(d) = REDIT_FORAGE_DELETE;
+      }
+      return;
+    case 'q':
+      redit_disp_menu(d);
+      return;
+    default:
+      redit_disp_forage_menu(d);
+      return;
+    }
+
+  case REDIT_FORAGE_ADD: {
+    int vnum, dc;
+    struct forage_entry *entry;
+
+    if (sscanf(arg, "%d %d", &vnum, &dc) != 2) {
+      write_to_output(d, "Usage: <vnum> <dc>\r\n");
+      redit_disp_forage_menu(d);
+      return;
+    }
+    if (vnum <= 0 || dc <= 0) {
+      write_to_output(d, "Both vnum and DC must be positive.\r\n");
+      redit_disp_forage_menu(d);
+      return;
+    }
+    if (real_object(vnum) == NOTHING) {
+      write_to_output(d, "That object vnum doesn't exist.\r\n");
+      redit_disp_forage_menu(d);
+      return;
+    }
+
+    CREATE(entry, struct forage_entry, 1);
+    entry->obj_vnum = vnum;
+    entry->dc = dc;
+    entry->next = OLC_ROOM(d)->forage;
+    OLC_ROOM(d)->forage = entry;
+    OLC_VAL(d) = 1;
+    redit_disp_forage_menu(d);
+    return;
+  }
+
+  case REDIT_FORAGE_DELETE: {
+    struct forage_entry *entry = OLC_ROOM(d)->forage;
+    struct forage_entry *prev = NULL;
+    int count = 0;
+
+    number = atoi(arg);
+    if (number <= 0) {
+      redit_disp_forage_menu(d);
+      return;
+    }
+
+    while (entry && ++count < number) {
+      prev = entry;
+      entry = entry->next;
+    }
+
+    if (!entry) {
+      write_to_output(d, "Invalid entry number.\r\n");
+      redit_disp_forage_menu(d);
+      return;
+    }
+
+    if (prev)
+      prev->next = entry->next;
+    else
+      OLC_ROOM(d)->forage = entry->next;
+    free(entry);
+    OLC_VAL(d) = 1;
+    redit_disp_forage_menu(d);
+    return;
+  }
 
   case REDIT_EXIT_MENU:
     switch (*arg) {

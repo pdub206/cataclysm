@@ -159,6 +159,7 @@ ACMD(do_remove);
 ACMD(do_wear);
 ACMD(do_wield);
 ACMD(do_skin);
+ACMD(do_forage);
 
 /*****************************************************************************
  * Begin Functions and defines for act.movement.c

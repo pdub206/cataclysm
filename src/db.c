@@ -1352,6 +1352,7 @@ void parse_room(FILE *fl, int virtual_nr)
     world[room_nr].dir_option[i] = NULL;
 
   world[room_nr].ex_description = NULL;
+  world[room_nr].forage = NULL;
 
   snprintf(buf, sizeof(buf), "SYSERR: Format error in room #%d (expecting D/E/S)", virtual_nr);
 
@@ -1372,6 +1373,38 @@ void parse_room(FILE *fl, int virtual_nr)
 
       new_descr->next = world[room_nr].ex_description;
       world[room_nr].ex_description = new_descr;
+      break;
+    case 'F':
+      for (;;) {
+        obj_vnum ovnum;
+        int dc;
+
+        if (!get_line(fl, line)) {
+          log("SYSERR: Unexpected EOF while reading 'F' block in room #%d.", virtual_nr);
+          break;
+        }
+        if (sscanf(line, "%d %d", &ovnum, &dc) != 2) {
+          log("SYSERR: Bad 'F' line in room #%d: '%s' (need <obj_vnum> <dc>).", virtual_nr, line);
+          continue;
+        }
+        if (ovnum == 0 && dc == 0)
+          break;
+
+        struct forage_entry *e;
+        struct forage_entry *tail;
+        CREATE(e, struct forage_entry, 1);
+        e->obj_vnum = ovnum;
+        e->dc = dc;
+        e->next = NULL;
+        if (!world[room_nr].forage) {
+          world[room_nr].forage = e;
+        } else {
+          tail = world[room_nr].forage;
+          while (tail->next)
+            tail = tail->next;
+          tail->next = e;
+        }
+      }
       break;
     case 'S':			/* end of room */
       /* DG triggers -- script is defined after the end of the room */
@@ -4444,6 +4477,31 @@ struct skin_yield_entry *copy_skin_yields(struct skin_yield_entry *src)
 
   for (; src; src = src->next) {
     CREATE(e, struct skin_yield_entry, 1);
+    *e = *src;
+    e->next = NULL;
+
+    if (!head) head = e;
+    else tail->next = e;
+    tail = e;
+  }
+  return head;
+}
+
+void free_forage_list(struct forage_entry *list)
+{
+  struct forage_entry *e, *next;
+  for (e = list; e; e = next) {
+    next = e->next;
+    free(e);
+  }
+}
+
+struct forage_entry *copy_forage_list(struct forage_entry *src)
+{
+  struct forage_entry *head = NULL, *tail = NULL, *e;
+
+  for (; src; src = src->next) {
+    CREATE(e, struct forage_entry, 1);
     *e = *src;
     e->next = NULL;
 
