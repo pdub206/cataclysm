@@ -467,6 +467,8 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   {
     mudlog(BRF, LVL_IMMORT, TRUE, "%s hit death trap #%d (%s)", GET_NAME(ch), GET_ROOM_VNUM(going_to), world[going_to].name);
     death_cry(ch);
+    if (!IS_NPC(ch))
+      GET_POS(ch) = POS_DEAD;
     extract_char(ch);
     return (0);
   }

@@ -909,8 +909,12 @@ void extract_char_final(struct char_data *ch)
         if (d->character && GET_IDNUM(ch) == GET_IDNUM(d->character))
           STATE(d) = CON_CLOSE;
       }
-      STATE(ch->desc) = CON_MENU;
-      write_to_output(ch->desc, "%s", CONFIG_MENU);
+      if (GET_POS(ch) == POS_DEAD) {
+        STATE(ch->desc) = CON_CLOSE;
+      } else {
+        STATE(ch->desc) = CON_MENU;
+        write_to_output(ch->desc, "%s", CONFIG_MENU);
+      }
     }
   }
 
@@ -973,9 +977,30 @@ void extract_char_final(struct char_data *ch)
     if (SCRIPT_MEM(ch))
       extract_script_mem(SCRIPT_MEM(ch));
   } else {
-    save_char(ch);
-    Crash_delete_crashfile(ch);
-    REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_QUITING);
+    if (GET_POS(ch) == POS_DEAD) {
+      int pfilepos = GET_PFILEPOS(ch);
+
+      if (pfilepos < 0)
+        pfilepos = get_ptable_by_name(GET_NAME(ch));
+
+      if (pfilepos >= 0) {
+        remove_player(pfilepos);
+      } else {
+        char filename[PATH_MAX];
+        int i;
+
+        log("SYSERR: Could not locate player index entry for %s on death cleanup.",
+            GET_NAME(ch));
+        for (i = 0; i < MAX_FILES; i++) {
+          if (get_filename(filename, sizeof(filename), i, GET_NAME(ch)))
+            unlink(filename);
+        }
+      }
+    } else {
+      save_char(ch);
+      Crash_delete_crashfile(ch);
+      REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_QUITING);
+    }
   }
 
   /* If there's a descriptor, they're in the menu now. */

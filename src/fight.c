@@ -356,6 +356,7 @@ struct char_data *i;
     send_to_group(ch, GROUP(ch), "%s has died.\r\n", GET_NAME(ch));
 
   update_pos(ch);
+  GET_POS(ch) = POS_DEAD;
 
   make_corpse(ch);
   extract_char(ch);
