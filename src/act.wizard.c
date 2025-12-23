@@ -411,7 +411,9 @@ static void stat_format_char_effects(struct char_data *k, char *buf, size_t buf_
     const char *dur_unit = "hr";
     int display_dur = aff->duration + 1;
 
-    if (aff->spell == SKILL_PERCEPTION) {
+    if (aff->spell == SKILL_PERCEPTION ||
+        aff->spell == SPELL_SCAN_AFFECT ||
+        aff->spell == SPELL_LISTEN_AFFECT) {
       /* convert mud-hours -> real minutes (round up) */
       int total_seconds = display_dur * SECS_PER_MUD_HOUR;
       display_dur = (total_seconds + SECS_PER_REAL_MIN - 1) / SECS_PER_REAL_MIN;
@@ -1813,7 +1815,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
       (k->player.time.played % 3600) / 60);
   }
 
-  stat_table_row_fmt(ch, "Level", "Level %d %s", GET_LEVEL(k), CLASS_ABBR(k));
+  stat_table_row_fmt(ch, "Class", "%s", CLASS_NAME(k));
 
   stat_table_row_fmt(ch, "Attributes",
     "Str %d Int %d Wis %d Dex %d Con %d Cha %d",

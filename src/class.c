@@ -26,10 +26,10 @@
 
 /* Names first */
 const char *class_abbrevs[] = {
-  "Mu",
+  "So",
   "Cl",
   "Ro",
-  "Wa",
+  "Fi",
   "Ba",
   "Ra",
   "Br",

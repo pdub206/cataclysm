@@ -938,6 +938,9 @@ do                                                              \
 /** Return the class abbreviation for ch. */
 #define CLASS_ABBR(ch)    (HAS_VALID_CLASS(ch) ? class_abbrevs[(int)GET_CLASS(ch)] : "--")
 
+/** Return the class abbreviation for ch. */
+#define CLASS_NAME(ch)    (HAS_VALID_CLASS(ch) ? pc_class_types[(int)GET_CLASS(ch)] : "--")
+
 /** 1 if ch is sorceror class, 0 if not. */
 #define IS_SORCEROR(ch)	(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_SORCEROR))
 /** 1 if ch is cleric class, 0 if not. */
