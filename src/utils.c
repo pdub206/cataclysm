@@ -1736,7 +1736,6 @@ static int skill_to_ability(int skillnum)
     case SKILL_PERSUASION:       return ABIL_CHA;
 
     /* Legacy overlaps you likely want treated as WIS in the interim */
-    case SKILL_LISTEN:           return ABIL_WIS;
     case SKILL_TRACK:            return ABIL_WIS;
 
     default:

@@ -306,9 +306,7 @@ static bool can_attempt_listen(struct char_data *ch)
 
 static int roll_listen_total(struct char_data *ch)
 {
-  int bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
-              GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
-  int total = rand_number(1, 20) + bonus;
+  int total = roll_skill_check(ch, SKILL_PERCEPTION, 0, NULL);
 
   if (FIGHTING(ch))
     total -= 4;

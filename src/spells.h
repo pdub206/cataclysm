@@ -105,36 +105,34 @@
 #define SKILL_HIDE                  133 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_KICK                  134 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_PICK_LOCK             135 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_WHIRLWIND             136 
+#define SKILL_WHIRLWIND             136 /* Performs whirlwind pulse action */
 #define SKILL_RESCUE                137 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_SNEAK                 138 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_STEAL                 139 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_TRACK                 140 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_BANDAGE               141 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_UNARMED               142 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_SHIELD_USE            143 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_PIERCING_WEAPONS      144 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_SLASHING_WEAPONS      145 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_BLUDGEONING_WEAPONS   146 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_PERCEPTION            147 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_STEALTH               148 /* Shared stealth skill for hide/sneak */
-#define SKILL_LISTEN                149 /* Anchor for the listen affect */
-#define SKILL_SLEIGHT_OF_HAND       150 /* Sleight of hand for palm/slip */
-#define SKILL_ACROBATICS            151 /* DEX */
-#define SKILL_ANIMAL_HANDLING       152 /* WIS */
-#define SKILL_ARCANA                153 /* INT */
-#define SKILL_ATHLETICS             154 /* STR */
-#define SKILL_DECEPTION             155 /* CHA */
-#define SKILL_HISTORY               156 /* INT */
-#define SKILL_INSIGHT               157 /* WIS */
-#define SKILL_INTIMIDATION          158 /* CHA */
-#define SKILL_INVESTIGATION         159 /* INT */
-#define SKILL_MEDICINE              160 /* WIS */
-#define SKILL_NATURE                161 /* INT */
-#define SKILL_PERFORMANCE           162 /* CHA */
-#define SKILL_PERSUASION            163 /* CHA */
-#define SKILL_RELIGION              164 /* INT */
-#define SKILL_SURVIVAL              165 /* WIS */
+#define SKILL_TRACK                 139 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_BANDAGE               140 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_UNARMED               141 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_SHIELD_USE            142 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_PIERCING_WEAPONS      143 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_SLASHING_WEAPONS      144 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_BLUDGEONING_WEAPONS   145 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_PERCEPTION            146 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_STEALTH               147 /* Shared stealth skill for hide/sneak */
+#define SKILL_SLEIGHT_OF_HAND       148 /* Sleight of hand for palm/slip */
+#define SKILL_ACROBATICS            149 /* DEX */
+#define SKILL_ANIMAL_HANDLING       150 /* WIS */
+#define SKILL_ARCANA                151 /* INT */
+#define SKILL_ATHLETICS             152 /* STR */
+#define SKILL_DECEPTION             153 /* CHA */
+#define SKILL_HISTORY               154 /* INT */
+#define SKILL_INSIGHT               155 /* WIS */
+#define SKILL_INTIMIDATION          156 /* CHA */
+#define SKILL_INVESTIGATION         157 /* INT */
+#define SKILL_MEDICINE              158 /* WIS */
+#define SKILL_NATURE                159 /* INT */
+#define SKILL_PERFORMANCE           160 /* CHA */
+#define SKILL_PERSUASION            161 /* CHA */
+#define SKILL_RELIGION              162 /* INT */
+#define SKILL_SURVIVAL              163 /* WIS */
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 
@@ -146,6 +144,8 @@
 
 /* To make an affect induced by dg_affect look correct on 'stat' we need to
  * define it with a 'spellname'. */
+#define SPELL_SCAN_AFFECT            296
+#define SPELL_LISTEN_AFFECT          297
 #define SPELL_DG_AFFECT              298
 
 #define TOP_SPELL_DEFINE	     299

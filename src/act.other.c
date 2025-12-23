@@ -207,26 +207,47 @@ int get_stealth_skill_value(struct char_data *ch)
 
 int roll_stealth_check(struct char_data *ch)
 {
-  int skill = get_stealth_skill_value(ch);
-  int bonus = GET_ABILITY_MOD(GET_DEX(ch)) + GET_PROFICIENCY(skill);
-  bool disadv = has_stealth_disadv(ch) ? TRUE : FALSE;
-  int rolla = rand_number(1, 20);
-  int rollb = rand_number(1, 20);
-  int roll = disadv ? MIN(rolla, rollb) : rolla;
+  int mode = has_stealth_disadv(ch) ? -1 : 0;
 
-  return roll + bonus;
+  get_stealth_skill_value(ch);
+  return roll_skill_check(ch, SKILL_STEALTH, mode, NULL);
 }
 
 int roll_sleight_check(struct char_data *ch)
 {
-  int skill = GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND);
-  int bonus = GET_ABILITY_MOD(GET_DEX(ch)) + GET_PROFICIENCY(skill);
-  int total = rand_number(1, 20) + bonus;
+  int total = roll_skill_check(ch, SKILL_SLEIGHT_OF_HAND, 0, NULL);
 
   if (FIGHTING(ch))
     total -= 4;
 
   return total;
+}
+
+static int compute_steal_dc(struct char_data *vict, int weight, bool pc_restricted)
+{
+  int dc = SLEIGHT_BASE_DC + MAX(0, weight);
+
+  if (!vict)
+    return dc;
+
+  if (pc_restricted || GET_LEVEL(vict) >= LVL_IMMORT || GET_MOB_SPEC(vict) == shop_keeper)
+    return 1000;
+
+  if (GET_POS(vict) < POS_SLEEPING)
+    return MAX(0, weight);
+
+  if (!AWAKE(vict)) {
+    dc = MAX(0, dc - 5);
+    return dc;
+  }
+
+  dc += GET_ABILITY_MOD(GET_WIS(vict));
+  if (GET_SKILL(vict, SKILL_PERCEPTION) > 0)
+    dc += get_total_proficiency_bonus(vict);
+  if (FIGHTING(vict))
+    dc -= 4;
+
+  return dc;
 }
 
 static struct obj_data *find_container_on_character(struct char_data *viewer,
@@ -306,7 +327,7 @@ static bool sleight_observer_notices(struct char_data *actor,
                                      struct char_data *viewer,
                                      int sleight_total)
 {
-  int roll, bonus = 0, total;
+  int d20, total;
 
   if (!viewer || viewer == actor)
     return FALSE;
@@ -318,23 +339,21 @@ static bool sleight_observer_notices(struct char_data *actor,
     return TRUE;
   }
 
-  roll = rand_number(1, 20);
+  if (can_scan_for_sneak(viewer)) {
+    total = roll_skill_check(viewer, SKILL_PERCEPTION, 0, &d20);
+    if (FIGHTING(viewer))
+      total -= 4;
+  } else {
+    d20 = roll_d20();
+    total = d20;
+  }
 
-  if (roll == 1) {
+  if (d20 == 1) {
     gain_skill(viewer, "perception", FALSE);
     return FALSE;
   }
 
-  if (can_scan_for_sneak(viewer)) {
-    bonus = GET_ABILITY_MOD(GET_WIS(viewer)) +
-            GET_PROFICIENCY(GET_SKILL(viewer, SKILL_PERCEPTION));
-    if (FIGHTING(viewer))
-      bonus -= 4;
-  }
-
-  total = roll + bonus;
-
-  if (roll == 20 || total >= sleight_total) {
+  if (d20 == 20 || total >= sleight_total) {
     gain_skill(viewer, "perception", TRUE);
     return TRUE;
   }
@@ -419,9 +438,7 @@ bool can_scan_for_sneak(struct char_data *ch)
 
 int roll_scan_perception(struct char_data *ch)
 {
-  int bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
-              GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
-  int total = rand_number(1, 20) + bonus;
+  int total = roll_skill_check(ch, SKILL_PERCEPTION, 0, NULL);
 
   if (FIGHTING(ch))
     total -= 4;
@@ -710,7 +727,7 @@ static int scan_target_dc(struct char_data *tch)
 
 bool scan_confirm_target(struct char_data *ch, struct char_data *tch)
 {
-  int roll, bonus, total;
+  int total;
 
   if (!ch || !tch)
     return FALSE;
@@ -719,10 +736,7 @@ bool scan_confirm_target(struct char_data *ch, struct char_data *tch)
   if (!GET_SKILL(ch, SKILL_PERCEPTION))
     return FALSE;
 
-  bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
-          GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
-  roll  = rand_number(1, 20);
-  total = roll + bonus;
+  total = roll_skill_check(ch, SKILL_PERCEPTION, 0, NULL);
 
   if (FIGHTING(ch))
     total -= 4;
@@ -758,7 +772,7 @@ static int scan_effect_duration(struct char_data *ch)
 bool perform_scan_sweep(struct char_data *ch)
 {
   struct char_data *tch;
-  int roll, bonus, total;
+  int total;
   bool had_targets = FALSE;
   bool found_any   = FALSE;
 
@@ -786,10 +800,7 @@ bool perform_scan_sweep(struct char_data *ch)
   if (!had_targets)
     return FALSE;
 
-  bonus = GET_ABILITY_MOD(GET_WIS(ch)) +
-          GET_PROFICIENCY(GET_SKILL(ch, SKILL_PERCEPTION));
-  roll  = rand_number(1, 20);
-  total = roll + bonus;
+  total = roll_skill_check(ch, SKILL_PERCEPTION, 0, NULL);
 
   if (FIGHTING(ch))
     total -= 4;
@@ -827,13 +838,14 @@ ACMD(do_scan)
 
   if (AFF_FLAGGED(ch, AFF_SCAN)) {
     affect_from_char(ch, SKILL_PERCEPTION);
+    affect_from_char(ch, SPELL_SCAN_AFFECT);
     send_to_char(ch, "You lower your guard and stop scanning the area.\r\n");
     act("$n relaxes, no longer scanning so intently.", TRUE, ch, 0, 0, TO_ROOM);
     return;
   }
 
   new_affect(&af);
-  af.spell    = SKILL_PERCEPTION;
+  af.spell    = SPELL_SCAN_AFFECT;
   af.location = APPLY_NONE;
   af.modifier = 0;
   af.duration = scan_effect_duration(ch);
@@ -858,13 +870,13 @@ ACMD(do_listen)
   }
 
   if (AFF_FLAGGED(ch, AFF_LISTEN)) {
-    affect_from_char(ch, SKILL_LISTEN);
+    affect_from_char(ch, SPELL_LISTEN_AFFECT);
     send_to_char(ch, "You stop actively listening for hushed voices.\r\n");
     return;
   }
 
   new_affect(&af);
-  af.spell    = SKILL_LISTEN;
+  af.spell    = SPELL_LISTEN_AFFECT;
   af.location = APPLY_NONE;
   af.modifier = 0;
   af.duration = listen_effect_duration(ch);
@@ -1034,9 +1046,10 @@ ACMD(do_steal)
   struct char_data *vict;
   struct obj_data *obj;
   char vict_name[MAX_INPUT_LENGTH], obj_name[MAX_INPUT_LENGTH];
-  int percent, gold, eq_pos, pcsteal = 0, ohoh = 0;
+  int gold, eq_pos, pcsteal = 0, ohoh = 0;
+  int sleight_total, dc;
 
-  if (!GET_SKILL(ch, SKILL_STEAL)) {
+  if (!GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -1055,21 +1068,10 @@ ACMD(do_steal)
     return;
   }
 
-  /* 101% is a complete failure */
-  percent = rand_number(1, 101) - GET_ABILITY_MOD(GET_DEX(ch));
-
-  if (GET_POS(vict) < POS_SLEEPING)
-    percent = -1;		/* ALWAYS SUCCESS, unless heavy object. */
-
   if (!CONFIG_PT_ALLOWED && !IS_NPC(vict))
     pcsteal = 1;
 
-  if (!AWAKE(vict))	/* Easier to steal from sleeping people. */
-    percent -= 50;
-
-  /* No stealing if not allowed. If it is no stealing from Imm's or Shopkeepers. */
-  if (GET_LEVEL(vict) >= LVL_IMMORT || pcsteal || GET_MOB_SPEC(vict) == shop_keeper)
-    percent = 101;		/* Failure */
+  sleight_total = roll_sleight_check(ch);
 
   if (str_cmp(obj_name, "coins") && str_cmp(obj_name, "gold")) {
 
@@ -1102,14 +1104,14 @@ ACMD(do_steal)
       }
     } else {			/* obj found in inventory */
 
-      percent += GET_OBJ_WEIGHT(obj);	/* Make heavy harder */
+      dc = compute_steal_dc(vict, GET_OBJ_WEIGHT(obj), pcsteal);
 
-      if (percent > GET_SKILL(ch, SKILL_STEAL)) {
+      if (sleight_total < dc) {
         ohoh = TRUE;
         send_to_char(ch, "Oops..\r\n");
         act("$n tried to steal something from you!", FALSE, ch, 0, vict, TO_VICT);
         act("$n tries to steal something from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
-        gain_skill(ch, "steal", FALSE);
+        gain_skill(ch, "sleight of hand", FALSE);
       } else {			/* Steal the item */
           if (IS_CARRYING_N(ch) + 1 < CAN_CARRY_N(ch)) {
             if (!give_otrigger(obj, vict, ch) || !receive_mtrigger(ch, vict, obj) ) {
@@ -1126,12 +1128,13 @@ ACMD(do_steal)
       }
     }
   } else {			/* Steal some coins */
-    if (AWAKE(vict) && (percent > GET_SKILL(ch, SKILL_STEAL))) {
+    dc = compute_steal_dc(vict, 0, pcsteal);
+    if (AWAKE(vict) && (sleight_total < dc)) {
       ohoh = TRUE;
       send_to_char(ch, "Oops..\r\n");
       act("You discover that $n has $s hands in your wallet.", FALSE, ch, 0, vict, TO_VICT);
       act("$n tries to steal gold from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
-      gain_skill(ch, "steal", FALSE);
+      gain_skill(ch, "sleight of hand", FALSE);
     } else {
       /* Steal some gold coins */
       gold = (GET_GOLD(vict) * rand_number(1, 10)) / 100;
@@ -1139,7 +1142,7 @@ ACMD(do_steal)
       if (gold > 0) {
         increase_gold(ch, gold);
         decrease_gold(vict, gold);
-        gain_skill(ch, "steal", TRUE);
+        gain_skill(ch, "sleight of hand", TRUE);
         if (gold > 1)
           send_to_char(ch, "Bingo!  You got %d gold coins.\r\n", gold);
         else

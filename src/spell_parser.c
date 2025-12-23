@@ -915,6 +915,12 @@ void mag_assign_spells(void) {
   spello(SPELL_DG_AFFECT, "Script-inflicted", 0, 0, 0, POS_SITTING,
   TAR_IGNORE, TRUE, 0, NULL);
 
+  /* Non-castable affects for skill-driven detection */
+  spello(SPELL_SCAN_AFFECT, "Scanning", 0, 0, 0, POS_SITTING,
+  TAR_IGNORE, TRUE, 0, NULL);
+  spello(SPELL_LISTEN_AFFECT, "Listening", 0, 0, 0, POS_SITTING,
+  TAR_IGNORE, TRUE, 0, NULL);
+
   /* Declaration of skills - this actually doesn't do anything except set it up
    * so that immortals can use these skills by default.  The min level to use
    * the skill for other classes is set up in class.c. */
@@ -925,7 +931,6 @@ void mag_assign_spells(void) {
   skillo(SKILL_PICK_LOCK, "pick lock");
   skillo(SKILL_RESCUE, "rescue");
   skillo(SKILL_SNEAK, "sneak");
-  skillo(SKILL_STEAL, "steal");
   skillo(SKILL_TRACK, "track");
   skillo(SKILL_WHIRLWIND, "whirlwind");
   skillo(SKILL_BANDAGE, "bandage");
@@ -936,7 +941,6 @@ void mag_assign_spells(void) {
   skillo(SKILL_BLUDGEONING_WEAPONS, "bludgeoning weapons");
   skillo(SKILL_PERCEPTION, "perception");
   skillo(SKILL_STEALTH, "stealth");
-  skillo(SKILL_LISTEN, "listen");
   skillo(SKILL_SLEIGHT_OF_HAND, "sleight of hand");
   skillo(SKILL_ACROBATICS, "acrobatics");
   skillo(SKILL_ANIMAL_HANDLING, "animal handling");

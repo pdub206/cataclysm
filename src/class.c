@@ -357,7 +357,6 @@ void grant_class_skills(struct char_data *ch, bool reset)
   case CLASS_ROGUE:
     SET_SKILL(ch, SKILL_STEALTH, 5);
     SET_SKILL(ch, SKILL_TRACK, 5);
-    SET_SKILL(ch, SKILL_STEAL, 5);
     SET_SKILL(ch, SKILL_BACKSTAB, 5);
     SET_SKILL(ch, SKILL_PICK_LOCK, 5);
     SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
@@ -400,7 +399,6 @@ void grant_class_skills(struct char_data *ch, bool reset)
     break;
 
   case CLASS_RANGER:
-    SET_SKILL(ch, SKILL_STEALTH, 5);
     SET_SKILL(ch, SKILL_BANDAGE, 5);
     SET_SKILL(ch, SKILL_TRACK, 5);
     SET_SKILL(ch, SKILL_BASH, 5);
@@ -415,6 +413,7 @@ void grant_class_skills(struct char_data *ch, bool reset)
     SET_SKILL(ch, SKILL_SURVIVAL, 5);
     SET_SKILL(ch, SKILL_ATHLETICS, 5);
     SET_SKILL(ch, SKILL_PERSUASION, 5);
+    SET_SKILL(ch, SKILL_STEALTH, 5);
     break;
 
   case CLASS_BARD:
@@ -683,7 +682,6 @@ void init_spell_levels(void)
   /* ROGUES */
   spell_level(SKILL_PICK_LOCK, CLASS_ROGUE, 1);
   spell_level(SKILL_BACKSTAB, CLASS_ROGUE, 1);
-  spell_level(SKILL_STEAL, CLASS_ROGUE, 1);
   spell_level(SKILL_TRACK, CLASS_ROGUE, 1);
   spell_level(SKILL_UNARMED, CLASS_ROGUE, 1);
   spell_level(SKILL_PIERCING_WEAPONS, CLASS_ROGUE, 1);
