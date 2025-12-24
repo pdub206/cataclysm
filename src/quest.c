@@ -301,8 +301,8 @@ void generic_complete_quest(struct char_data *ch)
 
     if (QST_GOLD(rnum)) {
       increase_gold(ch, QST_GOLD(rnum));
-      send_to_char(ch,
-            "You have been awarded %d gold coins for your service.\r\n",
+          send_to_char(ch,
+            "You have been awarded %d coins for your service.\r\n",
             QST_GOLD(rnum));
     }
     if (QST_OBJ(rnum) && QST_OBJ(rnum) != NOTHING) {

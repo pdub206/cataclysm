@@ -1010,7 +1010,7 @@ Shows your balance.
 
 Moves all of your money in/out of the bank.
 
-See also: GOLD, SCORE
+See also: COINS, SCORE
 #0
 BASH
 
@@ -3516,11 +3516,11 @@ Examples: @RTSTAT 23612, 23613, 23614@n
 
 See also: REMOTE, VARIABLES, CONTEXT
 #31
-GOLD PURSE MONEY PLATINUM SILVER COPPER CASH COINS WEALTH CURRENCY MULTI-CURRENCY ECONOMY TREASURE
+COINS PURSE MONEY PLATINUM SILVER COPPER CASH WEALTH CURRENCY MULTI-CURRENCY ECONOMY TREASURE
 
-Usage: gold
+Usage: coins
    
-Displays how many gold coins you are carrying.
+Displays how many coins you are carrying.
 
 See also: BALANCE, DEPOSIT, WITHDRAW, MINIMIZE
 #0
@@ -4042,7 +4042,7 @@ INFORMATION
    The following commands deal with information - for more info, @RHELP KEYWORD@n 
 
 RULES POLICY                         - The rules of the game.
-SCORE AFFECTS GOLD TOGGLE PRACTICE   - Info about yourself and your settings.
+SCORE AFFECTS COINS TOGGLE PRACTICE  - Info about yourself and your settings.
 HELP INFO NEWS MOTD IMOTD            - Info about the game, recent changes.
 WHO WHERE CONSIDER FLAGS TITLE       - Info on other players.
 TIME DATE                            - Info on time.
@@ -8518,7 +8518,7 @@ dex                 Imm    BOTH  NUMBER
 drunk               Imm    BOTH  MISC  
 exp                 God    BOTH  NUMBER
 frozen              GrGod  PC    BINARY
-gold                Imm    BOTH  NUMBER
+coins               Imm    BOTH  NUMBER
 height              Imm    BOTH  NUMBER
 hitpoints           Imm    BOTH  NUMBER
 hunger              Imm    BOTH  MISC  
@@ -9235,13 +9235,13 @@ Thief Only.
 
 Usage: steal <item> [target]
 
-Use steal to steal gold or items from people.  The chance of not getting
+Use steal to steal coins or items from people.  The chance of not getting
 caught depends on how well you have practiced steal, and if the person
 is asleep.
 
 Examples:
 
-  > steal gold drunk
+  > steal coins drunk
   > steal sword mercenary
     (If it is wielded, only possible if he is sleeping)
 
@@ -9901,7 +9901,7 @@ set test nohassle off
 set test olc 611
 set test title has trial vnum 61165
 set test loadroom 3
-set test gold 1000000
+set test coins 1000000
 restore test
 redit 61165
 1
@@ -9925,7 +9925,7 @@ set test title has zone 348
 set file test title has zone 348
 set test loadroom 348
 set file test loadroom 348
-set test gold 1000000
+set test coins 1000000
 wiznet Okay test, you have zone 348 vnum's 34800 to 34899. Help buildwalk and help dig to learn how to create and link your rooms. If you have any questions just ask.
 toggle nohassle off
 load obj 1332
@@ -9953,7 +9953,7 @@ saveall
 set test olc 348
 set test title has zone 348
 set test loadroom 348
-set test gold 1000000
+set test coins 1000000
 wiznet Okay test, you have zone 348 vnum's 34800 to 34899. Help buildwalk and help dig to learn how 
 to create and link your rooms. If you have any questions just ask.
 toggle nohassle off
@@ -10454,7 +10454,7 @@ send("set " .. matches[3] .. " title has trial vnum " .. matches[2])
 send("set file " .. matches[3] .. " title has trial vnum " .. matches[2])
 send("set " .. matches[3] .. " loadroom 3")
 send("set file " .. matches[3] .. " loadroom 3")
-send("set " .. matches[3] .. " gold 1000000")
+send("set " .. matches[3] .. " coins 1000000")
 send("restore " .. matches[3])
 send("redit " .. matches[2])
 send("1")

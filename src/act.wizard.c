@@ -44,6 +44,8 @@ static void do_stat_room(struct char_data *ch, struct room_data *rm);
 static void do_stat_object(struct char_data *ch, struct obj_data *j);
 static void do_stat_character(struct char_data *ch, struct char_data *k);
 static void stop_snooping(struct char_data *ch);
+static struct obj_data *find_inventory_coin(struct char_data *ch);
+static void remove_other_coins_from_list(struct obj_data *list, struct obj_data *keep);
 static size_t print_zone_to_buf(char *bufptr, size_t left, zone_rnum zone, int listall);
 static struct char_data *is_in_game(long idnum);
 static void mob_checkload(struct char_data *ch, mob_vnum mvnum);
@@ -1837,7 +1839,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
     GET_MANA(k), GET_MAX_MANA(k), mana_gain(k),
     GET_MOVE(k), GET_MAX_MOVE(k), move_gain(k));
 
-  stat_table_row_fmt(ch, "Currency", "Gold %d, Bank %d (Total %d)",
+  stat_table_row_fmt(ch, "Currency", "Coins %d, Bank %d (Total %d)",
     GET_GOLD(k), GET_BANK_GOLD(k), GET_GOLD(k) + GET_BANK_GOLD(k));
 
   if (!IS_NPC(k)) {
@@ -3565,7 +3567,7 @@ ACMD(do_show)
 
     send_to_char(ch, "Player: %-12s (%s) [%2d %s]\r\n", GET_NAME(vict),
       genders[(int) GET_SEX(vict)], GET_LEVEL(vict), CLASS_ABBR(vict));
-    send_to_char(ch, "Gold: %-8d  Bal: %-8d Exp: %-8d  Align: %-5d\r\n",
+    send_to_char(ch, "Coins: %-8d  Bal: %-8d Exp: %-8d  Align: %-5d\r\n",
       GET_GOLD(vict), GET_BANK_GOLD(vict), GET_EXP(vict),
       GET_ALIGNMENT(vict));
     send_to_char(ch, "Started: %-25.25s  Last: %-25.25s\r\n", buf1, buf2);
@@ -3774,7 +3776,7 @@ static struct set_struct {
    { "drunk",		LVL_BUILDER, 	BOTH, 	MISC },
    { "exp", 		LVL_GOD, 	BOTH, 	NUMBER },
    { "frozen",		LVL_GRGOD, 	PC,	BINARY },  /* 15 */
-   { "gold",		LVL_BUILDER, 	BOTH, 	NUMBER },
+   { "coins",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "height",		LVL_BUILDER,	BOTH,	NUMBER },
    { "hitpoints",       LVL_BUILDER, 	BOTH, 	NUMBER },
    { "hunger",		LVL_BUILDER, 	BOTH, 	MISC },    /* 20 */
@@ -3946,9 +3948,42 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       }
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_FROZEN);
       break;
-    case 15: /* gold */
-      GET_GOLD(vict) = RANGE(0, 100000000);
-      break;
+    case 15: { /* coins */
+      struct obj_data *coin_obj;
+      int i;
+
+      value = MIN(MAX(value, 0), 100000000);
+      coin_obj = find_inventory_coin(vict);
+
+      if (value == 0) {
+        remove_other_coins_from_list(vict->carrying, NULL);
+        for (i = 0; i < NUM_WEARS; i++)
+          remove_other_coins_from_list(GET_EQ(vict, i), NULL);
+        GET_GOLD(vict) = 0;
+        send_to_char(ch, "Ok.\r\n");
+        return (1);
+      }
+
+      if (coin_obj) {
+        GET_OBJ_VAL(coin_obj, 0) = value;
+        update_money_obj(coin_obj);
+      } else {
+        coin_obj = create_money(value);
+        if (!coin_obj) {
+          send_to_char(ch, "Ok.\r\n");
+          return (1);
+        }
+        obj_to_char(coin_obj, vict);
+      }
+
+      remove_other_coins_from_list(vict->carrying, coin_obj);
+      for (i = 0; i < NUM_WEARS; i++)
+        remove_other_coins_from_list(GET_EQ(vict, i), coin_obj);
+
+      GET_GOLD(vict) = value;
+      send_to_char(ch, "Ok.\r\n");
+      return (1);
+    }
     case 16: /* height */
       GET_HEIGHT(vict) = value;
       affect_total(vict);
@@ -4323,6 +4358,35 @@ static void show_set_help(struct char_data *ch)
     }
   }
   page_string(ch->desc, buf, TRUE);
+}
+
+static struct obj_data *find_inventory_coin(struct char_data *ch)
+{
+  struct obj_data *obj;
+
+  if (!ch)
+    return NULL;
+
+  for (obj = ch->carrying; obj; obj = obj->next_content)
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      return obj;
+
+  return NULL;
+}
+
+static void remove_other_coins_from_list(struct obj_data *list, struct obj_data *keep)
+{
+  struct obj_data *obj, *next_obj;
+
+  for (obj = list; obj; obj = next_obj) {
+    next_obj = obj->next_content;
+
+    if (obj->contains)
+      remove_other_coins_from_list(obj->contains, keep);
+
+    if (obj != keep && GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      extract_obj(obj);
+  }
 }
 
 ACMD(do_set)

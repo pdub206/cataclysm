@@ -62,6 +62,24 @@ static size_t print_object_location(int num, const obj_data *obj, const char_dat
 #define SHOW_OBJ_SHORT    1
 #define SHOW_OBJ_MAIN   2
 
+static bool inventory_coin_counts = FALSE;
+
+static bool obj_match_for_list(const struct obj_data *a, const struct obj_data *b)
+{
+  if (!a || !b)
+    return FALSE;
+
+  if (inventory_coin_counts &&
+      GET_OBJ_TYPE(a) == ITEM_MONEY &&
+      GET_OBJ_TYPE(b) == ITEM_MONEY &&
+      GET_OBJ_VAL(a, 0) != GET_OBJ_VAL(b, 0))
+    return FALSE;
+
+  return ((a->short_description == b->short_description && a->name == b->name) ||
+          (!strcmp(a->short_description, b->short_description) &&
+           !strcmp(a->name, b->name)));
+}
+
 static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mode)
 {
   int found = 0;
@@ -121,6 +139,8 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
       }
     }
     send_to_char(ch, "%s", obj->short_description);
+    if (inventory_coin_counts && GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      send_to_char(ch, " (%d)", GET_OBJ_VAL(obj, 0));
     break;
 
   case SHOW_OBJ_MAIN:
@@ -400,8 +420,7 @@ static void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mo
 
     /* Check the list to see if we've already counted this object */
     for (j = list; j != i; j = j->next_content)
-      if ((j->short_description == i->short_description && j->name == i->name) ||
-          (!strcmp(j->short_description, i->short_description) && !strcmp(j->name, i->name)))
+      if (obj_match_for_list(j, i))
         break; /* found a matching object */
     if (j != i)
       continue; /* we counted object i earlier in the list */
@@ -409,8 +428,7 @@ static void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mo
     /* Count matching objects, including this one */
     for (display = j = i; j; j = j->next_content)
       /* This if-clause should be exactly the same as the one in the loop above */
-      if ((j->short_description == i->short_description && j->name == i->name) ||
-          (!strcmp(j->short_description, i->short_description) && !strcmp(j->name, i->name)))
+      if (obj_match_for_list(j, i))
         if (CAN_SEE_OBJ(ch, j)) {
           ++num;
           /* If the original item can't be seen, switch it for this one */
@@ -423,9 +441,23 @@ static void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mo
         (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_HOLYLIGHT)))) {
       if (mode == SHOW_OBJ_LONG)
         send_to_char(ch, "%s", CCGRN(ch, C_NRM));
-      if (num != 1)
-        send_to_char(ch, "(%2i) ", num);
-      show_obj_to_char(display, ch, mode);
+
+      if (GET_OBJ_TYPE(display) == ITEM_MONEY && mode == SHOW_OBJ_LONG && num > 1) {
+        const char *pile_desc = money_pile_desc(num);
+        char buf[MAX_STRING_LENGTH];
+
+        if (pile_desc) {
+          snprintf(buf, sizeof(buf), "%s are lying here.", pile_desc);
+          buf[0] = UPPER(buf[0]);
+          send_to_char(ch, "%s", buf);
+        } else {
+          show_obj_to_char(display, ch, mode);
+        }
+      } else {
+        if (num != 1)
+          send_to_char(ch, "(%2i) ", num);
+        show_obj_to_char(display, ch, mode);
+      }
       send_to_char(ch, "%s", CCNRM(ch, C_NRM));
       found = TRUE;
     }
@@ -1105,9 +1137,9 @@ ACMD(do_gold)
   if (GET_GOLD(ch) == 0)
     send_to_char(ch, "You're broke!\r\n");
   else if (GET_GOLD(ch) == 1)
-    send_to_char(ch, "You have one miserable little gold coin.\r\n");
+    send_to_char(ch, "You have one miserable little coin.\r\n");
   else
-    send_to_char(ch, "You have %d gold coins.\r\n", GET_GOLD(ch));
+    send_to_char(ch, "You have %d coins.\r\n", GET_GOLD(ch));
 }
 
 ACMD(do_score)
@@ -1163,8 +1195,6 @@ ACMD(do_score)
     send_to_char(ch, "  It's your birthday today.\r\n");
   else
     send_to_char(ch, "\r\n");
-
-  send_to_char(ch, "You have %d gold coins.\r\n", GET_GOLD(ch));
 
   /* Only players have quest data */
   if (!ismob) {
@@ -1289,7 +1319,9 @@ ACMD(do_score)
 ACMD(do_inventory)
 {
   send_to_char(ch, "You are carrying:\r\n");
+  inventory_coin_counts = TRUE;
   list_obj_to_char(ch->carrying, ch, SHOW_OBJ_SHORT, TRUE);
+  inventory_coin_counts = FALSE;
 }
 
 ACMD(do_equipment)

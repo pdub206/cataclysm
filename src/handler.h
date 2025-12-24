@@ -23,7 +23,12 @@ bool add_dur, bool avg_dur, bool add_mod, bool avg_mod);
 
 /* utility */
 const char *money_desc(int amount);
+const char *money_pile_desc(int piles);
 struct obj_data *create_money(int amount);
+void update_money_obj(struct obj_data *obj);
+int count_char_coins(struct char_data *ch);
+int remove_coins_from_char(struct char_data *ch, int amount);
+void add_coins_to_char(struct char_data *ch, int amount);
 int	isname(const char *str, const char *namelist);
 int	is_name(const char *str, const char *namelist);
 char	*fname(const char *namelist);

@@ -545,7 +545,7 @@ void qedit_parse(struct descriptor_data *d, char *arg)
  case 'g':
  case 'G':
    OLC_MODE(d) = QEDIT_GOLD;
-   write_to_output(d, "Enter the number of gold coins (0 for none) : ");
+   write_to_output(d, "Enter the number of coins (0 for none) : ");
    break;
  case 't':
  case 'T':
@@ -744,4 +744,3 @@ void qedit_string_cleanup(struct descriptor_data *d, int terminator)
     break;
   }
 }
-

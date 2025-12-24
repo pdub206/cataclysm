@@ -394,7 +394,7 @@
 #define ITEM_DRINKCON  17		/**< Item is a drink container	*/
 #define ITEM_KEY       18		/**< Item is a key		*/
 #define ITEM_FOOD      19		/**< Item is food			*/
-#define ITEM_MONEY     20		/**< Item is money (gold)		*/
+#define ITEM_MONEY     20		/**< Item is money (coins)		*/
 #define ITEM_PEN       21		/**< Item is a pen		*/
 #define ITEM_BOAT      22		/**< Item is a boat		*/
 #define ITEM_FOUNTAIN  23		/**< Item is a fountain		*/

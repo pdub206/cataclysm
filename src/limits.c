@@ -493,30 +493,37 @@ void point_update(void)
 int increase_gold(struct char_data *ch, int amt)
 {
   int curr_gold;
+  int add;
+
+  if (!ch)
+    return 0;
 
   curr_gold = GET_GOLD(ch);
 
-  if (amt < 0) {
-    GET_GOLD(ch) = MAX(0, curr_gold+amt);
-    /* Validate to prevent overflow */
-    if (GET_GOLD(ch) > curr_gold) GET_GOLD(ch) = 0;
-  } else {
-    GET_GOLD(ch) = MIN(MAX_GOLD, curr_gold+amt);
-    /* Validate to prevent overflow */
-    if (GET_GOLD(ch) < curr_gold) GET_GOLD(ch) = MAX_GOLD;
-  }
-  if (GET_GOLD(ch) == MAX_GOLD)
-    send_to_char(ch, "%sYou have reached the maximum gold!\r\n%sYou must spend it or bank it before you can gain any more.\r\n", QBRED, QNRM);
+  if (amt < 0)
+    return decrease_gold(ch, -amt);
+  if (amt == 0)
+    return curr_gold;
 
-  return (GET_GOLD(ch));
+  add = MIN(amt, MAX_GOLD - curr_gold);
+  if (add <= 0)
+    return curr_gold;
+
+  add_coins_to_char(ch, add);
+
+  if (GET_GOLD(ch) == MAX_GOLD)
+    send_to_char(ch, "%sYou have reached the maximum coins!\r\n%sYou must spend them or bank them before you can gain any more.\r\n", QBRED, QNRM);
+
+  return GET_GOLD(ch);
 }
 
 int decrease_gold(struct char_data *ch, int deduction)
 {
-  int amt;
-  amt = (deduction * -1);
-  increase_gold(ch, amt);
-  return (GET_GOLD(ch));
+  if (!ch || deduction <= 0)
+    return GET_GOLD(ch);
+
+  remove_coins_from_char(ch, deduction);
+  return GET_GOLD(ch);
 }
 
 int increase_bank(struct char_data *ch, int amt)

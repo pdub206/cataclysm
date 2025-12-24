@@ -233,7 +233,6 @@ static void make_corpse(struct char_data *ch)
 {
   char buf2[MAX_NAME_LENGTH + 64];
   struct obj_data *corpse, *o;
-  struct obj_data *money;
   int i, x, y;
 
   corpse = create_obj();
@@ -289,13 +288,8 @@ static void make_corpse(struct char_data *ch)
     }
 
   /* transfer gold */
-  if (GET_GOLD(ch) > 0) {
-    if (IS_NPC(ch) || ch->desc) {
-      money = create_money(GET_GOLD(ch));
-      obj_to_obj(money, corpse);
-    }
+  if (GET_GOLD(ch) > 0)
     GET_GOLD(ch) = 0;
-  }
   ch->carrying = NULL;
   IS_CARRYING_N(ch) = 0;
   IS_CARRYING_W(ch) = 0;

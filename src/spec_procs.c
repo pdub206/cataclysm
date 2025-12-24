@@ -267,9 +267,9 @@ static void npc_steal(struct char_data *ch, struct char_data *victim)
 
   if (AWAKE(victim) && (rand_number(0, GET_LEVEL(ch)) == 0)) {
     act("You discover that $n has $s hands in your wallet.", FALSE, ch, 0, victim, TO_VICT);
-    act("$n tries to steal gold from $N.", TRUE, ch, 0, victim, TO_NOTVICT);
+    act("$n tries to steal coins from $N.", TRUE, ch, 0, victim, TO_NOTVICT);
   } else {
-    /* Steal some gold coins */
+    /* Steal some coins */
     gold = (GET_GOLD(victim) * rand_number(1, 10)) / 100;
     if (gold > 0) {
       increase_gold(ch, gold);
@@ -579,7 +579,7 @@ SPECIAL(pet_shops)
       return (TRUE);
     }
     if (GET_GOLD(ch) < PET_PRICE(pet)) {
-      send_to_char(ch, "You don't have enough gold!\r\n");
+      send_to_char(ch, "You don't have enough coins!\r\n");
       return (TRUE);
     }
     decrease_gold(ch, PET_PRICE(pet));
@@ -657,4 +657,3 @@ SPECIAL(bank)
   } else
     return (FALSE);
 }
-

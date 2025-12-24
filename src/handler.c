@@ -34,6 +34,9 @@ static int apply_ac(struct char_data *ch, int eq_pos);
 static void update_object(struct obj_data *obj, int use);
 static void affect_modify_ar(struct char_data * ch, byte loc, sbyte mod, int bitv[], bool add);
 static bool is_shadow_keyword(const char *name);
+static int obj_coin_count(struct obj_data *obj);
+static struct char_data *obj_owner(struct obj_data *obj);
+static void adjust_char_coins(struct char_data *ch, int amount);
 
 char *fname(const char *namelist)
 {
@@ -383,12 +386,58 @@ void char_to_room(struct char_data *ch, room_rnum room)
   }
 }
 
+static int obj_coin_count(struct obj_data *obj)
+{
+  int total = 0;
+  struct obj_data *child;
+
+  if (!obj)
+    return 0;
+
+  if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+    total += MAX(0, GET_OBJ_VAL(obj, 0));
+
+  for (child = obj->contains; child; child = child->next_content)
+    total += obj_coin_count(child);
+
+  return total;
+}
+
+static struct char_data *obj_owner(struct obj_data *obj)
+{
+  struct obj_data *top = obj;
+
+  while (top) {
+    if (top->carried_by)
+      return top->carried_by;
+    if (top->worn_by)
+      return top->worn_by;
+    top = top->in_obj;
+  }
+
+  return NULL;
+}
+
+static void adjust_char_coins(struct char_data *ch, int amount)
+{
+  if (!ch || amount == 0)
+    return;
+
+  if (amount > 0)
+    GET_GOLD(ch) = MIN(MAX_GOLD, GET_GOLD(ch) + amount);
+  else
+    GET_GOLD(ch) = MAX(0, GET_GOLD(ch) + amount);
+}
+
 /* Give an object to a char. */
 void obj_to_char(struct obj_data *object, struct char_data *ch)
 {
   room_rnum __rs_room = RoomSave_room_of_obj(object);  /* where the item currently lives */
 
   if (object && ch) {
+    struct char_data *old_owner = obj_owner(object);
+    int coin_count = obj_coin_count(object);
+
     object->next_content = ch->carrying;
     ch->carrying = object;
     object->carried_by = ch;
@@ -403,6 +452,11 @@ void obj_to_char(struct obj_data *object, struct char_data *ch)
     /* set flag for crash-save system, but not on mobs! */
     if (!IS_NPC(ch))
       SET_BIT_AR(PLR_FLAGS(ch), PLR_CRASH);
+
+    if (coin_count > 0 && old_owner != ch) {
+      adjust_char_coins(old_owner, -coin_count);
+      adjust_char_coins(ch, coin_count);
+    }
   } else
     log("SYSERR: NULL obj (%p) or char (%p) passed to obj_to_char.", (void *)object, (void *)ch);
 }
@@ -416,6 +470,14 @@ void obj_from_char(struct obj_data *object)
   if (object == NULL) {
     log("SYSERR: NULL object passed to obj_from_char.");
     return;
+  }
+  {
+    struct char_data *old_owner = obj_owner(object);
+    int coin_count = obj_coin_count(object);
+
+    if (coin_count > 0 && old_owner) {
+      adjust_char_coins(old_owner, -coin_count);
+    }
   }
   REMOVE_FROM_LIST(object, object->carried_by->carrying, next_content);
 
@@ -710,6 +772,16 @@ void obj_to_obj(struct obj_data *obj, struct obj_data *obj_to)
 	(void *)obj, (void *)obj, (void *)obj_to);
     return;
   }
+  {
+    struct char_data *old_owner = obj_owner(obj);
+    struct char_data *new_owner = obj_owner(obj_to);
+    int coin_count = obj_coin_count(obj);
+
+    if (coin_count > 0 && old_owner != new_owner) {
+      adjust_char_coins(old_owner, -coin_count);
+      adjust_char_coins(new_owner, coin_count);
+    }
+  }
 
   obj->next_content = obj_to->contains;
   obj_to->contains = obj;
@@ -738,6 +810,14 @@ void obj_from_obj(struct obj_data *obj)
   if (obj->in_obj == NULL) {
     log("SYSERR: (%s): trying to illegally extract obj from obj.", __FILE__);
     return;
+  }
+  {
+    struct char_data *old_owner = obj_owner(obj);
+    int coin_count = obj_coin_count(obj);
+
+    if (coin_count > 0 && old_owner) {
+      adjust_char_coins(old_owner, -coin_count);
+    }
   }
   obj_from = obj->in_obj;
   REMOVE_FROM_LIST(obj, obj_from->contains, next_content);
@@ -1371,95 +1451,245 @@ int get_obj_pos_in_equip_vis(struct char_data *ch, char *arg, int *number, struc
   return (-1);
 }
 
+static int money_weight(int amount)
+{
+  const int coins_per_weight = 10;
+
+  if (amount <= 0)
+    return 0;
+
+  return MAX(1, (amount + coins_per_weight - 1) / coins_per_weight);
+}
+
 const char *money_desc(int amount)
 {
-  int cnt;
-  struct {
-    int limit;
-    const char *description;
-  } money_table[] = {
-    {          1, "a gold coin"				},
-    {         10, "a tiny pile of gold coins"		},
-    {         20, "a handful of gold coins"		},
-    {         75, "a little pile of gold coins"		},
-    {        200, "a small pile of gold coins"		},
-    {       1000, "a pile of gold coins"		},
-    {       5000, "a big pile of gold coins"		},
-    {      10000, "a large heap of gold coins"		},
-    {      20000, "a huge mound of gold coins"		},
-    {      75000, "an enormous mound of gold coins"	},
-    {     150000, "a small mountain of gold coins"	},
-    {     250000, "a mountain of gold coins"		},
-    {     500000, "a huge mountain of gold coins"	},
-    {    1000000, "an enormous mountain of gold coins"	},
-    {          0, NULL					},
-  };
-
   if (amount <= 0) {
-    log("SYSERR: Try to create negative or 0 money (%d).", amount);
+    log("SYSERR: Try to describe negative or 0 coins (%d).", amount);
     return (NULL);
   }
 
-  for (cnt = 0; money_table[cnt].limit; cnt++)
-    if (amount <= money_table[cnt].limit)
-      return (money_table[cnt].description);
+  if (amount == 1)
+    return "a single ceramic coin";
+  if (amount == 2)
+    return "a couple ceramic coins";
+  if (amount < 10)
+    return "a few ceramic coins";
+  return "a pile of ceramic coins";
+}
 
-  return ("an absolutely colossal mountain of gold coins");
+const char *money_pile_desc(int piles)
+{
+  if (piles <= 0)
+    return NULL;
+  if (piles == 1)
+    return "a pile of ceramic coins";
+  if (piles == 2)
+    return "a couple piles of ceramic coins";
+  if (piles <= 5)
+    return "a few piles of ceramic coins";
+  if (piles <= 9)
+    return "several piles of ceramic coins";
+  return "many piles of ceramic coins";
+}
+
+void update_money_obj(struct obj_data *obj)
+{
+  struct extra_descr_data *new_descr;
+  const char *desc;
+  char buf[200];
+  int amount;
+  int new_weight;
+  int delta_weight;
+
+  if (!obj || GET_OBJ_TYPE(obj) != ITEM_MONEY)
+    return;
+
+  amount = MAX(0, GET_OBJ_VAL(obj, 0));
+  desc = money_desc(amount);
+
+  if (obj->name && (obj->item_number == NOTHING ||
+      obj->name != obj_proto[obj->item_number].name)) {
+    free(obj->name);
+  }
+  obj->name = strdup("coin coins ceramic");
+
+  if (obj->short_description && (obj->item_number == NOTHING ||
+      obj->short_description != obj_proto[obj->item_number].short_description)) {
+    free(obj->short_description);
+  }
+  obj->short_description = desc ? strdup(desc) : strdup("ceramic coins");
+
+  if (obj->description && (obj->item_number == NOTHING ||
+      obj->description != obj_proto[obj->item_number].description)) {
+    free(obj->description);
+  }
+
+  if (amount == 1)
+    snprintf(buf, sizeof(buf), "A single ceramic coin is lying here.");
+  else if (amount == 2)
+    snprintf(buf, sizeof(buf), "A couple ceramic coins are lying here.");
+  else if (amount < 10)
+    snprintf(buf, sizeof(buf), "A few ceramic coins are lying here.");
+  else
+    snprintf(buf, sizeof(buf), "A pile of ceramic coins is lying here.");
+  obj->description = strdup(buf);
+
+  if (!obj->ex_description) {
+    CREATE(new_descr, struct extra_descr_data, 1);
+    new_descr->next = NULL;
+    obj->ex_description = new_descr;
+  }
+  new_descr = obj->ex_description;
+
+  if (new_descr->keyword)
+    free(new_descr->keyword);
+  new_descr->keyword = strdup("coin coins ceramic");
+
+  if (new_descr->description)
+    free(new_descr->description);
+
+  if (amount < 10)
+    snprintf(buf, sizeof(buf), "There are %d ceramic coins.", amount);
+  else if (amount < 100)
+    snprintf(buf, sizeof(buf), "There are about %d ceramic coins.", 10 * (amount / 10));
+  else if (amount < 1000)
+    snprintf(buf, sizeof(buf), "It looks to be about %d ceramic coins.", 100 * (amount / 100));
+  else if (amount < 100000)
+    snprintf(buf, sizeof(buf), "You guess there are, maybe, %d ceramic coins.",
+	     1000 * ((amount / 1000) + rand_number(0, (amount / 1000))));
+  else
+    strcpy(buf, "There are a LOT of ceramic coins.");	/* strcpy: OK (is < 200) */
+  new_descr->description = strdup(buf);
+
+  SET_BIT_AR(GET_OBJ_WEAR(obj), ITEM_WEAR_TAKE);
+  GET_OBJ_COST(obj) = amount;
+
+  new_weight = money_weight(amount);
+  delta_weight = new_weight - GET_OBJ_WEIGHT(obj);
+  if (delta_weight != 0) {
+    if (IN_ROOM(obj) != NOWHERE || obj->carried_by || obj->in_obj)
+      weight_change_object(obj, delta_weight);
+    else
+      GET_OBJ_WEIGHT(obj) = new_weight;
+  }
 }
 
 struct obj_data *create_money(int amount)
 {
   struct obj_data *obj;
-  struct extra_descr_data *new_descr;
-  char buf[200];
   int y;
 
   if (amount <= 0) {
-    log("SYSERR: Try to create negative or 0 money. (%d)", amount);
+    log("SYSERR: Try to create negative or 0 coins. (%d)", amount);
     return (NULL);
   }
   obj = create_obj();
-  CREATE(new_descr, struct extra_descr_data, 1);
-
-  if (amount == 1) {
-    obj->name = strdup("coin gold");
-    obj->short_description = strdup("a gold coin");
-    obj->description = strdup("One miserable gold coin is lying here.");
-    new_descr->keyword = strdup("coin gold");
-    new_descr->description = strdup("It's just one miserable little gold coin.");
-  } else {
-    obj->name = strdup("coins gold");
-    obj->short_description = strdup(money_desc(amount));
-    snprintf(buf, sizeof(buf), "%s is lying here.", money_desc(amount));
-    obj->description = strdup(CAP(buf));
-
-    new_descr->keyword = strdup("coins gold");
-    if (amount < 10)
-      snprintf(buf, sizeof(buf), "There are %d coins.", amount);
-    else if (amount < 100)
-      snprintf(buf, sizeof(buf), "There are about %d coins.", 10 * (amount / 10));
-    else if (amount < 1000)
-      snprintf(buf, sizeof(buf), "It looks to be about %d coins.", 100 * (amount / 100));
-    else if (amount < 100000)
-      snprintf(buf, sizeof(buf), "You guess there are, maybe, %d coins.",
-	      1000 * ((amount / 1000) + rand_number(0, (amount / 1000))));
-    else
-      strcpy(buf, "There are a LOT of coins.");	/* strcpy: OK (is < 200) */
-    new_descr->description = strdup(buf);
-  }
-
-  new_descr->next = NULL;
-  obj->ex_description = new_descr;
 
   GET_OBJ_TYPE(obj) = ITEM_MONEY;
   for(y = 0; y < TW_ARRAY_MAX; y++)
     obj->obj_flags.wear_flags[y] = 0;
   SET_BIT_AR(GET_OBJ_WEAR(obj), ITEM_WEAR_TAKE);
   GET_OBJ_VAL(obj, 0) = amount;
-  GET_OBJ_COST(obj) = amount;
   obj->item_number = NOTHING;
+  update_money_obj(obj);
 
   return (obj);
+}
+
+static void count_coins_in_list(struct obj_data *list, int *total)
+{
+  struct obj_data *obj;
+
+  for (obj = list; obj; obj = obj->next_content) {
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      *total += MAX(0, GET_OBJ_VAL(obj, 0));
+    if (obj->contains)
+      count_coins_in_list(obj->contains, total);
+  }
+}
+
+int count_char_coins(struct char_data *ch)
+{
+  int total = 0;
+  int i;
+  struct obj_data *obj;
+
+  if (!ch)
+    return 0;
+
+  count_coins_in_list(ch->carrying, &total);
+  for (i = 0; i < NUM_WEARS; i++) {
+    obj = GET_EQ(ch, i);
+    if (obj)
+      count_coins_in_list(obj, &total);
+  }
+
+  return total;
+}
+
+static void take_coins_from_list(struct obj_data *list, int *remaining, struct char_data *owner)
+{
+  struct obj_data *obj;
+  struct obj_data *next_obj;
+
+  for (obj = list; obj && *remaining > 0; obj = next_obj) {
+    next_obj = obj->next_content;
+
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY) {
+      int pile = GET_OBJ_VAL(obj, 0);
+      int take = MIN(pile, *remaining);
+
+      if (take > 0) {
+        if (take == pile) {
+          *remaining -= take;
+          extract_obj(obj);
+          continue;
+        }
+
+        GET_OBJ_VAL(obj, 0) = pile - take;
+        *remaining -= take;
+        update_money_obj(obj);
+        adjust_char_coins(owner, -take);
+      }
+    }
+
+    if (obj->contains && *remaining > 0)
+      take_coins_from_list(obj->contains, remaining, owner);
+  }
+}
+
+int remove_coins_from_char(struct char_data *ch, int amount)
+{
+  int remaining;
+  int i;
+  struct obj_data *obj;
+
+  if (!ch || amount <= 0)
+    return 0;
+
+  remaining = amount;
+  take_coins_from_list(ch->carrying, &remaining, ch);
+  for (i = 0; i < NUM_WEARS && remaining > 0; i++) {
+    obj = GET_EQ(ch, i);
+    if (obj)
+      take_coins_from_list(obj, &remaining, ch);
+  }
+
+  return amount - remaining;
+}
+
+void add_coins_to_char(struct char_data *ch, int amount)
+{
+  struct obj_data *money;
+
+  if (!ch || amount <= 0)
+    return;
+
+  money = create_money(amount);
+  if (!money)
+    return;
+
+  obj_to_char(money, ch);
 }
 
 /* Generic Find, designed to find any object orcharacter.

@@ -636,7 +636,7 @@ obj_save_data *objsave_parse_objects(FILE *fl)
       long vnum = -1L;
       vnum = strtol(line + 1, NULL, 10);
 
-      if (vnum <= 0) {
+      if (vnum <= 0 && vnum != -1L) {
         mudlog(NRM, LVL_IMMORT, TRUE, "SAVE-LOAD: bad vnum header: '%s'", line);
         temp = NULL;
         pending_locate = 0;
@@ -645,15 +645,23 @@ obj_save_data *objsave_parse_objects(FILE *fl)
       }
 
       /* Instantiate from prototype if available, else create a blank */
-      int rnum = real_object((obj_vnum)vnum);
-      if (rnum >= 0) {
-        temp = read_object(rnum, REAL);
-      } else {
+      if (vnum == -1L) {
         temp = create_obj();
-        /* Do NOT assign GET_OBJ_VNUM(temp); item_number derives vnum. */
+        temp->item_number = NOTHING;
         if (!temp->name)              temp->name = strdup("object");
         if (!temp->short_description) temp->short_description = strdup("an object");
         if (!temp->description)       temp->description = strdup("An object lies here.");
+      } else {
+        int rnum = real_object((obj_vnum)vnum);
+        if (rnum >= 0) {
+          temp = read_object(rnum, REAL);
+        } else {
+          temp = create_obj();
+          /* Do NOT assign GET_OBJ_VNUM(temp); item_number derives vnum. */
+          if (!temp->name)              temp->name = strdup("object");
+          if (!temp->short_description) temp->short_description = strdup("an object");
+          if (!temp->description)       temp->description = strdup("An object lies here.");
+        }
       }
 
       pending_locate = 0;
@@ -793,6 +801,11 @@ static int Crash_load_objs(struct char_data *ch) {
                        "Contact a God for assistance.\r\n");
     }
     mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE, "%s entering game with no equipment.", GET_NAME(ch));
+    if (GET_GOLD(ch) > 0) {
+      int old_gold = GET_GOLD(ch);
+      GET_GOLD(ch) = 0;
+      add_coins_to_char(ch, old_gold);
+    }
     return 1;
   }
  
@@ -842,6 +855,20 @@ static int Crash_load_objs(struct char_data *ch) {
 		free(current);
 	}
 
+  {
+    int old_gold = GET_GOLD(ch);
+    int coin_total = count_char_coins(ch);
+
+    if (coin_total > 0) {
+      GET_GOLD(ch) = coin_total;
+    } else if (old_gold > 0) {
+      GET_GOLD(ch) = 0;
+      add_coins_to_char(ch, old_gold);
+    } else {
+      GET_GOLD(ch) = 0;
+    }
+  }
+
   /* Little hoarding check. -gg 3/1/98 */
   mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "%s (level %d) has %d object%s.",
          GET_NAME(ch), GET_LEVEL(ch), num_objs, num_objs != 1 ? "s" : "");
@@ -886,7 +913,7 @@ static int handle_obj(struct obj_data *temp, struct char_data *ch, int locate, s
         cont_row[j] = NULL;
       }
     if (cont_row[0]) { /* content list existing */
-      if (GET_OBJ_TYPE(temp) == ITEM_CONTAINER) {
+      if (obj_is_storage(temp)) {
         /* rem item ; fill ; equip again */
         temp = unequip_char(ch, locate-1);
         temp->contains = NULL; /* should be empty - but who knows */
@@ -914,7 +941,7 @@ static int handle_obj(struct obj_data *temp, struct char_data *ch, int locate, s
       }
 
     if (j == -locate && cont_row[j]) { /* content list existing */
-      if (GET_OBJ_TYPE(temp) == ITEM_CONTAINER) {
+      if (obj_is_storage(temp)) {
         /* take item ; fill ; give to char again */
         obj_from_char(temp);
         temp->contains = NULL;

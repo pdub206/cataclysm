@@ -28,6 +28,7 @@
 /* do_get utility functions */
 static int can_take_obj(struct char_data *ch, struct obj_data *obj);
 static void get_check_money(struct char_data *ch, struct obj_data *obj);
+static bool merge_money_pile(struct char_data *ch, struct obj_data *obj);
 static void get_from_container(struct char_data *ch, struct obj_data *cont, char *arg, int mode, int amount);
 static void get_from_room(struct char_data *ch, char *arg, int amount);
 static void perform_get_from_container(struct char_data *ch, struct obj_data *obj, struct obj_data *cont, int mode);
@@ -82,7 +83,13 @@ static void perform_put(struct char_data *ch, struct obj_data *obj, struct obj_d
   else if (OBJ_FLAGGED(obj, ITEM_NODROP) && IN_ROOM(cont) != NOWHERE)
     act("You can't get $p out of your hand.", FALSE, ch, obj, NULL, TO_CHAR);
   else {
-    obj_from_char(obj);
+    if (obj->carried_by)
+      obj_from_char(obj);
+    else if (obj->in_obj)
+      obj_from_obj(obj);
+    else if (IN_ROOM(obj) != NOWHERE)
+      obj_from_room(obj);
+
     obj_to_obj(obj, cont);
 
     act("$n puts $p in $P.", TRUE, ch, obj, cont, TO_ROOM);
@@ -136,6 +143,7 @@ ACMD(do_put)
   struct obj_data *obj, *next_obj, *cont;
   struct char_data *tmp_char;
   int obj_dotmode, cont_dotmode, found = 0, howmany = 1;
+  int amount_specified = 0;
   char *theobj, *thecont;
 
   one_argument(two_arguments(argument, arg1, arg2), arg3);	/* three_arguments */
@@ -144,6 +152,7 @@ ACMD(do_put)
     howmany = atoi(arg1);
     theobj = arg2;
     thecont = arg3;
+    amount_specified = 1;
   } else {
     theobj = arg1;
     thecont = arg2;
@@ -173,6 +182,23 @@ ACMD(do_put)
           else if (obj == cont && howmany == 1)
             send_to_char(ch, "You attempt to fold it into itself, but fail.\r\n");
           else {
+            if (amount_specified && GET_OBJ_TYPE(obj) == ITEM_MONEY && howmany > 0) {
+              int pile = GET_OBJ_VAL(obj, 0);
+              if (howmany < pile) {
+                struct obj_data *split = create_money(howmany);
+                if (!split) {
+                  send_to_char(ch, "You fumble the coins.\r\n");
+                  return;
+                }
+                GET_OBJ_VAL(obj, 0) = pile - howmany;
+                update_money_obj(obj);
+                GET_GOLD(ch) = MAX(0, GET_GOLD(ch) - howmany);
+                obj = split;
+                howmany = 1;
+              } else {
+                howmany = 1;
+              }
+            }
             while (obj && howmany) {
               next_obj = obj->next_content;
               if (obj != cont) {
@@ -236,6 +262,9 @@ ACMD(do_put)
 
 static int can_take_obj(struct char_data *ch, struct obj_data *obj)
 {
+if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+  update_money_obj(obj);
+
 if (!(CAN_WEAR(obj, ITEM_WEAR_TAKE))) {
   act("$p: you can't take that!", FALSE, ch, obj, 0, TO_CHAR);
   return (0);
@@ -261,19 +290,38 @@ if (!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_NOHASSLE)) {
 
 static void get_check_money(struct char_data *ch, struct obj_data *obj)
 {
-  int value = GET_OBJ_VAL(obj, 0);
-
-  if (GET_OBJ_TYPE(obj) != ITEM_MONEY || value <= 0)
+  if (GET_OBJ_TYPE(obj) != ITEM_MONEY)
     return;
 
+  update_money_obj(obj);
+}
+
+static bool merge_money_pile(struct char_data *ch, struct obj_data *obj)
+{
+  struct obj_data *target;
+  int coins;
+
+  if (!ch || !obj || GET_OBJ_TYPE(obj) != ITEM_MONEY)
+    return FALSE;
+
+  for (target = ch->carrying; target; target = target->next_content) {
+    if (target != obj && GET_OBJ_TYPE(target) == ITEM_MONEY)
+      break;
+  }
+
+  if (!target)
+    return FALSE;
+
+  coins = MAX(0, GET_OBJ_VAL(obj, 0));
+  if (coins <= 0)
+    return FALSE;
+
+  GET_OBJ_VAL(target, 0) += coins;
+  update_money_obj(target);
+  GET_GOLD(ch) = MIN(MAX_GOLD, GET_GOLD(ch) + coins);
   extract_obj(obj);
 
-  increase_gold(ch, value);
-
-  if (value == 1)
-    send_to_char(ch, "There was 1 coin.\r\n");
-  else
-    send_to_char(ch, "There were %d coins.\r\n", value);
+  return TRUE;
 }
 
 static void perform_get_from_container(struct char_data *ch, struct obj_data *obj,
@@ -283,11 +331,18 @@ static void perform_get_from_container(struct char_data *ch, struct obj_data *ob
     if (IS_CARRYING_N(ch) >= CAN_CARRY_N(ch))
       act("$p: you can't hold any more items.", FALSE, ch, obj, 0, TO_CHAR);
     else if (get_otrigger(obj, ch)) {
+      int coin_amt = (GET_OBJ_TYPE(obj) == ITEM_MONEY) ? GET_OBJ_VAL(obj, 0) : 0;
+
       obj_from_obj(obj);
       obj_to_char(obj, ch);
       act("You get $p from $P.", FALSE, ch, obj, cont, TO_CHAR);
       act("$n gets $p from $P.", TRUE, ch, obj, cont, TO_ROOM);
-      get_check_money(ch, obj);
+      if (!merge_money_pile(ch, obj))
+        get_check_money(ch, obj);
+      if (coin_amt == 1)
+        send_to_char(ch, "There was one coin.\r\n");
+      else if (coin_amt > 1)
+        send_to_char(ch, "There were %d coins.\r\n", coin_amt);
     }
   }
 }
@@ -352,11 +407,18 @@ void get_from_container(struct char_data *ch, struct obj_data *cont,
 static int perform_get_from_room(struct char_data *ch, struct obj_data *obj)
 {
   if (can_take_obj(ch, obj) && get_otrigger(obj, ch)) {
+    int coin_amt = (GET_OBJ_TYPE(obj) == ITEM_MONEY) ? GET_OBJ_VAL(obj, 0) : 0;
+
     obj_from_room(obj);
     obj_to_char(obj, ch);
     act("You get $p.", FALSE, ch, obj, 0, TO_CHAR);
     act("$n gets $p.", TRUE, ch, obj, 0, TO_ROOM);
-    get_check_money(ch, obj);
+    if (!merge_money_pile(ch, obj))
+      get_check_money(ch, obj);
+    if (coin_amt == 1)
+      send_to_char(ch, "There was one coin.\r\n");
+    else if (coin_amt > 1)
+      send_to_char(ch, "There were %d coins.\r\n", coin_amt);
     return (1);
   }
   return (0);
@@ -500,6 +562,7 @@ ACMD(do_get)
 static void perform_drop_gold(struct char_data *ch, int amount, byte mode, room_rnum RDR)
 {
   struct obj_data *obj;
+  int removed;
 
   if (amount <= 0)
     send_to_char(ch, "Heh heh heh.. we are jolly funny today, eh?\r\n");
@@ -519,20 +582,33 @@ static void perform_drop_gold(struct char_data *ch, int amount, byte mode, room_
         return;
       }
 
+      removed = remove_coins_from_char(ch, amount);
+      if (removed != amount) {
+        if (has_obj_by_uid_in_lookup_table(object_id))
+          extract_obj(obj);
+        send_to_char(ch, "You don't have that many coins!\r\n");
+        return;
+      }
+
       snprintf(buf, sizeof(buf), "$n drops %s.", money_desc(amount));
       act(buf, TRUE, ch, 0, 0, TO_ROOM);
 
-      send_to_char(ch, "You drop some gold.\r\n");
+      send_to_char(ch, "You drop some coins.\r\n");
       obj_to_room(obj, IN_ROOM(ch));
     } else { 
       char buf[MAX_STRING_LENGTH];
 
+      removed = remove_coins_from_char(ch, amount);
+      if (removed != amount) {
+        send_to_char(ch, "You don't have that many coins!\r\n");
+        return;
+      }
+
       snprintf(buf, sizeof(buf), "$n discards %s.", money_desc(amount));
       act(buf, FALSE, ch, 0, 0, TO_ROOM);
 
-      send_to_char(ch, "You discard some gold.\r\n");
+      send_to_char(ch, "You discard some coins.\r\n");
     }
-    decrease_gold(ch, amount);
   }
 }
 
@@ -720,6 +796,7 @@ static void perform_give_gold(struct char_data *ch, struct char_data *vict,
 		            int amount)
 {
   char buf[MAX_STRING_LENGTH];
+  struct obj_data *money;
 
   if (amount <= 0) {
     send_to_char(ch, "Heh heh heh ... we are jolly funny today, eh?\r\n");
@@ -731,16 +808,38 @@ static void perform_give_gold(struct char_data *ch, struct char_data *vict,
   }
   send_to_char(ch, "%s", CONFIG_OK);
 
-  snprintf(buf, sizeof(buf), "$n gives you %d gold coin%s.", amount, amount == 1 ? "" : "s");
+  money = create_money(amount);
+  if (!money)
+    return;
+
+  if (IS_CARRYING_N(vict) >= CAN_CARRY_N(vict) &&
+      GET_LEVEL(ch) < LVL_IMMORT && GET_LEVEL(vict) < LVL_IMMORT) {
+    act("$N seems to have $S hands full.", FALSE, ch, 0, vict, TO_CHAR);
+    extract_obj(money);
+    return;
+  }
+  if (GET_OBJ_WEIGHT(money) + IS_CARRYING_W(vict) > CAN_CARRY_W(vict) &&
+      GET_LEVEL(ch) < LVL_IMMORT && GET_LEVEL(vict) < LVL_IMMORT) {
+    act("$E can't carry that much weight.", FALSE, ch, 0, vict, TO_CHAR);
+    extract_obj(money);
+    return;
+  }
+
+  snprintf(buf, sizeof(buf), "$n gives you %d coin%s.", amount, amount == 1 ? "" : "s");
   act(buf, FALSE, ch, 0, vict, TO_VICT);
 
   snprintf(buf, sizeof(buf), "$n gives %s to $N.", money_desc(amount));
   act(buf, TRUE, ch, 0, vict, TO_NOTVICT);
 
-  if (IS_NPC(ch) || (GET_LEVEL(ch) < LVL_GOD))
-    decrease_gold(ch, amount);
-    
-  increase_gold(vict, amount);
+  if (IS_NPC(ch) || (GET_LEVEL(ch) < LVL_GOD)) {
+    if (remove_coins_from_char(ch, amount) != amount) {
+      send_to_char(ch, "You don't have that many coins!\r\n");
+      extract_obj(money);
+      return;
+    }
+  }
+
+  obj_to_char(money, vict);
   bribe_mtrigger(vict, ch, amount);
 }
 
@@ -780,6 +879,10 @@ ACMD(do_give)
     char buf1[MAX_INPUT_LENGTH];
 
     one_argument(argument, buf1);
+    if (!str_cmp(arg, "coins") || !str_cmp(arg, "coin")) {
+      send_to_char(ch, "How many coins do you want to give?\r\n");
+      return;
+    }
     if (!(vict = give_find_vict(ch, buf1)))
       return;
     dotmode = find_all_dots(arg);

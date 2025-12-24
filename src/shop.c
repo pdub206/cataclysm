@@ -838,7 +838,7 @@ static void shopping_value(char *arg, struct char_data *ch, struct char_data *ke
   if (!(obj = get_selling_obj(ch, name, keeper, shop_nr, TRUE)))
     return;
 
-  snprintf(buf, sizeof(buf), "%s I'll give you %d gold coins for that!", GET_NAME(ch), sell_price(obj, shop_nr, keeper, ch));
+  snprintf(buf, sizeof(buf), "%s I'll give you %d coins for that!", GET_NAME(ch), sell_price(obj, shop_nr, keeper, ch));
   do_tell(keeper, buf, cmd_tell, 0);
 }
 
@@ -1647,4 +1647,3 @@ void destroy_shops(void)
   shop_index = NULL;
   top_shop = -1;
 }
-

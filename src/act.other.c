@@ -223,14 +223,14 @@ int roll_sleight_check(struct char_data *ch)
   return total;
 }
 
-static int compute_steal_dc(struct char_data *vict, int weight, bool pc_restricted)
+static int compute_steal_dc(struct char_data *thief, struct char_data *vict, int weight)
 {
   int dc = SLEIGHT_BASE_DC + MAX(0, weight);
 
   if (!vict)
     return dc;
 
-  if (pc_restricted || GET_LEVEL(vict) >= LVL_IMMORT || GET_MOB_SPEC(vict) == shop_keeper)
+  if (GET_LEVEL(vict) >= LVL_IMMORT)
     return 1000;
 
   if (GET_POS(vict) < POS_SLEEPING)
@@ -238,7 +238,9 @@ static int compute_steal_dc(struct char_data *vict, int weight, bool pc_restrict
 
   if (!AWAKE(vict)) {
     dc = MAX(0, dc - 5);
-    return dc;
+    if (thief && AFF_FLAGGED(thief, AFF_HIDE))
+      dc -= 5;
+    return MAX(0, dc);
   }
 
   dc += GET_ABILITY_MOD(GET_WIS(vict));
@@ -246,6 +248,12 @@ static int compute_steal_dc(struct char_data *vict, int weight, bool pc_restrict
     dc += get_total_proficiency_bonus(vict);
   if (FIGHTING(vict))
     dc -= 4;
+  if (AFF_FLAGGED(vict, AFF_SCAN))
+    dc += 5;
+  if (thief && AFF_FLAGGED(thief, AFF_HIDE))
+    dc -= 5;
+  if (GET_MOB_SPEC(vict) == shop_keeper)
+    dc += 20;
 
   return dc;
 }
@@ -284,6 +292,9 @@ static bool sleight_can_take_obj(struct char_data *ch, struct obj_data *obj)
   if (!obj)
     return FALSE;
 
+  if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+    update_money_obj(obj);
+
   if (!CAN_WEAR(obj, ITEM_WEAR_TAKE)) {
     act("$p: you can't take that!", FALSE, ch, obj, 0, TO_CHAR);
     return FALSE;
@@ -305,22 +316,83 @@ static bool sleight_can_take_obj(struct char_data *ch, struct obj_data *obj)
 
 static void sleight_check_money(struct char_data *ch, struct obj_data *obj)
 {
-  int value;
-
   if (!obj || GET_OBJ_TYPE(obj) != ITEM_MONEY)
     return;
+  update_money_obj(obj);
+}
 
-  value = GET_OBJ_VAL(obj, 0);
-  if (value <= 0)
-    return;
+static int count_coins_in_list(const struct obj_data *list)
+{
+  int total = 0;
+  const struct obj_data *obj;
 
+  for (obj = list; obj; obj = obj->next_content) {
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      total += MAX(0, GET_OBJ_VAL(obj, 0));
+    if (obj->contains)
+      total += count_coins_in_list(obj->contains);
+  }
+
+  return total;
+}
+
+static int remove_coins_from_list(struct obj_data *list, int amount)
+{
+  struct obj_data *obj, *next_obj;
+  int removed = 0;
+
+  for (obj = list; obj && removed < amount; obj = next_obj) {
+    next_obj = obj->next_content;
+
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY) {
+      int pile = MAX(0, GET_OBJ_VAL(obj, 0));
+      int take = MIN(pile, amount - removed);
+
+      if (take > 0) {
+        if (take == pile) {
+          removed += take;
+          extract_obj(obj);
+          continue;
+        }
+        GET_OBJ_VAL(obj, 0) = pile - take;
+        update_money_obj(obj);
+        removed += take;
+      }
+    }
+
+    if (obj->contains && removed < amount)
+      removed += remove_coins_from_list(obj->contains, amount - removed);
+  }
+
+  return removed;
+}
+
+static bool sleight_merge_money_pile(struct char_data *ch, struct obj_data *obj)
+{
+  struct obj_data *target;
+  int coins;
+
+  if (!ch || !obj || GET_OBJ_TYPE(obj) != ITEM_MONEY)
+    return FALSE;
+
+  for (target = ch->carrying; target; target = target->next_content) {
+    if (target != obj && GET_OBJ_TYPE(target) == ITEM_MONEY)
+      break;
+  }
+
+  if (!target)
+    return FALSE;
+
+  coins = MAX(0, GET_OBJ_VAL(obj, 0));
+  if (coins <= 0)
+    return FALSE;
+
+  GET_OBJ_VAL(target, 0) += coins;
+  update_money_obj(target);
+  GET_GOLD(ch) = MIN(MAX_GOLD, GET_GOLD(ch) + coins);
   extract_obj(obj);
-  increase_gold(ch, value);
 
-  if (value == 1)
-    send_to_char(ch, "There was 1 coin.\r\n");
-  else
-    send_to_char(ch, "There were %d coins.\r\n", value);
+  return TRUE;
 }
 
 static bool sleight_observer_notices(struct char_data *actor,
@@ -920,12 +992,12 @@ ACMD(do_palm)
     return;
   }
 
-  if (GET_OBJ_TYPE(container) != ITEM_CONTAINER) {
+  if (!obj_is_storage(container) && GET_OBJ_TYPE(container) != ITEM_FURNITURE) {
     send_to_char(ch, "That's not even a container.\r\n");
     return;
   }
 
-  if (OBJVAL_FLAGGED(container, CONT_CLOSED)) {
+  if (obj_storage_is_closed(container)) {
     send_to_char(ch, "You'd better open it first.\r\n");
     return;
   }
@@ -950,9 +1022,16 @@ ACMD(do_palm)
   if (!get_otrigger(item, ch))
     return;
 
+  int coin_amt = (GET_OBJ_TYPE(item) == ITEM_MONEY) ? GET_OBJ_VAL(item, 0) : 0;
+
   obj_from_obj(item);
   obj_to_char(item, ch);
-  sleight_check_money(ch, item);
+  if (!sleight_merge_money_pile(ch, item))
+    sleight_check_money(ch, item);
+  if (coin_amt == 1)
+    send_to_char(ch, "There was one coin.\r\n");
+  else if (coin_amt > 1)
+    send_to_char(ch, "There were %d coins.\r\n", coin_amt);
 
   if (base_fail)
     send_to_char(ch, "You get %s from your %s.\r\n", item_desc, cont_desc);
@@ -965,10 +1044,12 @@ ACMD(do_palm)
 ACMD(do_slip)
 {
   struct obj_data *container, *obj;
-  char obj_name[MAX_INPUT_LENGTH], cont_name[MAX_INPUT_LENGTH];
+  char obj_name[MAX_INPUT_LENGTH], cont_name[MAX_INPUT_LENGTH], arg3[MAX_INPUT_LENGTH];
   char item_desc[MAX_STRING_LENGTH], cont_desc[MAX_STRING_LENGTH];
   int sleight_total;
   bool base_fail;
+  int howmany = 1;
+  int amount_specified = 0;
 
   if (!GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
@@ -980,7 +1061,14 @@ ACMD(do_slip)
     return;
   }
 
-  two_arguments(argument, obj_name, cont_name);
+  one_argument(two_arguments(argument, obj_name, cont_name), arg3);
+
+  if (*arg3 && is_number(obj_name)) {
+    howmany = atoi(obj_name);
+    strlcpy(obj_name, cont_name, sizeof(obj_name));
+    strlcpy(cont_name, arg3, sizeof(cont_name));
+    amount_specified = 1;
+  }
 
   if (!*obj_name || !*cont_name) {
     send_to_char(ch, "Usage: slip <item> <container>\r\n");
@@ -992,12 +1080,12 @@ ACMD(do_slip)
     return;
   }
 
-  if (GET_OBJ_TYPE(container) != ITEM_CONTAINER) {
+  if (!obj_is_storage(container) && GET_OBJ_TYPE(container) != ITEM_FURNITURE) {
     send_to_char(ch, "That's not even a container.\r\n");
     return;
   }
 
-  if (OBJVAL_FLAGGED(container, CONT_CLOSED)) {
+  if (obj_storage_is_closed(container)) {
     send_to_char(ch, "You'd better open it first.\r\n");
     return;
   }
@@ -1005,6 +1093,22 @@ ACMD(do_slip)
   if (!(obj = get_obj_in_list_vis(ch, obj_name, NULL, ch->carrying))) {
     send_to_char(ch, "You aren't even carrying that.\r\n");
     return;
+  }
+
+  if (amount_specified && GET_OBJ_TYPE(obj) == ITEM_MONEY && howmany > 0) {
+    int pile = GET_OBJ_VAL(obj, 0);
+
+    if (howmany < pile) {
+      struct obj_data *split = create_money(howmany);
+      if (!split) {
+        send_to_char(ch, "You fumble the coins.\r\n");
+        return;
+      }
+      GET_OBJ_VAL(obj, 0) = pile - howmany;
+      update_money_obj(obj);
+      GET_GOLD(ch) = MAX(0, GET_GOLD(ch) - howmany);
+      obj = split;
+    }
   }
 
   if (OBJ_FLAGGED(obj, ITEM_NODROP)) {
@@ -1030,7 +1134,12 @@ ACMD(do_slip)
   if (!drop_otrigger(obj, ch))
     return;
 
-  obj_from_char(obj);
+  if (obj->carried_by)
+    obj_from_char(obj);
+  else if (obj->in_obj)
+    obj_from_obj(obj);
+  else if (IN_ROOM(obj) != NOWHERE)
+    obj_from_room(obj);
   obj_to_obj(obj, container);
 
   if (base_fail)
@@ -1046,7 +1155,7 @@ ACMD(do_steal)
   struct char_data *vict;
   struct obj_data *obj;
   char vict_name[MAX_INPUT_LENGTH], obj_name[MAX_INPUT_LENGTH];
-  int gold, eq_pos, pcsteal = 0, ohoh = 0;
+  int gold, eq_pos, ohoh = 0;
   int sleight_total, dc;
 
   if (!GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND)) {
@@ -1068,8 +1177,10 @@ ACMD(do_steal)
     return;
   }
 
-  if (!CONFIG_PT_ALLOWED && !IS_NPC(vict))
-    pcsteal = 1;
+  if (GET_LEVEL(vict) >= LVL_IMMORT) {
+    send_to_char(ch, "You cannot steal from an immortal.\r\n");
+    return;
+  }
 
   sleight_total = roll_sleight_check(ch);
 
@@ -1104,9 +1215,9 @@ ACMD(do_steal)
       }
     } else {			/* obj found in inventory */
 
-      dc = compute_steal_dc(vict, GET_OBJ_WEIGHT(obj), pcsteal);
+      dc = compute_steal_dc(ch, vict, GET_OBJ_WEIGHT(obj));
 
-      if (sleight_total < dc) {
+      if (GET_LEVEL(ch) < LVL_IMMORT && sleight_total < dc) {
         ohoh = TRUE;
         send_to_char(ch, "Oops..\r\n");
         act("$n tried to steal something from you!", FALSE, ch, 0, vict, TO_VICT);
@@ -1128,28 +1239,34 @@ ACMD(do_steal)
       }
     }
   } else {			/* Steal some coins */
-    dc = compute_steal_dc(vict, 0, pcsteal);
-    if (AWAKE(vict) && (sleight_total < dc)) {
+    dc = compute_steal_dc(ch, vict, 0);
+    if (GET_LEVEL(ch) < LVL_IMMORT && AWAKE(vict) && (sleight_total < dc)) {
       ohoh = TRUE;
       send_to_char(ch, "Oops..\r\n");
       act("You discover that $n has $s hands in your wallet.", FALSE, ch, 0, vict, TO_VICT);
-      act("$n tries to steal gold from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+      act("$n tries to steal coins from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
       gain_skill(ch, "sleight of hand", FALSE);
     } else {
-      /* Steal some gold coins */
-      gold = (GET_GOLD(vict) * rand_number(1, 10)) / 100;
-      gold = MIN(1782, gold);
+      int total = count_coins_in_list(vict->carrying);
+      int max_steal = total / 10;
+      if (max_steal > 0) {
+        gold = rand_number(1, max_steal);
+        gold = remove_coins_from_list(vict->carrying, gold);
+      } else {
+        gold = 0;
+      }
+
       if (gold > 0) {
-        increase_gold(ch, gold);
-        decrease_gold(vict, gold);
+        GET_GOLD(vict) = MAX(0, GET_GOLD(vict) - gold);
+        add_coins_to_char(ch, gold);
         gain_skill(ch, "sleight of hand", TRUE);
         if (gold > 1)
-          send_to_char(ch, "Bingo!  You got %d gold coins.\r\n", gold);
+          send_to_char(ch, "Bingo!  You got %d coins.\r\n", gold);
         else
-          send_to_char(ch, "You manage to swipe a solitary gold coin.\r\n");
-          } else {
-      send_to_char(ch, "You couldn't get any gold...\r\n");
-          }
+          send_to_char(ch, "You manage to swipe a solitary coin.\r\n");
+      } else {
+        send_to_char(ch, "You couldn't get any coins...\r\n");
+      }
     }
   }
 
@@ -1369,7 +1486,7 @@ ACMD(do_split)
       return;
     }
     if (amount > GET_GOLD(ch)) {
-      send_to_char(ch, "You don't seem to have that much gold to split.\r\n");
+      send_to_char(ch, "You don't seem to have that many coins to split.\r\n");
       return;
     }
     
@@ -1382,7 +1499,7 @@ ACMD(do_split)
       share = amount / num;
       rest = amount % num;
     } else {
-      send_to_char(ch, "With whom do you wish to share your gold?\r\n");
+      send_to_char(ch, "With whom do you wish to share your coins?\r\n");
       return;
     }
 
@@ -1393,7 +1510,7 @@ ACMD(do_split)
 		GET_NAME(ch), amount, share);
     if (rest && len < sizeof(buf)) {
       snprintf(buf + len, sizeof(buf) - len,
-		"%d coin%s %s not splitable, so %s keeps the money.\r\n", rest,
+		"%d coin%s %s not splitable, so %s keeps the coins.\r\n", rest,
 		(rest == 1) ? "" : "s", (rest == 1) ? "was" : "were", GET_NAME(ch));
     }
 
@@ -1407,7 +1524,7 @@ ACMD(do_split)
 	    amount, num, share);
 
     if (rest) {
-      send_to_char(ch, "%d coin%s %s not splitable, so you keep the money.\r\n",
+      send_to_char(ch, "%d coin%s %s not splitable, so you keep the coins.\r\n",
 		rest, (rest == 1) ? "" : "s", (rest == 1) ? "was" : "were");
     }
   } else {
