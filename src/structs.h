@@ -340,6 +340,7 @@
 #define CON_MSGEDIT      32 /**< OLC mode - message editor */
 #define CON_PLR_BACKGROUND 33 /**< Entering a new character background */
 #define CON_GET_PROTOCOL 33 /**< Used at log-in while attempting to get protocols > */
+#define CON_GET_CONNECT  34 /**< Login connect/disconnect menu */
 
 /* OLC States range - used by IS_IN_OLC and IS_PLAYING */
 #define FIRST_OLC_STATE CON_OEDIT     /**< The first CON_ state that is an OLC */

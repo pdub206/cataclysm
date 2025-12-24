@@ -1449,7 +1449,7 @@ static void init_descriptor (struct descriptor_data *newd, int desc)
   *newd->output = '\0';
   newd->bufptr = 0;
   newd->has_prompt = 1;  /* prompt is part of greetings */
-  STATE(newd) = CONFIG_PROTOCOL_NEGOTIATION ? CON_GET_PROTOCOL : CON_GET_NAME;
+  STATE(newd) = CONFIG_PROTOCOL_NEGOTIATION ? CON_GET_PROTOCOL : CON_GET_CONNECT;
   CREATE(newd->history, char *, HISTORY_SIZE);
   if (++last_desc == 1000)
     last_desc = 1;
@@ -2135,7 +2135,7 @@ static void check_idle_passwords(void)
 
   for (d = descriptor_list; d; d = next_d) {
     next_d = d->next;
-    if (STATE(d) != CON_PASSWORD && STATE(d) != CON_GET_NAME)
+    if (STATE(d) != CON_PASSWORD && STATE(d) != CON_GET_NAME && STATE(d) != CON_GET_CONNECT)
       continue;
     if (!d->idle_tics) {
       d->idle_tics++;

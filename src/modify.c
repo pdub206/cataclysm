@@ -125,6 +125,7 @@ void string_write(struct descriptor_data *d, char **writeto, size_t len, long ma
 void string_add(struct descriptor_data *d, char *str)
 {
   int action;
+  char **orig_str = d->str;
 
   /* Determine if this is the terminal string, and truncate if so. Changed to
    * only accept '\t' at the beginning of line. - JE */
@@ -207,6 +208,7 @@ void string_add(struct descriptor_data *d, char *str)
   /* Ok, now final cleanup. */
   if (action == STRINGADD_SAVE || action == STRINGADD_ABORT) {
     int i;
+    int chain_write;
     struct {
       int mode;
       void (*func)(struct descriptor_data *d, int action);
@@ -231,15 +233,18 @@ void string_add(struct descriptor_data *d, char *str)
         (*cleanup_modes[i].func)(d, action);
 
     /* Common post cleanup code. */
-    d->str = NULL;
-    d->mail_to = 0;
-    d->max_str = 0;
-    if (d->character && !IS_NPC(d->character)) {
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_BUG);
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_IDEA);
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_TYPO);
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_MAILING);
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_WRITING);
+    chain_write = (d->str && d->str != orig_str);
+    if (!chain_write) {
+      d->str = NULL;
+      d->mail_to = 0;
+      d->max_str = 0;
+      if (d->character && !IS_NPC(d->character)) {
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_BUG);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_IDEA);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_TYPO);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_MAILING);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_WRITING);
+      }
     }
   } else if (action != STRINGADD_ACTION && strlen(*d->str) + 3 <= d->max_str) /* 3 = \r\n\0 */
      strcat(*d->str, "\r\n");
@@ -299,6 +304,41 @@ static void exdesc_string_cleanup(struct descriptor_data *d, int action)
 {
   if (action == STRINGADD_ABORT)
     write_to_output(d, "Description aborted.\r\n");
+
+  if (d->character && (!GET_BACKGROUND(d->character) || !*GET_BACKGROUND(d->character))) {
+    write_to_output(d,
+      "\r\nBefore stepping into Miranthas, share a bit of your character's background.\r\n"
+      "Guideline: aim for at least four lines that hint at where they came from,\r\n"
+      "who shaped them, and why they now walk the Tyr region. Touch on things like:\r\n"
+      "  - The city-state, tribe, or caravan that claimed them.\r\n"
+      "  - Mentors, slavers, or patrons who left a mark.\r\n"
+      "  - A defining hardship, triumph, oath, or secret.\r\n"
+      "  - The goal, vengeance, or hope that drives them back into the wastes.\r\n"
+      "\r\nExample 1:\r\n"
+      "   Raised beneath the ziggurat of Tyr, I learned to barter gossip between\r\n"
+      "   templars and gladiators just to stay alive. Freedom came when Kalak fell,\r\n"
+      "   but the slave-scar on my shoulder still aches. I now search the desert\r\n"
+      "   for the relic my clutch mates died protecting, hoping to buy their kin peace.\r\n"
+      "\r\nExample 2:\r\n"
+      "   I rode caravan outrider routes from Balic until giants shattered our train.\r\n"
+      "   Two nights buried in silt taught me to whisper with the wind and trust only\r\n"
+      "   my erdlu. I hunt the warlord who sold us out, yet coin and company on the\r\n"
+      "   road must come first.\r\n"
+      "\r\nExample 3:\r\n"
+      "   Born outside Raam, I was tempered by obsidian shards and psionic murmurs.\r\n"
+      "   A defiler ruined our oasis, so I swore to hound such spell-scars wherever\r\n"
+      "   they bloom. Rumor of a hidden well near Tyr is the lone hope that guides me.\r\n"
+      "\r\nType your background now. Use '/s' on a blank line when you finish.\r\n"
+      "If you'd rather keep it secret, just save immediately and we'll note the mystery.\r\n\r\n");
+    d->backstr = NULL;
+    if (GET_BACKGROUND(d->character) && *GET_BACKGROUND(d->character))
+      d->backstr = strdup(GET_BACKGROUND(d->character));
+    d->str = &d->character->player.background;
+    d->max_str = PLR_DESC_LENGTH;
+    STATE(d) = CON_PLR_BACKGROUND;
+    send_editor_help(d);
+    return;
+  }
 
   write_to_output(d, "%s", CONFIG_MENU);
   STATE(d) = CON_MENU;

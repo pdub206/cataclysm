@@ -1321,7 +1321,7 @@ EVENTFUNC(get_protocols)
   write_to_output(d, buf, 0);
     
   write_to_output(d, GREETINGS, 0); 
-  STATE(d) = CON_GET_NAME;
+  STATE(d) = CON_GET_CONNECT;
   return 0;
 }
 
@@ -1366,6 +1366,26 @@ void nanny(struct descriptor_data *d, char *arg)
   case CON_GET_PROTOCOL:
     write_to_output(d, "Collecting Protocol Information... Please Wait.\r\n"); 
     return;
+  case CON_GET_CONNECT:
+    if (!*arg) {
+      write_to_output(d, GREETINGS, 0);
+      return;
+    }
+    switch (UPPER(*arg)) {
+      case 'C':
+        write_to_output(d, "By what name do you wish to be known? ");
+        STATE(d) = CON_GET_NAME;
+        return;
+      case 'X':
+        write_to_output(d, "Goodbye.\r\n");
+        STATE(d) = CON_CLOSE;
+        return;
+      default:
+        write_to_output(d,
+          "That is an invalid selection.\r\n");
+        write_to_output(d, GREETINGS, 0);
+        return;
+    }
   case CON_GET_NAME:		/* wait for input of name */
     if (d->character == NULL) {
       CREATE(d->character, struct char_data, 1);
@@ -1437,7 +1457,7 @@ void nanny(struct descriptor_data *d, char *arg)
 
         /* Check for multiple creations of a character. */
         if (!valid_name(tmp_name)) {
-          write_to_output(d, "Invalid name, please try another.\r\nName: ");
+          write_to_output(d, "Invalid name, please try another.\r\nBy what name do you wish to be known? ");
           return;
         }
         CREATE(d->character->player.name, char, strlen(tmp_name) + 1);
@@ -1468,7 +1488,7 @@ void nanny(struct descriptor_data *d, char *arg)
       echo_off(d);
       STATE(d) = CON_NEWPASSWD;
     } else if (*arg == 'n' || *arg == 'N') {
-      write_to_output(d, "Okay, what IS it, then? ");
+      write_to_output(d, "Okay, what IS it, then?\r\nBy what name do you wish to be known? ");
       free(d->character->player.name);
       d->character->player.name = NULL;
       STATE(d) = CON_GET_NAME;
@@ -1721,41 +1741,43 @@ case CON_QCLASS:
   }
 
   case CON_PLR_DESC:
-    /* If the player canceled or has no description, prompt again */
-    if (!d->character->player.description || !*d->character->player.description) {
+    /* Description accepted — save and continue */
+    save_char(d->character);
+
+    if (!GET_BACKGROUND(d->character) || !*GET_BACKGROUND(d->character)) {
       write_to_output(d,
-        "\r\nYou must provide a description before entering the world.\r\n"
-        "Please try again.  Type '/s' on a blank line when finished.\r\n\r\n");
+        "\r\nBefore stepping into Miranthas, share a bit of your character's background.\r\n"
+        "Guideline: aim for at least four lines that hint at where they came from,\r\n"
+        "who shaped them, and why they now walk the Tyr region. Touch on things like:\r\n"
+        "  - The city-state, tribe, or caravan that claimed them.\r\n"
+        "  - Mentors, slavers, or patrons who left a mark.\r\n"
+        "  - A defining hardship, triumph, oath, or secret.\r\n"
+        "  - The goal, vengeance, or hope that drives them back into the wastes.\r\n"
+        "\r\nExample 1:\r\n"
+        "   Raised beneath the ziggurat of Tyr, I learned to barter gossip between\r\n"
+        "   templars and gladiators just to stay alive. Freedom came when Kalak fell,\r\n"
+        "   but the slave-scar on my shoulder still aches. I now search the desert\r\n"
+        "   for the relic my clutch mates died protecting, hoping to buy their kin peace.\r\n"
+        "\r\nExample 2:\r\n"
+        "   I rode caravan outrider routes from Balic until giants shattered our train.\r\n"
+        "   Two nights buried in silt taught me to whisper with the wind and trust only\r\n"
+        "   my erdlu. I hunt the warlord who sold us out, yet coin and company on the\r\n"
+        "   road must come first.\r\n"
+        "\r\nExample 3:\r\n"
+        "   Born outside Raam, I was tempered by obsidian shards and psionic murmurs.\r\n"
+        "   A defiler ruined our oasis, so I swore to hound such spell-scars wherever\r\n"
+        "   they bloom. Rumor of a hidden well near Tyr is the lone hope that guides me.\r\n"
+        "\r\nType your background now. Use '/s' on a blank line when you finish.\r\n"
+        "If you'd rather keep it secret, just save immediately and we'll note the mystery.\r\n\r\n");
       d->backstr = NULL;
-      d->str = &d->character->player.description;
+      if (GET_BACKGROUND(d->character) && *GET_BACKGROUND(d->character))
+        d->backstr = strdup(GET_BACKGROUND(d->character));
+      d->str = &d->character->player.background;
       d->max_str = PLR_DESC_LENGTH;
+      STATE(d) = CON_PLR_BACKGROUND;
       send_editor_help(d);
       return;
     }
-
-    /* Count lines */
-    {
-      int line_count = 0;
-      for (char *p = d->character->player.description; *p; p++)
-        if (*p == '\n')
-          line_count++;
-
-      if (line_count < 4) {
-        write_to_output(d,
-          "\r\nYour description must be at least four lines long.\r\n"
-          "Please expand on your appearance and try again.\r\n");
-        free(d->character->player.description);
-        d->character->player.description = NULL;
-        d->backstr = NULL;
-        d->str = &d->character->player.description;
-        d->max_str = PLR_DESC_LENGTH;
-        send_editor_help(d);
-        return;
-      }
-    }
-
-    /* Description accepted — save and continue */
-    save_char(d->character);
 
     write_to_output(d, "%s\r\n*** PRESS RETURN: ", motd);
     STATE(d) = CON_RMOTD;
@@ -1781,72 +1803,6 @@ case CON_QCLASS:
       break;
 
     case '1':
-      /* Require a description before entering the world */
-      if (!d->character->player.description || !*d->character->player.description) {
-        write_to_output(d,
-          "\r\nBefore entering the world, you must describe your character.\r\n"
-          "Focus on what others can immediately see — height, build, complexion,\r\n"
-          "facial structure, hair, eyes, and other physical traits.\r\n"
-          "When done, type '/s' on a blank line.\r\n\r\n");
-        d->backstr = NULL;
-        d->str = &d->character->player.description;
-        d->max_str = PLR_DESC_LENGTH;
-        STATE(d) = CON_PLR_DESC;
-        send_editor_help(d);
-        return;
-      } else {
-        int line_count = 0;
-        for (char *p = d->character->player.description; *p; p++)
-          if (*p == '\n')
-            line_count++;
-        if (line_count < 4) {
-          write_to_output(d,
-            "\r\nYour description must be at least four lines long.\r\n"
-            "Please expand it before entering the world.\r\n\r\n");
-          d->backstr = NULL;
-          d->str = &d->character->player.description;
-          d->max_str = PLR_DESC_LENGTH;
-          STATE(d) = CON_PLR_DESC;
-          send_editor_help(d);
-          return;
-        }
-      }
-
-      if (!GET_BACKGROUND(d->character) || !*GET_BACKGROUND(d->character)) {
-        write_to_output(d,
-          "\r\nBefore stepping into Athas, share a bit of your character's background.\r\n"
-          "Guideline: aim for at least four lines that hint at where they came from,\r\n"
-          "who shaped them, and why they now walk the Tyr region. Touch on things like:\r\n"
-          "  - The city-state, tribe, or caravan that claimed them.\r\n"
-          "  - Mentors, slavers, or patrons who left a mark.\r\n"
-          "  - A defining hardship, triumph, oath, or secret.\r\n"
-          "  - The goal, vengeance, or hope that drives them back into the wastes.\r\n"
-          "\r\nExample 1:\r\n"
-          "   Raised beneath the ziggurat of Tyr, I learned to barter gossip between\r\n"
-          "   templars and gladiators just to stay alive. Freedom came when Kalak fell,\r\n"
-          "   but the slave-scar on my shoulder still aches. I now search the desert\r\n"
-          "   for the relic my clutch mates died protecting, hoping to buy their kin peace.\r\n"
-          "\r\nExample 2:\r\n"
-          "   I rode caravan outrider routes from Balic until giants shattered our train.\r\n"
-          "   Two nights buried in silt taught me to whisper with the wind and trust only\r\n"
-          "   my erdlu. I hunt the warlord who sold us out, yet coin and company on the\r\n"
-          "   road must come first.\r\n"
-          "\r\nExample 3:\r\n"
-          "   Born outside Raam, I was tempered by obsidian shards and psionic murmurs.\r\n"
-          "   A defiler ruined our oasis, so I swore to hound such spell-scars wherever\r\n"
-          "   they bloom. Rumor of a hidden well near Tyr is the lone hope that guides me.\r\n"
-          "\r\nType your background now. Use '/s' on a blank line when you finish.\r\n"
-          "If you'd rather keep it secret, just save immediately and we'll note the mystery.\r\n\r\n");
-        d->backstr = NULL;
-        if (GET_BACKGROUND(d->character) && *GET_BACKGROUND(d->character))
-          d->backstr = strdup(GET_BACKGROUND(d->character));
-        d->str = &d->character->player.background;
-        d->max_str = PLR_DESC_LENGTH;
-        STATE(d) = CON_PLR_BACKGROUND;
-        send_editor_help(d);
-        return;
-      }
-
       /* Proceed into the world */
       load_result = enter_player_game(d);
       send_to_char(d->character, "%s", CONFIG_WELC_MESSG);
