@@ -34,7 +34,7 @@ NEW COMMANDS AND NEW MUD BEHAVIOR:
 **  You will now be immediately notified when you have new mail, when coming
     back from AFK and reconnecting.
 
-**  New toggles: autoloot, autogold, autosplit, autosac, and autoassist.
+**  New toggles: autoloot, autosplit, autosac, and autoassist.
 
 **  Improved toggle command allowing more options.
 
@@ -103,7 +103,7 @@ NEW COMMANDS AND NEW MUD BEHAVIOR:
 **  Use the ASSIST command to engage in mortal combat with someone in the room
     who is getting pummeled.
 
-**  Use the SPLIT command to split gold among the members of your group 
+**  Use the SPLIT command to split coins among the members of your group 
     (including yourself) who are in the room.  i.e. If you are in a group
     with 4 other people who are in the room with you, type "SPLIT 100"
     to give each of them 20 coins.

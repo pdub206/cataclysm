@@ -256,7 +256,7 @@ SPECIAL(mayor)
 
 static void npc_steal(struct char_data *ch, struct char_data *victim)
 {
-  int gold;
+  int coins;
 
   if (IS_NPC(victim))
     return;
@@ -270,10 +270,10 @@ static void npc_steal(struct char_data *ch, struct char_data *victim)
     act("$n tries to steal coins from $N.", TRUE, ch, 0, victim, TO_NOTVICT);
   } else {
     /* Steal some coins */
-    gold = (GET_GOLD(victim) * rand_number(1, 10)) / 100;
-    if (gold > 0) {
-      increase_gold(ch, gold);
-	  decrease_gold(victim, gold);
+    coins = (GET_COINS(victim) * rand_number(1, 10)) / 100;
+    if (coins > 0) {
+      increase_coins(ch, coins);
+	  decrease_coins(victim, coins);
     }
   }
 }
@@ -578,11 +578,11 @@ SPECIAL(pet_shops)
       send_to_char(ch, "There is no such pet!\r\n");
       return (TRUE);
     }
-    if (GET_GOLD(ch) < PET_PRICE(pet)) {
+    if (GET_COINS(ch) < PET_PRICE(pet)) {
       send_to_char(ch, "You don't have enough coins!\r\n");
       return (TRUE);
     }
-    decrease_gold(ch, PET_PRICE(pet));
+    decrease_coins(ch, PET_PRICE(pet));
 
     pet = read_mobile(GET_MOB_RNUM(pet), REAL);
     GET_EXP(pet) = 0;
@@ -621,8 +621,8 @@ SPECIAL(bank)
   int amount;
 
   if (CMD_IS("balance")) {
-    if (GET_BANK_GOLD(ch) > 0)
-      send_to_char(ch, "Your current balance is %d coins.\r\n", GET_BANK_GOLD(ch));
+    if (GET_BANK_COINS(ch) > 0)
+      send_to_char(ch, "Your current balance is %d coins.\r\n", GET_BANK_COINS(ch));
     else
       send_to_char(ch, "You currently have no money deposited.\r\n");
     return (TRUE);
@@ -631,12 +631,12 @@ SPECIAL(bank)
       send_to_char(ch, "How much do you want to deposit?\r\n");
       return (TRUE);
     }
-    if (GET_GOLD(ch) < amount) {
+    if (GET_COINS(ch) < amount) {
       send_to_char(ch, "You don't have that many coins!\r\n");
       return (TRUE);
     }
-    decrease_gold(ch, amount);
-	increase_bank(ch, amount);
+    decrease_coins(ch, amount);
+	increase_bank_coins(ch, amount);
     send_to_char(ch, "You deposit %d coins.\r\n", amount);
     act("$n makes a bank transaction.", TRUE, ch, 0, FALSE, TO_ROOM);
     return (TRUE);
@@ -645,12 +645,12 @@ SPECIAL(bank)
       send_to_char(ch, "How much do you want to withdraw?\r\n");
       return (TRUE);
     }
-    if (GET_BANK_GOLD(ch) < amount) {
+    if (GET_BANK_COINS(ch) < amount) {
       send_to_char(ch, "You don't have that many coins deposited!\r\n");
       return (TRUE);
     }
-    increase_gold(ch, amount);
-	decrease_bank(ch, amount);
+    increase_coins(ch, amount);
+	decrease_bank_coins(ch, amount);
     send_to_char(ch, "You withdraw %d coins.\r\n", amount);
     act("$n makes a bank transaction.", TRUE, ch, 0, FALSE, TO_ROOM);
     return (TRUE);

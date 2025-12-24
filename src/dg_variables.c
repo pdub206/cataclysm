@@ -451,8 +451,8 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
  * For example you want to check how many PC's are in room with vnum 1204. PC's
  * have the vnum -1 so: %echo% players in room 1204: %findmob.1204(-1)%
  * Or say you had a bank, and you want a script to check the number of bags of
- * gold (vnum: 1234). In the vault (vnum: 453). Use: %findobj.453(1234)% and it
- * will return the number of bags of gold.
+ * coins (vnum: 1234). In the vault (vnum: 453). Use: %findobj.453(1234)% and it
+ * will return the number of bags of coins.
  * Addition inspired by Jamie Nelson */
       else if (!str_cmp(var, "findmob")) {
         if (!field || !*field || !subfield || !*subfield) {
@@ -717,12 +717,12 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           }
           break;
         case 'g':
-          if (!str_cmp(field, "gold")) {
+          if (!str_cmp(field, "coins")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              increase_gold(c, addition);
+              increase_coins(c, addition);
             }
-            snprintf(str, slen, "%d", GET_GOLD(c));
+            snprintf(str, slen, "%d", GET_COINS(c));
           }
           break;
         case 'h':
@@ -1565,7 +1565,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
  * if the field returns a name or a script UID or the like it can recurse. If
  * you supply a value like, %actor.int.str% it wont blow up on you either. Now
  * also lets subfields have variables parsed inside of them so that: %echo%
- * %actor.gold(%actor.gold%)% will double the actors gold every time its called.
+ * %actor.coins(%actor.coins%)% will double the actors coins every time its called.
  * - Jamie Nelson */
 
 /* substitutes any variables into line and returns it as buf */

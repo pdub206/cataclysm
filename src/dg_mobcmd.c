@@ -971,7 +971,7 @@ ACMD(do_mtransform)
       GET_MAX_HIT(&tmpmob) = GET_MAX_HIT(ch);
       GET_EXP(&tmpmob) = GET_EXP(ch);
     }
-    GET_GOLD(&tmpmob) = GET_GOLD(ch);
+    GET_COINS(&tmpmob) = GET_COINS(ch);
     GET_POS(&tmpmob) = GET_POS(ch);
     IS_CARRYING_W(&tmpmob) = IS_CARRYING_W(ch);
     IS_CARRYING_N(&tmpmob) = IS_CARRYING_N(ch);

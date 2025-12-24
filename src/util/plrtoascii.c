@@ -43,8 +43,8 @@ struct char_point_data_plrtoascii {
    sh_int max_move;     /* Max move for PC/NPC                     */
 
    sh_int armor;        /* Internal -100..100, external -10..10 AC */
-   int	gold;           /* Money carried                           */
-   int	bank_gold;	/* Gold the char has in a bank account	   */
+   int	coins;          /* Money carried                           */
+   int	bank_coins;	/* Coins the char has in a bank account	   */
    int	exp;            /* The experience of the player            */
 
 };
@@ -291,10 +291,10 @@ void convert(char *filename)
       fprintf(outfile, "Move: %d/%d\n", cpd->move, cpd->max_move);
     if (cpd->armor != PFDEF_AC)
       fprintf(outfile, "Ac  : %d\n", cpd->armor);
-    if (cpd->gold != PFDEF_GOLD)
-      fprintf(outfile, "Gold: %d\n", cpd->gold);
-    if (cpd->bank_gold != PFDEF_BANK)
-      fprintf(outfile, "Bank: %d\n", cpd->bank_gold);
+    if (cpd->coins != PFDEF_COINS)
+      fprintf(outfile, "Coin: %d\n", cpd->coins);
+    if (cpd->bank_coins != PFDEF_BANK_COINS)
+      fprintf(outfile, "BankCoins: %d\n", cpd->bank_coins);
     if (cpd->exp != PFDEF_EXP)
       fprintf(outfile, "Exp : %d\n", cpd->exp);
 

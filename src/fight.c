@@ -287,9 +287,9 @@ static void make_corpse(struct char_data *ch)
       obj_to_obj(unequip_char(ch, i), corpse);
     }
 
-  /* transfer gold */
-  if (GET_GOLD(ch) > 0)
-    GET_GOLD(ch) = 0;
+  /* transfer coins */
+  if (GET_COINS(ch) > 0)
+    GET_COINS(ch) = 0;
   ch->carrying = NULL;
   IS_CARRYING_N(ch) = 0;
   IS_CARRYING_W(ch) = 0;
@@ -630,7 +630,7 @@ int skill_message(int dam, struct char_data *ch, struct char_data *vict,
  *	> 0	How much damage done. */
 int damage(struct char_data *ch, struct char_data *victim, int dam, int attacktype)
 {
-  long local_gold = 0;
+  long local_coins = 0;
   char local_buf[256];
   struct char_data *tmp_char;
   struct obj_data *corpse_obj;
@@ -796,22 +796,19 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
       if (MOB_FLAGGED(ch, MOB_MEMORY))
 	forget(ch, victim);
     }
-    /* Cant determine GET_GOLD on corpse, so do now and store */
+    /* Can't determine GET_COINS on corpse, so do now and store */
     if (IS_NPC(victim)) {
-      local_gold = GET_GOLD(victim);
-      sprintf(local_buf,"%ld", (long)local_gold);
+      local_coins = GET_COINS(victim);
+      sprintf(local_buf,"%ld", (long)local_coins);
     }
 
     die(victim, ch);
-    if (GROUP(ch) && (local_gold > 0) && PRF_FLAGGED(ch, PRF_AUTOSPLIT) ) {
+    if (GROUP(ch) && (local_coins > 0) && PRF_FLAGGED(ch, PRF_AUTOSPLIT) ) {
       generic_find("corpse", FIND_OBJ_ROOM, ch, &tmp_char, &corpse_obj);
       if (corpse_obj) {
         do_get(ch, "all.coin corpse", 0, 0);
         do_split(ch, local_buf, 0, 0);
       }
-      /* need to remove the gold from the corpse */
-    } else if (!IS_NPC(ch) && (ch != victim) && PRF_FLAGGED(ch, PRF_AUTOGOLD)) {
-      do_get(ch, "all.coin corpse", 0, 0);
     }
     if (!IS_NPC(ch) && (ch != victim) && PRF_FLAGGED(ch, PRF_AUTOLOOT)) {
       do_get(ch, "all corpse", 0, 0);

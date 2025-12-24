@@ -94,7 +94,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "autoexits" , "autoex"  , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOEXIT },
   { "autoassist","autoass" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOASSIST },
   { "autodoor" , "autodoor", POS_DEAD    , do_gen_tog , 0, SCMD_AUTODOOR },
-  { "autogold" , "autogold", POS_DEAD    , do_gen_tog , 0, SCMD_AUTOGOLD },
   { "autokey"  , "autokey" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOKEY },
   { "autoloot" , "autoloot", POS_DEAD    , do_gen_tog , 0, SCMD_AUTOLOOT },
   { "automap"  , "automap" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOMAP },
@@ -157,8 +156,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "gemote"   , "gem"     , POS_SLEEPING, do_gen_comm , LVL_IMMORT, SCMD_GEMOTE },
   { "give"     , "giv"     , POS_RESTING , do_give     , 0, 0 },
   { "goto"     , "go"      , POS_SLEEPING, do_goto     , LVL_IMMORT, 0 },
-  { "gold"     , "gol"     , POS_RESTING , do_gold     , 0, 0 },
-  { "coins"    , "coin"    , POS_RESTING , do_gold     , 0, 0 },
+  { "coins"    , "coin"    , POS_RESTING , do_coins    , 0, 0 },
   { "group"    , "gr"      , POS_RESTING , do_group    , 1, 0 },
   { "grab"     , "grab"    , POS_RESTING , do_grab     , 0, 0 },
 

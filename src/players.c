@@ -269,8 +269,8 @@ int load_char(const char *name, struct char_data *ch)
     GET_COND(ch, THIRST) = PFDEF_THIRST;
     GET_COND(ch, DRUNK) = PFDEF_DRUNK;
     GET_BAD_PWS(ch) = PFDEF_BADPWS;
-    GET_GOLD(ch) = PFDEF_GOLD;
-    GET_BANK_GOLD(ch) = PFDEF_BANK;
+    GET_COINS(ch) = PFDEF_COINS;
+    GET_BANK_COINS(ch) = PFDEF_BANK_COINS;
     GET_EXP(ch) = PFDEF_EXP;
     GET_AC(ch) = PFDEF_AC;
     ch->real_abils.str = PFDEF_STR;
@@ -336,13 +336,14 @@ int load_char(const char *name, struct char_data *ch)
       case 'B':
         if (!strcmp(tag, "Back"))     ch->player.background   = fread_string(fl, buf2);
 	else if (!strcmp(tag, "Badp"))	GET_BAD_PWS(ch)		= atoi(line);
-	else if (!strcmp(tag, "Bank"))	GET_BANK_GOLD(ch)	= atoi(line);
+	else if (!strcmp(tag, "BankCoins"))	GET_BANK_COINS(ch)	= atoi(line);
 	else if (!strcmp(tag, "Brth"))	ch->player.time.birth	= atol(line);
 	break;
 
       case 'C':
 	     if (!strcmp(tag, "Cha "))	ch->real_abils.cha	= atoi(line);
 	else if (!strcmp(tag, "Clas"))	GET_CLASS(ch)		= atoi(line);
+	else if (!strcmp(tag, "Coin"))	GET_COINS(ch)		= atoi(line);
 	else if (!strcmp(tag, "Con "))	ch->real_abils.con	= atoi(line);
 	break;
 
@@ -358,10 +359,6 @@ int load_char(const char *name, struct char_data *ch)
 
       case 'F':
 	     if (!strcmp(tag, "Frez"))	GET_FREEZE_LEV(ch)	= atoi(line);
-	break;
-
-      case 'G':
-	     if (!strcmp(tag, "Gold"))	GET_GOLD(ch)		= atoi(line);
 	break;
 
       case 'H':
@@ -672,8 +669,8 @@ void save_char(struct char_data * ch)
   if (GET_CHA(ch)	   != PFDEF_CHA)	fprintf(fl, "Cha : %d\n", GET_CHA(ch));
 
   if (GET_AC(ch)	   != PFDEF_AC)		fprintf(fl, "Ac  : %d\n", GET_AC(ch));
-  if (GET_GOLD(ch)	   != PFDEF_GOLD)	fprintf(fl, "Gold: %d\n", GET_GOLD(ch));
-  if (GET_BANK_GOLD(ch)	   != PFDEF_BANK)	fprintf(fl, "Bank: %d\n", GET_BANK_GOLD(ch));
+  if (GET_COINS(ch)	   != PFDEF_COINS)	fprintf(fl, "Coin: %d\n", GET_COINS(ch));
+  if (GET_BANK_COINS(ch)	   != PFDEF_BANK_COINS)	fprintf(fl, "BankCoins: %d\n", GET_BANK_COINS(ch));
   if (GET_EXP(ch)	   != PFDEF_EXP)	fprintf(fl, "Exp : %d\n", GET_EXP(ch));
   if (GET_OLC_ZONE(ch)     != PFDEF_OLC)        fprintf(fl, "Olc : %d\n", GET_OLC_ZONE(ch));
   if (GET_PAGE_LENGTH(ch)  != PFDEF_PAGELENGTH) fprintf(fl, "Page: %d\n", GET_PAGE_LENGTH(ch));

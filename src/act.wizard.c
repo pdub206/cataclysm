@@ -1840,7 +1840,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
     GET_MOVE(k), GET_MAX_MOVE(k), move_gain(k));
 
   stat_table_row_fmt(ch, "Currency", "Coins %d, Bank %d (Total %d)",
-    GET_GOLD(k), GET_BANK_GOLD(k), GET_GOLD(k) + GET_BANK_GOLD(k));
+    GET_COINS(k), GET_BANK_COINS(k), GET_COINS(k) + GET_BANK_COINS(k));
 
   if (!IS_NPC(k)) {
     if (GET_QUEST(k) != NOTHING)
@@ -3568,7 +3568,7 @@ ACMD(do_show)
     send_to_char(ch, "Player: %-12s (%s) [%2d %s]\r\n", GET_NAME(vict),
       genders[(int) GET_SEX(vict)], GET_LEVEL(vict), CLASS_ABBR(vict));
     send_to_char(ch, "Coins: %-8d  Bal: %-8d Exp: %-8d  Align: %-5d\r\n",
-      GET_GOLD(vict), GET_BANK_GOLD(vict), GET_EXP(vict),
+      GET_COINS(vict), GET_BANK_COINS(vict), GET_EXP(vict),
       GET_ALIGNMENT(vict));
     send_to_char(ch, "Started: %-25.25s  Last: %-25.25s\r\n", buf1, buf2);
     send_to_char(ch, "Played: %dh %dm\r\n",
@@ -3881,7 +3881,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       affect_total(vict);
       break;
     case 4: /* bank */
-      GET_BANK_GOLD(vict) = RANGE(0, 100000000);
+      GET_BANK_COINS(vict) = RANGE(0, 100000000);
       break;
     case 5: /* brief */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_BRIEF);
@@ -3959,7 +3959,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         remove_other_coins_from_list(vict->carrying, NULL);
         for (i = 0; i < NUM_WEARS; i++)
           remove_other_coins_from_list(GET_EQ(vict, i), NULL);
-        GET_GOLD(vict) = 0;
+        GET_COINS(vict) = 0;
         send_to_char(ch, "Ok.\r\n");
         return (1);
       }
@@ -3980,7 +3980,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       for (i = 0; i < NUM_WEARS; i++)
         remove_other_coins_from_list(GET_EQ(vict, i), coin_obj);
 
-      GET_GOLD(vict) = value;
+      GET_COINS(vict) = value;
       send_to_char(ch, "Ok.\r\n");
       return (1);
     }
@@ -4549,7 +4549,7 @@ ACMD(do_links)
 /*item limits*/
 #define MAX_DAM_ALLOWED            50    /* for weapons  - avg. dam*/
 #define MAX_AFFECTS_ALLOWED        3
-#define MAX_OBJ_GOLD_ALLOWED       1000000
+#define MAX_OBJ_COINS_ALLOWED       1000000
 
 /* Armor class limits*/
 #define TOTAL_WEAR_CHECKS  (NUM_ITEM_WEARS-2)  /*minus Wield and Take*/
@@ -4597,7 +4597,7 @@ static struct zcheck_affs {
   {APPLY_MANA,       -50,  50, "mana"},
   {APPLY_HIT,        -50,  50, "hit points"},
   {APPLY_MOVE,       -50,  50, "movement"},
-  {APPLY_GOLD,         0,   0, "gold"},
+  {APPLY_COINS,         0,   0, "coins"},
   {APPLY_EXP,          0,   0, "experience"},
   {APPLY_AC,         -10,  10, "magical AC"},
   {APPLY_SAVE_STR, -2, 2, "saving throw (Strength)"},
@@ -4751,10 +4751,10 @@ ACMD (do_zcheck)
       obj = &obj_proto[i];
       switch (GET_OBJ_TYPE(obj)) {
         case ITEM_MONEY:
-          if ((value = GET_OBJ_VAL(obj, 0))>MAX_OBJ_GOLD_ALLOWED && (found=1))
+          if ((value = GET_OBJ_VAL(obj, 0))>MAX_OBJ_COINS_ALLOWED && (found=1))
             len += snprintf(buf + len, sizeof(buf) - len,
                             "- Is worth %d (money limit %d coins).\r\n",
-                                 value, MAX_OBJ_GOLD_ALLOWED);
+                                 value, MAX_OBJ_COINS_ALLOWED);
           break;
         case ITEM_WEAPON:
           if (GET_OBJ_VAL(obj, 3) >= NUM_ATTACK_TYPES && (found=1))

@@ -48,7 +48,7 @@ struct shop_data {
    room_vnum *in_room;		/* Where is the shop?			*/
    int	 open1, open2;		/* When does the shop open?		*/
    int	 close1, close2;	/* When does the shop close?		*/
-   int	 bankAccount;		/* Store all gold over 15000 (disabled)	*/
+   int	 bankAccount;		/* Store all coins over 15000 (disabled)	*/
    int	 lastsort;		/* How many items are sorted in inven?	*/
    SPECIAL (*func);		/* Secondary spec_proc for shopkeeper	*/
 };

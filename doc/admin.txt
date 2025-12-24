@@ -447,7 +447,7 @@ trap! tbaMUD is bound to contain bugs, but most of the core systems have been
 well tested, so you should take claims such as “I magically lost all my stuff!”
 with a grain of salt and check your system logs. 
 
-If a player ever asks you for reimbursement of equipment, money, gold, 
+If a player ever asks you for reimbursement of equipment, money, coins, 
 experience points (XP), or whatever, your gut reaction should always be to 
 check the logs first. 
 

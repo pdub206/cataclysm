@@ -1132,14 +1132,14 @@ ACMD(do_examine)
   }
 }
 
-ACMD(do_gold)
+ACMD(do_coins)
 {
-  if (GET_GOLD(ch) == 0)
+  if (GET_COINS(ch) == 0)
     send_to_char(ch, "You're broke!\r\n");
-  else if (GET_GOLD(ch) == 1)
+  else if (GET_COINS(ch) == 1)
     send_to_char(ch, "You have one miserable little coin.\r\n");
   else
-    send_to_char(ch, "You have %d coins.\r\n", GET_GOLD(ch));
+    send_to_char(ch, "You have %d coins.\r\n", GET_COINS(ch));
 }
 
 ACMD(do_score)
@@ -2256,9 +2256,6 @@ ACMD(do_toggle)
     {"autoloot", PRF_AUTOLOOT, 0,
     "Autoloot disabled.\r\n",
     "Autoloot enabled.\r\n"},
-    {"autogold", PRF_AUTOGOLD, 0,
-    "Autogold disabled.\r\n",
-    "Autogold enabled.\r\n"},
     {"autosplit", PRF_AUTOSPLIT, 0,
     "Autosplit disabled.\r\n",
     "Autosplit enabled.\r\n"},
@@ -2355,7 +2352,6 @@ ACMD(do_toggle)
     "          Wimpy: %-3s\r\n"
 
     "       AutoLoot: %-3s    "
-    "       AutoGold: %-3s    "
     "      AutoSplit: %-3s\r\n"
 
     "     AutoAssist: %-3s    "
@@ -2385,7 +2381,6 @@ ACMD(do_toggle)
     buf2,
 
     ONOFF(PRF_FLAGGED(ch, PRF_AUTOLOOT)),
-    ONOFF(PRF_FLAGGED(ch, PRF_AUTOGOLD)),
     ONOFF(PRF_FLAGGED(ch, PRF_AUTOSPLIT)),
 
     ONOFF(PRF_FLAGGED(ch, PRF_AUTOASSIST)),

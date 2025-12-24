@@ -55,7 +55,7 @@
 #define MAX_OBJ_COST        2000000
 #define MAX_CONTAINER_SIZE    10000
 
-#define MAX_MOB_GOLD         100000
+#define MAX_MOB_COINS         100000
 #define MAX_MOB_EXP          150000
 
 /* this is one mud year.. */

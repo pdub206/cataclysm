@@ -36,10 +36,10 @@ static int perform_get_from_room(struct char_data *ch, struct obj_data *obj);
 /* do_give utility functions */
 static struct char_data *give_find_vict(struct char_data *ch, char *arg);
 static void perform_give(struct char_data *ch, struct char_data *vict, struct obj_data *obj);
-static void perform_give_gold(struct char_data *ch, struct char_data *vict, int amount);
+static void perform_give_coins(struct char_data *ch, struct char_data *vict, int amount);
 /* do_drop utility functions */
 static int perform_drop(struct char_data *ch, struct obj_data *obj, byte mode, const char *sname, room_rnum RDR);
-static void perform_drop_gold(struct char_data *ch, int amount, byte mode, room_rnum RDR);
+static void perform_drop_coins(struct char_data *ch, int amount, byte mode, room_rnum RDR);
 /* do_put utility functions */
 static void perform_put(struct char_data *ch, struct obj_data *obj, struct obj_data *cont);
 /* do_remove utility functions */
@@ -192,7 +192,7 @@ ACMD(do_put)
                 }
                 GET_OBJ_VAL(obj, 0) = pile - howmany;
                 update_money_obj(obj);
-                GET_GOLD(ch) = MAX(0, GET_GOLD(ch) - howmany);
+                GET_COINS(ch) = MAX(0, GET_COINS(ch) - howmany);
                 obj = split;
                 howmany = 1;
               } else {
@@ -318,7 +318,7 @@ static bool merge_money_pile(struct char_data *ch, struct obj_data *obj)
 
   GET_OBJ_VAL(target, 0) += coins;
   update_money_obj(target);
-  GET_GOLD(ch) = MIN(MAX_GOLD, GET_GOLD(ch) + coins);
+  GET_COINS(ch) = MIN(MAX_COINS, GET_COINS(ch) + coins);
   extract_obj(obj);
 
   return TRUE;
@@ -559,14 +559,14 @@ ACMD(do_get)
   }
 }
 
-static void perform_drop_gold(struct char_data *ch, int amount, byte mode, room_rnum RDR)
+static void perform_drop_coins(struct char_data *ch, int amount, byte mode, room_rnum RDR)
 {
   struct obj_data *obj;
   int removed;
 
   if (amount <= 0)
     send_to_char(ch, "Heh heh heh.. we are jolly funny today, eh?\r\n");
-  else if (GET_GOLD(ch) < amount)
+  else if (GET_COINS(ch) < amount)
     send_to_char(ch, "You don't have that many coins!\r\n");
   else {
     if (mode != SCMD_JUNK) {
@@ -691,7 +691,7 @@ ACMD(do_drop)
     multi = atoi(arg);
     one_argument(argument, arg);
     if (!str_cmp("coins", arg) || !str_cmp("coin", arg))
-      perform_drop_gold(ch, multi, mode, RDR);
+      perform_drop_coins(ch, multi, mode, RDR);
     else if (multi <= 0)
       send_to_char(ch, "Yeah, that makes sense.\r\n");
     else if (!*arg)
@@ -792,7 +792,7 @@ static struct char_data *give_find_vict(struct char_data *ch, char *arg)
   return (NULL);
 }
 
-static void perform_give_gold(struct char_data *ch, struct char_data *vict,
+static void perform_give_coins(struct char_data *ch, struct char_data *vict,
 		            int amount)
 {
   char buf[MAX_STRING_LENGTH];
@@ -802,7 +802,7 @@ static void perform_give_gold(struct char_data *ch, struct char_data *vict,
     send_to_char(ch, "Heh heh heh ... we are jolly funny today, eh?\r\n");
     return;
   }
-  if ((GET_GOLD(ch) < amount) && (IS_NPC(ch) || (GET_LEVEL(ch) < LVL_GOD))) {
+  if ((GET_COINS(ch) < amount) && (IS_NPC(ch) || (GET_LEVEL(ch) < LVL_GOD))) {
     send_to_char(ch, "You don't have that many coins!\r\n");
     return;
   }
@@ -860,7 +860,7 @@ ACMD(do_give)
     if (!str_cmp("coins", arg) || !str_cmp("coin", arg)) {
       one_argument(argument, arg);
       if ((vict = give_find_vict(ch, arg)) != NULL)
-	perform_give_gold(ch, vict, amount);
+	perform_give_coins(ch, vict, amount);
       return;
     } else if (!*arg) /* Give multiple code. */
       send_to_char(ch, "What do you want to give %d of?\r\n", amount);

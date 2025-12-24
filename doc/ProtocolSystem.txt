@@ -104,16 +104,16 @@ can use MSDPFlush() instead - however, as with MSDPUpdate(), it will only send
 variables that are reportable and have changed.
 
 /******************************************************************************
- The MSDP_GOLD variable reports a negative number!
+ The MSDP_MONEY variable reports a negative number!
  ******************************************************************************/
 
 The snippet uses ints, which are usually 32 bits.  If you're using 64 bit long 
-long ints for certain things (such as gold), then you should either store them 
+long ints for certain things (such as coins), then you should either store them 
 in MSDP string variables, or change the snippet to use long long ints.
 
 Note that this won't effect your character, it's only the MSDP variable that 
 overflows.  It will give inaccurate information on your GUI, but players won't 
-actually lose any gold, so don't panic!
+actually lose any coins, so don't panic!
 
 /******************************************************************************
  The snippet is revealing my vnums!  Those are supposed to be top secret!

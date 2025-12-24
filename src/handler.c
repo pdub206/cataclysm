@@ -149,7 +149,7 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
   case APPLY_MANA:         GET_MAX_MANA(ch) += mod; break;
   case APPLY_HIT:          GET_MAX_HIT(ch) += mod; break;
   case APPLY_MOVE:         GET_MAX_MOVE(ch) += mod; break;
-  case APPLY_GOLD:         break;
+  case APPLY_COINS:         break;
   case APPLY_EXP:          break;
 
   case APPLY_AC:           GET_AC(ch) += mod; break;
@@ -424,9 +424,9 @@ static void adjust_char_coins(struct char_data *ch, int amount)
     return;
 
   if (amount > 0)
-    GET_GOLD(ch) = MIN(MAX_GOLD, GET_GOLD(ch) + amount);
+    GET_COINS(ch) = MIN(MAX_COINS, GET_COINS(ch) + amount);
   else
-    GET_GOLD(ch) = MAX(0, GET_GOLD(ch) + amount);
+    GET_COINS(ch) = MAX(0, GET_COINS(ch) + amount);
 }
 
 /* Give an object to a char. */

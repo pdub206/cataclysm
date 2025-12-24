@@ -214,7 +214,7 @@ static void qedit_setup_new(struct descriptor_data *d)
   quest->value[6]   = 1;              /* Quantity of targets    */
   quest->prev_quest = NOTHING;        /* Previous quest         */
   quest->next_quest = NOTHING;        /* Next quest             */
-  quest->gold_reward= 0;              /* Prize in gold coins    */
+  quest->coins_reward= 0;             /* Prize in coins         */
   quest->exp_reward = 0;              /* Prize in exp points    */
   quest->obj_reward = NOTHING;        /* vnum of reward object  */
   quest->name       = strdup("Undefined Quest");
@@ -310,7 +310,7 @@ static void qedit_disp_menu(struct descriptor_data *d)
     "\tn    Quest Point Rewards\r\n"
     "\tg B\tn) Completed      : [\tc%6d\tn] \tg C\tn) Abandoned   : [\tc%6d\tn]\r\n"
     "\tn    Other Rewards Rewards\r\n"
-    "\tg G\tn) Gold Coins     : [\tc%6d\tn] \tg T\tn) Exp Points  : [\tc%6d\tn] \tg O\tn) Object : [\tc%6d\tn]\r\n"
+    "\tg G\tn) Coins         : [\tc%6d\tn] \tg T\tn) Exp Points  : [\tc%6d\tn] \tg O\tn) Object : [\tc%6d\tn]\r\n"
     "\tn    Level Limits to Accept Quest\r\n"
     "\tg D\tn) Lower Level    : [\tc%6d\tn] \tg E\tn) Upper Level : [\tc%6d\tn]\r\n"
     "\tg F\tn) Prerequisite   : [\tc%6d\tn] \ty%s\r\n"
@@ -337,7 +337,7 @@ static void qedit_disp_menu(struct descriptor_data *d)
     quest->target == NOBODY ? -1 : quest->target, targetname,
     quest->value[6],
     quest->value[0], quest->value[1],
-    quest->gold_reward, quest->exp_reward, quest->obj_reward == NOTHING ? -1 : quest->obj_reward,
+    quest->coins_reward, quest->exp_reward, quest->obj_reward == NOTHING ? -1 : quest->obj_reward,
     quest->value[2], quest->value[3],
     quest->prereq     == NOTHING ? -1 : quest->prereq,
     quest->prereq     == NOTHING ? "" :
@@ -544,7 +544,7 @@ void qedit_parse(struct descriptor_data *d, char *arg)
    break;
  case 'g':
  case 'G':
-   OLC_MODE(d) = QEDIT_GOLD;
+   OLC_MODE(d) = QEDIT_COINS;
    write_to_output(d, "Enter the number of coins (0 for none) : ");
    break;
  case 't':
@@ -703,8 +703,8 @@ void qedit_parse(struct descriptor_data *d, char *arg)
       }
       OLC_QUEST(d)->prev_quest = (number == -1 ? NOTHING : atoi(arg));
       break;
-    case QEDIT_GOLD:
-      OLC_QUEST(d)->gold_reward = LIMIT(number, 0, 99999);
+    case QEDIT_COINS:
+      OLC_QUEST(d)->coins_reward = LIMIT(number, 0, 99999);
       break;
     case QEDIT_EXP:
       OLC_QUEST(d)->exp_reward = LIMIT(number, 0, 99999);

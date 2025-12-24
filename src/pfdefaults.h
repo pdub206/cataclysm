@@ -30,8 +30,8 @@
 #define PFDEF_BADPWS		0
 #define PFDEF_PREFFLAGS		0
 #define PFDEF_PRACTICES		0
-#define PFDEF_GOLD		0
-#define PFDEF_BANK		0
+#define PFDEF_COINS		0
+#define PFDEF_BANK_COINS		0
 #define PFDEF_EXP	        0
 #define PFDEF_AC		0
 #define PFDEF_STR		0

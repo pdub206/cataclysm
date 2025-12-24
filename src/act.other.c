@@ -389,7 +389,7 @@ static bool sleight_merge_money_pile(struct char_data *ch, struct obj_data *obj)
 
   GET_OBJ_VAL(target, 0) += coins;
   update_money_obj(target);
-  GET_GOLD(ch) = MIN(MAX_GOLD, GET_GOLD(ch) + coins);
+  GET_COINS(ch) = MIN(MAX_COINS, GET_COINS(ch) + coins);
   extract_obj(obj);
 
   return TRUE;
@@ -1106,7 +1106,7 @@ ACMD(do_slip)
       }
       GET_OBJ_VAL(obj, 0) = pile - howmany;
       update_money_obj(obj);
-      GET_GOLD(ch) = MAX(0, GET_GOLD(ch) - howmany);
+      GET_COINS(ch) = MAX(0, GET_COINS(ch) - howmany);
       obj = split;
     }
   }
@@ -1155,7 +1155,7 @@ ACMD(do_steal)
   struct char_data *vict;
   struct obj_data *obj;
   char vict_name[MAX_INPUT_LENGTH], obj_name[MAX_INPUT_LENGTH];
-  int gold, eq_pos, ohoh = 0;
+  int coins, eq_pos, ohoh = 0;
   int sleight_total, dc;
 
   if (!GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND)) {
@@ -1184,7 +1184,7 @@ ACMD(do_steal)
 
   sleight_total = roll_sleight_check(ch);
 
-  if (str_cmp(obj_name, "coins") && str_cmp(obj_name, "gold")) {
+  if (str_cmp(obj_name, "coins") && str_cmp(obj_name, "coin")) {
 
     if (!(obj = get_obj_in_list_vis(ch, obj_name, NULL, vict->carrying))) {
 
@@ -1250,18 +1250,18 @@ ACMD(do_steal)
       int total = count_coins_in_list(vict->carrying);
       int max_steal = total / 10;
       if (max_steal > 0) {
-        gold = rand_number(1, max_steal);
-        gold = remove_coins_from_list(vict->carrying, gold);
+        coins = rand_number(1, max_steal);
+        coins = remove_coins_from_list(vict->carrying, coins);
       } else {
-        gold = 0;
+        coins = 0;
       }
 
-      if (gold > 0) {
-        GET_GOLD(vict) = MAX(0, GET_GOLD(vict) - gold);
-        add_coins_to_char(ch, gold);
+      if (coins > 0) {
+        GET_COINS(vict) = MAX(0, GET_COINS(vict) - coins);
+        add_coins_to_char(ch, coins);
         gain_skill(ch, "sleight of hand", TRUE);
-        if (gold > 1)
-          send_to_char(ch, "Bingo!  You got %d coins.\r\n", gold);
+        if (coins > 1)
+          send_to_char(ch, "Bingo!  You got %d coins.\r\n", coins);
         else
           send_to_char(ch, "You manage to swipe a solitary coin.\r\n");
       } else {
@@ -1485,7 +1485,7 @@ ACMD(do_split)
       send_to_char(ch, "Sorry, you can't do that.\r\n");
       return;
     }
-    if (amount > GET_GOLD(ch)) {
+    if (amount > GET_COINS(ch)) {
       send_to_char(ch, "You don't seem to have that many coins to split.\r\n");
       return;
     }
@@ -1503,7 +1503,7 @@ ACMD(do_split)
       return;
     }
 
-    decrease_gold(ch, share * (num - 1));
+    decrease_coins(ch, share * (num - 1));
 
     /* Abusing signed/unsigned to make sizeof work. */
     len = snprintf(buf, sizeof(buf), "%s splits %d coins; you receive %d.\r\n",
@@ -1516,7 +1516,7 @@ ACMD(do_split)
 
     while ((k = (struct char_data *) simple_list(GROUP(ch)->members)) != NULL)
       if (k != ch && IN_ROOM(ch) == IN_ROOM(k) && !IS_NPC(k)) {
-	      increase_gold(k, share);
+	      increase_coins(k, share);
 	      send_to_char(k, "%s", buf);
 			}
 
@@ -1687,8 +1687,6 @@ ACMD(do_gen_tog)
     "AFK flag is now on.\r\n"},
     {"Autoloot disabled.\r\n",
     "Autoloot enabled.\r\n"},
-    {"Autogold disabled.\r\n",
-    "Autogold enabled.\r\n"},
     {"Autosplit disabled.\r\n",
     "Autosplit enabled.\r\n"},
     {"Autoassist disabled.\r\n",
@@ -1777,9 +1775,6 @@ ACMD(do_gen_tog)
     break;
   case SCMD_AUTOLOOT:
     result = PRF_TOG_CHK(ch, PRF_AUTOLOOT);
-    break;
-  case SCMD_AUTOGOLD:
-    result = PRF_TOG_CHK(ch, PRF_AUTOGOLD);
     break;
   case SCMD_AUTOSPLIT:
     result = PRF_TOG_CHK(ch, PRF_AUTOSPLIT);

@@ -38,8 +38,8 @@ long atol(const char *str);
 #define MINDEX_DELETED   FLAG(0)  /* Mail has been marked for deletion     */
 #define MINDEX_URGENT    FLAG(1)  /* Mail is flagged as urgent by sender   */
 #define MINDEX_HAS_OBJ   FLAG(2)  /* Mail has an attached object           */
-#define MINDEX_HAS_GOLD  FLAG(3)  /* Mail contains some gold coins         */
-#define MINDEX_IS_COD    FLAG(4)  /* Mail requires some gold coins         */
+#define MINDEX_HAS_COINS FLAG(3)  /* Mail contains some coins              */
+#define MINDEX_IS_COD    FLAG(4)  /* Mail requires some coins              */
 #define MINDEX_FROM_MOB  FLAG(5)  /* Mail has been sent by using scripts   */
 #define MINDEX_READ      FLAG(6)  /* Mail has been viewed but not received */
 #define MINDEX_DRAFT     FLAG(7)  /* Mail is an unsent draft copy          */
@@ -159,8 +159,8 @@ int parse_mail_flags(FILE *plr_file) {
       if (IS_SET_AR(fl, MAIL_DRAFT))    SET_BIT(ret, MINDEX_DRAFT);
     }
   }
-  if ((txt = findLine(plr_file, "Gold:")) != NULL) {
-    if (atol(txt) > 0) SET_BIT(ret, MINDEX_HAS_GOLD);
+  if ((txt = findLine(plr_file, "Coin:")) != NULL) {
+    if (atol(txt) > 0) SET_BIT(ret, MINDEX_HAS_COINS);
   }
   if ((txt = findLine(plr_file, "Objs:")) != NULL) {
     SET_BIT(ret, MINDEX_HAS_OBJ);

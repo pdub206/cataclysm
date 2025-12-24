@@ -299,7 +299,7 @@ int Crash_clean_file(char *name)
   char filename[MAX_INPUT_LENGTH], filetype[20];
   int numread;
   FILE *fl;
-  int savecode, timed, netcost, gold, account, nitems;
+  int savecode, timed, netcost, coins, account, nitems;
   char line[READ_SIZE];
 
   if (!get_filename(filename, sizeof(filename), CRASH_FILE, name))
@@ -318,7 +318,7 @@ int Crash_clean_file(char *name)
     return FALSE;
 
   sscanf(line, "%d %d %d %d %d %d",&savecode,&timed,&netcost,
-         &gold,&account,&nitems);
+         &coins,&account,&nitems);
 
   if ((savecode == SAVE_CRASH) ||
       (savecode == SAVE_LOGOUT) ||
@@ -401,11 +401,11 @@ static void Crash_write_header(struct char_data *ch, FILE *fp, int savecode)
 {
   int timed = (int)time(0);
   int netcost = 0;
-  int gold = ch ? GET_GOLD(ch) : 0;
-  int account = ch ? GET_BANK_GOLD(ch) : 0;
+  int coins = ch ? GET_COINS(ch) : 0;
+  int account = ch ? GET_BANK_COINS(ch) : 0;
   int nitems = 0;
 
-  fprintf(fp, "%d %d %d %d %d %d\n", savecode, timed, netcost, gold, account, nitems);
+  fprintf(fp, "%d %d %d %d %d %d\n", savecode, timed, netcost, coins, account, nitems);
 }
 
 void Crash_crashsave(struct char_data *ch)
@@ -783,7 +783,7 @@ static int Crash_load_objs(struct char_data *ch) {
   int i, orig_save_code, num_objs=0;
   struct obj_data *cont_row[MAX_BAG_ROWS];
   int savecode = SAVE_UNDEF;
-  int timed=0,netcost=0,gold,account,nitems;
+  int timed=0,netcost=0,coins,account,nitems;
 	obj_save_data *loaded, *current;
 
   if (!get_filename(filename, sizeof(filename), CRASH_FILE, GET_NAME(ch)))
@@ -801,10 +801,10 @@ static int Crash_load_objs(struct char_data *ch) {
                        "Contact a God for assistance.\r\n");
     }
     mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE, "%s entering game with no equipment.", GET_NAME(ch));
-    if (GET_GOLD(ch) > 0) {
-      int old_gold = GET_GOLD(ch);
-      GET_GOLD(ch) = 0;
-      add_coins_to_char(ch, old_gold);
+    if (GET_COINS(ch) > 0) {
+      int old_coins = GET_COINS(ch);
+      GET_COINS(ch) = 0;
+      add_coins_to_char(ch, old_coins);
     }
     return 1;
   }
@@ -812,7 +812,7 @@ static int Crash_load_objs(struct char_data *ch) {
   if (!get_line(fl, line))
     mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE, "Failed to read player's save code: %s.", GET_NAME(ch));
   else
-    sscanf(line,"%d %d %d %d %d %d",&savecode, &timed, &netcost,&gold,&account,&nitems);
+    sscanf(line,"%d %d %d %d %d %d",&savecode, &timed, &netcost,&coins,&account,&nitems);
 
   if (savecode == SAVE_LOGOUT || savecode == SAVE_TIMEDOUT) {
     mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE,
@@ -856,16 +856,16 @@ static int Crash_load_objs(struct char_data *ch) {
 	}
 
   {
-    int old_gold = GET_GOLD(ch);
+    int old_coins = GET_COINS(ch);
     int coin_total = count_char_coins(ch);
 
     if (coin_total > 0) {
-      GET_GOLD(ch) = coin_total;
-    } else if (old_gold > 0) {
-      GET_GOLD(ch) = 0;
-      add_coins_to_char(ch, old_gold);
+      GET_COINS(ch) = coin_total;
+    } else if (old_coins > 0) {
+      GET_COINS(ch) = 0;
+      add_coins_to_char(ch, old_coins);
     } else {
-      GET_GOLD(ch) = 0;
+      GET_COINS(ch) = 0;
     }
   }
 

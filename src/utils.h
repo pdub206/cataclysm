@@ -182,10 +182,10 @@ void  gain_skill(struct char_data *ch, char *skill, bool success);
 void	point_update(void);
 void	update_pos(struct char_data *victim);
 void run_autowiz(void);
-int increase_gold(struct char_data *ch, int amt);
-int decrease_gold(struct char_data *ch, int amt);
-int increase_bank(struct char_data *ch, int amt);
-int decrease_bank(struct char_data *ch, int amt);
+int increase_coins(struct char_data *ch, int amt);
+int decrease_coins(struct char_data *ch, int amt);
+int increase_bank_coins(struct char_data *ch, int amt);
+int decrease_bank_coins(struct char_data *ch, int amt);
 
 /* in class.c */
 void    advance_level(struct char_data *ch);
@@ -602,10 +602,10 @@ do                                                              \
 #define GET_MANA(ch)	  ((ch)->points.mana)
 /** Maximum mana points (magic) of ch. */
 #define GET_MAX_MANA(ch)  ((ch)->points.max_mana)
-/** Gold on ch. */
-#define GET_GOLD(ch)	  ((ch)->points.gold)
-/** Gold in bank of ch. */
-#define GET_BANK_GOLD(ch) ((ch)->points.bank_gold)
+/** Coins on ch. */
+#define GET_COINS(ch)	  ((ch)->points.coins)
+/** Coins in bank of ch. */
+#define GET_BANK_COINS(ch) ((ch)->points.bank_coins)
 
 /** Current position (standing, sitting) of ch. */
 #define GET_POS(ch)	  ((ch)->char_specials.position)

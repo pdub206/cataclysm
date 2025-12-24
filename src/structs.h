@@ -263,17 +263,16 @@
 #define PRF_BUILDWALK    21   /**< Build new rooms while walking */
 #define PRF_AFK          22   /**< AFK flag */
 #define PRF_AUTOLOOT     23   /**< Loot everything from a corpse */
-#define PRF_AUTOGOLD     24   /**< Loot gold from a corpse */
-#define PRF_AUTOSPLIT    25   /**< Split gold with group */
-#define PRF_AUTOSAC      26   /**< Sacrifice a corpse */
-#define PRF_AUTOASSIST   27   /**< Auto-assist toggle */
-#define PRF_AUTOMAP      28   /**< Show map at the side of room descs */
-#define PRF_AUTOKEY      29   /**< Automatically unlock locked doors when opening */
-#define PRF_AUTODOOR     30   /**< Use the next available door */
-#define PRF_ZONERESETS   31   /**< Show when zones reset */
-#define PRF_VERBOSE      32   /**< Listings like where are more verbose */
+#define PRF_AUTOSPLIT    24   /**< Split coins with group */
+#define PRF_AUTOSAC      25   /**< Sacrifice a corpse */
+#define PRF_AUTOASSIST   26   /**< Auto-assist toggle */
+#define PRF_AUTOMAP      27   /**< Show map at the side of room descs */
+#define PRF_AUTOKEY      28   /**< Automatically unlock locked doors when opening */
+#define PRF_AUTODOOR     29   /**< Use the next available door */
+#define PRF_ZONERESETS   30   /**< Show when zones reset */
+#define PRF_VERBOSE      31   /**< Listings like where are more verbose */
 /** Total number of available PRF flags */
-#define NUM_PRF_FLAGS    33
+#define NUM_PRF_FLAGS    32
 
 /* Affect bits: used in char_data.char_specials.saved.affected_by */
 /* WARNING: In the world files, NEVER set the bits marked "R" ("Reserved") */
@@ -382,7 +381,7 @@
 #define ITEM_WEAPON     5		/**< Item is a weapon		*/
 #define ITEM_FURNITURE  6   /**< Sittable Furniture		*/
 #define ITEM_FREE       7   /**< Unimplemented		*/
-#define ITEM_TREASURE   8   /**< Item is a treasure, not gold	*/
+#define ITEM_TREASURE   8   /**< Item is a treasure, not coins	*/
 #define ITEM_ARMOR      9   /**< Item is armor		*/
 #define ITEM_POTION    10   /**< Item is a potion		*/
 #define ITEM_WORN      11		/**< Unimplemented		*/
@@ -465,7 +464,7 @@
 #define APPLY_MANA             12	/**< Apply to max mana		*/
 #define APPLY_HIT              13	/**< Apply to max hit points	*/
 #define APPLY_MOVE             14	/**< Apply to max move points	*/
-#define APPLY_GOLD             15	/**< Reserved			*/
+#define APPLY_COINS             15	/**< Reserved			*/
 #define APPLY_EXP              16	/**< Reserved			*/
 #define APPLY_AC               17	/**< Apply to Armor Class		*/
 #define APPLY_PROFICIENCY      18 /**< Apply to Proficiency Bonus */
@@ -638,8 +637,8 @@
 #define MAX_HELP_ENTRY        MAX_STRING_LENGTH /**< Max size of help entry */
 #define MAX_COMPLETED_QUESTS  1024   /**< Maximum number of completed quests allowed */
 
-#define MAX_GOLD 2140000000 /**< Maximum possible on hand gold (2.14 Billion) */
-#define MAX_BANK 2140000000 /**< Maximum possible in bank gold (2.14 Billion) */
+#define MAX_COINS 2140000000 /**< Maximum possible on hand coins (2.14 Billion) */
+#define MAX_BANK_COINS 2140000000 /**< Maximum possible in bank coins (2.14 Billion) */
 
 /** Define the largest set of commands for a trigger.
  * 16k should be plenty and then some. */
@@ -789,7 +788,7 @@ struct save_info
   int time;
   int savecode;          /**< How this character saved */
   int net_cost_per_diem; /**< ? Appears to be unused ? */
-  int gold;              /**< ? Appears to be unused ? */
+  int coins;             /**< ? Appears to be unused ? */
   int account;           /**< ? Appears to be unused ? */
   int nitems;            /**< ? Appears to be unused ? */
   int spare0;
@@ -947,8 +946,8 @@ struct char_point_data
    * Armor class. */
   sh_int armor;
   sh_int prof_mod; /**< Equipment/affect delta to proficiency bonus */
-  int gold;        /**< Current gold carried on character */
-  int bank_gold;   /**< Gold the char has in a bank account	*/
+  int coins;       /**< Current coins carried on character */
+  int bank_coins;  /**< Coins the char has in a bank account */
   int exp;         /**< The experience points, or value, of the character. */
 
 };

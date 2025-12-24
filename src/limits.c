@@ -490,68 +490,68 @@ void point_update(void)
 }
 
 /* Note: amt may be negative */
-int increase_gold(struct char_data *ch, int amt)
+int increase_coins(struct char_data *ch, int amt)
 {
-  int curr_gold;
+  int curr_coins;
   int add;
 
   if (!ch)
     return 0;
 
-  curr_gold = GET_GOLD(ch);
+  curr_coins = GET_COINS(ch);
 
   if (amt < 0)
-    return decrease_gold(ch, -amt);
+    return decrease_coins(ch, -amt);
   if (amt == 0)
-    return curr_gold;
+    return curr_coins;
 
-  add = MIN(amt, MAX_GOLD - curr_gold);
+  add = MIN(amt, MAX_COINS - curr_coins);
   if (add <= 0)
-    return curr_gold;
+    return curr_coins;
 
   add_coins_to_char(ch, add);
 
-  if (GET_GOLD(ch) == MAX_GOLD)
+  if (GET_COINS(ch) == MAX_COINS)
     send_to_char(ch, "%sYou have reached the maximum coins!\r\n%sYou must spend them or bank them before you can gain any more.\r\n", QBRED, QNRM);
 
-  return GET_GOLD(ch);
+  return GET_COINS(ch);
 }
 
-int decrease_gold(struct char_data *ch, int deduction)
+int decrease_coins(struct char_data *ch, int deduction)
 {
   if (!ch || deduction <= 0)
-    return GET_GOLD(ch);
+    return GET_COINS(ch);
 
   remove_coins_from_char(ch, deduction);
-  return GET_GOLD(ch);
+  return GET_COINS(ch);
 }
 
-int increase_bank(struct char_data *ch, int amt)
+int increase_bank_coins(struct char_data *ch, int amt)
 {
   int curr_bank;
 
   if (IS_NPC(ch)) return 0;
 
-  curr_bank = GET_BANK_GOLD(ch);
+  curr_bank = GET_BANK_COINS(ch);
 
   if (amt < 0) {
-    GET_BANK_GOLD(ch) = MAX(0, curr_bank+amt);
+    GET_BANK_COINS(ch) = MAX(0, curr_bank+amt);
     /* Validate to prevent overflow */
-    if (GET_BANK_GOLD(ch) > curr_bank) GET_BANK_GOLD(ch) = 0;
+    if (GET_BANK_COINS(ch) > curr_bank) GET_BANK_COINS(ch) = 0;
   } else {
-    GET_BANK_GOLD(ch) = MIN(MAX_BANK, curr_bank+amt);
+    GET_BANK_COINS(ch) = MIN(MAX_BANK_COINS, curr_bank+amt);
     /* Validate to prevent overflow */
-    if (GET_BANK_GOLD(ch) < curr_bank) GET_BANK_GOLD(ch) = MAX_BANK;
+    if (GET_BANK_COINS(ch) < curr_bank) GET_BANK_COINS(ch) = MAX_BANK_COINS;
   }
-  if (GET_BANK_GOLD(ch) == MAX_BANK)
+  if (GET_BANK_COINS(ch) == MAX_BANK_COINS)
     send_to_char(ch, "%sYou have reached the maximum bank balance!\r\n%sYou cannot put more into your account unless you withdraw some first.\r\n", QBRED, QNRM);
-  return (GET_BANK_GOLD(ch));
+  return (GET_BANK_COINS(ch));
 }
 
-int decrease_bank(struct char_data *ch, int deduction)
+int decrease_bank_coins(struct char_data *ch, int deduction)
 {
   int amt;
   amt = (deduction * -1);
-  increase_bank(ch, amt);
-  return (GET_BANK_GOLD(ch));
+  increase_bank_coins(ch, amt);
+  return (GET_BANK_COINS(ch));
 }

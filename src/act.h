@@ -106,7 +106,7 @@ ACMD(do_diagnose);
 ACMD(do_equipment);
 ACMD(do_examine);
 ACMD(do_exits);
-ACMD(do_gold);
+ACMD(do_coins);
 ACMD(do_help);
 ACMD(do_history);
 ACMD(do_inventory);
@@ -230,18 +230,17 @@ ACMD(do_gen_tog);
 #define SCMD_BUILDWALK   15
 #define SCMD_AFK         16
 #define SCMD_AUTOLOOT    17
-#define SCMD_AUTOGOLD    18
-#define SCMD_AUTOSPLIT   19
-#define SCMD_AUTOASSIST  20
-#define SCMD_AUTOMAP     21
-#define SCMD_AUTOKEY     22
-#define SCMD_AUTODOOR    23
-#define SCMD_ZONERESETS  24
-#define SCMD_SYSLOG      25
-#define SCMD_WIMPY       26
-#define SCMD_PAGELENGTH  27
-#define SCMD_SCREENWIDTH 28
-#define SCMD_COLOR       29
+#define SCMD_AUTOSPLIT   18
+#define SCMD_AUTOASSIST  19
+#define SCMD_AUTOMAP     20
+#define SCMD_AUTOKEY     21
+#define SCMD_AUTODOOR    22
+#define SCMD_ZONERESETS  23
+#define SCMD_SYSLOG      24
+#define SCMD_WIMPY       25
+#define SCMD_PAGELENGTH  26
+#define SCMD_SCREENWIDTH 27
+#define SCMD_COLOR       28
 
 /* do_quit */
 ACMD(do_quit);
