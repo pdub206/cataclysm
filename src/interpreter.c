@@ -1282,6 +1282,65 @@ int enter_player_game (struct descriptor_data *d)
   /* Load inventory/equipment */
   load_result = Crash_load(d->character);
 
+  {
+    static const struct {
+      obj_vnum vnum;
+      int wear_pos;
+    } starting_wear[] = {
+      { 153, WEAR_BACK },
+      { 165, WEAR_BODY },
+      { 166, WEAR_LEGS },
+      { 167, WEAR_FEET },
+    };
+    static const struct {
+      obj_vnum vnum;
+      int qty;
+    } starting_inv[] = {
+      { 142, 3 },
+      { 160, 1 },
+      { 121, 1 },
+    };
+    int i;
+    int has_eq = 0;
+
+    if (GET_LEVEL(d->character) <= 1 && GET_EXP(d->character) <= 1 &&
+        d->character->carrying == NULL) {
+      for (i = 0; i < NUM_WEARS; i++) {
+        if (GET_EQ(d->character, i)) {
+          has_eq = 1;
+          break;
+        }
+      }
+
+      if (!has_eq) {
+        for (i = 0; i < (int)(sizeof(starting_wear) / sizeof(starting_wear[0])); i++) {
+          struct obj_data *obj = read_object(starting_wear[i].vnum, VIRTUAL);
+          if (!obj) {
+            log("SYSERR: enter_player_game: missing starting wear obj vnum %d",
+                starting_wear[i].vnum);
+            continue;
+          }
+          equip_char(d->character, obj, starting_wear[i].wear_pos);
+        }
+
+        for (i = 0; i < (int)(sizeof(starting_inv) / sizeof(starting_inv[0])); i++) {
+          int qty = starting_inv[i].qty;
+          while (qty-- > 0) {
+            struct obj_data *obj = read_object(starting_inv[i].vnum, VIRTUAL);
+            if (!obj) {
+              log("SYSERR: enter_player_game: missing starting inventory obj vnum %d",
+                  starting_inv[i].vnum);
+              break;
+            }
+            obj_to_char(obj, d->character);
+          }
+        }
+
+        add_coins_to_char(d->character, rand_number(800, 1100));
+      }
+    }
+  }
+
   /* DO NOT save here — avoids clobbering Room with NOWHERE on login. */
   /* login_wtrigger can remain. */
   login_wtrigger(&world[IN_ROOM(d->character)], d->character);

@@ -257,13 +257,13 @@ const char *MENU =
 
 const char *WELC_MESSG =
 "\r\n"
-"Welcome to tbaMUD!  May your visit here be... Enlightening"
+"Welcome to Miranthas! May you live long and prosper here!\r\n"
 "\r\n\r\n";
 
 const char *START_MESSG =
-"Welcome.  This is your new tbaMUD character!  You can now earn coins,\r\n"
-"gain experience, find weapons and equipment, and much more -- while\r\n"
-"meeting people from around the world!\r\n";
+"Welcome.  This is your new Miranthas character! The world is harsh and\r\n"
+"unforgiving to those that are unprepared. Take your time to explore before\r\n"
+"leaving the city gates!\r\n";
 
 /* AUTOWIZ OPTIONS */
 /* Should the game automatically create a new wizlist/immlist every time someone

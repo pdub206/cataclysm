@@ -359,6 +359,11 @@ static void background_string_cleanup(struct descriptor_data *d, int action)
       write_to_output(d, "Background entry canceled.\r\n");
     else
       write_to_output(d, "Background saved.\r\n");
+
+    save_char(d->character);
+    write_to_output(d, "%s\r\n*** PRESS RETURN: ", motd);
+    STATE(d) = CON_RMOTD;
+    return;
   }
 
   write_to_output(d, "%s", CONFIG_MENU);
