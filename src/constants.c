@@ -466,7 +466,7 @@ const char *wear_bits[] = {
 const char *extra_bits[] = {
   "GLOW",
   "HUM",
-  "NO_RENT",
+  "UNUSED",
   "NO_DONATE",
   "NO_INVIS",
   "INVISIBLE",

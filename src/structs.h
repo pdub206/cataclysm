@@ -17,7 +17,7 @@
 #include <time.h>
 
 /** If you want equipment to be automatically equipped to the same place
- * it was when players rented, set the define below to 1 because
+ * it was when players saved, set the define below to 1 because
  * TRUE/FALSE aren't defined yet. */
 #define USE_AUTOEQ	1
 
@@ -424,7 +424,7 @@
 /* Extra object flags: used by obj_data.obj_flags.extra_flags */
 #define ITEM_GLOW              0   /**< Item is glowing */
 #define ITEM_HUM               1   /**< Item is humming */
-#define ITEM_NORENT            2   /**< Item cannot be rented */
+#define ITEM_UNUSED2           2   /**< Reserved (unused) */
 #define ITEM_NODONATE          3   /**< Item cannot be donated */
 #define ITEM_NOINVIS           4   /**< Item cannot be made invis	*/
 #define ITEM_INVISIBLE         5   /**< Item is invisible */
@@ -533,13 +533,13 @@
 #define SKY_RAINING    2  /**< Weather = Rain */
 #define SKY_LIGHTNING  3  /**< Weather = Lightning storm */
 
-/* Rent codes */
-#define RENT_UNDEF      0 /**< Character inv save status = undefined */
-#define RENT_CRASH      1 /**< Character inv save status = game crash */
-#define RENT_RENTED     2 /**< Character inv save status = rented */
-#define RENT_CRYO       3 /**< Character inv save status = cryogenics */
-#define RENT_FORCED     4 /**< Character inv save status = forced rent */
-#define RENT_TIMEDOUT   5 /**< Character inv save status = timed out */
+/* Save codes (legacy) */
+#define SAVE_UNDEF      0 /**< Character inv save status = undefined */
+#define SAVE_CRASH      1 /**< Character inv save status = game crash */
+#define SAVE_LOGOUT     2 /**< Character inv save status = legacy save */
+#define SAVE_CRYO       3 /**< Character inv save status = cryogenics */
+#define SAVE_FORCED     4 /**< Character inv save status = forced save */
+#define SAVE_TIMEDOUT   5 /**< Character inv save status = timed out */
 
 /* Settings for Bit Vectors */
 #define RF_ARRAY_MAX    4  /**< # Bytes in Bit vector - Room flags */
@@ -711,7 +711,7 @@ struct obj_flag_data
   int extra_flags[EF_ARRAY_MAX];    /**< If it hums, glows, etc.	    */
   int weight;                       /**< Weight of the object */
   int cost;                         /**< Value when sold             */
-  int cost_per_day;                 /**< Rent cost per real day */
+  int cost_per_day;                 /**< Legacy per-day value (unused) */
   int timer;                        /**< Timer for object             */
   int bitvector[AF_ARRAY_MAX];      /**< Affects characters           */
 };
@@ -776,7 +776,7 @@ struct obj_file_elem
   struct obj_affected_type affected[MAX_OBJ_AFFECT]; /**< Affects to mobs */
 };
 
-/** Header block for rent files.
+/** Header block for legacy save files.
  * DO NOT CHANGE the structure if you are using binary object files
  * and already have a player base and don't want to do a player wipe.
  * If you are using binary player files, feel free to turn the spare
@@ -784,10 +784,10 @@ struct obj_file_elem
  * int datatype.
  * NOTE: This is *not* used with the ascii playerfiles.
  * NOTE 2: This structure appears to be unused in this codebase? */
-struct rent_info
+struct save_info
 {
   int time;
-  int rentcode;          /**< How this character rented */
+  int savecode;          /**< How this character saved */
   int net_cost_per_diem; /**< ? Appears to be unused ? */
   int gold;              /**< ? Appears to be unused ? */
   int account;           /**< ? Appears to be unused ? */
@@ -1375,7 +1375,6 @@ struct game_data
   int max_npc_corpse_time; /**< Num tics before NPC corpses decompose*/
   int max_pc_corpse_time; /**< Num tics before PC corpse decomposes.*/
   int idle_void; /**< Num tics before PC sent to void(idle)*/
-  int idle_rent_time; /**< Num tics before PC is autorented.   */
   int idle_max_level; /**< Level of players immune to idle.     */
   int dts_are_dumps; /**< Should items in dt's be junked?   */
   int load_into_inventory; /**< Objects load in immortals inventory. */
@@ -1394,16 +1393,12 @@ struct game_data
   char *NOEFFECT; /**< 'Nothing seems to happen.'            */
 };
 
-/** The rent and crashsave options. */
+/** Crashsave options. */
 struct crash_save_data
 {
-  int free_rent; /**< Should the MUD allow rent for free?   */
-  int max_obj_save; /**< Max items players can rent.           */
-  int min_rent_cost; /**< surcharge on top of item costs.       */
   int auto_save; /**< Does the game automatically save ppl? */
   int autosave_time; /**< if auto_save=TRUE, how often?         */
   int crash_file_timeout; /**< Life of crashfiles and idlesaves.     */
-  int rent_file_timeout; /**< Lifetime of normal rent files in days */
 };
 
 /** Important room numbers. This structure stores vnums, not real array
@@ -1464,7 +1459,7 @@ struct config_data
   char *CONFFILE;
   /** In-game specific global settings, such as allowing player killing. */
   struct game_data play;
-  /** How is renting, crash files, and object saving handled? */
+  /** How are crash files and object saving handled? */
   struct crash_save_data csd;
   /** Special designated rooms, like start rooms, and donation rooms. */
   struct room_numbers room_nums;

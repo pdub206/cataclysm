@@ -563,8 +563,7 @@ static void oedit_disp_menu(struct descriptor_data *d)
     "%s7%s) Wear flags  : %s%s\r\n"
     "%s8%s) Weight      : %s%d\r\n"
     "%s9%s) Cost        : %s%d\r\n"
-    "%sA%s) Cost/Day    : %s%d\r\n"
-    "%sB%s) Timer       : %s%d\r\n"
+    "%sA%s) Timer       : %s%d\r\n"
     "%sM%s) Min Level   : %s%d\r\n"
     "%sP%s) Perm Affects: %s%s\r\n"
     "%sS%s) Script      : %s%s\r\n"
@@ -574,7 +573,6 @@ static void oedit_disp_menu(struct descriptor_data *d)
     grn, nrm, cyn, buf1,
     grn, nrm, cyn, GET_OBJ_WEIGHT(obj),
     grn, nrm, cyn, GET_OBJ_COST(obj),
-    grn, nrm, cyn, GET_OBJ_RENT(obj),
     grn, nrm, cyn, GET_OBJ_TIMER(obj),
     grn, nrm, cyn, GET_OBJ_LEVEL(obj),
     grn, nrm, cyn, buf2,
@@ -659,7 +657,7 @@ void oedit_parse(struct descriptor_data *d, char *arg)
     case '4':
       OLC_MODE(d) = OEDIT_MAINDESC;
       send_editor_help(d);
-      write_to_output(d, "Enter action description:\r\n\r\n");
+      write_to_output(d, "Enter main description:\r\n\r\n");
       if (OLC_OBJ(d)->main_description) {
         write_to_output(d, "%s", OLC_OBJ(d)->main_description);
         oldtext = strdup(OLC_OBJ(d)->main_description);
@@ -689,10 +687,6 @@ void oedit_parse(struct descriptor_data *d, char *arg)
       OLC_MODE(d) = OEDIT_COST;
       break;
     case 'a': case 'A':
-      write_to_output(d, "Enter cost per day : ");
-      OLC_MODE(d) = OEDIT_COSTPERDAY;
-      break;
-    case 'b': case 'B':
       write_to_output(d, "Enter timer : ");
       OLC_MODE(d) = OEDIT_TIMER;
       break;
@@ -870,13 +864,6 @@ void oedit_parse(struct descriptor_data *d, char *arg)
 
   case OEDIT_COST:
     GET_OBJ_COST(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_COST);
-    OLC_DIRTY(d) = 1;
-    OLC_MODE(d) = OEDIT_MAIN_MENU;
-    oedit_disp_menu(d);
-    return;
-
-  case OEDIT_COSTPERDAY:
-    GET_OBJ_RENT(OLC_OBJ(d)) = LIMIT(atoi(arg), 0, MAX_OBJ_RENT);
     OLC_DIRTY(d) = 1;
     OLC_MODE(d) = OEDIT_MAIN_MENU;
     oedit_disp_menu(d);

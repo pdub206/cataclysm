@@ -20,7 +20,7 @@ LAB runloop
   search nonum log/syslog "killed" >> log/rip
   search nonum log/syslog "Running" >> log/restarts
   search nonum log/syslog "advanced" >> log/levels
-  search nonum log/syslog "equipment lost" >> log/rentgone
+  search nonum log/syslog "equipment lost" >> log/syslog
   search nonum log/syslog "usage" >> log/usage
   search nonum log/syslog "new player" >> log/newplayers
   search nonum log/syslog "SYSERR" >> log/errors

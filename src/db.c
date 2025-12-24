@@ -84,7 +84,7 @@ int top_shop = -1;              /* top of shop table             */
 
 int no_mail = 0;                /* mail disabled?		 */
 int mini_mud = 0;               /* mini-mud mode?		 */
-int no_rent_check = 0;          /* skip rent check on boot?	 */
+int no_rent_check = 0;          /* skip save-file check on boot? */
 time_t boot_time = 0;           /* time of mud boot		 */
 int circle_restrict = 0;        /* level of game restriction	 */
 room_rnum r_mortal_start_room;	/* rnum of mortal start room	 */
@@ -772,7 +772,7 @@ void boot_db(void)
   load_ibt_file(SCMD_TYPO);
 
   if (!no_rent_check) {
-    log("Deleting timed-out crash and rent files:");
+    log("Deleting timed-out crash and idle-save files:");
     update_obj_file();
     log("   Done.");
   }
@@ -2207,7 +2207,7 @@ char *parse_object(FILE *obj_f, int nr)
 
   GET_OBJ_WEIGHT(obj_proto + i) = t[0];
   GET_OBJ_COST(obj_proto + i) = t[1];
-  GET_OBJ_RENT(obj_proto + i) = t[2];
+  GET_OBJ_COST_PER_DAY(obj_proto + i) = 0;
   GET_OBJ_LEVEL(obj_proto + i) = t[3];
   GET_OBJ_TIMER(obj_proto + i) = t[4];
 
@@ -3993,10 +3993,6 @@ static int check_object(struct obj_data *obj)
     log("SYSERR: Object #%d (%s) has negative weight (%d).",
 	GET_OBJ_VNUM(obj), obj->short_description, GET_OBJ_WEIGHT(obj));
 
-  if (GET_OBJ_RENT(obj) < 0 && (error = TRUE))
-    log("SYSERR: Object #%d (%s) has negative cost/day (%d).",
-	GET_OBJ_VNUM(obj), obj->short_description, GET_OBJ_RENT(obj));
-
   snprintf(objname, sizeof(objname), "Object #%d (%s)", GET_OBJ_VNUM(obj), obj->short_description);
   for(y = 0; y < TW_ARRAY_MAX; y++) {
     error |= check_bitvector_names(GET_OBJ_WEAR(obj)[y], wear_bits_count, objname, "object wear");
@@ -4139,7 +4135,6 @@ static void load_default_config( void )
   CONFIG_MAX_NPC_CORPSE_TIME    = max_npc_corpse_time;
   CONFIG_MAX_PC_CORPSE_TIME	    = max_pc_corpse_time;
   CONFIG_IDLE_VOID		        = idle_void;
-  CONFIG_IDLE_RENT_TIME	        = idle_rent_time;
   CONFIG_IDLE_MAX_LEVEL	        = idle_max_level;
   CONFIG_DTS_ARE_DUMPS	        = dts_are_dumps;
   CONFIG_LOAD_INVENTORY         = load_into_inventory;
@@ -4159,14 +4154,10 @@ static void load_default_config( void )
   CONFIG_SCRIPT_PLAYERS         = script_players;
   CONFIG_DEBUG_MODE             = debug_mode;
 
-  /* Rent / crashsave options. */
-  CONFIG_FREE_RENT              = free_rent;
-  CONFIG_MAX_OBJ_SAVE           = max_obj_save;
-  CONFIG_MIN_RENT_COST	        = min_rent_cost;
+  /* Crashsave options. */
   CONFIG_AUTO_SAVE		        = auto_save;
   CONFIG_AUTOSAVE_TIME	        = autosave_time;
   CONFIG_CRASH_TIMEOUT          = crash_file_timeout;
-  CONFIG_RENT_TIMEOUT	        = rent_file_timeout;
 
   /* Room numbers. */
   CONFIG_MORTAL_START           = mortal_start_room;
@@ -4292,9 +4283,7 @@ void load_config( void )
         break;
 
       case 'f':
-        if (!str_cmp(tag, "free_rent"))
-          CONFIG_FREE_RENT = num;
-        else if (!str_cmp(tag, "frozen_start_room"))
+        if (!str_cmp(tag, "frozen_start_room"))
           CONFIG_FROZEN_START = num;
         break;
 
@@ -4311,8 +4300,6 @@ void load_config( void )
       case 'i':
         if (!str_cmp(tag, "idle_void"))
           CONFIG_IDLE_VOID = num;
-        else if (!str_cmp(tag, "idle_rent_time"))
-          CONFIG_IDLE_RENT_TIME = num;
         else if (!str_cmp(tag, "idle_max_level"))
           CONFIG_IDLE_MAX_LEVEL = num;
         else if (!str_cmp(tag, "immort_start_room"))
@@ -4347,8 +4334,6 @@ void load_config( void )
           CONFIG_MAX_FILESIZE = num;
         else if (!str_cmp(tag, "max_npc_corpse_time"))
           CONFIG_MAX_NPC_CORPSE_TIME = num;
-        else if (!str_cmp(tag, "max_obj_save"))
-          CONFIG_MAX_OBJ_SAVE = num;
         else if (!str_cmp(tag, "max_pc_corpse_time"))
           CONFIG_MAX_PC_CORPSE_TIME = num;
         else if (!str_cmp(tag, "max_playing"))
@@ -4359,8 +4344,7 @@ void load_config( void )
           strncpy(buf, "Reading menu in load_config()", sizeof(buf));
           CONFIG_MENU = fread_string(fl, buf);
           parse_at(CONFIG_MENU);
-        } else if (!str_cmp(tag, "min_rent_cost"))
-          CONFIG_MIN_RENT_COST = num;
+        }
         else if (!str_cmp(tag, "min_wizlist_lev"))
           CONFIG_MIN_WIZLIST_LEV = num;
         else if (!str_cmp(tag, "mortal_start_room"))
@@ -4411,8 +4395,6 @@ void load_config( void )
         break;
 
       case 'r':
-        if (!str_cmp(tag, "rent_file_timeout"))
-          CONFIG_RENT_TIMEOUT = num;
         break;
 
       case 's':

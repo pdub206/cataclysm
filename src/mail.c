@@ -350,7 +350,6 @@ static void postmaster_receive_mail(struct char_data *ch, struct char_data *mail
     SET_BIT_AR(GET_OBJ_WEAR(obj), ITEM_WEAR_TAKE);
     GET_OBJ_WEIGHT(obj) = 1;
     GET_OBJ_COST(obj) = 30;
-    GET_OBJ_RENT(obj) = 10;
     obj->main_description = read_delete(GET_IDNUM(ch));
 
     if (obj->main_description == NULL)

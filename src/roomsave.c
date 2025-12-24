@@ -85,9 +85,9 @@ static struct obj_data *roomsave_read_list_ctx(FILE *fl, int stop_on_E)
       break;
     }
 
-    /* Parse object header: O vnum timer weight cost rent */
-    int vnum, timer, weight, cost, rent;
-    if (sscanf(line, "O %d %d %d %d %d", &vnum, &timer, &weight, &cost, &rent) != 5)
+    /* Parse object header: O vnum timer weight cost unused */
+    int vnum, timer, weight, cost, unused_cost;
+    if (sscanf(line, "O %d %d %d %d %d", &vnum, &timer, &weight, &cost, &unused_cost) != 5)
       continue;
 
     /* IMPORTANT: read by VNUM (VIRTUAL), not real index */
@@ -110,7 +110,7 @@ static struct obj_data *roomsave_read_list_ctx(FILE *fl, int stop_on_E)
     GET_OBJ_TIMER(obj)  = timer;
     GET_OBJ_WEIGHT(obj) = weight;
     GET_OBJ_COST(obj)   = cost;
-    GET_OBJ_RENT(obj)   = rent;
+    GET_OBJ_COST_PER_DAY(obj)   = 0;
 
     /* Clear array flags so missing slots don't keep proto bits */
 #ifdef EF_ARRAY_MAX
@@ -198,7 +198,7 @@ static struct obj_data *roomsave_read_list(FILE *fl)
 
 /* ---------- Minimal line format ----------
 #R <vnum> <unix_time>
-O <vnum> <timer> <extra_flags> <wear_flags> <weight> <cost> <rent>
+O <vnum> <timer> <extra_flags> <wear_flags> <weight> <cost> <unused>
 V <i> <val[i]>    ; repeated for all value slots present on this obj
 B                 ; begin contents of this object (container)
 E                 ; end contents of this object
@@ -234,7 +234,7 @@ static void write_one_object(FILE *fl, struct obj_data *obj) {
           GET_OBJ_TIMER(obj),
           GET_OBJ_WEIGHT(obj),
           GET_OBJ_COST(obj),
-          GET_OBJ_RENT(obj));
+          GET_OBJ_COST_PER_DAY(obj));
 
 /* Extra flags array */
 #if defined(EF_ARRAY_MAX) && defined(GET_OBJ_EXTRA_AR)

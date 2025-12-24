@@ -256,7 +256,7 @@ int save_objects(zone_rnum zone_num)
           GET_OBJ_VAL(obj, 0), GET_OBJ_VAL(obj, 1),
           GET_OBJ_VAL(obj, 2), GET_OBJ_VAL(obj, 3),
           GET_OBJ_WEIGHT(obj), GET_OBJ_COST(obj),
-          GET_OBJ_RENT(obj), GET_OBJ_LEVEL(obj), GET_OBJ_TIMER(obj)
+          GET_OBJ_COST_PER_DAY(obj), GET_OBJ_LEVEL(obj), GET_OBJ_TIMER(obj)
       );
 
       /* Do we have script(s) attached? */

@@ -131,7 +131,7 @@ wait 1 s
 %load% <obj|mob> <vnum> [name [position]]
 
    This command loads a mob or object into the game. No-take objects loaded to
-an actor will load to the room. NO_RENT objects can not be loaded.
+an actor will load to the room.
 
 load an object to room: %load% obj 1300
 load a mob to room    : %load% mob 1300
@@ -1487,7 +1487,7 @@ configuration values that control the operation of the MUD.
 
 OasisOLC MUD Configuration Editor
 G) Game Play Options              @RHELP CEDIT-GAME@n
-C) Crashsave/Rent Options         @RHELP CEDIT-SAVE@n
+C) Crashsave Options              @RHELP CEDIT-SAVE@n
 R) Room Numbers                   @RHELP CEDIT-ROOM@n
 O) Operation Options              @RHELP CEDIT-OPERATION@n
 A) Autowiz Options                @RHELP CEDIT-AUTOWIZ@n
@@ -1513,12 +1513,12 @@ G) Maximum Experience Loss : 500000
 H) Max Time for NPC Corpse : 5
 I) Max Time for PC Corpse  : 10
 J) Tics before PC sent to void : 1000000
-K) Tics before PC is autosaved : 2000000
-L) Level Immune To IDLE        : 35
-M) Death Traps Junk Items      : No
-N) Objects Load Into Inventory : Yes
-O) Track Through Doors         : Yes
-P) Display Closed Doors        : Yes
+K) Level Immune To IDLE        : 35
+L) Death Traps Junk Items      : No
+M) Objects Load Into Inventory : Yes
+N) Track Through Doors         : Yes
+O) Display Closed Doors        : Yes
+P) Diagonal Directions         : No
 R) Mortals Level To Immortal   : Yes
 1) OK Message Text         : Okay.
 2) NOPERSON Message Text   : No-one by that name here.
@@ -1583,13 +1583,9 @@ See also: CEDIT-MENU
 #31
 CEDIT-SAVES
 
-A) Free Rent          : Yes
-B) Max Objects Saved  : 30
-C) Minimum Rent Cost  : 100
-D) Auto Save          : Yes
-E) Auto Save Time     : 5 minute(s)
-F) Crash File Timeout : 10 day(s)
-G) Rent File Timeout  : 30 day(s)
+A) Auto Save          : Yes
+B) Auto Save Time     : 5 minute(s)
+C) Crash File Timeout : 10 day(s)
 Q) Exit To The Main Menu
 
 See also: CEDIT-MENU
@@ -3206,7 +3202,6 @@ xnames         ../lib/misc/xnames
 levels         ../log/levels
 rip            ../log/rip
 players        ../log/newplayers
-rentgone       ../log/rentgone
 errors         ../log/errors
 godcmds        ../log/godcmds
 syslog         ../syslog
@@ -3748,7 +3743,7 @@ Usage: hcontrol build <house vnum> <exit dir> <player name>
 
    House control, controls the addition, removal, and payments of houses.
 Hcontrol show will show all the houses currently defined in the game along 
-with their last 'rent' payment date.
+with their last upkeep payment date.
 
 See also: HOUSE, HOUSES
 #31
@@ -3931,7 +3926,7 @@ loaded into your house next time you enter the game.
 Guests of your house can be defined using the HOUSE command.  See HOUSE for
 more information.
 
-Houses are an alternative to renting.  You can simply enter your house and
+Houses are an alternative to logout storage.  You can simply enter your house and
 quit; your objects will drop to the ground and be crash-saved for when you
 return.  There is currently no limit to the number of objects which can be
 stored in your house.  Of course, players must expect to pay a much higher
@@ -4069,9 +4064,9 @@ See also: DETECT-INVISIBILITY
 #0
 INNS RECEPTIONS
 
-Inns are only required if renting is enabled.
+Inns are only required if inn services are enabled.
 
-See also: OFFER, RENT
+See also: OFFER
 #0
 INVENTORY
 
@@ -4841,7 +4836,7 @@ All with a max load of 10. The first time the zone resets. 5 Kobolds will be
 loaded in 5 different rooms. The second time another 5 Kobolds will be loaded 
 into those same rooms. So now you would have 5 rooms with 2 Kobolds in each. 
 Next zone reset - nothing changes unless some players come along and kills some
-Kobolds.  An object in a players rent file does not count as in the game.
+Kobolds.  An object in a players save file does not count as in the game.
 
 See also: DEPENDENT, ZEDIT-MENU, ZEDIT-ADVANCED
 #31
@@ -5723,18 +5718,18 @@ OBJ-FORMATS OBJECT-FORMATS OBJ-FILES
 <action description>~
 <type flag> <extra (effects) bitvector> <wear bitvector> <perm affects>
 <value 0> <value 1> <value 2> <value 3>
-<weight> <cost> <rent per day>
+<weight> <cost> <unused>
 {Zero or more Extra Descriptions and/or Affect Fields}
 
 See also: OEDIT
 #31
 OBJ-NOTES OBJECT-NOTES BOOKS PENS NOTES QUILLS NEWSPAPERS POSTITS POST-ITS OBJ-TYPE-NOTE PAPERS TYPE-NOTE
 
-   With Object Type NOTE you can then use the A-desc to write what you want 
+   With Object Type NOTE you can then use the M-desc to write what you want 
 people to see when they read it.  Players will then be able to write on the
 note by holding a PEN. If you want to create a book I suggest using object type
 OTHER. That way players can read/look book but can not overwrite what you put
-in the a-desc.
+in the m-desc.
    To make a long book you have to use the extra descriptions with keywords
 like 1 2 3 etc.  Since the buffers can only hold so much text. You would need 
 to include instructions, something like this: to read another page type read #.
@@ -5854,15 +5849,12 @@ applies. Suggested object standards are displayed at the end of each apply
 
 See also: STANDARDS
 #31
-OEDIT-COST OEDIT-COST/DAY OEDIT-TIMER OBJECT-TIMER TIMERS COST-DAY
+OEDIT-COST OEDIT-TIMER OBJECT-TIMER TIMERS
   
 9) Cost        : @c0@n
    How much is the object worth. Maximum 1000.
 
-A) Cost/Day    : @c0@n
-   NOT USED. This is for MUD's that charge rent.
-
-B) Timer       : @c0@n
+A) Timer       : @c0@n
    Should not be set, but may be used in conjunction with a timer trigger.
 
 See also: %TIMER%
@@ -5905,13 +5897,12 @@ to what may lie ahead or what has happened in the past.
 
 See also: TEXT-EDITOR, EXTRA, SWORDS
 #31
-OEDIT-EXTRA-FLAGS OEDIT-FLAGS OBJECT-FLAGS OBJECTFLAGS GLOW HUM NODROP NO_DROP NORENT NO_RENT OFLAGS OBJFLAGS OBJ-FLAGS 
+OEDIT-EXTRA-FLAGS OEDIT-FLAGS OBJECT-FLAGS OBJECTFLAGS GLOW HUM NODROP NO_DROP OFLAGS OBJFLAGS OBJ-FLAGS 
 
 6) Extra flags : @cNOBITS@n
  
 1)   GLOW            Item is glowing (cosmetic).
 2)   HUM             Item is humming (cosmetic).
-3)   NORENT          Item cannot be rented.
 4)   NODONATE        Item cannot be donated.
 5)   NOINVIS         Item cannot be made invisible.
 6)   INVISIBLE       Item is invisible.
@@ -5989,8 +5980,7 @@ OEDIT-MENU OBJ-MENU OBJECT-MENU
 7) Wear flags  : @cTAKE@n                     @RHELP OEDIT-WEAR-FLAGS@n
 8) Weight      : @c0@n                        @RHELP OEDIT-WEIGHT@n
 9) Cost        : @c0@n                        @RHELP OEDIT-COST@n
-A) Cost/Day    : @c0@n                        @RHELP OEDIT-COST/DAY@n                   
-B) Timer       : @c0@n                        @RHELP OEDIT-TIMER@n
+A) Timer       : @c0@n                        @RHELP OEDIT-TIMER@n
 C) Values      : @c0 0 0 0@n                  @RHELP OEDIT-VALUES@n
 D) Applies menu                           @RHELP OEDIT-APPLIES@n
 E) Extra descriptions menu                @RHELP OEDIT-EXTRA@n
@@ -6218,7 +6208,7 @@ will not be able to take it. By giving it a large weight this causes the code
 to say it is too heavy for you instead of "You can't take that". Good for 
 statues, and funny when you see players dropping all their stuff and stripping
 naked to get the things. Objects without take flags do not require a weight, 
-cost, cost/day, applies, min level, and perm affects.
+cost, applies, min level, and perm affects.
    Note that the TAKE bit controls whether or not an item can be picked up 
 using the get or take command, whereas the HOLD bit controls if the object 
 can be worn using the hold command. The wear flags determine how you can 
@@ -6245,21 +6235,6 @@ Everything that has a take flag must have a weight. For weapons a  weight of
    If you do not want something to be taken you can remove the TAKE flag. 
 
 See also: OEDIT-WEAR-FLAGS
-#31
-OFFER RENTING UNRENTING UN-RENTING 
-
-Usage: offer
-       rent
-
-For use in the receptions of inns.
-
-Offer makes the innkeeper tell you the cost of storing your belongings
-for one day.  Rent stores your belongings and exits you from the game.
-When you re-enter, you will start where you rented.
-
-However, rent is free here, and you can simply quit. 
-
-See also: INN, RECEPTION
 #0
 OFFLINE-EDITOR CIRCEDIT CWC 
 
@@ -6560,7 +6535,7 @@ The shop owner simply places his unwanted items into the stock room, and they
 instantly become available to buy in the shop.  The shopkeeper works like any
 other shopkeeper, but only sells the contents of the stock room.
 
-Unsellable or unrentable items cannot be sold, and simply won't appear on the
+Unsellable items cannot be sold, and simply won't appear on the
 shopkeeper's list.
 
 When an item is sold, a small pile of gold will appear in the stock room. The
@@ -7464,7 +7439,7 @@ QUIT LOGOUT
 When you get tired of playing, you can leave the game by typing 'quit'.
 You can quit anywhere, and you will not lose your EQ when you decide to do so.
 
-See also: INN, OFFER, RENT
+See also: INN, OFFER
 #0
 RADIAX
 
@@ -7610,7 +7585,7 @@ See also: REDIT-MENU, RLIST, DIG, OLC, XCOPY
 REDIT-DELETE ROOMDELETE ROOM-DELETE ERASE DELETE-ROOM ODELETE OEDIT-DELETE MDELETE MEDIT-DELETE DELETE-OBJECT
 
    Deletes the current room, mobile, or object. Be careful and make sure you
-are deleting the right vnum. Do not delete objects in rent files.
+are deleting the right vnum. Do not delete objects in save files.
 
 See also: OLC, AUTOSAVE, PURGE, VDELETE
 #31
@@ -8686,8 +8661,8 @@ SHOW-SHOPS SHOW-ZONES SHOWZONES SHOWSHOPS ZSTAT SHOW->ZONES SHOW-COLOUR SHOW-COL
 Usage: show <mode> [argument]
 
 Show options:
-zones          player         rent           stats          errors         
-death          godrooms       shops          houses         snoop          
+zones          player         stats          errors
+death          godrooms       shops          houses         snoop
 
 The SHOW command displays information.  Some modes of show require additional
 information, such as a player name.
@@ -8699,7 +8674,6 @@ zones     Shows all the zones in the game and their current reset status.
 death     Shows all death traps in the game.
 player    Shows player summary information, simply provide a player name.
 godrooms  Shows the rooms in the 'god zone'.
-rent      Shows the filename and path to a players rent file.
 shops     Shows all the shops in the game and their buy/sell parameters.
 stats     Shows game status information including players in game, mobs etc.
 houses    Shows the houses that are currently defined.
@@ -11965,8 +11939,7 @@ Objects When using field - The variable returns:
 affects()    - Checks if flag exists. @RHELP OEDIT-AFFECT@n @RTSTAT 1205@n
 carried_by   - The id of the character carrying the object, or an empty return. @RTSTAT 55005@n
 contents     - Gives the first object in a container.  @RTSTAT 32@n
-cost()       - The cost (not rent cost) of the object. Subfield sets.
-cost_per_day - The rent cost of the object
+cost()       - The cost of the object. Subfield sets.
 count        - The number of the same object.
 has_in       - True if the container holds the item.
 hasattached() - Checks if the trig is attached. @RHELP HASATTACHED@n.

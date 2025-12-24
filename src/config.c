@@ -64,9 +64,8 @@ int max_exp_loss = 500000;	/* max losable per death */
 int max_npc_corpse_time = 5;
 int max_pc_corpse_time = 10;
 
-/* How many ticks before a player is sent to the void or idle-rented. */
+/* How many ticks before a player is sent to the void. */
 int idle_void = 8;
-int idle_rent_time = 48;
 
 /* This level and up is immune to idling, LVL_IMPL+1 will disable it. */
 int idle_max_level = LVL_IMMORT;
@@ -101,17 +100,7 @@ int no_mort_to_immort = YES;
 * If set to NO, then only the 6 directions n,e,s,w,u,d are allowed */
 int diagonal_dirs = NO;
 
-/* RENT/CRASHSAVE OPTIONS */
-/* Should the MUD allow you to 'rent' for free?  (i.e. if you just quit, your
- * objects are saved at no cost). */
-int free_rent = YES;
-
-/* Maximum number of items players are allowed to rent. */
-int max_obj_save = 30;
-
-/* Receptionist's surcharge on top of item costs. */
-int min_rent_cost = 100;
-
+/* CRASHSAVE OPTIONS */
 /* Should the game automatically save people?  (i.e., save player data every 4
  * kills (on average), and Crash-save as defined below. If auto_save is YES,
  * then the 'save' command will be disabled to prevent item duplication via
@@ -123,11 +112,9 @@ int auto_save = YES;
  * save players' houses. */
 int autosave_time = 5;
 
-/* Lifetime of crashfiles and forced-rent (idlesave) files in days. */
+/* Lifetime of crashfiles and idle-save files in days. */
 int crash_file_timeout = 10;
 
-/* Lifetime of normal rent files in days. */
-int rent_file_timeout = 30;
 
 /* Do you want to automatically wipe players who've been gone too long? */
 int auto_pwipe = NO;

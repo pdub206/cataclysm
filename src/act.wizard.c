@@ -3459,7 +3459,6 @@ ACMD(do_show)
     { "nothing",	0  },				/* 0 */
     { "zones",		LVL_IMMORT },			/* 1 */
     { "player",		LVL_IMMORT },
-    { "rent",		LVL_IMMORT },
     { "stats",		LVL_IMMORT },
     { "errors",		LVL_IMMORT },			/* 5 */
     { "death",		LVL_IMMORT },
@@ -3577,17 +3576,8 @@ ACMD(do_show)
     free_char(vict);
     break;
   }
-  /* show rent */
-  case 3:
-    if (!*value) {
-      send_to_char(ch, "A name would help.\r\n");
-      return;
-    }
-    Crash_listrent(ch, value);
-    break;
-
   /* show stats */
-  case 4:
+  case 3:
     i = 0;
     j = 0;
     k = 0;
@@ -3626,7 +3616,7 @@ ACMD(do_show)
     break;
 
   /* show errors */
-  case 5:
+  case 4:
     len = strlcpy(buf, "Errant Rooms\r\n------------\r\n", sizeof(buf));
     for (i = 0, k = 0; i <= top_of_world; i++)
       for (j = 0; j < DIR_COUNT; j++) {
@@ -3649,7 +3639,7 @@ ACMD(do_show)
     break;
 
   /* show death */
-  case 6:
+  case 5:
     len = strlcpy(buf, "Death Traps\r\n-----------\r\n", sizeof(buf));
     for (i = 0, j = 0; i <= top_of_world; i++)
       if (ROOM_FLAGGED(i, ROOM_DEATH)) {
@@ -3662,7 +3652,7 @@ ACMD(do_show)
     break;
 
   /* show godrooms */
-  case 7:
+  case 6:
     len = strlcpy(buf, "Godrooms\r\n--------------------------\r\n", sizeof(buf));
     for (i = 0, j = 0; i <= top_of_world; i++)
       if (ROOM_FLAGGED(i, ROOM_GODROOM)) {
@@ -3675,17 +3665,17 @@ ACMD(do_show)
     break;
 
   /* show shops */
-  case 8:
+  case 7:
     show_shops(ch, value);
     break;
 
   /* show houses */
-  case 9:
+  case 8:
     hcontrol_list_houses(ch, value);
     break;
 
   /* show snoop */
-  case 10:
+  case 9:
     i = 0;
     send_to_char(ch, "People currently snooping:\r\n--------------------------\r\n");
     for (d = descriptor_list; d; d = d->next) {
@@ -3703,7 +3693,7 @@ ACMD(do_show)
     break;
 
   /* show experience tables */
-  case 11:
+  case 10:
     len = strlcpy(buf, "LvL - Mu     Cl     Th     Wa     BA     Ra     Br     Dr\r\n--------------------------\r\n", sizeof(buf));
 
     for (i = 1; i < LVL_IMMORT; i++) { 
@@ -3724,7 +3714,7 @@ ACMD(do_show)
     page_string(ch->desc, buf, TRUE);
     break;
 
-  case 12:
+  case 11:
     len = strlcpy(buf, "Colours\r\n--------------------------\r\n", sizeof(buf));
     k = 0;
     for (r = 0; r < 6; r++)
@@ -4726,11 +4716,11 @@ ACMD (do_zcheck)
       }  /*switch on Item_Type*/
 
       if (!CAN_WEAR(obj, ITEM_WEAR_TAKE)) {
-        if ((GET_OBJ_COST(obj) || (GET_OBJ_WEIGHT(obj) && GET_OBJ_TYPE(obj) != ITEM_FOUNTAIN) ||
-           GET_OBJ_RENT(obj)) && (found = 1))
+        if ((GET_OBJ_COST(obj) || (GET_OBJ_WEIGHT(obj) && GET_OBJ_TYPE(obj) != ITEM_FOUNTAIN)) &&
+           (found = 1))
           len += snprintf(buf + len, sizeof(buf) - len,
-                          "- is NO_TAKE, but has cost (%d) weight (%d) or rent (%d) set.\r\n",
-                          GET_OBJ_COST(obj), GET_OBJ_WEIGHT(obj), GET_OBJ_RENT(obj));
+                          "- is NO_TAKE, but has cost (%d) or weight (%d) set.\r\n",
+                          GET_OBJ_COST(obj), GET_OBJ_WEIGHT(obj));
       } else {
         if (GET_OBJ_COST(obj) == 0 && (found=1) && GET_OBJ_TYPE(obj) != ITEM_TRASH)
           len += snprintf(buf + len, sizeof(buf) - len,
@@ -5298,7 +5288,6 @@ ACMD(do_file)
     { "levels",         LVL_GOD,    LEVELS_LOGFILE,      TRUE},
     { "rip",            LVL_GOD,    RIP_LOGFILE,         TRUE},
     { "players",        LVL_GOD,    NEWPLAYERS_LOGFILE,  TRUE},
-    { "rentgone",       LVL_GOD,    RENTGONE_LOGFILE,    TRUE},
     { "errors",         LVL_GOD,    ERRORS_LOGFILE,      TRUE},
     { "godcmds",        LVL_GOD,    GODCMDS_LOGFILE,     TRUE},
     { "syslog",         LVL_GOD,    SYSLOG_LOGFILE,      TRUE},

@@ -112,8 +112,8 @@ the text to be displayed and will take in all text until ended by an EOF marker
 3 Informational Utilities 
 
 3.1 listrent 
-This utility allows you to view player rent files offline. It displays the type
-of rent; Rent, Crash, Cryo, or lost link (TimedOut). It also displays the 
+This utility allows you to view player save files offline. It displays the type
+of save; Legacy, Crash, Cryo, or lost link (TimedOut). It also displays the 
 object vnum and first keyword. 
 
 The command line syntax for listrent is as follows: 
@@ -123,7 +123,7 @@ listrent <objfile1> [<objfile2> .. <objfilen>]
 where <objfile1> 
 is the first object file to view, <objfile2> the second, and so forth. 
 
-This utility must be recompiled if you make any changes to the rent file 
+This utility must be recompiled if you make any changes to the save file 
 structure. 
 
 

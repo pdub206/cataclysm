@@ -1148,14 +1148,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             snprintf(str, slen, "%d", GET_OBJ_COST(o));
           }
 
-          else if (!str_cmp(field, "cost_per_day")) {
-            if (subfield && *subfield) {
-              int addition = atoi(subfield);
-              GET_OBJ_RENT(o) = MAX(1, addition + GET_OBJ_RENT(o));
-            }
-            snprintf(str, slen, "%d", GET_OBJ_RENT(o));
-          }
-
           else if (!str_cmp(field, "carried_by")) {
             if (o->carried_by)
               snprintf(str, slen,"%c%ld",UID_CHAR, char_script_id(o->carried_by));

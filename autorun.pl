@@ -52,7 +52,6 @@ while (1) {
   open (DEATHS, ">>log/deaths");
   open (REBOOT, ">>log/reboots");
   open (LEVELS, ">>log/levels");
-  open (NORENT, ">>log/norent");
   open (USAGE,  ">>log/usage");
   open (NEWPLR, ">>log/newplrs");
   open (SYSERR, ">>log/errors");
@@ -67,7 +66,6 @@ while (1) {
     print DEATHS if /killed/;
     print REBOOT if /Running/;
     print LEVELS if /advanced/;
-    print NORENT if /equipment lost/;
     print USAGE  if /usage/;
     print NEWPLR if /new player/;
     print SYSERR if /SYSERR/;

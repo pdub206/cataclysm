@@ -29,7 +29,7 @@ Features in Dark Sun MUD Alpha release:
  * Rooms can be saved with their objects and NPC's to be loaded on the next boot
  * Converted action descriptions to main descriptions for items
  * Mapping command now supports new terrain types
- * Rent system has been removed so players do not need to pay to keep their items
+ * Players do not pay to keep their items when they log out
  * Furniture items now allow items to be placed on top of them (a mug on top of the bar)
  * Furniture items can now be stood at, sat on, rested on, and slept on
  * Furniture items in rooms can be reviewed with "look tables"

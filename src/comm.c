@@ -272,7 +272,7 @@ int main(int argc, char **argv)
     case 'm':
       mini_mud = 1;
       no_rent_check = 1;
-      puts("Running in minimized mode & with no rent check.");
+      puts("Running in minimized mode & with no save-file check.");
       break;
     case 'c':
       scheck = 1;
@@ -280,7 +280,7 @@ int main(int argc, char **argv)
       break;
     case 'q':
       no_rent_check = 1;
-      puts("Quick boot mode -- rent check supressed.");
+      puts("Quick boot mode -- save-file check suppressed.");
       break;
     case 'r':
       circle_restrict = 1;
@@ -300,7 +300,7 @@ int main(int argc, char **argv)
               "  -m             Start in mini-MUD mode.\n"
 	      "  -f<file>       Use <file> for configuration.\n"
 	      "  -o <file>      Write log to <file> instead of stderr.\n"
-              "  -q             Quick boot (doesn't scan rent for object limits)\n"
+              "  -q             Quick boot (doesn't scan save files for object limits)\n"
               "  -r             Restrict MUD -- no new players allowed.\n"
               "  -s             Suppress special procedure assignments.\n"
               " Note:		These arguments are 'CaSe SeNsItIvE!!!'\n",

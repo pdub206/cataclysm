@@ -844,7 +844,7 @@ static int export_save_objects(zone_rnum zrnum)
 
       fprintf(obj_file,
 	      "%d %d %d %d\n",
-	      GET_OBJ_WEIGHT(obj), GET_OBJ_COST(obj), GET_OBJ_RENT(obj), GET_OBJ_LEVEL(obj));
+	      GET_OBJ_WEIGHT(obj), GET_OBJ_COST(obj), GET_OBJ_COST_PER_DAY(obj), GET_OBJ_LEVEL(obj));
 
       /* Do we have script(s) attached? */
       export_script_save_to_disk(obj_file, obj, OBJ_TRIGGER);

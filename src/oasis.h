@@ -53,7 +53,6 @@
 
 #define MAX_OBJ_WEIGHT      1000000
 #define MAX_OBJ_COST        2000000
-#define MAX_OBJ_RENT        2000000
 #define MAX_CONTAINER_SIZE    10000
 
 #define MAX_MOB_GOLD         100000
@@ -187,7 +186,6 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define OEDIT_WEAR                  	8
 #define OEDIT_WEIGHT                	9
 #define OEDIT_COST                  	10
-#define OEDIT_COSTPERDAY            	11
 #define OEDIT_TIMER                 	12
 #define OEDIT_VALUE_1               	13
 #define OEDIT_VALUE_2               	14
@@ -368,35 +366,31 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define CEDIT_MAX_NPC_CORPSE_TIME	   26
 #define CEDIT_MAX_PC_CORPSE_TIME	      27
 #define CEDIT_IDLE_VOID			         28
-#define CEDIT_IDLE_RENT_TIME		      29
-#define CEDIT_IDLE_MAX_LEVEL		      30
-#define CEDIT_DTS_ARE_DUMPS		      31
-#define CEDIT_LOAD_INTO_INVENTORY	   32
-#define CEDIT_TRACK_THROUGH_DOORS	   33
-#define CEDIT_NO_MORT_TO_IMMORT		   34
-#define CEDIT_MAX_OBJ_SAVE		         35
-#define CEDIT_MIN_RENT_COST		      36
-#define CEDIT_AUTOSAVE_TIME		      37
-#define CEDIT_CRASH_FILE_TIMEOUT	      38
-#define CEDIT_RENT_FILE_TIMEOUT		   39
-#define CEDIT_MORTAL_START_ROOM		   40
-#define CEDIT_IMMORT_START_ROOM		   41
-#define CEDIT_FROZEN_START_ROOM		   42
-#define CEDIT_DONATION_ROOM_1		      43
-#define CEDIT_DONATION_ROOM_2		      44
-#define CEDIT_DONATION_ROOM_3		      45
-#define CEDIT_DFLT_PORT			         46
-#define CEDIT_MAX_PLAYING		         47
-#define CEDIT_MAX_FILESIZE		         48
-#define CEDIT_MAX_BAD_PWS		         49
-#define CEDIT_SITEOK_EVERYONE		      50
-#define CEDIT_NAMESERVER_IS_SLOW	      51
-#define CEDIT_USE_AUTOWIZ		         52
-#define CEDIT_MIN_WIZLIST_LEV		      53
-#define CEDIT_MAP_OPTION               54
-#define CEDIT_MAP_SIZE                 55
-#define CEDIT_MINIMAP_SIZE             56
-#define CEDIT_DEBUG_MODE               57
+#define CEDIT_IDLE_MAX_LEVEL		      29
+#define CEDIT_DTS_ARE_DUMPS		      30
+#define CEDIT_LOAD_INTO_INVENTORY	   31
+#define CEDIT_TRACK_THROUGH_DOORS	   32
+#define CEDIT_NO_MORT_TO_IMMORT		   33
+#define CEDIT_AUTOSAVE_TIME		      34
+#define CEDIT_CRASH_FILE_TIMEOUT	      35
+#define CEDIT_MORTAL_START_ROOM		   36
+#define CEDIT_IMMORT_START_ROOM		   37
+#define CEDIT_FROZEN_START_ROOM		   38
+#define CEDIT_DONATION_ROOM_1		      39
+#define CEDIT_DONATION_ROOM_2		      40
+#define CEDIT_DONATION_ROOM_3		      41
+#define CEDIT_DFLT_PORT			         42
+#define CEDIT_MAX_PLAYING		         43
+#define CEDIT_MAX_FILESIZE		         44
+#define CEDIT_MAX_BAD_PWS		         45
+#define CEDIT_SITEOK_EVERYONE		      46
+#define CEDIT_NAMESERVER_IS_SLOW	      47
+#define CEDIT_USE_AUTOWIZ		         48
+#define CEDIT_MIN_WIZLIST_LEV		      49
+#define CEDIT_MAP_OPTION               50
+#define CEDIT_MAP_SIZE                 51
+#define CEDIT_MINIMAP_SIZE             52
+#define CEDIT_DEBUG_MODE               53
 
 /* Hedit Submodes of connectedness. */
 #define HEDIT_CONFIRM_SAVESTRING        0

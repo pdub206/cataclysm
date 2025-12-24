@@ -67,9 +67,9 @@ Table of Contents
        connection refused'' when the MUD boots, and then dies.  Why?
    4.7 When I run tbaMUD under Windows, it tells me ``Winsock error
        #10047'' when the MUD boots, and then dies.  Why?
-   4.8 When I run tbaMUD under Windows, players can't rent---their
-       equipment is just dropped on the ground, syslogs don't work, so what
-       is the problem?
+   4.8 When I run tbaMUD under Windows, players can't save their items on
+       logout - their equipment is just dropped on the ground, syslogs don't
+       work, so what is the problem?
    4.9 When someone logs on to my Windows MUD, the console screen gives:
        ``gethostbyaddr: No such file or directory''
    4.10 My MUD crashed and my connection got closed.  What can I do?
@@ -631,9 +631,9 @@ select ``Add Protocol'', and under the vendor ``Microsoft'', choose
 ``TCP/IP''.  It may ask you to insert the Windows CDROM in order to copy
 the drivers onto your hard drive.
 
-4.8.  When I run tbaMUD under Windows, players can't rent---their
-      equipment is just dropped on the ground, syslogs don't work, so what
-      is the problem?
+4.8.  When I run tbaMUD under Windows, players can't save their items on
+      logout - their equipment is just dropped on the ground, syslogs don't
+      work, so what is the problem?
 
 The reason that objects aren't saved when your players quit is that certain
 unzip programs are buggy and don't completely recreate the MUD's directory

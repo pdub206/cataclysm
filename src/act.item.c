@@ -87,7 +87,7 @@ static void perform_put(struct char_data *ch, struct obj_data *obj, struct obj_d
 
     act("$n puts $p in $P.", TRUE, ch, obj, cont, TO_ROOM);
 
-    /* Yes, I realize this is strange until we have auto-equip on rent. -gg */
+    /* Yes, I realize this is strange until we have auto-equip on load. -gg */
     if (OBJ_FLAGGED(obj, ITEM_NODROP) && !OBJ_FLAGGED(cont, ITEM_NODROP)) {
       SET_BIT_AR(GET_OBJ_EXTRA(cont), ITEM_NODROP);
       act("You get a strange feeling as you put $p in $P.", FALSE,

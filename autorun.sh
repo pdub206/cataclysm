@@ -57,7 +57,7 @@ while ( : ) do
   fgrep "killed" syslog >> log/rip
   fgrep "Running" syslog >> log/restarts
   fgrep "advanced" syslog >> log/levels
-  fgrep "equipment lost" syslog >> log/rentgone
+  fgrep "equipment lost" syslog >> log/syslog
   fgrep "usage" syslog >> log/usage
   fgrep "new player" syslog >> log/newplayers
   fgrep "SYSERR" syslog >> log/errors

@@ -145,7 +145,7 @@ An area’s balance should be an integral part of the design process, not
 something to be tacked on as an afterthought. Too often, an area will be 
 designed with outrageously good weapons and armor which throws off the balance 
 of the game. Naturally, after such zone is added, players complain bitterly if 
-it is ever removed or toned down. Also, because the rent system saves hitrolls,
+it is ever removed or toned down. Also, because the save system stores hitrolls,
 damrolls, and ac-apply’s, veteran players will be able to hold on to their old, 
 spectacular equipment unless it is explicitly taken from them, even after the
 area has been changed. This does nothing but generate bad feelings on all 
@@ -944,7 +944,7 @@ StrAdd The mobile’s strength addition, which can range from 1 to 99.
 <action description>~ 
 <type flag> <extra (affects) bitvector> <wear bitvector> 
 <value 0> <value 1> <value 2> <value 3> 
-<weight> <cost> <rent per day> 
+<weight> <cost> <unused> 
 {Zero or more Extra Descriptions and/or Affect Fields} 
 
 There can be an unlimited number of Extra Descriptions and up to 3 Affect 
@@ -1026,7 +1026,7 @@ but has no substantive effect otherwise. The flags have the following values:
 
 1)   GLOW            Item is glowing (cosmetic).
 2)   HUM             Item is humming (cosmetic).
-3)   NORENT          Item cannot be rented.
+3)   UNUSED          Reserved (unused).
 4)   NODONATE        Item cannot be donated.
 5)   NOINVIS         Item cannot be made invisible.
 6)   INVISIBLE       Item is invisible.
@@ -1075,7 +1075,7 @@ other containers become full.
 
 Cost The value of the object in gold coins; used by shopkeepers. 
 
-Rent Per Day The cost per day to rent the object in the Reception. 
+Cost Per Day A legacy value that the game ignores. 
 
 5.2 Object Value Definitions 
 The meaning of an object’s four values (value 0 through value 3) vary depending
@@ -1281,7 +1281,7 @@ A
 This object is virtual number 901, is a Type 9 object (armor), cannot be 
 donated, has a magical aura, and cannot be dropped. It can be picked up and 
 worn as a shield. It has an AC-apply of 12, weighs 15 pounds, is valued at 
-5000 coins and costs 1350 coins per day to rent. Its Affect fields indicate 
+5000 coins and includes a legacy cost-per-day value of 1350 (ignored). Its Affect fields indicate 
 that this object affects breath weapon saving throws by -4 and increases Wisdom
 by 2. 
 

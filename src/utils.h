@@ -781,8 +781,8 @@ do                                                              \
 #define GET_OBJ_TYPE(obj)	((obj)->obj_flags.type_flag)
 /** Cost of obj. */
 #define GET_OBJ_COST(obj)	((obj)->obj_flags.cost)
-/** Cost per day to rent obj, if rent is turned on. */
-#define GET_OBJ_RENT(obj)	((obj)->obj_flags.cost_per_day)
+/** Per-day value, kept for legacy object data. */
+#define GET_OBJ_COST_PER_DAY(obj)	((obj)->obj_flags.cost_per_day)
 /** Affect flags on obj. */
 #define GET_OBJ_AFFECT(obj)	((obj)->obj_flags.bitvector)
 /** Extra flags bit array on obj. */
@@ -1036,8 +1036,6 @@ do                                                              \
 #define CONFIG_MAX_PC_CORPSE_TIME  config_info.play.max_pc_corpse_time
 /** How long can a pc be idled before being pulled into the void? */
 #define CONFIG_IDLE_VOID        config_info.play.idle_void
-/** How long until the idle pc is force rented? */
-#define CONFIG_IDLE_RENT_TIME   config_info.play.idle_rent_time
 /** What level and above is immune to idle outs? */
 #define CONFIG_IDLE_MAX_LEVEL   config_info.play.idle_max_level
 /** Are death traps dumps? */
@@ -1071,20 +1069,12 @@ do                                                              \
 #define CONFIG_SCRIPT_PLAYERS  config_info.play.script_players
 
 /* Crash Saves */
-/** Get free rent setting. */
-#define CONFIG_FREE_RENT        config_info.csd.free_rent
-/** Get max number of objects to save. */
-#define CONFIG_MAX_OBJ_SAVE     config_info.csd.max_obj_save
-/** Get minimum cost to rent. */
-#define CONFIG_MIN_RENT_COST    config_info.csd.min_rent_cost
 /** Get the auto save setting. */
 #define CONFIG_AUTO_SAVE        config_info.csd.auto_save
 /** Get the auto save frequency. */
 #define CONFIG_AUTOSAVE_TIME    config_info.csd.autosave_time
 /** Get the length of time to hold crash files. */
 #define CONFIG_CRASH_TIMEOUT    config_info.csd.crash_file_timeout
-/** Get legnth of time to hold rent files. */
-#define CONFIG_RENT_TIMEOUT     config_info.csd.rent_file_timeout
 
 /* Room Numbers */
 /** Get the mortal start room. */

@@ -373,7 +373,7 @@ static void check_idling(struct char_data *ch)
       Crash_crashsave(ch);
       char_from_room(ch);
       char_to_room(ch, 1);
-    } else if (ch->char_specials.timer > CONFIG_IDLE_RENT_TIME) {
+    } else if (ch->char_specials.timer > (CONFIG_IDLE_VOID * 2)) {
       if (IN_ROOM(ch) != NOWHERE)
 	char_from_room(ch);
       char_to_room(ch, 3);
@@ -386,11 +386,8 @@ static void check_idling(struct char_data *ch)
 	ch->desc->character = NULL;
 	ch->desc = NULL;
       }
-      if (CONFIG_FREE_RENT)
-	Crash_rentsave(ch, 0);
-      else
-	Crash_idlesave(ch);
-      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "%s force-rented and extracted (idle).", GET_NAME(ch));
+      Crash_idlesave(ch);
+      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "%s idle-saved and extracted (idle).", GET_NAME(ch));
       add_llog_entry(ch, LAST_IDLEOUT);
       extract_char(ch);
     }

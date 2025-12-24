@@ -587,4 +587,59 @@ cover their face.
 11 0 0 0 0 al 0 0 0 0 0 0 0
 1 1 0 10
 1 10 0 0 0
+#163
+pants worn fraying~
+a pair of worn, fraying pants~
+Some worn, fraying fabric is lying here in a heap.~
+   What was once likely a nice pair of pants has been worn down over several
+years.  The bottom has frayed and is in tatters, while the knees are completely
+split open.
+~
+11 0 0 0 0 ag 0 0 0 0 0 0 0
+0 0 0 0
+1 5 0 0 0
+#164
+shirt worn sleeveless~
+a worn, sleeveless shirt~
+A plain shirt without sleeves lies here.~
+   This shirt at one point had sleeves, but they have been cut from the body.  
+A plain undyed color, it looks similar in color to sand.
+~
+11 0 0 0 0 ae 0 0 0 0 0 0 0
+0 0 0 0
+1 5 0 0 0
+#165
+shirt sandcloth~
+a sandcloth shirt~
+A shirt made of sandcloth lies here.~
+   This shirt is made from undyed sandcloth.  Woven to keep out the harsh gritty
+sand that is found nearly everywhere, the fabric is known for being lightweight
+and resistant to the elements.
+~
+11 0 0 0 0 ae 0 0 0 0 0 0 0
+0 0 0 0
+1 20 0 0 0
+#166
+trousers sandcloth pair~
+a pair of sandcloth trousers~
+A pile of undyed sandcloth lies here in a heap.~
+   These pants have been sewn by a modest tailor and made out of undyed
+sandcloth.  Known for its ruggedness and being lightweight, they look capable of
+keeping the wearer safe from the elements.
+~
+11 0 0 0 0 ag 0 0 0 0 0 0 0
+0 0 0 0
+2 30 0 0 0
+#167
+boots carru hide pair~
+a pair of carru-hide boots~
+A pair of boots made out of carru hide are here.~
+   Made from tanned carru hide, these boots look sturdy and well worn.  The
+stitching is dark and repeats an X pattern, reinforcing them to ensure they
+remain reliable for a long time.  The sole appears to be made of two layers of
+hide, reinforcing the foot from the ground below.
+~
+11 0 0 0 0 ah 0 0 0 0 0 0 0
+0 0 0 0
+1 40 0 0 0
 $~

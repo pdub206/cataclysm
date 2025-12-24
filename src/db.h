@@ -116,7 +116,6 @@
 #define LEVELS_LOGFILE     PREFIX_LOGFILE"levels"
 #define RIP_LOGFILE        PREFIX_LOGFILE"rip"
 #define NEWPLAYERS_LOGFILE PREFIX_LOGFILE"newplayers"
-#define RENTGONE_LOGFILE   PREFIX_LOGFILE"rentgone"
 #define ERRORS_LOGFILE     PREFIX_LOGFILE"errors"
 #define GODCMDS_LOGFILE    PREFIX_LOGFILE"godcmds"
 #define HELP_LOGFILE       PREFIX_LOGFILE"help"
@@ -227,7 +226,7 @@ struct help_index_element {
 
 /* The ban defines and structs were moved to ban.h */
 
-/* for the "buffered" rent and house object loading */
+/* for the buffered save and house object loading */
 struct obj_save_data_t {
   struct obj_data *obj;
   int locate;
@@ -273,7 +272,6 @@ void  Crash_save_all(void);
 void  Crash_idlesave(struct char_data *ch);
 void  Crash_crashsave(struct char_data *ch);
 int Crash_load(struct char_data *ch);
-void  Crash_listrent(struct char_data *ch, char *name);
 int Crash_clean_file(char *name);
 int Crash_delete_crashfile(struct char_data *ch);
 int Crash_delete_file(char *name);

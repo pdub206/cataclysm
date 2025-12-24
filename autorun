@@ -55,7 +55,7 @@ dts:0:death trap
 rip:0:killed
 restarts:0:Running
 levels:0:advanced
-rentgone:0:equipment lost
+syslog:0:equipment lost
 usage:5000:usage
 newplayers:0:new player
 errors:5000:SYSERR
