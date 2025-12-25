@@ -11,6 +11,9 @@
 #include "utils.h"
 #include "handler.h"
 #include "constants.h"
+#include "spells.h"
+
+extern struct player_special_data dummy_mob;
 
 /* ---------- local RNG for the sim (do NOT use MUD's rand_number here) ---------- */
 static inline int randi_closed(int lo, int hi) {
@@ -75,6 +78,30 @@ static double hit_rate(int attack_mod, int target_ac, int trials) {
   return (double)hits / (double)trials;
 }
 
+/* stealth vs scan (contest): return stealth win rate */
+static double stealth_vs_scan_rate(struct char_data *sneaky, struct char_data *scanner, int trials) {
+  int wins = 0;
+  for (int i=0;i<trials;++i) {
+    int stealth_total = roll_skill_check(sneaky, SKILL_STEALTH, 0, NULL);
+    int scan_total = roll_skill_check(scanner, SKILL_PERCEPTION, 0, NULL);
+    if (stealth_total > scan_total)
+      wins++;
+  }
+  return (double)wins / (double)trials;
+}
+
+/* steal check vs DC (no scan vs scan): return success rate */
+static double steal_vs_dc_rate(struct char_data *thief, int dc, int trials) {
+  int wins = 0;
+  for (int i=0;i<trials;++i) {
+    int total = roll_skill_check(thief, SKILL_SLEIGHT_OF_HAND, 0, NULL);
+    if (total >= dc)
+      wins++;
+  }
+  return (double)wins / (double)trials;
+}
+
+/* Mirror compute_steal_dc logic for sims (uses real modifiers and flags). */
 /* simple DPR per swing: roll dice + STR mod; 0 on miss (local RNG) */
 static int swing_damage(int ndice, int sdice, int str_mod) {
   return dice_local(ndice, sdice) + str_mod;
@@ -133,6 +160,31 @@ static void build_heavy(struct char_data *ch) {
   equip_at(ch, WEAR_WRIST_R,     make_armor(1,1,0,0,0,0));
 }
 
+static void build_stealthy(struct char_data *ch, int dex, int skill_pct, int prof_bonus) {
+  init_test_char(ch);
+  set_ability_scores(ch, 10, dex, 10, 10, 10, 10);
+  ch->player.level = 1;
+  ch->points.prof_mod = prof_bonus - get_level_proficiency_bonus(ch);
+  SET_SKILL(ch, SKILL_STEALTH, skill_pct);
+}
+
+static void build_scanner(struct char_data *ch, int wis, int skill_pct, int prof_bonus) {
+  init_test_char(ch);
+  set_ability_scores(ch, 10, 10, 10, 10, wis, 10);
+  ch->player.level = 1;
+  ch->points.prof_mod = prof_bonus - get_level_proficiency_bonus(ch);
+  SET_SKILL(ch, SKILL_PERCEPTION, skill_pct);
+}
+
+static void build_thief(struct char_data *ch, int dex, int skill_pct, int prof_bonus) {
+  init_test_char(ch);
+  set_ability_scores(ch, 10, dex, 10, 10, 10, 10);
+  ch->player.level = 1;
+  ch->points.prof_mod = prof_bonus - get_level_proficiency_bonus(ch);
+  SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, skill_pct);
+}
+
+
 /* attacker profiles: compute attack_mod = STRmod + prof(skill%) + weapon_magic */
 static int compute_attack_mod(int str_score, int skill_pct, int weapon_magic) {
   int mod = GET_ABILITY_MOD(str_score);
@@ -146,6 +198,7 @@ static int compute_attack_mod(int str_score, int skill_pct, int weapon_magic) {
 int main(void) {
   /* seed local RNG (do not rely on MUD RNG here) */
   srand(42);
+  circle_srandom(42);
 
   /* 1) Hit-rate grid: atk_mod 0..10 vs AC 12..20 */
   printf("Hit-rate grid (trials=50000):\n      ");
@@ -209,6 +262,56 @@ int main(void) {
     }
     printf("\n");
   }
+
+  /* 4) Stealth vs Scan grid (contested d20 + ability + proficiency) */
+  const int profs[] = { 0, 1, 2, 3, 4, 5, 6 };
+
+  printf("Stealth vs Scan grid (trials=30000, Dex/Wis 14):\n");
+  printf("Columns = Scan proficiency, Rows = Stealth proficiency\n           ");
+  for (size_t i=0;i<sizeof(profs)/sizeof(profs[0]);++i) printf("Scan%+2d ", profs[i]);
+  printf("\n");
+  for (size_t si=0; si<sizeof(profs)/sizeof(profs[0]); ++si) {
+    printf("Stealth%+2d ", profs[si]);
+    for (size_t vi=0; vi<sizeof(profs)/sizeof(profs[0]); ++vi) {
+      struct char_data sneaky, scanner;
+      build_stealthy(&sneaky, 14, 50, profs[si]);
+      build_scanner(&scanner, 14, 50, profs[vi]);
+      double p = stealth_vs_scan_rate(&sneaky, &scanner, 30000);
+      printf(" %5.1f", p*100.0);
+    }
+    printf("\n");
+  }
+  printf("\n");
+
+  /* 5) Steal vs fixed DC grid */
+  const int row_label_width = 22;
+  const int col_width = 6;
+  const int dc_list[] = { 5, 10, 14, 16, 18, 20 };
+  const size_t uniq_count = sizeof(dc_list) / sizeof(dc_list[0]);
+
+  printf("Steal vs DC grid (trials=30000, Dex 14):\n");
+  printf("Columns = DC, Rows = Sleight of Hand proficiency\n");
+  printf("%-*s", row_label_width, "");
+  for (size_t i=0;i<uniq_count;++i) {
+    char col_label[8];
+    snprintf(col_label, sizeof(col_label), "DC%d", dc_list[i]);
+    printf(" %*s", col_width, col_label);
+  }
+  printf("\n");
+
+  for (size_t ti=0; ti<sizeof(profs)/sizeof(profs[0]); ++ti) {
+    char row_label[32];
+    snprintf(row_label, sizeof(row_label), "Sleight of Hand%+d", profs[ti]);
+    printf("%-*s", row_label_width, row_label);
+    for (size_t di=0; di<uniq_count; ++di) {
+      struct char_data thief;
+      build_thief(&thief, 14, 50, profs[ti]);
+      double p = steal_vs_dc_rate(&thief, dc_list[di], 30000);
+      printf(" %*.*f", col_width, 1, p*100.0);
+    }
+    printf("\n");
+  }
+  printf("\n");
 
   return 0;
 }

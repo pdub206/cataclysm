@@ -7,7 +7,7 @@
 /* --- Globals expected by utils.c --- */
 FILE *logfile = NULL;                    /* used by mudlog/basic_mud_vlog */
 struct descriptor_data *descriptor_list = NULL;
-struct char_data dummy_mob;              /* used as a safe send_to_char target */
+struct player_special_data dummy_mob;    /* dummy specials area for mobs */
 
 /* --- Minimal world so in_room lookups are safe in tests/sims --- */
 struct room_data stub_room;        /* zeroed room */
@@ -19,6 +19,11 @@ struct weather_data weather_info;
 const char *pc_class_types[] = { "class", NULL };
 
 /* --- Functions utils.c references that we don't need in tests --- */
+bool has_save_proficiency(int class_num, int ability) {
+  (void)class_num; (void)ability;
+  return FALSE;
+}
+
 void send_to_char(struct char_data *ch, const char *messg, ...) {
   /* no-op for tests */
   (void)ch; (void)messg;

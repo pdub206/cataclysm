@@ -7,6 +7,9 @@
 #include "structs.h"
 #include "utils.h"
 #include "constants.h"
+#include "spells.h"
+
+extern struct player_special_data dummy_mob;
 
 /* ---------- Tiny test framework ---------- */
 static int tests_run = 0, tests_failed = 0;
@@ -26,6 +29,17 @@ static int tests_run = 0, tests_failed = 0;
   T_ASSERT((val) >= (lo) && (val) <= (hi), "%s: got %.3f, expect in [%.3f, %.3f]", (label), (double)(val), (double)(lo), (double)(hi))
 
 /* ---------- Helpers for test setup ---------- */
+
+static void init_test_char(struct char_data *ch) {
+  memset(ch, 0, sizeof(*ch));
+  ch->player_specials = calloc(1, sizeof(struct player_special_data));
+  ch->in_room = 0;
+}
+
+static void set_prof_bonus(struct char_data *ch, int prof_bonus) {
+  ch->player.level = 1;
+  ch->points.prof_mod = prof_bonus - get_level_proficiency_bonus(ch);
+}
 
 /* Make a simple armor object with given per-piece fields. */
 static struct obj_data *make_armor(int piece_ac, int bulk, int magic, int stealth_disadv, int durability, int str_req) {
@@ -55,6 +69,27 @@ static void set_ability_scores(struct char_data *ch, int str, int dex, int con, 
   ch->real_abils.wis  = wis;
   ch->real_abils.cha  = cha;
   ch->aff_abils = ch->real_abils; /* common pattern */
+}
+
+static double simulate_skill_vs_dc(struct char_data *ch, int skillnum, int dc, int trials) {
+  int success = 0;
+  for (int i = 0; i < trials; ++i) {
+    int total = roll_skill_check(ch, skillnum, 0, NULL);
+    if (total >= dc)
+      success++;
+  }
+  return (double)success / (double)trials;
+}
+
+static double simulate_stealth_vs_scan(struct char_data *sneaky, struct char_data *scanner, int trials) {
+  int success = 0;
+  for (int i = 0; i < trials; ++i) {
+    int stealth_total = roll_skill_check(sneaky, SKILL_STEALTH, 0, NULL);
+    int scan_total = roll_skill_check(scanner, SKILL_PERCEPTION, 0, NULL);
+    if (stealth_total > scan_total)
+      success++;
+  }
+  return (double)success / (double)trials;
 }
 
 /* For hit probability sanity tests: simulate pure d20 vs ascending AC with nat 1/20. */
@@ -210,11 +245,85 @@ static void test_hit_probability_sanity(void) {
   T_IN_RANGE(p4, 0.05, 0.15, "Hit rate low (atk+0 vs AC20)");
 }
 
+static void test_stealth_vs_scan_proficiency(void) {
+  struct char_data sneaky, scanner;
+  init_test_char(&sneaky);
+  init_test_char(&scanner);
+
+  set_ability_scores(&sneaky, 10, 14, 10, 10, 10, 10);  /* DEX 14 */
+  set_ability_scores(&scanner, 10, 10, 10, 10, 14, 10); /* WIS 14 */
+
+  SET_SKILL(&sneaky, SKILL_STEALTH, 50);
+  SET_SKILL(&scanner, SKILL_PERCEPTION, 50);
+  set_prof_bonus(&scanner, 0); /* fixed scan proficiency */
+
+  const int trials = 20000;
+
+  set_prof_bonus(&sneaky, 0);
+  circle_srandom(12345);
+  double p1 = simulate_stealth_vs_scan(&sneaky, &scanner, trials);
+
+  set_prof_bonus(&sneaky, 3);
+  circle_srandom(12345);
+  double p2 = simulate_stealth_vs_scan(&sneaky, &scanner, trials);
+
+  set_prof_bonus(&sneaky, 6);
+  circle_srandom(12345);
+  double p3 = simulate_stealth_vs_scan(&sneaky, &scanner, trials);
+
+  T_ASSERT(p1 < p2 && p2 < p3,
+           "Stealth vs scan should improve with proficiency (%.3f < %.3f < %.3f)",
+           p1, p2, p3);
+  T_ASSERT((p3 - p1) > 0.08,
+           "Stealth vs scan gap should be meaningful (%.3f -> %.3f)",
+           p1, p3);
+}
+
+static void test_steal_vs_scan_proficiency(void) {
+  struct char_data thief;
+  init_test_char(&thief);
+  set_ability_scores(&thief, 10, 14, 10, 10, 10, 10); /* DEX 14 */
+  SET_SKILL(&thief, SKILL_SLEIGHT_OF_HAND, 50);
+
+  const int trials = 20000;
+  const int dc_no_scan = 10; /* compute_steal_dc base with neutral awake victim */
+  const int dc_scan = 15;    /* base + scan bonus */
+  const int profs[] = { 0, 3, 6 };
+  double no_scan[3], scan[3];
+
+  for (size_t i = 0; i < 3; ++i) {
+    set_prof_bonus(&thief, profs[i]);
+
+    circle_srandom(24680);
+    no_scan[i] = simulate_skill_vs_dc(&thief, SKILL_SLEIGHT_OF_HAND, dc_no_scan, trials);
+
+    circle_srandom(24680);
+    scan[i] = simulate_skill_vs_dc(&thief, SKILL_SLEIGHT_OF_HAND, dc_scan, trials);
+  }
+
+  T_ASSERT(no_scan[0] < no_scan[1] && no_scan[1] < no_scan[2],
+           "Steal vs no-scan improves with proficiency (%.3f < %.3f < %.3f)",
+           no_scan[0], no_scan[1], no_scan[2]);
+  T_ASSERT(scan[0] < scan[1] && scan[1] < scan[2],
+           "Steal vs scan improves with proficiency (%.3f < %.3f < %.3f)",
+           scan[0], scan[1], scan[2]);
+  T_ASSERT(scan[0] < no_scan[0] && scan[1] < no_scan[1] && scan[2] < no_scan[2],
+           "Scan DC should reduce steal success (no-scan %.3f/%.3f/%.3f vs scan %.3f/%.3f/%.3f)",
+           no_scan[0], no_scan[1], no_scan[2], scan[0], scan[1], scan[2]);
+
+  T_IN_RANGE(no_scan[0], 0.70, 0.80, "Steal no-scan +0");
+  T_IN_RANGE(no_scan[2], 0.93, 0.98, "Steal no-scan +6");
+  T_IN_RANGE(scan[0], 0.45, 0.55, "Steal scan +0");
+  T_IN_RANGE(scan[2], 0.65, 0.75, "Steal scan +6");
+}
+
 int main(void) {
   test_GET_ABILITY_MOD();
   test_GET_PROFICIENCY();
   test_ac_light_medium_heavy();
   test_hit_probability_sanity();
+  test_stealth_vs_scan_proficiency();
+  test_steal_vs_scan_proficiency();
 
   printf("Tests run: %d, failures: %d\n", tests_run, tests_failed);
   return tests_failed ? 1 : 0;
