@@ -348,6 +348,7 @@
 #define CON_ACCOUNT_CNFPASSWD 39 /**< New account, confirm password */
 #define CON_ACCOUNT_EMAIL 40 /**< New account, optional email */
 #define CON_ACCOUNT_MENU  41 /**< Account main menu */
+#define CON_ACCOUNT_LIST  42 /**< Viewing account character list */
 
 /* OLC States range - used by IS_IN_OLC and IS_PLAYING */
 #define FIRST_OLC_STATE CON_OEDIT     /**< The first CON_ state that is an OLC */
@@ -1040,7 +1041,9 @@ struct account_data
   char *name;                 /**< Account username */
   char passwd[MAX_PWD_LENGTH+1]; /**< Account password (hashed) */
   char *email;                /**< Optional email address */
-  char *pc_name;              /**< Attached PC name, if any */
+  char *pc_name;              /**< Active PC name, if any */
+  char **pc_list;             /**< Ordered list of PCs created by this account */
+  int pc_count;               /**< Number of PCs in list */
 };
 
 /** Special data used by NPCs, not PCs */

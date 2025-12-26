@@ -990,7 +990,10 @@ void extract_char_final(struct char_data *ch)
           STATE(d) = CON_CLOSE;
       }
       if (GET_POS(ch) == POS_DEAD) {
-        STATE(ch->desc) = CON_CLOSE;
+        STATE(ch->desc) = CON_ACCOUNT_MENU;
+        send_account_menu(ch->desc);
+        ch->desc->character = NULL;
+        ch->desc = NULL;
       } else {
         STATE(ch->desc) = CON_ACCOUNT_MENU;
         send_account_menu(ch->desc);

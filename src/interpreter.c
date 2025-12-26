@@ -1036,6 +1036,31 @@ static int _parse_name(char *arg, char *name)
   return (0);
 }
 
+static void show_account_character_list(struct descriptor_data *d)
+{
+  int i;
+
+  if (!d || !d->account)
+    return;
+
+  write_to_output(d, "\r\nCharacter history:\r\n");
+  if (d->account->pc_count == 0) {
+    write_to_output(d, "  (none)\r\n");
+    return;
+  }
+
+  for (i = 0; i < d->account->pc_count; i++) {
+    int pfilepos = get_ptable_by_name(d->account->pc_list[i]);
+    const char *status = "dead";
+
+    if (pfilepos >= 0 && !IS_SET(player_table[pfilepos].flags, PINDEX_DELETED))
+      status = "alive";
+
+    write_to_output(d, "  %s (%s)\r\n", d->account->pc_list[i], status);
+  }
+  write_to_output(d, "\r\n*** PRESS RETURN: ");
+}
+
 void send_account_menu(struct descriptor_data *d)
 {
   int has_pc;
@@ -1046,12 +1071,34 @@ void send_account_menu(struct descriptor_data *d)
   account_refresh_pc(d->account);
   has_pc = account_has_alive_pc(d->account);
 
-  write_to_output(d, "\r\nAccount: %s\r\n", d->account->name);
+  write_to_output(d,
+    "\r\n"
+    "                     .\r\n"
+    "                    /=\\\\\r\n"
+    "                   /===\\ \\\r\n"
+    "                  /=====\\' \\\r\n"
+    "                 /=======\\'' \\\r\n"
+    "                /=========\\ ' '\\\r\n"
+    "               /===========\\''   \\\r\n"
+    "              /=============\\ ' '  \\\r\n"
+    "             /===============\\   ''  \\\r\n"
+    "            /=================\\' ' ' ' \\\r\n"
+    "           /===================\\' ' '  ' \\\r\n"
+    "          /=====================\\' '   ' ' \\\r\n"
+    "         /=======================\\  '   ' /\r\n"
+    "        /=========================\\   ' /\r\n"
+    "       /===========================\\'  /\r\n"
+    "      /=============| |=============\\/\r\n"
+    "\r\n"
+    "      -Pyramid of Ikaros, current day.\r\n"
+    "\r\n");
+  write_to_output(d, "\r\n Account: %s\r\n", d->account->name);
   if (has_pc)
-    write_to_output(d, "\t(1\t)) Connect to %s.\r\n", d->account->pc_name);
+    write_to_output(d, "\t(  C\t)) Connect to %s.\r\n", d->account->pc_name);
   else
-    write_to_output(d, "\t(1\t)) Create a new PC.\r\n");
-  write_to_output(d, "\t(0\t)) Exit from tbaMUD.\r\n\r\n"
+    write_to_output(d, "\t(  R\t)) Create a new PC.\r\n");
+  write_to_output(d, "\t(  L\t)) List previous characters.\r\n");
+  write_to_output(d, "\t(  X\t)) Exit from Miranthas.\r\n\r\n"
                      "   Make your choice: ");
 }
 
@@ -1535,6 +1582,10 @@ void nanny(struct descriptor_data *d, char *arg)
           strlen(tmp_name) > MAX_NAME_LENGTH || !valid_name(tmp_name) ||
           fill_word(strcpy(buf, tmp_name)) || reserved_word(buf)) {	/* strcpy: OK (mutual MAX_INPUT_LENGTH) */
         write_to_output(d, "Invalid name, please try another.\r\nName: ");
+        return;
+      }
+      if (account_has_pc(d->account, tmp_name)) {
+        write_to_output(d, "That name has already been used, try something else.\r\nName: ");
         return;
       }
 
@@ -2030,13 +2081,20 @@ case CON_QCLASS:
     has_pc = account_has_alive_pc(d->account);
 
     switch (*arg) {
-    case '0':
+    case 'X':
+    case 'x':
       write_to_output(d, "Goodbye.\r\n");
       if (d->character)
         add_llog_entry(d->character, LAST_QUIT);
       STATE(d) = CON_CLOSE;
       break;
-    case '1':
+    case 'L':
+    case 'l':
+      show_account_character_list(d);
+      STATE(d) = CON_ACCOUNT_LIST;
+      break;
+    case 'C':
+    case 'c':
       if (has_pc) {
         if (d->character) {
           free_char(d->character);
@@ -2116,6 +2174,18 @@ case CON_QCLASS:
         write_to_output(d, "\r\n*** PRESS RETURN: ");
         STATE(d) = CON_RMOTD;
       } else {
+        write_to_output(d, "You do not have a character to connect.\r\n");
+        send_account_menu(d);
+        STATE(d) = CON_ACCOUNT_MENU;
+      }
+      break;
+    case 'R':
+    case 'r':
+      if (has_pc) {
+        write_to_output(d, "You already have a character. Delete it before creating another.\r\n");
+        send_account_menu(d);
+        STATE(d) = CON_ACCOUNT_MENU;
+      } else {
         if (d->character) {
           free_char(d->character);
           d->character = NULL;
@@ -2142,6 +2212,11 @@ case CON_QCLASS:
     STATE(d) = CON_ACCOUNT_MENU;
     break;
   }
+
+  case CON_ACCOUNT_LIST:
+    send_account_menu(d);
+    STATE(d) = CON_ACCOUNT_MENU;
+    break;
 
   case CON_CHPWD_GETOLD:
     if (strncmp(CRYPT(arg, GET_PASSWD(d->character)), GET_PASSWD(d->character), MAX_PWD_LENGTH)) {
