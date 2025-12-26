@@ -787,6 +787,10 @@ int get_filename(char *filename, size_t fbufsize, int mode, const char *orig_nam
     prefix = LIB_PLRFILES;
     suffix = SUF_PLR;
     break;
+  case ACCT_FILE:
+    prefix = LIB_ACCTFILES;
+    suffix = SUF_ACCT;
+    break;
   default:
     return (0);
   }

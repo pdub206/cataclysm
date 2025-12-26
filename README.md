@@ -1,19 +1,19 @@
-***Files for Dark Sun MUD.***
+***Files for Miranthas MUD.***
 
-Dark Sun MUD is a continuation of tbaMUD/CircleMUD, which is built on DIKU MUD.
+Miranthas MUD is a continuation of tbaMUD/CircleMUD, which is built on DIKU MUD.
 The code here is freeware to honor that tradition.
 
 Due to the sensitive nature of topics found in this setting, all characters and
-players are 18+. The game world is based on the D&D campaign setting Dark Sun
-(as close as possible).
+players are 18+. The game world is derived from several inspirational sources,
+most notably the former Armageddon MUD.
 
 Roleplay is highly encouraged, but not enforced.
 
-Features in Dark Sun MUD Alpha release:
+Features in Miranthas MUD Alpha release:
 
-* The city of Tyr is available for exploration
+* The city of Caleran is available for exploration
 * Experience points and levels are removed in favor of skill based progression
-* Initial skills/spells based partly on tbaMUD code and Dark Sun 5e conversion
+* Initial skills/spells based partly on tbaMUD code and 5e conversion (to be cleaned up in later release)
 * Expanded emoting system for roleplay
 * Permanent character death - aka. hardcore mode
 * A hybrid "5e-like" system where:
@@ -42,11 +42,13 @@ Features in Dark Sun MUD Alpha release:
  * NPC's can now be assigned a class like a PC and inherit the relevant skills
  * PC's now use a short description for identification instead of name
  * Backgrounds are now available for PC's and NPC's
+ * Account system for tracking players/characters over long periods of time
 
 Features to be implemented in the next few releases:
 
-* Race selection based on Dark Sun
-* The Merchant Calendar and moon cycles
+* Race/species selection
+* Subclass selection
+* New calendar and moon cycles
 * Heat based on time of day increases/decreases, changing hunger/thirst levels
 * Sandstorms
 * Shaded rooms
@@ -55,16 +57,17 @@ Features to be implemented in the next few releases:
 * Basic crafting system
 * Continued skill and spell improvements
 * Apartment rentals for storing your loot
-* Account system for tracking players/characters over long periods of time
-* Quest system to increase or decrease notoriety
-* Additional zones/cities based on Dark Sun world map
-* Resources on the world map can be claimed by different city-states
+* Enhanced quest system
+* Dialogue trees with NPC's
+* Additional zones/cities based on Miranthas world map
+* Resources on the world map can be claimed by different city-states or independent factions
 * Claimed resources improve quality of armor/weapons/food/prices available
 
 ...and down the road:
 
-* Change to SQL database on the backend
-* Python abstraction layer for modern scripting support
+* Replace ASCII files in favor of SQL database on the backend
+* Replace DG Scripts with a Python abstraction layer for modern scripting support
+* Replace Oasis OLC with more modern interface for easing builder duties
 * Discord server integration for ticketing and community
 * Full documentation for admins and easy to follow improvement guides
-* ...something else I haven't thought of
+* ...suggestions from anyone who uses this game

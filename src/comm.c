@@ -65,6 +65,7 @@
 #include "interpreter.h"
 #include "handler.h"
 #include "db.h"
+#include "accounts.h"
 #include "house.h"
 #include "oasis.h"
 #include "genolc.h"
@@ -1451,6 +1452,7 @@ static void init_descriptor (struct descriptor_data *newd, int desc)
   newd->has_prompt = 1;  /* prompt is part of greetings */
   STATE(newd) = CONFIG_PROTOCOL_NEGOTIATION ? CON_GET_PROTOCOL : CON_GET_CONNECT;
   CREATE(newd->history, char *, HISTORY_SIZE);
+  newd->account = NULL;
   if (++last_desc == 1000)
     last_desc = 1;
   newd->desc_num = last_desc;
@@ -2126,6 +2128,9 @@ void close_socket(struct descriptor_data *d)
       break;
   }
 
+  account_free(d->account);
+  d->account = NULL;
+
   free(d);
 }
 
@@ -2135,7 +2140,10 @@ static void check_idle_passwords(void)
 
   for (d = descriptor_list; d; d = next_d) {
     next_d = d->next;
-    if (STATE(d) != CON_PASSWORD && STATE(d) != CON_GET_NAME && STATE(d) != CON_GET_CONNECT)
+    if (STATE(d) != CON_PASSWORD && STATE(d) != CON_GET_NAME &&
+        STATE(d) != CON_GET_CONNECT && STATE(d) != CON_GET_ACCOUNT &&
+        STATE(d) != CON_ACCOUNT_PASSWORD && STATE(d) != CON_ACCOUNT_NEWPASSWD &&
+        STATE(d) != CON_ACCOUNT_CNFPASSWD)
       continue;
     if (!d->idle_tics) {
       d->idle_tics++;

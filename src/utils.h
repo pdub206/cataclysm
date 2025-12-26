@@ -211,8 +211,9 @@ void char_from_furniture(struct char_data *ch);
 #define ETEXT_FILE       1 /**< ???? */
 #define SCRIPT_VARS_FILE 2 /**< Reference to a global variable file. */
 #define PLR_FILE         3 /**< The standard player file */
+#define ACCT_FILE        4 /**< The standard account file */
 
-#define MAX_FILES        4 /**< Max number of files types vailable */
+#define MAX_FILES        4 /**< Max number of player-owned file types available */
 
 /* breadth-first searching for graph function (tracking, etc) */
 #define BFS_ERROR		(-1)       /**< Error in the search. */
@@ -543,6 +544,7 @@ do                                                              \
 #define GET_LEVEL(ch)   ((ch)->player.level)
 /** Password of PC. */
 #define GET_PASSWD(ch)	((ch)->player.passwd)
+#define GET_ACCOUNT(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->account_name))
 /** The player file position of PC. */
 #define GET_PFILEPOS(ch)((ch)->pfilepos)
 

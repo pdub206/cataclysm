@@ -297,6 +297,10 @@ int load_char(const char *name, struct char_data *ch)
     GET_NUM_QUESTS(ch) = PFDEF_COMPQUESTS;
     GET_LAST_MOTD(ch) = PFDEF_LASTMOTD;
     GET_LAST_NEWS(ch) = PFDEF_LASTNEWS;
+    if (GET_ACCOUNT(ch)) {
+      free(GET_ACCOUNT(ch));
+      GET_ACCOUNT(ch) = NULL;
+    }
 
     for (i = 0; i < AF_ARRAY_MAX; i++)
       AFF_FLAGS(ch)[i] = PFDEF_AFFFLAGS;
@@ -311,6 +315,11 @@ int load_char(const char *name, struct char_data *ch)
       switch (*tag) {
       case 'A':
         if (!strcmp(tag, "Ac  "))	GET_AC(ch)		= atoi(line);
+	else if (!strcmp(tag, "Acct")) {
+          if (GET_ACCOUNT(ch))
+            free(GET_ACCOUNT(ch));
+          GET_ACCOUNT(ch) = strdup(line);
+        }
 	else if (!strcmp(tag, "Act ")) {
          if (sscanf(line, "%s %s %s %s", f1, f2, f3, f4) == 4) {
           PLR_FLAGS(ch)[0] = asciiflag_conv(f1);
@@ -590,6 +599,7 @@ void save_char(struct char_data * ch)
   if (GET_NAME(ch))				fprintf(fl, "Name: %s\n", GET_NAME(ch));
   if (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch))       fprintf(fl, "Sdsc: %s\n", GET_SHORT_DESC(ch));
   if (GET_PASSWD(ch))				fprintf(fl, "Pass: %s\n", GET_PASSWD(ch));
+  if (GET_ACCOUNT(ch) && *GET_ACCOUNT(ch))	fprintf(fl, "Acct: %s\n", GET_ACCOUNT(ch));
   if (ch->player.description && *ch->player.description) {
     strcpy(buf, ch->player.description);
     strip_cr(buf);

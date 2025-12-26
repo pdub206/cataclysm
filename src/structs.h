@@ -341,6 +341,13 @@
 #define CON_PLR_BACKGROUND 33 /**< Entering a new character background */
 #define CON_GET_PROTOCOL 33 /**< Used at log-in while attempting to get protocols > */
 #define CON_GET_CONNECT  34 /**< Login connect/disconnect menu */
+#define CON_GET_ACCOUNT  35 /**< Login with account name */
+#define CON_ACCOUNT_CNFRM 36 /**< New account, confirm name */
+#define CON_ACCOUNT_PASSWORD 37 /**< Login with account password */
+#define CON_ACCOUNT_NEWPASSWD 38 /**< New account, create password */
+#define CON_ACCOUNT_CNFPASSWD 39 /**< New account, confirm password */
+#define CON_ACCOUNT_EMAIL 40 /**< New account, optional email */
+#define CON_ACCOUNT_MENU  41 /**< Account main menu */
 
 /* OLC States range - used by IS_IN_OLC and IS_PLAYING */
 #define FIRST_OLC_STATE CON_OEDIT     /**< The first CON_ state that is an OLC */
@@ -1022,8 +1029,18 @@ struct player_special_data
   void *last_olc_targ;   /**< ? Currently Unused ? */
   int last_olc_mode;     /**< ? Currently Unused ? */
   char *host;            /**< Resolved hostname, or ip, for player. */
+  char *account_name;    /**< Account name owning this PC. */
   int buildwalk_sector;  /**< Default sector type for buildwalk */
   struct scan_result_data *scan_results; /**< Hidden figures this player has spotted */
+};
+
+/** Account data stored separately from character data. */
+struct account_data
+{
+  char *name;                 /**< Account username */
+  char passwd[MAX_PWD_LENGTH+1]; /**< Account password (hashed) */
+  char *email;                /**< Optional email address */
+  char *pc_name;              /**< Attached PC name, if any */
 };
 
 /** Special data used by NPCs, not PCs */
@@ -1158,6 +1175,7 @@ struct descriptor_data
   int bufspace;             /**< space left in the output buffer	*/
   struct txt_block *large_outbuf; /**< ptr to large buffer, if we need it */
   struct txt_q input;       /**< q of unprocessed input		*/
+  struct account_data *account; /**< Active account session data */
   struct char_data *character; /**< linked to char			*/
   struct char_data *original;  /**< original char if switched		*/
   struct descriptor_data *snooping; /**< Who is this char snooping	*/

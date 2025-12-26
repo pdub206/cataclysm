@@ -3527,6 +3527,8 @@ void free_char(struct char_data *ch)
       free(ch->player_specials->poofin);
     if (ch->player_specials->poofout)
       free(ch->player_specials->poofout);
+    if (ch->player_specials->account_name)
+      free(ch->player_specials->account_name);
     if (ch->player_specials->saved.completed_quests)
       free(ch->player_specials->saved.completed_quests);
     if (GET_HOST(ch))

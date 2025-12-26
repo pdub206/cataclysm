@@ -312,13 +312,13 @@ static void exdesc_string_cleanup(struct descriptor_data *d, int action)
     write_to_output(d,
       "\r\nBefore stepping into Miranthas, share a bit of your character's background.\r\n"
       "Guideline: aim for at least four lines that hint at where they came from,\r\n"
-      "who shaped them, and why they now walk the Tyr region. Touch on things like:\r\n"
+      "who shaped them, and why they now walk the Caleran region. Touch on things like:\r\n"
       "  - The city-state, tribe, or caravan that claimed them.\r\n"
       "  - Mentors, slavers, or patrons who left a mark.\r\n"
       "  - A defining hardship, triumph, oath, or secret.\r\n"
       "  - The goal, vengeance, or hope that drives them back into the wastes.\r\n"
       "\r\nExample 1:\r\n"
-      "   Raised beneath the ziggurat of Tyr, I learned to barter gossip between\r\n"
+      "   Raised beneath the ziggurat of Caleran, I learned to barter gossip between\r\n"
       "   templars and gladiators just to stay alive. Freedom came when Kalak fell,\r\n"
       "   but the slave-scar on my shoulder still aches. I now search the desert\r\n"
       "   for the relic my clutch mates died protecting, hoping to buy their kin peace.\r\n"
@@ -330,7 +330,7 @@ static void exdesc_string_cleanup(struct descriptor_data *d, int action)
       "\r\nExample 3:\r\n"
       "   Born outside Raam, I was tempered by obsidian shards and psionic murmurs.\r\n"
       "   A defiler ruined our oasis, so I swore to hound such spell-scars wherever\r\n"
-      "   they bloom. Rumor of a hidden well near Tyr is the lone hope that guides me.\r\n"
+      "   they bloom. Rumor of a hidden well near Caleran is the lone hope that guides me.\r\n"
       "\r\nType your background now. Use '/s' on a blank line when you finish.\r\n"
       "If you'd rather keep it secret, just save immediately and we'll note the mystery.\r\n\r\n");
     d->backstr = NULL;
@@ -343,8 +343,8 @@ static void exdesc_string_cleanup(struct descriptor_data *d, int action)
     return;
   }
 
-  write_to_output(d, "%s", CONFIG_MENU);
-  STATE(d) = CON_MENU;
+  send_account_menu(d);
+  STATE(d) = CON_ACCOUNT_MENU;
 }
 
 static void background_string_cleanup(struct descriptor_data *d, int action)
@@ -369,8 +369,8 @@ static void background_string_cleanup(struct descriptor_data *d, int action)
     return;
   }
 
-  write_to_output(d, "%s", CONFIG_MENU);
-  STATE(d) = CON_MENU;
+  send_account_menu(d);
+  STATE(d) = CON_ACCOUNT_MENU;
 }
 
 /* By Michael Buselli. Traverse down the string until the begining of the next

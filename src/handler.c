@@ -992,8 +992,8 @@ void extract_char_final(struct char_data *ch)
       if (GET_POS(ch) == POS_DEAD) {
         STATE(ch->desc) = CON_CLOSE;
       } else {
-        STATE(ch->desc) = CON_MENU;
-        write_to_output(ch->desc, "%s", CONFIG_MENU);
+        STATE(ch->desc) = CON_ACCOUNT_MENU;
+        send_account_menu(ch->desc);
       }
     }
   }

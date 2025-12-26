@@ -34,6 +34,7 @@
 #define LIB_PLROBJS	":plrobjs:"
 #define LIB_PLRVARS	":plrvars:"
 #define LIB_PLRFILES	":plrfiles:"
+#define LIB_ACCTFILES	":acctfiles:"
 #define LIB_HOUSE	":house:"
 #define SLASH		":"
 #elif defined(CIRCLE_AMIGA) || defined(CIRCLE_UNIX) || defined(CIRCLE_WINDOWS) || defined(CIRCLE_ACORN) || defined(CIRCLE_VMS)
@@ -47,6 +48,7 @@
 #define LIB_PLRVARS	"plrvars/"
 #define LIB_HOUSE	"house/"
 #define LIB_PLRFILES    "plrfiles/"
+#define LIB_ACCTFILES   "acctfiles/"
 #define SLASH		"/"
 #else
 #error "Unknown path components."
@@ -56,6 +58,7 @@
 #define SUF_TEXT	"text"
 #define SUF_MEM	        "mem"
 #define SUF_PLR		"plr"
+#define SUF_ACCT	"acc"
 
 #if defined(CIRCLE_AMIGA)
 #define EXE_FILE "/bin/circle" /* maybe use argv[0] but it's not reliable */
