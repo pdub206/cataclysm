@@ -230,7 +230,10 @@ void string_add(struct descriptor_data *d, char *str)
 
     for (i = 0; cleanup_modes[i].func; i++)
       if (STATE(d) == cleanup_modes[i].mode)
-        (*cleanup_modes[i].func)(d, action);
+        {
+          (*cleanup_modes[i].func)(d, action);
+          break;
+        }
 
     /* Common post cleanup code. */
     chain_write = (d->str && d->str != orig_str);
