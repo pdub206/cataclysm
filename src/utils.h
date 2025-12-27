@@ -15,6 +15,8 @@
 * functions, move functions, char_from_furniture) out of utils and declare /
 * define elsewhere.
 */
+#include <stdbool.h>
+
 #ifndef _UTILS_H_ /* Begin header file protection */
 #define _UTILS_H_
 
@@ -31,6 +33,9 @@
 /** direct all log() references to basic_mud_log() function. */
 #define log			basic_mud_log
 
+/* Immortal command log */
+#define GODCMDS_FILE "../log/godcmds"
+
 /** Standard line size, used for many string limits. */
 #define READ_SIZE	256
 
@@ -38,6 +43,7 @@
  * are made available with the function definition. */
 void basic_mud_log(const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 void basic_mud_vlog(const char *format, va_list args);
+void godcmd_log(const char *fmt, ...) __attribute__((format(printf,1,2)));
 int touch(const char *path);
 void mudlog(int type, int level, int file, const char *str, ...) __attribute__ ((format (printf, 4, 5)));
 int	rand_number(int from, int to);
@@ -72,6 +78,49 @@ char * convert_from_tabs(char * string);
 int count_non_protocol_chars(char * str);
 char *right_trim_whitespace(const char *string);
 void remove_from_string(char *string, const char *to_remove);
+const char *const *obj_value_labels(int item_type);
+const char *get_char_sdesc(const struct char_data *ch);
+int obj_is_storage(const struct obj_data *obj);
+int obj_storage_is_closed(const struct obj_data *obj);
+int roll_skill_check(struct char_data *ch, int skillnum, int mode, int *out_d20);
+
+/* 5e system helpers */
+
+/* --- Ascending AC breakdown --- */
+struct ac_breakdown {
+  int base;               /* always 10 */
+  int armor_piece_sum;    /* sum of clamped per-piece AC */
+  int armor_magic_sum;    /* sum of clamped per-piece magic (capped globally) */
+  int total_bulk;         /* sum of bulk * weight across armor pieces */
+  int dex_cap;            /* cap derived from bulk (Light 5 / Med 2 / Heavy 0) */
+  int dex_mod_applied;    /* min(DEX_mod, dex_cap) */
+  int situational;        /* cover, spells, etc. */
+  int total;              /* final AC */
+};
+
+int GET_ABILITY_MOD(int score);
+int GET_PROFICIENCY(int pct);
+int get_level_proficiency_bonus(struct char_data *ch);
+int get_total_proficiency_bonus(struct char_data *ch);
+int get_save_mod(struct char_data *ch, int ability);
+int compute_save_dc(struct char_data *caster, int level, int spellnum);
+int compute_ascending_ac(struct char_data *ch);
+int GET_SITUATIONAL_AC(struct char_data *ch);
+int compute_armor_class_asc(struct char_data *ch);
+void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out);
+
+/* Advantage/Disadvantage helpers */
+int roll_d20(void);
+int roll_d20_adv(void);
+int roll_d20_disadv(void);
+
+/* Percent-based checks (for existing percent skill flows) */
+bool percent_success(int chance_pct);            /* 0..100 */
+bool percent_success_adv(int chance_pct);        /* roll twice, take better */
+bool percent_success_disadv(int chance_pct);     /* roll twice, take worse */
+
+/* Stealth disadvantage detector */
+bool has_stealth_disadv(struct char_data *ch);
 
 /* Public functions made available form weather.c */
 void weather_and_time(int mode);
@@ -126,17 +175,17 @@ int	perform_move(struct char_data *ch, int dir, int following);
 int	mana_gain(struct char_data *ch);
 int	hit_gain(struct char_data *ch);
 int	move_gain(struct char_data *ch);
-void	set_title(struct char_data *ch, char *title);
 void	gain_exp(struct char_data *ch, int gain);
 void	gain_exp_regardless(struct char_data *ch, int gain);
 void	gain_condition(struct char_data *ch, int condition, int value);
+void  gain_skill(struct char_data *ch, char *skill, bool success);
 void	point_update(void);
 void	update_pos(struct char_data *victim);
 void run_autowiz(void);
-int increase_gold(struct char_data *ch, int amt);
-int decrease_gold(struct char_data *ch, int amt);
-int increase_bank(struct char_data *ch, int amt);
-int decrease_bank(struct char_data *ch, int amt);
+int increase_coins(struct char_data *ch, int amt);
+int decrease_coins(struct char_data *ch, int amt);
+int increase_bank_coins(struct char_data *ch, int amt);
+int decrease_bank_coins(struct char_data *ch, int amt);
 
 /* in class.c */
 void    advance_level(struct char_data *ch);
@@ -162,8 +211,9 @@ void char_from_furniture(struct char_data *ch);
 #define ETEXT_FILE       1 /**< ???? */
 #define SCRIPT_VARS_FILE 2 /**< Reference to a global variable file. */
 #define PLR_FILE         3 /**< The standard player file */
+#define ACCT_FILE        4 /**< The standard account file */
 
-#define MAX_FILES        4 /**< Max number of files types vailable */
+#define MAX_FILES        4 /**< Max number of player-owned file types available */
 
 /* breadth-first searching for graph function (tracking, etc) */
 #define BFS_ERROR		(-1)       /**< Error in the search. */
@@ -465,17 +515,36 @@ do                                                              \
 /** How old is PC/NPC, at last recorded time? */
 #define GET_AGE(ch)     (age(ch)->year)
 
-/** Name of PC. */
-#define GET_PC_NAME(ch)	((ch)->player.name)
-/** Name of PC or short_descr of NPC. */
-#define GET_NAME(ch)    (IS_NPC(ch) ? \
-			 (ch)->player.short_descr : GET_PC_NAME(ch))
-/** Title of PC */
-#define GET_TITLE(ch)   ((ch)->player.title)
+/** Proper name for PCs and NPCs. */
+#define GET_NAME(ch)        ((ch)->player.name)
+
+/** Player-only convenience. */
+#define GET_PC_NAME(ch)     ((ch)->player.name)
+
+/** Parsing keywords for matching. */
+#define GET_KEYWORDS(ch)    ((ch)->player.keywords)
+
+/** Appearance-based description for displays (e.g. short look text). */
+#define GET_SHORT_DESC(ch)  ((ch)->player.short_descr)
+
+/** Character background / history text. */
+#define GET_BACKGROUND(ch)  ((ch)->player.background)
+
+/** Safe name for room messages. */
+#define GET_DISPLAY_NAME(ch) (GET_NAME(ch) && *GET_NAME(ch) ? GET_NAME(ch) : "someone")
+
+/*
+ * Wrapper around isname() that checks GET_KEYWORDS for NPCs and GET_NAME for PCs.
+ * Use this instead of calling isname() directly when matching character names.
+ */
+#define IS_NAME_MATCH(str, ch) \
+  (isname((str), IS_NPC(ch) ? GET_KEYWORDS(ch) : GET_NAME(ch)))
+
 /** Level of PC or NPC. */
 #define GET_LEVEL(ch)   ((ch)->player.level)
 /** Password of PC. */
 #define GET_PASSWD(ch)	((ch)->player.passwd)
+#define GET_ACCOUNT(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->account_name))
 /** The player file position of PC. */
 #define GET_PFILEPOS(ch)((ch)->pfilepos)
 
@@ -496,8 +565,6 @@ do                                                              \
 
 /** Current strength of ch. */
 #define GET_STR(ch)     ((ch)->aff_abils.str)
-/** Current strength modifer of ch. */
-#define GET_ADD(ch)     ((ch)->aff_abils.str_add)
 /** Current dexterity of ch. */
 #define GET_DEX(ch)     ((ch)->aff_abils.dex)
 /** Current intelligence of ch. */
@@ -509,10 +576,22 @@ do                                                              \
 /** Current charisma of ch. */
 #define GET_CHA(ch)     ((ch)->aff_abils.cha)
 
+/* Definitions for 5e-like saving throws */
+#define GET_SAVE(ch, i)   ((ch)->char_specials.saved.saving_throws[(i)])
+
+#define SAVE_STR(ch)  GET_SAVE(ch, ABIL_STR)
+#define SAVE_DEX(ch)  GET_SAVE(ch, ABIL_DEX)
+#define SAVE_CON(ch)  GET_SAVE(ch, ABIL_CON)
+#define SAVE_INT(ch)  GET_SAVE(ch, ABIL_INT)
+#define SAVE_WIS(ch)  GET_SAVE(ch, ABIL_WIS)
+#define SAVE_CHA(ch)  GET_SAVE(ch, ABIL_CHA)
+
 /** Experience points of ch. */
 #define GET_EXP(ch)	  ((ch)->points.exp)
 /** Armor class of ch. */
 #define GET_AC(ch)        ((ch)->points.armor)
+/** Proficiency bonus of ch. */
+#define GET_PROF_MOD(ch)  ((ch)->points.prof_mod)
 /** Current hit points (health) of ch. */
 #define GET_HIT(ch)	  ((ch)->points.hit)
 /** Maximum hit points of ch. */
@@ -525,14 +604,10 @@ do                                                              \
 #define GET_MANA(ch)	  ((ch)->points.mana)
 /** Maximum mana points (magic) of ch. */
 #define GET_MAX_MANA(ch)  ((ch)->points.max_mana)
-/** Gold on ch. */
-#define GET_GOLD(ch)	  ((ch)->points.gold)
-/** Gold in bank of ch. */
-#define GET_BANK_GOLD(ch) ((ch)->points.bank_gold)
-/** Current to-hit roll modifier for ch. */
-#define GET_HITROLL(ch)	  ((ch)->points.hitroll)
-/** Current damage roll modifier for ch. */
-#define GET_DAMROLL(ch)   ((ch)->points.damroll)
+/** Coins on ch. */
+#define GET_COINS(ch)	  ((ch)->points.coins)
+/** Coins in bank of ch. */
+#define GET_BANK_COINS(ch) ((ch)->points.bank_coins)
 
 /** Current position (standing, sitting) of ch. */
 #define GET_POS(ch)	  ((ch)->char_specials.position)
@@ -550,7 +625,7 @@ do                                                              \
 /** Who or what the ch is hunting. */
 #define HUNTING(ch)	  ((ch)->char_specials.hunting)
 /** Saving throw i for character ch. */
-#define GET_SAVE(ch, i)	  ((ch)->char_specials.saved.apply_saving_throw[i])
+#define GET_SAVE(ch, i)   ((ch)->char_specials.saved.saving_throws[(i)])
 /** Alignment value for ch. */
 #define GET_ALIGNMENT(ch) ((ch)->char_specials.saved.alignment)
 
@@ -558,8 +633,6 @@ do                                                              \
 #define GET_COND(ch, i)		CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.conditions[(i)]))
 /** The room to load player ch into. */
 #define GET_LOADROOM(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.load_room))
-/** Number of skill practice sessions remaining for ch. */
-#define GET_PRACTICES(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.spells_to_learn))
 /** Current invisibility level of ch. */
 #define GET_INVIS_LEV(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.invis_level))
 /** Current wimpy level of ch. */
@@ -592,6 +665,7 @@ do                                                              \
 #define GET_PREF(ch)      ((ch)->pref)
 /** Get host name or ip of ch. */
 #define GET_HOST(ch)		CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->host))
+#define GET_SCAN_RESULTS(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->scan_results))
 #define GET_LAST_MOTD(ch)       CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.lastmotd))
 #define GET_LAST_NEWS(ch)       CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.lastnews))
 /** Get channel history i for ch. */
@@ -614,10 +688,20 @@ do                                                              \
 /** The type of quest ch is currently participating in. */
 #define GET_QUEST_TYPE(ch)      (real_quest(GET_QUEST((ch))) != NOTHING ? aquest_table[real_quest(GET_QUEST((ch)))].type : AQ_UNDEFINED )
 
-/** The current skill level of ch for skill i. */
-#define GET_SKILL(ch, i)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.skills[i]))
-/** Copy the current skill level i of ch to pct. */
-#define SET_SKILL(ch, i, pct)	do { CHECK_PLAYER_SPECIAL((ch), (ch)->player_specials->saved.skills[i]) = pct; } while(0)
+/* Unified access macros for PC and NPC skills */
+#define GET_SKILL(ch, i) \
+  (IS_NPC(ch) ? ((ch)->mob_specials.skills[(i)]) : ((ch)->player_specials->saved.skills[(i)]))
+
+#define SET_SKILL(ch, i, pct) do { \
+  if (IS_NPC(ch)) \
+    (ch)->mob_specials.skills[(i)] = (pct); \
+  else { \
+    CHECK_PLAYER_SPECIAL((ch), (ch)->player_specials->saved.skills[(i)]) = (pct); \
+  } \
+} while (0)
+/** Per-skill next gain time (epoch seconds). Index with a valid skill number. **/
+#define GET_SKILL_NEXT_GAIN(ch, i) \
+  (CHECK_PLAYER_SPECIAL((ch), (ch)->player_specials->saved.next_skill_gain[(i)]))
 
 /** The player's default sector type when buildwalking */
 #define GET_BUILDWALK_SECTOR(ch) CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->buildwalk_sector))
@@ -638,19 +722,14 @@ do                                                              \
 /** Return the memory of ch. */
 #define MEMORY(ch)		((ch)->mob_specials.memory)
 
-/** Return the equivalent strength of ch if ch has level 18 strength. */
-#define STRENGTH_APPLY_INDEX(ch) \
-        ( ((GET_ADD(ch) ==0) || (GET_STR(ch) != 18)) ? GET_STR(ch) :\
-          (GET_ADD(ch) <= 50) ? 26 :( \
-          (GET_ADD(ch) <= 75) ? 27 :( \
-          (GET_ADD(ch) <= 90) ? 28 :( \
-          (GET_ADD(ch) <= 99) ? 29 :  30 ) ) )                   \
-        )
-
-/** Return how much weight ch can carry. */
-#define CAN_CARRY_W(ch) (str_app[STRENGTH_APPLY_INDEX(ch)].carry_w)
-/** Return how many items ch can carry. */
-#define CAN_CARRY_N(ch) (5 + (GET_DEX(ch) >> 1) + (GET_LEVEL(ch) >> 1))
+/** Return how much weight ch can carry (5e rule: Str × 15 lb). */
+#define CAN_CARRY_W(ch)  (GET_STR(ch) * 15)
+/** Return how many items ch can carry (5e has no item count, so base it on Strength too). 
+ * Here we use Str × 2 as a simple abstraction to replace the old level/dex scaling.
+ */
+#define CAN_CARRY_N(ch)  (GET_STR(ch) * 2)
+/** Max weapon weight a character can wield (5e-like rule of thumb: Str × 1.5 lb). */
+#define CAN_WIELD_W(ch)  (GET_STR(ch) * 1.5)
 /** Return whether or not ch is awake. */
 #define AWAKE(ch) (GET_POS(ch) > POS_SLEEPING)
 /** Defines if ch can see in general in the dark. */
@@ -704,8 +783,8 @@ do                                                              \
 #define GET_OBJ_TYPE(obj)	((obj)->obj_flags.type_flag)
 /** Cost of obj. */
 #define GET_OBJ_COST(obj)	((obj)->obj_flags.cost)
-/** Cost per day to rent obj, if rent is turned on. */
-#define GET_OBJ_RENT(obj)	((obj)->obj_flags.cost_per_day)
+/** Per-day value, kept for legacy object data. */
+#define GET_OBJ_COST_PER_DAY(obj)	((obj)->obj_flags.cost_per_day)
 /** Affect flags on obj. */
 #define GET_OBJ_AFFECT(obj)	((obj)->obj_flags.bitvector)
 /** Extra flags bit array on obj. */
@@ -737,6 +816,8 @@ do                                                              \
 #define CAN_WEAR(obj, part)	OBJWEAR_FLAGGED((obj), (part))
 /** Return short description of obj. */
 #define GET_OBJ_SHORT(obj)      ((obj)->short_description)
+/* Return main description of obj. */
+#define GET_OBJ_MAIN(obj)   ((obj)->main_description)
 
 /* Compound utilities and other macros. */
 /** Used to compute version. To see if the code running is newer than 3.0pl13,
@@ -815,8 +896,12 @@ do                                                              \
    (CAN_WEAR((obj), ITEM_WEAR_TAKE) && CAN_CARRY_OBJ((ch),(obj)) && \
     CAN_SEE_OBJ((ch),(obj)))
 
-/** If vict can see ch, return ch name, else return "someone". */
-#define PERS(ch, vict)   (CAN_SEE(vict, ch) ? GET_NAME(ch) : (GET_LEVEL(ch) > LVL_IMMORT ? "an immortal" : "someone"))
+/* Display name for a character as seen by 'vict'.
+ * - If vict can’t see ch: "someone"
+ * - Otherwise: prefer short_descr, fall back to NPC name or a generic label
+ */
+#define PERS(ch, vict)                                                     \
+  (CAN_SEE((vict), (ch)) ? get_char_sdesc(ch) : "someone")
 
 /** If vict can see obj, return obj short description, else return
  * "something". */
@@ -849,21 +934,31 @@ do                                                              \
 #define IS_DIAGONAL(dir) (((dir) == NORTHWEST) || ((dir) == NORTHEAST) || \
 		((dir) == SOUTHEAST) || ((dir) == SOUTHWEST) )
 
-/** Return the class abbreviation for ch. */
-#define CLASS_ABBR(ch) (IS_NPC(ch) ? "--" : class_abbrevs[(int)GET_CLASS(ch)])
+/** True if ch has a valid player class assigned. */
+#define HAS_VALID_CLASS(ch) ((GET_CLASS(ch) >= CLASS_SORCEROR) && (GET_CLASS(ch) < NUM_CLASSES))
 
-/** 1 if ch is magic user class, 0 if not. */
-#define IS_MAGIC_USER(ch)	(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_MAGIC_USER))
+/** Return the class abbreviation for ch. */
+#define CLASS_ABBR(ch)    (HAS_VALID_CLASS(ch) ? class_abbrevs[(int)GET_CLASS(ch)] : "--")
+
+/** Return the class abbreviation for ch. */
+#define CLASS_NAME(ch)    (HAS_VALID_CLASS(ch) ? pc_class_types[(int)GET_CLASS(ch)] : "--")
+
+/** 1 if ch is sorceror class, 0 if not. */
+#define IS_SORCEROR(ch)	(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_SORCEROR))
 /** 1 if ch is cleric class, 0 if not. */
-#define IS_CLERIC(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_CLERIC))
-/** 1 if ch is thief class, 0 if not. */
-#define IS_THIEF(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_THIEF))
-/** 1 if ch is warrior class, 0 if not. */
-#define IS_WARRIOR(ch)		(!IS_NPC(ch) && \
-        (GET_CLASS(ch) == CLASS_WARRIOR))
+#define IS_CLERIC(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_CLERIC))
+/** 1 if ch is rogue class, 0 if not. */
+#define IS_ROGUE(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_ROGUE))
+/** 1 if ch is fighter class, 0 if not. */
+#define IS_FIGHTER(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_FIGHTER))
+/** 1 if ch is barbarian class, 0 if not. */
+#define IS_BARBARIAN(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_BARBARIAN))
+/** 1 if ch is ranger class, 0 if not. */
+#define IS_RANGER(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_RANGER))
+/** 1 if ch is bard class, 0 if not. */
+#define IS_BARD(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_BARD))
+/** 1 if ch is druid class, 0 if not. */
+#define IS_DRUID(ch)		(HAS_VALID_CLASS(ch) && (GET_CLASS(ch) == CLASS_DRUID))
 
 /** Defines if ch is outdoors or not. */
 #define OUTSIDE(ch) (!ROOM_FLAGGED(IN_ROOM(ch), ROOM_INDOORS))
@@ -872,19 +967,6 @@ do                                                              \
 #define GROUP(ch)            (ch->group)
 #define GROUP_LEADER(group)  (group->leader)
 #define GROUP_FLAGS(group)   (group->group_flags)
-
-/* Happy-hour defines */
-#define IS_HAPPYQP   (happy_data.qp_rate > 0)
-#define IS_HAPPYEXP  (happy_data.exp_rate > 0)
-#define IS_HAPPYGOLD (happy_data.gold_rate > 0)
-
-#define HAPPY_EXP    happy_data.exp_rate
-#define HAPPY_GOLD   happy_data.gold_rate
-#define HAPPY_QP     happy_data.qp_rate
-
-#define HAPPY_TIME   happy_data.ticks_left
-
-#define IS_HAPPYHOUR ((IS_HAPPYEXP || IS_HAPPYGOLD || IS_HAPPYQP) && (HAPPY_TIME > 0))
 
 /* OS compatibility */
 #ifndef NULL
@@ -944,8 +1026,6 @@ do                                                              \
 #define CONFIG_PT_ALLOWED       config_info.play.pt_allowed
 /** What level to use the shout command? */
 #define CONFIG_LEVEL_CAN_SHOUT  config_info.play.level_can_shout
-/** How many move points does holler cost? */
-#define CONFIG_HOLLER_MOVE_COST config_info.play.holler_move_cost
 /** How many characters can fit in a room marked as tunnel? */
 #define CONFIG_TUNNEL_SIZE      config_info.play.tunnel_size
 /** What is the max experience that can be gained at once? */
@@ -958,8 +1038,6 @@ do                                                              \
 #define CONFIG_MAX_PC_CORPSE_TIME  config_info.play.max_pc_corpse_time
 /** How long can a pc be idled before being pulled into the void? */
 #define CONFIG_IDLE_VOID        config_info.play.idle_void
-/** How long until the idle pc is force rented? */
-#define CONFIG_IDLE_RENT_TIME   config_info.play.idle_rent_time
 /** What level and above is immune to idle outs? */
 #define CONFIG_IDLE_MAX_LEVEL   config_info.play.idle_max_level
 /** Are death traps dumps? */
@@ -993,20 +1071,12 @@ do                                                              \
 #define CONFIG_SCRIPT_PLAYERS  config_info.play.script_players
 
 /* Crash Saves */
-/** Get free rent setting. */
-#define CONFIG_FREE_RENT        config_info.csd.free_rent
-/** Get max number of objects to save. */
-#define CONFIG_MAX_OBJ_SAVE     config_info.csd.max_obj_save
-/** Get minimum cost to rent. */
-#define CONFIG_MIN_RENT_COST    config_info.csd.min_rent_cost
 /** Get the auto save setting. */
 #define CONFIG_AUTO_SAVE        config_info.csd.auto_save
 /** Get the auto save frequency. */
 #define CONFIG_AUTOSAVE_TIME    config_info.csd.autosave_time
 /** Get the length of time to hold crash files. */
 #define CONFIG_CRASH_TIMEOUT    config_info.csd.crash_file_timeout
-/** Get legnth of time to hold rent files. */
-#define CONFIG_RENT_TIMEOUT     config_info.csd.rent_file_timeout
 
 /* Room Numbers */
 /** Get the mortal start room. */
@@ -1067,5 +1137,60 @@ do                                                              \
 #define CONFIG_USE_AUTOWIZ      config_info.autowiz.use_autowiz
 /** What is the minimum level character to put on the wizlist? */
 #define CONFIG_MIN_WIZLIST_LEV  config_info.autowiz.min_wizlist_lev
+
+/* Safe skill fetch that never touches CHECK_PLAYER_SPECIAL */
+static inline int GET_SKILL_SAFE(struct char_data *ch, int i) {
+  if (IS_NPC(ch) || !ch->player_specials) return 0;
+  return ch->player_specials->saved.skills[i];
+}
+
+/* PCs: use spell skill % -> proficiency ladder.
+   NPCs: temporary flat +2 (single mortal level); revisit when NPC skills land. */
+static inline int GET_CASTER_PROF_FOR_SPELL(struct char_data *ch, int spellnum) {
+  if (IS_NPC(ch))
+    return 2;  /* TODO: replace with NPC skill-based proficiency later */
+  return GET_PROFICIENCY(GET_SKILL_SAFE(ch, spellnum));
+}
+
+/* Similar to 5e mods */
+static inline int GET_SPELL_ABILITY_MOD(struct char_data *ch) {
+  switch (GET_CLASS(ch)) {
+    case CLASS_SORCEROR:
+      return GET_ABILITY_MOD(GET_INT(ch));
+    case CLASS_CLERIC:
+      return GET_ABILITY_MOD(GET_WIS(ch));
+    case CLASS_DRUID:
+      return GET_ABILITY_MOD(GET_WIS(ch));
+    case CLASS_RANGER:   
+      return GET_ABILITY_MOD(GET_WIS(ch));
+    case CLASS_BARD:
+      return GET_ABILITY_MOD(GET_CHA(ch));
+    default:
+      return GET_ABILITY_MOD(GET_INT(ch));
+  }
+}
+
+/* Can expand on this later with any bonuses from items eg. rings/amulets */
+static inline int GET_SPELL_BONUS_MOD(struct char_data *ch, int spellnum) {
+  (void)ch; (void)spellnum;
+  return 0;
+}
+
+/* Spell Save DC helper */
+static inline int GET_SPELL_SAVE_DC(struct char_data *ch, int spellnum, int misc_dc_bonus)
+{
+  int prof = GET_CASTER_PROF_FOR_SPELL(ch, spellnum);
+  int abil = GET_SPELL_ABILITY_MOD(ch);
+  int dc   = 8 + prof + abil + misc_dc_bonus + GET_SPELL_BONUS_MOD(ch, spellnum);
+  if (dc < 1) dc = 1;
+  return dc;
+}
+
+/* Quick check for any affect flag out of the array */
+static inline bool ANY_AFF_FLAGS(const struct char_data *ch) {
+  for (int i = 0; i < AF_ARRAY_MAX; ++i)
+    if (AFF_FLAGS(ch)[i] != 0) return true;
+  return false;
+}
 
 #endif /* _UTILS_H_ */

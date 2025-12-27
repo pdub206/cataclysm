@@ -145,7 +145,7 @@ ACMD(do_track)
   int dir;
 
   /* The character must have the track skill. */
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_TRACK)) {
+  if (!GET_SKILL(ch, SKILL_TRACK)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
@@ -173,11 +173,13 @@ ACMD(do_track)
       dir = rand_number(0, DIR_COUNT - 1);
     } while (!CAN_GO(ch, dir) && --tries);
     send_to_char(ch, "You sense a trail %s from here!\r\n", dirs[dir]);
+    gain_skill(ch, "track", FALSE);
     return;
   }
 
   /* They passed the skill check. */
   dir = find_first_step(IN_ROOM(ch), IN_ROOM(vict));
+  gain_skill(ch, "track", TRUE);
 
   switch (dir) {
   case BFS_ERROR:

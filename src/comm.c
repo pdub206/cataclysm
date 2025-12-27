@@ -65,6 +65,7 @@
 #include "interpreter.h"
 #include "handler.h"
 #include "db.h"
+#include "accounts.h"
 #include "house.h"
 #include "oasis.h"
 #include "genolc.h"
@@ -272,7 +273,7 @@ int main(int argc, char **argv)
     case 'm':
       mini_mud = 1;
       no_rent_check = 1;
-      puts("Running in minimized mode & with no rent check.");
+      puts("Running in minimized mode & with no save-file check.");
       break;
     case 'c':
       scheck = 1;
@@ -280,7 +281,7 @@ int main(int argc, char **argv)
       break;
     case 'q':
       no_rent_check = 1;
-      puts("Quick boot mode -- rent check supressed.");
+      puts("Quick boot mode -- save-file check suppressed.");
       break;
     case 'r':
       circle_restrict = 1;
@@ -300,7 +301,7 @@ int main(int argc, char **argv)
               "  -m             Start in mini-MUD mode.\n"
 	      "  -f<file>       Use <file> for configuration.\n"
 	      "  -o <file>      Write log to <file> instead of stderr.\n"
-              "  -q             Quick boot (doesn't scan rent for object limits)\n"
+              "  -q             Quick boot (doesn't scan save files for object limits)\n"
               "  -r             Restrict MUD -- no new players allowed.\n"
               "  -s             Suppress special procedure assignments.\n"
               " Note:		These arguments are 'CaSe SeNsItIvE!!!'\n",
@@ -476,10 +477,6 @@ void copyover_recover()
       GET_PREF(d->character) = pref;
     
       enter_player_game(d);
-
-      /* Clear their load room if it's not persistant. */
-      if (!PLR_FLAGGED(d->character, PLR_LOADROOM))
-        GET_LOADROOM(d->character) = NOWHERE;
 
       d->connected = CON_PLAYING;
       look_at_room(d->character, 0);
@@ -1453,8 +1450,9 @@ static void init_descriptor (struct descriptor_data *newd, int desc)
   *newd->output = '\0';
   newd->bufptr = 0;
   newd->has_prompt = 1;  /* prompt is part of greetings */
-  STATE(newd) = CONFIG_PROTOCOL_NEGOTIATION ? CON_GET_PROTOCOL : CON_GET_NAME;
+  STATE(newd) = CONFIG_PROTOCOL_NEGOTIATION ? CON_GET_PROTOCOL : CON_GET_CONNECT;
   CREATE(newd->history, char *, HISTORY_SIZE);
+  newd->account = NULL;
   if (++last_desc == 1000)
     last_desc = 1;
   newd->desc_num = last_desc;
@@ -2130,6 +2128,9 @@ void close_socket(struct descriptor_data *d)
       break;
   }
 
+  account_free(d->account);
+  d->account = NULL;
+
   free(d);
 }
 
@@ -2139,7 +2140,10 @@ static void check_idle_passwords(void)
 
   for (d = descriptor_list; d; d = next_d) {
     next_d = d->next;
-    if (STATE(d) != CON_PASSWORD && STATE(d) != CON_GET_NAME)
+    if (STATE(d) != CON_PASSWORD && STATE(d) != CON_GET_NAME &&
+        STATE(d) != CON_GET_CONNECT && STATE(d) != CON_GET_ACCOUNT &&
+        STATE(d) != CON_ACCOUNT_PASSWORD && STATE(d) != CON_ACCOUNT_NEWPASSWD &&
+        STATE(d) != CON_ACCOUNT_CNFPASSWD)
       continue;
     if (!d->idle_tics) {
       d->idle_tics++;
@@ -2646,7 +2650,6 @@ char *act(const char *str, int hide_invisible, struct char_data *ch,
 
     for (i = descriptor_list; i; i = i->next) {
       if (!i->connected && i->character &&
-          !PRF_FLAGGED(i->character, PRF_NOGOSS) &&
           !PLR_FLAGGED(i->character, PLR_WRITING) &&
           !ROOM_FLAGGED(IN_ROOM(i->character), ROOM_SOUNDPROOF)) {
 
@@ -2791,7 +2794,7 @@ static void msdp_update( void )
       MSDPSetNumber( d, eMSDP_MANA, GET_MANA(ch) );
       MSDPSetNumber( d, eMSDP_MANA_MAX, GET_MAX_MANA(ch) );
       MSDPSetNumber( d, eMSDP_WIMPY, GET_WIMP_LEV(ch) );
-      MSDPSetNumber( d, eMSDP_MONEY, GET_GOLD(ch) );
+      MSDPSetNumber( d, eMSDP_MONEY, GET_COINS(ch) );
       MSDPSetNumber( d, eMSDP_MOVEMENT, GET_MOVE(ch) );
       MSDPSetNumber( d, eMSDP_MOVEMENT_MAX, GET_MAX_MOVE(ch) );
       MSDPSetNumber( d, eMSDP_AC, compute_armor_class(ch) );

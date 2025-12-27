@@ -43,7 +43,7 @@ Do forever
   'fgrep -w "killed" syslog >> log/rip'
   'fgrep -w "Running" syslog >> log/restarts'
   'fgrep -w "advanced" syslog >> log/levels'
-  'fgrep -w "equipment lost" syslog >> log/rentgone'
+  'fgrep -w "equipment lost" syslog >> log/syslog'
   'fgrep -w "usage" syslog >> log/usage'
   'fgrep -w "olc" syslog >> log/olc'
   'fgrep -w "new player" syslog >> log/newplayers'

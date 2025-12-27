@@ -83,6 +83,8 @@ const char *room_bits[] = {
   "OLC",
   "*",				/* The BFS Mark. */
   "WORLDMAP",
+  "QUIT",
+  "SAVE",
   "\n"
 };
 
@@ -111,6 +113,26 @@ const char *exit_bits[] = {
   "\n"
 };
 
+/* Furniture: which body positions are supported on this piece */
+const char *furniture_position_bits[] = {
+  "STAND",   /* can stand on it */
+  "SIT",     /* can sit on it */
+  "REST",    /* can rest on it */
+  "SLEEP",   /* can sleep on it */
+  "\n"
+};
+
+/* Furniture flags: behavior & semantics */
+const char *furniture_flag_bits[] = {
+  "ON",            /* interact 'on' it (table, stage, dais) */
+  "IN",            /* interact 'in' it (bed with canopy, tub) */
+  "AT",            /* interact 'at' it (altar, bar, desk) */
+  "BLOCKS_PASSAGE",/* occupies/blocks movement in room */
+  "MOUNT_POINT",   /* anchor for ropes, mounts, etc. */
+  "NO_DRAG",       /* cannot be dragged */
+  "\n"
+};
+
 /** Description of the room sector type.
  * @pre Must be in the same order as the defines.
  * Must end array with a single newline. */
@@ -123,8 +145,16 @@ const char *sector_types[] = {
   "Mountains",
   "Water (Swim)",
   "Water (No Swim)",
-  "In Flight",
   "Underwater",
+  "In Flight",
+  "Scrublands",
+  "Sands",
+  "Rocky Terrain",
+  "Roads",
+  "Underground",
+  "Silt Sea",
+  "Ashlands",
+  "Tablelands",
   "\n"
 };
 
@@ -168,7 +198,6 @@ const char *player_bits[] = {
   "CSH",
   "SITEOK",
   "NOSHOUT",
-  "NOTITLE",
   "DELETED",
   "LOADRM",
   "NO_WIZL",
@@ -236,16 +265,12 @@ const char *preference_bits[] = {
   "NO_WIZ",
   "L1",
   "L2",
-  "NO_AUC",
-  "NO_GOS",
-  "NO_GTZ",
   "RMFLG",
   "D_AUTO",
   "CLS",
   "BLDWLK",
   "AFK",
   "AUTOLOOT",
-  "AUTOGOLD",
   "AUTOSPLIT",
   "AUTOSAC",
   "AUTOASSIST",
@@ -282,8 +307,10 @@ const char *affected_bits[] =
   "SCUBA",
   "SNEAK",
   "HIDE",
-  "UNUSED",
+  "SCAN",
   "CHARM",
+  "BANDAGED",
+  "LISTEN",
   "\n"
 };
 
@@ -336,6 +363,7 @@ const char *wear_where[] = {
   "<worn on finger>     ",
   "<worn around neck>   ",
   "<worn around neck>   ",
+  "<worn on back>       ",
   "<worn on body>       ",
   "<worn on head>       ",
   "<worn on legs>       ",
@@ -360,6 +388,7 @@ const char *equipment_types[] = {
   "Worn on left finger",
   "First worn around Neck",
   "Second worn around Neck",
+  "Worn on back",
   "Worn on body",
   "Worn on head",
   "Worn on legs",
@@ -400,7 +429,7 @@ const char *item_types[] = {
   "LIQ CONTAINER",
   "KEY",
   "FOOD",
-  "MONEY",
+  "COINS",
   "PEN",
   "BOAT",
   "FOUNTAIN",
@@ -414,6 +443,7 @@ const char *wear_bits[] = {
   "TAKE",
   "FINGER",
   "NECK",
+  "BACK",
   "BODY",
   "HEAD",
   "LEGS",
@@ -435,7 +465,7 @@ const char *wear_bits[] = {
 const char *extra_bits[] = {
   "GLOW",
   "HUM",
-  "NO_RENT",
+  "UNUSED",
   "NO_DONATE",
   "NO_INVIS",
   "INVISIBLE",
@@ -445,14 +475,23 @@ const char *extra_bits[] = {
   "ANTI_GOOD",
   "ANTI_EVIL",
   "ANTI_NEUTRAL",
-  "ANTI_MAGE",
+  "ANTI_SORCEROR",
   "ANTI_CLERIC",
-  "ANTI_THIEF",
-  "ANTI_WARRIOR",
+  "ANTI_ROGUE",
+  "ANTI_FIGHTER",
+  "ANTI_BARBARIAN",
+  "ANTI_RANGER",
+  "ANTI_BARD",
+  "ANTI_DRUID",
   "NO_SELL",
   "QUEST_ITEM",
+  "HOOD_UP",
+  "SKINNED",
   "\n"
 };
+
+/* Number of extra flags (excluding the sentinel "\n") */
+const int NUM_EXTRA_FLAGS = (sizeof(extra_bits) / sizeof(extra_bits[0]) - 1);
 
 /** Describes the apply types.
  * @pre Must be in the same order as the defines.
@@ -473,16 +512,15 @@ const char *apply_types[] = {
   "MAXMANA",
   "MAXHIT",
   "MAXMOVE",
-  "GOLD",
+  "COINS",
   "EXP",
   "ARMOR",
-  "HITROLL",
-  "DAMROLL",
-  "SAVING_PARA",
-  "SAVING_ROD",
-  "SAVING_PETRI",
-  "SAVING_BREATH",
-  "SAVING_SPELL",
+  "SAVE_STR",
+  "SAVE_DEX",
+  "SAVE_CON",
+  "SAVE_INT",
+  "SAVE_WIS",
+  "SAVE_CHA",
   "\n"
 };
 
@@ -496,6 +534,9 @@ const char *container_bits[] = {
   "LOCKED",
   "\n",
 };
+
+/* Number of container flags (excluding the sentinel "\n") */
+const int NUM_CONTAINER_FLAGS = (sizeof(container_bits) / sizeof(container_bits[0]) - 1);
 
 /** Describes the liquid description.
  * @pre Must be in the same order as the defines.
@@ -601,198 +642,6 @@ const char *fullness[] =
   ""
 };
 
-/** Strength attribute affects.
- * The fields are hit mod, damage mod, weight carried mod, and weight wielded
- * mod. */
-cpp_extern const struct str_app_type str_app[] = {
-  {-5, -4, 0, 0},	/* str = 0 */
-  {-5, -4, 3, 1},	/* str = 1 */
-  {-3, -2, 3, 2},
-  {-3, -1, 10, 3},
-  {-2, -1, 25, 4},
-  {-2, -1, 55, 5},	/* str = 5 */
-  {-1, 0, 80, 6},
-  {-1, 0, 90, 7},
-  {0, 0, 100, 8},
-  {0, 0, 100, 9},
-  {0, 0, 115, 10},	/* str = 10 */
-  {0, 0, 115, 11},
-  {0, 0, 140, 12},
-  {0, 0, 140, 13},
-  {0, 0, 170, 14},
-  {0, 0, 170, 15},	/* str = 15 */
-  {0, 1, 195, 16},
-  {1, 1, 220, 18},
-  {1, 2, 255, 20},	/* str = 18 */
-  {3, 7, 640, 40},
-  {3, 8, 700, 40},	/* str = 20 */
-  {4, 9, 810, 40},
-  {4, 10, 970, 40},
-  {5, 11, 1130, 40},
-  {6, 12, 1440, 40},
-  {7, 14, 1750, 40},	/* str = 25 */
-  {1, 3, 280, 22},	/* str = 18/0 - 18-50 */
-  {2, 3, 305, 24},	/* str = 18/51 - 18-75 */
-  {2, 4, 330, 26},	/* str = 18/76 - 18-90 */
-  {2, 5, 380, 28},	/* str = 18/91 - 18-99 */
-  {3, 6, 480, 30}	/* str = 18/100 */
-};
-
-/** Dexterity skill modifiers for thieves.
- * The fields are for pick pockets, pick locks, find traps, sneak and hide. */
-cpp_extern const struct dex_skill_type dex_app_skill[] = {
-  {-99, -99, -90, -99, -60},	/* dex = 0 */
-  {-90, -90, -60, -90, -50},	/* dex = 1 */
-  {-80, -80, -40, -80, -45},
-  {-70, -70, -30, -70, -40},
-  {-60, -60, -30, -60, -35},
-  {-50, -50, -20, -50, -30},	/* dex = 5 */
-  {-40, -40, -20, -40, -25},
-  {-30, -30, -15, -30, -20},
-  {-20, -20, -15, -20, -15},
-  {-15, -10, -10, -20, -10},
-  {-10, -5, -10, -15, -5},	/* dex = 10 */
-  {-5, 0, -5, -10, 0},
-  {0, 0, 0, -5, 0},
-  {0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0},
-  {0, 0, 0, 0, 0},		/* dex = 15 */
-  {0, 5, 0, 0, 0},
-  {5, 10, 0, 5, 5},
-  {10, 15, 5, 10, 10},		/* dex = 18 */
-  {15, 20, 10, 15, 15},
-  {15, 20, 10, 15, 15},		/* dex = 20 */
-  {20, 25, 10, 15, 20},
-  {20, 25, 15, 20, 20},
-  {25, 25, 15, 20, 20},
-  {25, 30, 15, 25, 25},
-  {25, 30, 15, 25, 25}		/* dex = 25 */
-};
-
-/** Dexterity attribute affects.
- * The fields are reaction, missile attacks, and defensive (armor class). */
-cpp_extern const struct dex_app_type dex_app[] = {
-  {-7, -7, 6},		/* dex = 0 */
-  {-6, -6, 5},		/* dex = 1 */
-  {-4, -4, 5},
-  {-3, -3, 4},
-  {-2, -2, 3},
-  {-1, -1, 2},		/* dex = 5 */
-  {0, 0, 1},
-  {0, 0, 0},
-  {0, 0, 0},
-  {0, 0, 0},
-  {0, 0, 0},		/* dex = 10 */
-  {0, 0, 0},
-  {0, 0, 0},
-  {0, 0, 0},
-  {0, 0, 0},
-  {0, 0, -1},		/* dex = 15 */
-  {1, 1, -2},
-  {2, 2, -3},
-  {2, 2, -4},		/* dex = 18 */
-  {3, 3, -4},
-  {3, 3, -4},		/* dex = 20 */
-  {4, 4, -5},
-  {4, 4, -5},
-  {4, 4, -5},
-  {5, 5, -6},
-  {5, 5, -6}		/* dex = 25 */
-};
-
-/** Constitution attribute affects.
- * The field referenced is for hitpoint bonus. */
-cpp_extern const struct con_app_type con_app[] = {
-  {-4},		/* con = 0 */
-  {-3},		/* con = 1 */
-  {-2},
-  {-2},
-  {-1},
-  {-1},		/* con = 5 */
-  {-1},
-  {0},
-  {0},
-  {0},
-  {0},		/* con = 10 */
-  {0},
-  {0},
-  {0},
-  {0},
-  {1},		/* con = 15 */
-  {2},
-  {2},
-  {3},		/* con = 18 */
-  {3},
-  {4},		/* con = 20 */
-  {5},
-  {5},
-  {5},
-  {6},
-  {6}		/* con = 25 */
-};
-
-/** Intelligence attribute affects.
- * The field shows how much practicing affects a skill/spell. */
-cpp_extern const struct int_app_type int_app[] = {
-  {3},		/* int = 0 */
-  {5},		/* int = 1 */
-  {7},
-  {8},
-  {9},
-  {10},		/* int = 5 */
-  {11},
-  {12},
-  {13},
-  {15},
-  {17},		/* int = 10 */
-  {19},
-  {22},
-  {25},
-  {30},
-  {35},		/* int = 15 */
-  {40},
-  {45},
-  {50},		/* int = 18 */
-  {53},
-  {55},		/* int = 20 */
-  {56},
-  {57},
-  {58},
-  {59},
-  {60}		/* int = 25 */
-};
-
-/** Wisdom attribute affects.
- * The field represents how many extra practice points are gained per level. */
-cpp_extern const struct wis_app_type wis_app[] = {
-  {0},	/* wis = 0 */
-  {0},  /* wis = 1 */
-  {0},
-  {0},
-  {0},
-  {0},  /* wis = 5 */
-  {0},
-  {0},
-  {0},
-  {0},
-  {0},  /* wis = 10 */
-  {0},
-  {2},
-  {2},
-  {3},
-  {3},  /* wis = 15 */
-  {3},
-  {4},
-  {5},	/* wis = 18 */
-  {6},
-  {6},  /* wis = 20 */
-  {6},
-  {6},
-  {7},
-  {7},
-  {7}  /* wis = 25 */
-};
-
 /** Define a set of opposite directions from the cardinal directions. */
 int rev_dir[] =
 {
@@ -819,8 +668,16 @@ int movement_loss[] =
   6,	/* Mountains  */
   4,	/* Swimming   */
   1,	/* Unswimable */
-  1,	/* Flying     */
-  5   /* Underwater */
+  5,	/* Underwater */
+  1,  /* Flying */
+  3,  /* Scrubland */
+  3,  /* Sand */
+  5,  /* Rocky Hill */
+  1,  /* Road */
+  2,  /* Underground */
+  4,  /* Silt */
+  2,  /* Ashland */
+  2   /* Tableland */
 };
 
 /** The names of the days of the mud week. Not used in sprinttype(). */
@@ -937,13 +794,9 @@ const char *wtrig_types[] = {
 const char *history_types[] = {
   "all",
   "say",
-  "gossip",
   "wiznet",
   "tell",
   "shout",
-  "grats",
-  "holler",
-  "auction",
   "\n"
 };
 
@@ -954,6 +807,44 @@ const char *ibt_bits[] = {
   "InProgress",
   "\n"
 };
+
+/* 5e system helpers */
+
+/* Armor slot table for ascending AC rules
+*  Fields are AC, bulk, magic cap
+*/
+const struct armor_slot armor_slots[] = {
+  { "head",   2, 1, 1 },
+  { "body",   3, 3, 3 },
+  { "legs",   2, 1, 2 },
+  { "arms",   1, 1, 1 },
+  { "hands",  1, 1, 1 },
+  { "feet",   1, 1, 1 },
+  { "right wrist",  1, 1, 1 },
+  { "left wrist",  1, 1, 1 },
+};
+
+const int NUM_ARMOR_SLOTS = sizeof(armor_slots) / sizeof(armor_slots[0]);
+
+/* Wear-position mapping for armor_slots[] order */
+const int ARMOR_WEAR_POSITIONS[] = {
+  WEAR_HEAD,      /* "head"  */
+  WEAR_BODY,      /* "body"  */
+  WEAR_LEGS,      /* "legs"  */
+  WEAR_ARMS,      /* "arms"  */
+  WEAR_HANDS,     /* "hands" */
+  WEAR_FEET,      /* "feet"  */
+  WEAR_WRIST_R,   /* "right wrist"  */
+  WEAR_WRIST_L    /* "left wrist"  */
+};
+
+/* Armor flag names for obj->value[3] */
+const char *armor_flag_bits[] = {
+  "STEALTHDISADV",  /* ARMF_STEALTH_DISADV */
+  "REQ_STR15",      /* ARMF_REQ_STR15 */
+  "\n"
+};
+
 /* --- End of constants arrays. --- */
 
 /* Various arrays we count so we can check the world files.  These
@@ -968,4 +859,3 @@ const char *ibt_bits[] = {
 	extra_bits_count = sizeof(extra_bits) / sizeof(extra_bits[0]) - 1,
 	/** Number of defined wear bit descriptions. */
 	wear_bits_count = sizeof(wear_bits) / sizeof(wear_bits[0]) - 1;
-

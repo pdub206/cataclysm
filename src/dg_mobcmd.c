@@ -377,6 +377,7 @@ ACMD(do_mload)
         return;
       }
       char_to_room(mob, rnum);
+      equip_mob_from_loadout(mob);
       if (SCRIPT(ch)) { /* It _should_ have, but it might be detached. */
         char buf[MAX_INPUT_LENGTH];
         sprintf(buf, "%c%ld", UID_CHAR, char_script_id(mob));
@@ -941,14 +942,14 @@ ACMD(do_mtransform)
        the strings so we don't end up free'ing the prototypes later */
     if(m->player.name)
       tmpmob.player.name = strdup(m->player.name);
-    if(m->player.title)
-      tmpmob.player.title = strdup(m->player.title);
     if(m->player.short_descr)
       tmpmob.player.short_descr = strdup(m->player.short_descr);
     if(m->player.long_descr)
       tmpmob.player.long_descr = strdup(m->player.long_descr);
     if(m->player.description)
       tmpmob.player.description = strdup(m->player.description);
+    if(m->player.background)
+      tmpmob.player.background = strdup(m->player.background);
 
     tmpmob.script_id = ch->script_id;
     tmpmob.affected = ch->affected;
@@ -970,7 +971,7 @@ ACMD(do_mtransform)
       GET_MAX_HIT(&tmpmob) = GET_MAX_HIT(ch);
       GET_EXP(&tmpmob) = GET_EXP(ch);
     }
-    GET_GOLD(&tmpmob) = GET_GOLD(ch);
+    GET_COINS(&tmpmob) = GET_COINS(ch);
     GET_POS(&tmpmob) = GET_POS(ch);
     IS_CARRYING_W(&tmpmob) = IS_CARRYING_W(ch);
     IS_CARRYING_N(&tmpmob) = IS_CARRYING_N(ch);
@@ -1067,7 +1068,7 @@ ACMD(do_mdoor)
             strcat(newexit->general_description, "\r\n");
             break;
         case 2:  /* flags       */
-            newexit->exit_info = (sh_int)asciiflag_conv(value);
+            newexit->exit_info = (int)asciiflag_conv(value);
             break;
         case 3:  /* key         */
             newexit->key = atoi(value);

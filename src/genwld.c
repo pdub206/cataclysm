@@ -373,6 +373,13 @@ int save_rooms(zone_rnum rzone)
 			"%s~\n", xdesc->keyword, buf);
 	}
       }
+      if (room->forage) {
+        struct forage_entry *entry;
+        fprintf(sf, "F\n");
+        for (entry = room->forage; entry; entry = entry->next)
+          fprintf(sf, "%d %d\n", entry->obj_vnum, entry->dc);
+        fprintf(sf, "0 0\n");
+      }
       fprintf(sf, "S\n");
       script_save_to_disk(sf, room, WLD_TRIGGER);
     }
@@ -439,6 +446,9 @@ int copy_room_strings(struct room_data *dest, struct room_data *source)
   if (source->ex_description)
     copy_ex_descriptions(&dest->ex_description, source->ex_description);
 
+  if (source->forage)
+    dest->forage = copy_forage_list(source->forage);
+
   return TRUE;
 }
 
@@ -453,6 +463,9 @@ int free_room_strings(struct room_data *room)
     free(room->description);
   if (room->ex_description)
     free_ex_descriptions(room->ex_description);
+  if (room->forage)
+    free_forage_list(room->forage);
+  room->forage = NULL;
 
   /* Free exits. */
   for (i = 0; i < DIR_COUNT; i++) {

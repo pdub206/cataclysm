@@ -180,8 +180,8 @@ static void House_listrent(struct char_data *ch, room_vnum vnum)
 	loaded = objsave_parse_objects(fl);
 
 	for (current = loaded; current != NULL; current = current->next)
-	  len += snprintf(buf+len, sizeof(buf)-len, " [%5d] (%5dau) %s\r\n",
-	    GET_OBJ_VNUM(current->obj), GET_OBJ_RENT(current->obj), current->obj->short_description);
+	  len += snprintf(buf+len, sizeof(buf)-len, " [%5d] %s\r\n",
+	    GET_OBJ_VNUM(current->obj), current->obj->short_description);
 
 	/* now it's safe to free the obj_save_data list - all members of it
 	 * have been put in the correct lists by obj_to_room()
@@ -613,7 +613,7 @@ void House_list_guests(struct char_data *ch, int i, int quiet)
 
 /*************************************************************************
  * All code below this point and the code above, marked "CONVERSION"     *
- * can be removed after you have converted your house rent files using   *
+ * can be removed after you have converted your house save files using   *
  * the command                                                           *
  *   hcontrol asciiconvert                                               *
  *                                                                       *
@@ -621,7 +621,7 @@ void House_list_guests(struct char_data *ch, int i, int quiet)
  * After you have converted your house files, I suggest a reboot, which  *
  * will let your house files load on the next bootup. -Welcor            *
  ************************************************************************/
-/* Code for conversion to ascii house rent files. */
+/* Code for conversion to ascii house save files. */
 static void hcontrol_convert_houses(struct char_data *ch)
 {
   int i;
@@ -689,7 +689,7 @@ static int ascii_convert_house(struct char_data *ch, obj_vnum vnum)
       return (0);
     if (ferror(in)) {
       perror("SYSERR: Reading house file in House_load");
-      send_to_char(ch, "...read error in house rent file.\r\n");
+      send_to_char(ch, "...read error in house save file.\r\n");
       free(outfile);
       fclose(in);
       fclose(out);
@@ -700,7 +700,7 @@ static int ascii_convert_house(struct char_data *ch, obj_vnum vnum)
     	tmp = Obj_from_store(object, &i);
       if (!objsave_save_obj_record(tmp, out, i))
       {
-	      send_to_char(ch, "...write error in house rent file.\r\n");
+	      send_to_char(ch, "...write error in house save file.\r\n");
 	      free(outfile);
 	      fclose(in);
 	      fclose(out);
@@ -721,7 +721,7 @@ static int ascii_convert_house(struct char_data *ch, obj_vnum vnum)
 	return 1;
 }
 
-/* The circle 3.1 function for reading rent files. No longer used by the rent system. */
+/* The circle 3.1 function for reading save files. No longer used by the current system. */
 static struct obj_data *Obj_from_store(struct obj_file_elem object, int *location)
 {
   struct obj_data *obj;

@@ -105,12 +105,34 @@
 #define SKILL_HIDE                  133 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_KICK                  134 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_PICK_LOCK             135 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_WHIRLWIND             136 
+#define SKILL_WHIRLWIND             136 /* Performs whirlwind pulse action */
 #define SKILL_RESCUE                137 /* Reserved Skill[] DO NOT CHANGE */
 #define SKILL_SNEAK                 138 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_STEAL                 139 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_TRACK                 140 /* Reserved Skill[] DO NOT CHANGE */
-#define SKILL_BANDAGE               141 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_TRACK                 139 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_BANDAGE               140 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_UNARMED               141 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_SHIELD_USE            142 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_PIERCING_WEAPONS      143 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_SLASHING_WEAPONS      144 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_BLUDGEONING_WEAPONS   145 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_PERCEPTION            146 /* Reserved Skill[] DO NOT CHANGE */
+#define SKILL_STEALTH               147 /* Shared stealth skill for hide/sneak */
+#define SKILL_SLEIGHT_OF_HAND       148 /* Sleight of hand for palm/slip */
+#define SKILL_ACROBATICS            149 /* DEX */
+#define SKILL_ANIMAL_HANDLING       150 /* WIS */
+#define SKILL_ARCANA                151 /* INT */
+#define SKILL_ATHLETICS             152 /* STR */
+#define SKILL_DECEPTION             153 /* CHA */
+#define SKILL_HISTORY               154 /* INT */
+#define SKILL_INSIGHT               155 /* WIS */
+#define SKILL_INTIMIDATION          156 /* CHA */
+#define SKILL_INVESTIGATION         157 /* INT */
+#define SKILL_MEDICINE              158 /* WIS */
+#define SKILL_NATURE                159 /* INT */
+#define SKILL_PERFORMANCE           160 /* CHA */
+#define SKILL_PERSUASION            161 /* CHA */
+#define SKILL_RELIGION              162 /* INT */
+#define SKILL_SURVIVAL              163 /* WIS */
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 
@@ -122,6 +144,8 @@
 
 /* To make an affect induced by dg_affect look correct on 'stat' we need to
  * define it with a 'spellname'. */
+#define SPELL_SCAN_AFFECT            296
+#define SPELL_LISTEN_AFFECT          297
 #define SPELL_DG_AFFECT              298
 
 #define TOP_SPELL_DEFINE	     299
@@ -149,11 +173,15 @@
 /* new attack types can be added here - up to TYPE_SUFFERING */
 #define TYPE_SUFFERING		     399
 
-#define SAVING_PARA   0
-#define SAVING_ROD    1
-#define SAVING_PETRI  2
-#define SAVING_BREATH 3
-#define SAVING_SPELL  4
+/* Saving throws for 5e-like system */
+#define SAVING_STR    0
+#define SAVING_DEX    1
+#define SAVING_CON    2
+#define SAVING_INT    3
+#define SAVING_WIS    4
+#define SAVING_CHA    5
+
+#define NUM_SAVING_THROWS  6
 
 /***
  **Possible Targets:
@@ -276,7 +304,7 @@ void init_spell_levels(void);
 const char *skill_name(int num);
 
 /* From magic.c */
-int mag_savingthrow(struct char_data *ch, int type, int modifier);
+int mag_savingthrow(struct char_data *ch, int ability, int dc);
 void affect_update(void);
 
 /* from spell_parser.c */

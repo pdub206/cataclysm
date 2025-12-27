@@ -82,14 +82,12 @@ static void cedit_setup(struct descriptor_data *d)
   OLC_CONFIG(d)->play.pk_allowed          = CONFIG_PK_ALLOWED;
   OLC_CONFIG(d)->play.pt_allowed          = CONFIG_PT_ALLOWED;
   OLC_CONFIG(d)->play.level_can_shout     = CONFIG_LEVEL_CAN_SHOUT;
-  OLC_CONFIG(d)->play.holler_move_cost    = CONFIG_HOLLER_MOVE_COST;
   OLC_CONFIG(d)->play.tunnel_size         = CONFIG_TUNNEL_SIZE;
   OLC_CONFIG(d)->play.max_exp_gain        = CONFIG_MAX_EXP_GAIN;
   OLC_CONFIG(d)->play.max_exp_loss        = CONFIG_MAX_EXP_LOSS;
   OLC_CONFIG(d)->play.max_npc_corpse_time = CONFIG_MAX_NPC_CORPSE_TIME;
   OLC_CONFIG(d)->play.max_pc_corpse_time  = CONFIG_MAX_PC_CORPSE_TIME;
   OLC_CONFIG(d)->play.idle_void           = CONFIG_IDLE_VOID;
-  OLC_CONFIG(d)->play.idle_rent_time      = CONFIG_IDLE_RENT_TIME;
   OLC_CONFIG(d)->play.idle_max_level      = CONFIG_IDLE_MAX_LEVEL;
   OLC_CONFIG(d)->play.dts_are_dumps       = CONFIG_DTS_ARE_DUMPS;
   OLC_CONFIG(d)->play.load_into_inventory = CONFIG_LOAD_INVENTORY;
@@ -103,13 +101,9 @@ static void cedit_setup(struct descriptor_data *d)
   OLC_CONFIG(d)->play.script_players      = CONFIG_SCRIPT_PLAYERS;
 
   /* Crash Saves */
-  OLC_CONFIG(d)->csd.free_rent            = CONFIG_FREE_RENT;
-  OLC_CONFIG(d)->csd.max_obj_save         = CONFIG_MAX_OBJ_SAVE;
-  OLC_CONFIG(d)->csd.min_rent_cost        = CONFIG_MIN_RENT_COST;
   OLC_CONFIG(d)->csd.auto_save            = CONFIG_AUTO_SAVE;
   OLC_CONFIG(d)->csd.autosave_time        = CONFIG_AUTOSAVE_TIME;
   OLC_CONFIG(d)->csd.crash_file_timeout   = CONFIG_CRASH_TIMEOUT;
-  OLC_CONFIG(d)->csd.rent_file_timeout    = CONFIG_RENT_TIMEOUT;
 
   /* Room Numbers */
   OLC_CONFIG(d)->room_nums.mortal_start_room = CONFIG_MORTAL_START;
@@ -186,14 +180,12 @@ static void cedit_save_internally(struct descriptor_data *d)
   CONFIG_PK_ALLOWED          = OLC_CONFIG(d)->play.pk_allowed;
   CONFIG_PT_ALLOWED          = OLC_CONFIG(d)->play.pt_allowed;
   CONFIG_LEVEL_CAN_SHOUT     = OLC_CONFIG(d)->play.level_can_shout;
-  CONFIG_HOLLER_MOVE_COST    = OLC_CONFIG(d)->play.holler_move_cost;
   CONFIG_TUNNEL_SIZE         = OLC_CONFIG(d)->play.tunnel_size;
   CONFIG_MAX_EXP_GAIN        = OLC_CONFIG(d)->play.max_exp_gain;
   CONFIG_MAX_EXP_LOSS        = OLC_CONFIG(d)->play.max_exp_loss;
   CONFIG_MAX_NPC_CORPSE_TIME = OLC_CONFIG(d)->play.max_npc_corpse_time;
   CONFIG_MAX_PC_CORPSE_TIME  = OLC_CONFIG(d)->play.max_pc_corpse_time;
   CONFIG_IDLE_VOID           = OLC_CONFIG(d)->play.idle_void;
-  CONFIG_IDLE_RENT_TIME      = OLC_CONFIG(d)->play.idle_rent_time;
   CONFIG_IDLE_MAX_LEVEL      = OLC_CONFIG(d)->play.idle_max_level;
   CONFIG_DTS_ARE_DUMPS       = OLC_CONFIG(d)->play.dts_are_dumps;
   CONFIG_LOAD_INVENTORY      = OLC_CONFIG(d)->play.load_into_inventory;
@@ -207,13 +199,9 @@ static void cedit_save_internally(struct descriptor_data *d)
   CONFIG_SCRIPT_PLAYERS      = OLC_CONFIG(d)->play.script_players;
 
   /* Crash Saves */
-  CONFIG_FREE_RENT            = OLC_CONFIG(d)->csd.free_rent;
-  CONFIG_MAX_OBJ_SAVE         = OLC_CONFIG(d)->csd.max_obj_save;
-  CONFIG_MIN_RENT_COST        = OLC_CONFIG(d)->csd.min_rent_cost;
   CONFIG_AUTO_SAVE            = OLC_CONFIG(d)->csd.auto_save;
   CONFIG_AUTOSAVE_TIME        = OLC_CONFIG(d)->csd.autosave_time;
   CONFIG_CRASH_TIMEOUT   = OLC_CONFIG(d)->csd.crash_file_timeout;
-  CONFIG_RENT_TIMEOUT    = OLC_CONFIG(d)->csd.rent_file_timeout;
 
   /* Room Numbers */
   CONFIG_MORTAL_START = OLC_CONFIG(d)->room_nums.mortal_start_room;
@@ -344,8 +332,6 @@ int save_config( IDXTYPE nowhere )
   	      "pt_allowed = %d\n\n", CONFIG_PT_ALLOWED);
   fprintf(fl, "* What is the minimum level a player can shout/gossip/etc?\n"
               "level_can_shout = %d\n\n", CONFIG_LEVEL_CAN_SHOUT);
-  fprintf(fl, "* How many movement points does shouting cost the player?\n"
-  	      "holler_move_cost = %d\n\n", CONFIG_HOLLER_MOVE_COST);
   fprintf(fl, "* How many players can fit in a tunnel?\n"
               "tunnel_size = %d\n\n", CONFIG_TUNNEL_SIZE);
   fprintf(fl, "* Maximum experience gainable per kill?\n"
@@ -358,8 +344,6 @@ int save_config( IDXTYPE nowhere )
               "max_pc_corpse_time = %d\n\n", CONFIG_MAX_PC_CORPSE_TIME);
   fprintf(fl, "* Number of tics before a PC is sent to the void.\n"
               "idle_void = %d\n\n", CONFIG_IDLE_VOID);
-  fprintf(fl, "* Number of tics before a PC is autorented.\n"
-              "idle_rent_time = %d\n\n", CONFIG_IDLE_RENT_TIME);
   fprintf(fl, "* Level and above of players whom are immune to idle penalties.\n"
               "idle_max_level = %d\n\n", CONFIG_IDLE_MAX_LEVEL);
   fprintf(fl, "* Should the items in death traps be junked automatically?\n"
@@ -408,15 +392,8 @@ int save_config( IDXTYPE nowhere )
   fprintf(fl, "* Text sent to players when an effect fails.\n"
               "noeffect = %s\n", buf);
 
-   /* RENT / CRASHSAVE OPTIONS */
-  fprintf(fl, "\n\n\n* [ Rent/Crashsave Options ]\n");
-
-  fprintf(fl, "* Should the MUD allow you to 'rent' for free?  (i.e. if you just quit,\n"
-              "* your objects are saved at no cost, as in Merc-type MUDs.)\n"
-              "free_rent = %d\n\n", CONFIG_FREE_RENT);
-
-  fprintf(fl, "* Maximum number of items players are allowed to rent.\n"
-   	      "max_obj_save = %d\n\n", CONFIG_MAX_OBJ_SAVE);
+   /* CRASHSAVE OPTIONS */
+  fprintf(fl, "\n\n\n* [ Crashsave Options ]\n");
 
   fprintf(fl, "* Should the game automatically save people?\n"
               "auto_save = %d\n\n", CONFIG_AUTO_SAVE);
@@ -424,11 +401,9 @@ int save_config( IDXTYPE nowhere )
   fprintf(fl, "* If auto_save = 1, how often (in minutes) should the game save people's objects?\n"
               "autosave_time = %d\n\n", CONFIG_AUTOSAVE_TIME);
 
-  fprintf(fl, "* Lifetime of crashfiles and force-rent (idlesave) files in days.\n"
+  fprintf(fl, "* Lifetime of crashfiles and idle-save files in days.\n"
               "crash_file_timeout = %d\n\n", CONFIG_CRASH_TIMEOUT);
 
-  fprintf(fl, "* Lifetime of normal rent files in days.\n"
-              "rent_file_timeout = %d\n\n", CONFIG_RENT_TIMEOUT);
 
    /* ROOM NUMBERS */
   fprintf(fl, "\n\n\n* [ Room Numbers ]\n");
@@ -588,7 +563,7 @@ static void cedit_disp_menu(struct descriptor_data *d)
   write_to_output(d,
   	  "OasisOLC MUD Configuration Editor\r\n"
   	  "%sG%s) Game Play Options\r\n"
-  	  "%sC%s) Crashsave/Rent Options\r\n"
+  	  "%sC%s) Crashsave Options\r\n"
   	  "%sR%s) Room Numbers\r\n"
           "%sO%s) Operation Options\r\n"
           "%sA%s) Autowiz Options\r\n"
@@ -619,21 +594,19 @@ static void cedit_disp_game_play_options(struct descriptor_data *d)
         "%sA%s) Player Killing Allowed  : %s%s\r\n"
         "%sB%s) Player Thieving Allowed : %s%s\r\n"
         "%sC%s) Minimum Level To Shout  : %s%d\r\n"
-        "%sD%s) Holler Move Cost        : %s%d\r\n"
         "%sE%s) Tunnel Size             : %s%d\r\n"
         "%sF%s) Maximum Experience Gain : %s%d\r\n"
         "%sG%s) Maximum Experience Loss : %s%d\r\n"
         "%sH%s) Max Time for NPC Corpse : %s%d\r\n"
         "%sI%s) Max Time for PC Corpse  : %s%d\r\n"
         "%sJ%s) Tics before PC sent to void : %s%d\r\n"
-        "%sK%s) Tics before PC is autosaved : %s%d\r\n"
-        "%sL%s) Level Immune To IDLE        : %s%d\r\n"
-        "%sM%s) Death Traps Junk Items      : %s%s\r\n"
-        "%sN%s) Objects Load Into Inventory : %s%s\r\n"
-        "%sO%s) Track Through Doors         : %s%s\r\n"
-        "%sP%s) Display Closed Doors        : %s%s\r\n"
-        "%sR%s) Diagonal Directions         : %s%s\r\n"
-        "%sS%s) Prevent Mortal Level To Immortal : %s%s\r\n"
+        "%sK%s) Level Immune To IDLE        : %s%d\r\n"
+        "%sL%s) Death Traps Junk Items      : %s%s\r\n"
+        "%sM%s) Objects Load Into Inventory : %s%s\r\n"
+        "%sN%s) Track Through Doors         : %s%s\r\n"
+        "%sO%s) Display Closed Doors        : %s%s\r\n"
+        "%sP%s) Diagonal Directions         : %s%s\r\n"
+        "%sR%s) Prevent Mortal Level To Immortal : %s%s\r\n"
 	"%s1%s) OK Message Text         : %s%s"
 	"%s2%s) HUH Message Text        : %s%s"
         "%s3%s) NOPERSON Message Text   : %s%s"
@@ -647,7 +620,6 @@ static void cedit_disp_game_play_options(struct descriptor_data *d)
         grn, nrm, cyn, CHECK_VAR(OLC_CONFIG(d)->play.pk_allowed),
         grn, nrm, cyn, CHECK_VAR(OLC_CONFIG(d)->play.pt_allowed),
         grn, nrm, cyn, OLC_CONFIG(d)->play.level_can_shout,
-        grn, nrm, cyn, OLC_CONFIG(d)->play.holler_move_cost,
         grn, nrm, cyn, OLC_CONFIG(d)->play.tunnel_size,
         grn, nrm, cyn, OLC_CONFIG(d)->play.max_exp_gain,
         grn, nrm, cyn, OLC_CONFIG(d)->play.max_exp_loss,
@@ -655,7 +627,6 @@ static void cedit_disp_game_play_options(struct descriptor_data *d)
         grn, nrm, cyn, OLC_CONFIG(d)->play.max_pc_corpse_time,
 
         grn, nrm, cyn, OLC_CONFIG(d)->play.idle_void,
-        grn, nrm, cyn, OLC_CONFIG(d)->play.idle_rent_time,
         grn, nrm, cyn, OLC_CONFIG(d)->play.idle_max_level,
         grn, nrm, cyn, CHECK_VAR(OLC_CONFIG(d)->play.dts_are_dumps),
         grn, nrm, cyn, CHECK_VAR(OLC_CONFIG(d)->play.load_into_inventory),
@@ -685,22 +656,14 @@ static void cedit_disp_crash_save_options(struct descriptor_data *d)
   clear_screen(d);
 
   write_to_output(d, "\r\n\r\n"
-  	"%sA%s) Free Rent          : %s%s\r\n"
-  	"%sB%s) Max Objects Saved  : %s%d\r\n"
-  	"%sC%s) Minimum Rent Cost  : %s%d\r\n"
-  	"%sD%s) Auto Save          : %s%s\r\n"
-  	"%sE%s) Auto Save Time     : %s%d minute(s)\r\n"
-  	"%sF%s) Crash File Timeout : %s%d day(s)\r\n"
-  	"%sG%s) Rent File Timeout  : %s%d day(s)\r\n"
+  	"%sA%s) Auto Save          : %s%s\r\n"
+  	"%sB%s) Auto Save Time     : %s%d minute(s)\r\n"
+  	"%sC%s) Crash File Timeout : %s%d day(s)\r\n"
   	"%sQ%s) Exit To The Main Menu\r\n"
   	"Enter your choice : ",
-  	grn, nrm, cyn, CHECK_VAR(OLC_CONFIG(d)->csd.free_rent),
-  	grn, nrm, cyn, OLC_CONFIG(d)->csd.max_obj_save,
-  	grn, nrm, cyn, OLC_CONFIG(d)->csd.min_rent_cost,
   	grn, nrm, cyn, CHECK_VAR(OLC_CONFIG(d)->csd.auto_save),
   	grn, nrm, cyn, OLC_CONFIG(d)->csd.autosave_time,
   	grn, nrm, cyn, OLC_CONFIG(d)->csd.crash_file_timeout,
-  	grn, nrm, cyn, OLC_CONFIG(d)->csd.rent_file_timeout,
   	grn, nrm
   	);
 
@@ -897,12 +860,6 @@ void cedit_parse(struct descriptor_data *d, char *arg)
           OLC_MODE(d) = CEDIT_LEVEL_CAN_SHOUT;
           return;
 
-        case 'd':
-        case 'D':
-          write_to_output(d, "Enter the amount it costs (in move points) to holler : ");
-          OLC_MODE(d) = CEDIT_HOLLER_MOVE_COST;
-          return;
-
         case 'e':
         case 'E':
           write_to_output(d, "Enter the maximum number of people allowed in a tunnel : ");
@@ -941,43 +898,37 @@ void cedit_parse(struct descriptor_data *d, char *arg)
 
         case 'k':
         case 'K':
-          write_to_output(d, "Enter the number of tics before PC's are automatically rented and forced to quit : ");
-          OLC_MODE(d) = CEDIT_IDLE_RENT_TIME;
-          return;
-
-        case 'l':
-        case 'L':
           write_to_output(d, "Enter the level a player must be to become immune to IDLE : ");
           OLC_MODE(d) = CEDIT_IDLE_MAX_LEVEL;
           return;
 
+        case 'l':
+        case 'L':
+          TOGGLE_VAR(OLC_CONFIG(d)->play.dts_are_dumps);
+          break;
+
         case 'm':
         case 'M':
-          TOGGLE_VAR(OLC_CONFIG(d)->play.dts_are_dumps);
+          TOGGLE_VAR(OLC_CONFIG(d)->play.load_into_inventory);
           break;
 
         case 'n':
         case 'N':
-          TOGGLE_VAR(OLC_CONFIG(d)->play.load_into_inventory);
+          TOGGLE_VAR(OLC_CONFIG(d)->play.track_through_doors);
           break;
 
         case 'o':
         case 'O':
-          TOGGLE_VAR(OLC_CONFIG(d)->play.track_through_doors);
+          TOGGLE_VAR(OLC_CONFIG(d)->play.disp_closed_doors);
           break;
 
         case 'p':
         case 'P':
-          TOGGLE_VAR(OLC_CONFIG(d)->play.disp_closed_doors);
-          break;
-
-        case 'r':
-        case 'R':
 		  TOGGLE_VAR(OLC_CONFIG(d)->play.diagonal_dirs);
 		  break;
  
-		case 's':
-		case 'S':
+		case 'r':
+		case 'R':
 		  TOGGLE_VAR(OLC_CONFIG(d)->play.no_mort_to_immort);
           break;
 
@@ -1039,42 +990,19 @@ void cedit_parse(struct descriptor_data *d, char *arg)
       switch (*arg) {
         case 'a':
         case 'A':
-          TOGGLE_VAR(OLC_CONFIG(d)->csd.free_rent);
+          TOGGLE_VAR(OLC_CONFIG(d)->csd.auto_save);
           break;
 
         case 'b':
         case 'B':
-          write_to_output(d, "Enter the maximum number of items players can rent : ");
-          OLC_MODE(d) = CEDIT_MAX_OBJ_SAVE;
-          return;
-
-        case 'c':
-        case 'C':
-          write_to_output(d, "Enter the surcharge on top of item costs : ");
-          OLC_MODE(d) = CEDIT_MIN_RENT_COST;
-          return;
-
-        case 'd':
-        case 'D':
-          TOGGLE_VAR(OLC_CONFIG(d)->csd.auto_save);
-          break;
-
-        case 'e':
-        case 'E':
           write_to_output(d, "Enter how often (in minutes) should the MUD save players : ");
           OLC_MODE(d) = CEDIT_AUTOSAVE_TIME;
           return;
 
-        case 'f':
-        case 'F':
+        case 'c':
+        case 'C':
           write_to_output(d, "Enter the lifetime of crash and idlesave files (days) : ");
           OLC_MODE(d) = CEDIT_CRASH_FILE_TIMEOUT;
-          return;
-
-        case 'g':
-        case 'G':
-          write_to_output(d, "Enter the lifetime of normal rent files (days) : ");
-          OLC_MODE(d) = CEDIT_RENT_FILE_TIMEOUT;
           return;
 
         case 'q':
@@ -1321,17 +1249,6 @@ void cedit_parse(struct descriptor_data *d, char *arg)
       }
       break;
 
-    case CEDIT_HOLLER_MOVE_COST:
-      if (!*arg) {
-        write_to_output(d,
-          "That is an invalid choice!\r\n"
-          "Enter the amount it costs (in move points) to holler : ");
-      } else {
-        OLC_CONFIG(d)->play.holler_move_cost = atoi(arg);
-        cedit_disp_game_play_options(d);
-      }
-      break;
-
     case CEDIT_TUNNEL_SIZE:
       if (!*arg) {
         write_to_output(d,
@@ -1390,16 +1307,6 @@ void cedit_parse(struct descriptor_data *d, char *arg)
       }
       break;
 
-    case CEDIT_IDLE_RENT_TIME:
-      if (!*arg) {
-        write_to_output(d,
-          "That is an invalid choice!\r\n"
-          "Enter the number of tics before PC's are automatically rented and forced to quit : ");
-      } else {
-        OLC_CONFIG(d)->play.idle_rent_time = atoi(arg);
-        cedit_disp_game_play_options(d);
-      }
-      break;
 
     case CEDIT_IDLE_MAX_LEVEL:
       if (!*arg) {
@@ -1460,27 +1367,6 @@ void cedit_parse(struct descriptor_data *d, char *arg)
       cedit_disp_game_play_options(d);
       break;
 
-    case CEDIT_MAX_OBJ_SAVE:
-      if (!*arg) {
-        write_to_output(d,
-          "That is an invalid choice!\r\n"
-          "Enter the maximum objects a player can save : ");
-        } else {
-          OLC_CONFIG(d)->csd.max_obj_save = atoi(arg);
-          cedit_disp_crash_save_options(d);
-        }
-        break;
-
-    case CEDIT_MIN_RENT_COST:
-      if (!*arg) {
-        write_to_output(d,
-          "That is an invalid choice!\r\n"
-          "Enter the minimum amount it costs to rent : ");
-      } else {
-        OLC_CONFIG(d)->csd.min_rent_cost = atoi(arg);
-        cedit_disp_crash_save_options(d);
-      }
-      break;
 
     case CEDIT_AUTOSAVE_TIME:
       if (!*arg) {
@@ -1504,16 +1390,6 @@ void cedit_parse(struct descriptor_data *d, char *arg)
       }
       break;
 
-    case CEDIT_RENT_FILE_TIMEOUT:
-      if (!*arg) {
-        write_to_output(d,
-          "That is an invalid choice!\r\n"
-          "Enter the lifetime of rent files (days) : ");
-      } else {
-        OLC_CONFIG(d)->csd.rent_file_timeout = atoi(arg);
-        cedit_disp_crash_save_options(d);
-      }
-      break;
 
     case CEDIT_MORTAL_START_ROOM:
       if (!*arg) {

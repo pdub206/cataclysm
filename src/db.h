@@ -34,6 +34,7 @@
 #define LIB_PLROBJS	":plrobjs:"
 #define LIB_PLRVARS	":plrvars:"
 #define LIB_PLRFILES	":plrfiles:"
+#define LIB_ACCTFILES	":acctfiles:"
 #define LIB_HOUSE	":house:"
 #define SLASH		":"
 #elif defined(CIRCLE_AMIGA) || defined(CIRCLE_UNIX) || defined(CIRCLE_WINDOWS) || defined(CIRCLE_ACORN) || defined(CIRCLE_VMS)
@@ -47,6 +48,7 @@
 #define LIB_PLRVARS	"plrvars/"
 #define LIB_HOUSE	"house/"
 #define LIB_PLRFILES    "plrfiles/"
+#define LIB_ACCTFILES   "acctfiles/"
 #define SLASH		"/"
 #else
 #error "Unknown path components."
@@ -56,6 +58,7 @@
 #define SUF_TEXT	"text"
 #define SUF_MEM	        "mem"
 #define SUF_PLR		"plr"
+#define SUF_ACCT	"acc"
 
 #if defined(CIRCLE_AMIGA)
 #define EXE_FILE "/bin/circle" /* maybe use argv[0] but it's not reliable */
@@ -116,7 +119,6 @@
 #define LEVELS_LOGFILE     PREFIX_LOGFILE"levels"
 #define RIP_LOGFILE        PREFIX_LOGFILE"rip"
 #define NEWPLAYERS_LOGFILE PREFIX_LOGFILE"newplayers"
-#define RENTGONE_LOGFILE   PREFIX_LOGFILE"rentgone"
 #define ERRORS_LOGFILE     PREFIX_LOGFILE"errors"
 #define GODCMDS_LOGFILE    PREFIX_LOGFILE"godcmds"
 #define HELP_LOGFILE       PREFIX_LOGFILE"help"
@@ -227,7 +229,7 @@ struct help_index_element {
 
 /* The ban defines and structs were moved to ban.h */
 
-/* for the "buffered" rent and house object loading */
+/* for the buffered save and house object loading */
 struct obj_save_data_t {
   struct obj_data *obj;
   int locate;
@@ -257,6 +259,11 @@ void  free_help_table(void);
 void  free_player_index(void);
 void  load_help(FILE *fl, char *name);
 void  new_mobile_data(struct char_data *ch);
+void  equip_mob_from_loadout(struct char_data *mob);
+void free_skin_yields(struct skin_yield_entry *list);
+struct skin_yield_entry *copy_skin_yields(struct skin_yield_entry *src);
+void free_forage_list(struct forage_entry *list);
+struct forage_entry *copy_forage_list(struct forage_entry *src);
 
 zone_rnum real_zone(zone_vnum vnum);
 room_rnum real_room(room_vnum vnum);
@@ -268,7 +275,6 @@ void  Crash_save_all(void);
 void  Crash_idlesave(struct char_data *ch);
 void  Crash_crashsave(struct char_data *ch);
 int Crash_load(struct char_data *ch);
-void  Crash_listrent(struct char_data *ch, char *name);
 int Crash_clean_file(char *name);
 int Crash_delete_crashfile(struct char_data *ch);
 int Crash_delete_file(char *name);
@@ -395,9 +401,6 @@ extern struct message_list fight_messages[MAX_MESSAGES];
 /* autoquest globals */
 extern struct aq_data *aquest_table;
 extern qst_rnum total_quests;
-
-/* Happyhour global */
-extern struct happyhour happy_data;
 
 /* begin previously located in players.c, returned to db.c */
 extern struct player_index_element *player_table;

@@ -29,6 +29,7 @@
 #include "shop.h"
 #include "quest.h"
 #include "modify.h"
+#include "roomsave.h"
 
 /* Local defined utility functions */
 /* do_group utility functions */
@@ -37,32 +38,55 @@ static void display_group_list(struct char_data * ch);
 
 ACMD(do_quit)
 {
+  char first[MAX_INPUT_LENGTH];
+  char *rest;
+
   if (IS_NPC(ch) || !ch->desc)
     return;
 
-  if (subcmd != SCMD_QUIT && GET_LEVEL(ch) < LVL_IMMORT)
+  /* Parse optional "ooc" sub-arg: quit ooc <message> */
+  rest = (char *)argument;
+  skip_spaces(&rest);
+  rest = one_argument(rest, first);
+  bool quit_ooc = (*first && is_abbrev(first, "ooc")) ? TRUE : FALSE;
+
+  /* Keep original safety controls */
+  if (!quit_ooc && subcmd != SCMD_QUIT && GET_LEVEL(ch) < LVL_IMMORT)
     send_to_char(ch, "You have to type quit--no less, to quit!\r\n");
   else if (GET_POS(ch) == POS_FIGHTING)
     send_to_char(ch, "No way!  You're fighting for your life!\r\n");
   else if (GET_POS(ch) < POS_STUNNED) {
     send_to_char(ch, "You die before your time...\r\n");
     die(ch, NULL);
-  } else {
+  }
+  /* New: normal quit must be in a QUIT room (mortals only). */
+  else if (!quit_ooc && GET_LEVEL(ch) < LVL_IMMORT &&
+           !ROOM_FLAGGED(IN_ROOM(ch), ROOM_QUIT)) {
+    send_to_char(ch, "You cannot quit here. Find a room marked [Quit].\r\n");
+  }
+  /* For quit ooc, require a message for staff context. */
+  else if (quit_ooc) {
+    skip_spaces(&rest);
+    if (!*rest) {
+      send_to_char(ch, "Usage must include a reason to quit ooc: quit ooc <message>\r\n");
+      return;
+    }
+
     act("$n has left the game.", TRUE, ch, 0, 0, TO_ROOM);
-    mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE, "%s has quit the game.", GET_NAME(ch));
+    mudlog(CMP, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE,
+           "%s used QUIT OOC in room %d: %s",
+           GET_NAME(ch), GET_ROOM_VNUM(IN_ROOM(ch)), rest);
 
     if (GET_QUEST_TIME(ch) != -1)
       quest_timeout(ch);
 
-    send_to_char(ch, "Goodbye, friend.. Come back soon!\r\n");
+    send_to_char(ch, "You step out-of-character and leave the world...\r\n");
 
-    /* We used to check here for duping attempts, but we may as well do it right
-     * in extract_char(), since there is no check if a player rents out and it
-     * can leave them in an equally screwy situation. */
+    /* Save character and objects */
+    save_char(ch);
+    Crash_rentsave(ch, 0);
 
-    if (CONFIG_FREE_RENT)
-      Crash_rentsave(ch, 0);
-
+    /* Requirement: respawn in the same (possibly non-QUIT) room. */
     GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
 
     /* Stop snooping so you can't see passwords during deletion or change. */
@@ -72,21 +96,90 @@ ACMD(do_quit)
       ch->desc->snoop_by = NULL;
     }
 
-    extract_char(ch);		/* Char is saved before extracting. */
+    extract_char(ch);   /* Char is saved before extracting. */
+  }
+  else {
+    /* Normal quit (in a QUIT room, or immortal bypass) */
+    act("$n has left the game.", TRUE, ch, 0, 0, TO_ROOM);
+    mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE,
+           "%s has quit the game.", GET_NAME(ch));
+
+    if (GET_QUEST_TIME(ch) != -1)
+      quest_timeout(ch);
+
+    send_to_char(ch, "Goodbye, friend.. Come back soon!\r\n");
+
+    /* Save character and objects */
+    save_char(ch);
+    Crash_rentsave(ch, 0);
+
+    /* Requirement: respawn in the same QUIT room they logged out in. */
+    GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
+
+    /* Stop snooping so you can't see passwords during deletion or change. */
+    if (ch->desc->snoop_by) {
+      write_to_output(ch->desc->snoop_by, "Your victim is no longer among us.\r\n");
+      ch->desc->snoop_by->snooping = NULL;
+      ch->desc->snoop_by = NULL;
+    }
+
+    SET_BIT_AR(PLR_FLAGS(ch), PLR_QUITING);
+    extract_char(ch);   /* Char is saved before extracting. */
   }
 }
 
 ACMD(do_save)
 {
-  if (IS_NPC(ch) || !ch->desc)
-    return;
+  char a1[MAX_INPUT_LENGTH], a2[MAX_INPUT_LENGTH];
 
+  /* Accept both orders: "save room" or "room save" */
+  two_arguments(argument, a1, a2);
+
+  /* order-agnostic check */
+  int wants_room = ((*a1 && !str_cmp(a1, "room")) ||
+                    (*a2 && !str_cmp(a2, "room")));
+
+  if (wants_room) {
+    room_rnum rnum = IN_ROOM(ch);
+
+    if (rnum == NOWHERE) {
+      send_to_char(ch, "You're not in a valid room.\r\n");
+      return;
+    }
+
+    /* Not a SAVE room? Fall back to normal character save semantics. */
+    if (!ROOM_FLAGGED(rnum, ROOM_SAVE)) {
+      send_to_char(ch, "Saving %s.\r\n", GET_NAME(ch));
+      save_char(ch);
+      Crash_crashsave(ch);   /* keep whatever your tree normally calls */
+      return;
+    }
+
+    /* Room is flagged SAVE → persist its contents */
+    if (RoomSave_now(rnum)) {
+      send_to_char(ch, "Saving room.\r\n");
+      mudlog(NRM, LVL_IMMORT, FALSE,
+             "RoomSave: manual save of room %d by %s.",
+             world[rnum].number, GET_NAME(ch));
+      /* If you added a dirty-save API and want to clear the bit on manual save,
+         you can optionally call it here (guard with a macro if desired):
+         #ifdef ROOMSAVE_HAVE_DIRTY_API
+         RoomSave_clear_dirty(rnum);
+         #endif
+      */
+    } else {
+      send_to_char(ch, "Room save failed; see logs.\r\n");
+      mudlog(NRM, LVL_IMMORT, TRUE,
+             "SYSERR: RoomSave: manual save FAILED for room %d by %s.",
+             world[rnum].number, GET_NAME(ch));
+    }
+    return;
+  }
+
+  /* No "room" token present → normal character save */
   send_to_char(ch, "Saving %s.\r\n", GET_NAME(ch));
   save_char(ch);
   Crash_crashsave(ch);
-  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_HOUSE_CRASH))
-    House_crashsave(GET_ROOM_VNUM(IN_ROOM(ch)));
-  GET_LOADROOM(ch) = GET_ROOM_VNUM(IN_ROOM(ch));
 }
 
 /* Generic function for commands which are normally overridden by special
@@ -96,51 +189,965 @@ ACMD(do_not_here)
   send_to_char(ch, "Sorry, but you cannot do that here!\r\n");
 }
 
+#define STEALTH_BASE_DC 10
+#define SLEIGHT_BASE_DC 10
+
+int get_stealth_skill_value(struct char_data *ch)
+{
+  int skill = GET_SKILL(ch, SKILL_STEALTH);
+  int legacy = MAX(GET_SKILL(ch, SKILL_HIDE), GET_SKILL(ch, SKILL_SNEAK));
+
+  if (skill <= 0 && legacy > 0) {
+    skill = MIN(legacy, 100);
+    SET_SKILL(ch, SKILL_STEALTH, skill);
+  }
+
+  return skill;
+}
+
+int roll_stealth_check(struct char_data *ch)
+{
+  int mode = has_stealth_disadv(ch) ? -1 : 0;
+
+  get_stealth_skill_value(ch);
+  return roll_skill_check(ch, SKILL_STEALTH, mode, NULL);
+}
+
+int roll_sleight_check(struct char_data *ch)
+{
+  int total = roll_skill_check(ch, SKILL_SLEIGHT_OF_HAND, 0, NULL);
+
+  if (FIGHTING(ch))
+    total -= 4;
+
+  return total;
+}
+
+static int compute_steal_dc(struct char_data *thief, struct char_data *vict, int weight)
+{
+  int dc = SLEIGHT_BASE_DC + MAX(0, weight);
+
+  if (!vict)
+    return dc;
+
+  if (GET_LEVEL(vict) >= LVL_IMMORT)
+    return 1000;
+
+  if (GET_POS(vict) < POS_SLEEPING)
+    return MAX(0, weight);
+
+  if (!AWAKE(vict)) {
+    dc = MAX(0, dc - 5);
+    if (thief && AFF_FLAGGED(thief, AFF_HIDE))
+      dc -= 5;
+    return MAX(0, dc);
+  }
+
+  dc += GET_ABILITY_MOD(GET_WIS(vict));
+  if (GET_SKILL(vict, SKILL_PERCEPTION) > 0)
+    dc += get_total_proficiency_bonus(vict);
+  if (FIGHTING(vict))
+    dc -= 4;
+  if (AFF_FLAGGED(vict, AFF_SCAN))
+    dc += 5;
+  if (thief && AFF_FLAGGED(thief, AFF_HIDE))
+    dc -= 5;
+  if (GET_MOB_SPEC(vict) == shop_keeper)
+    dc += 20;
+
+  return dc;
+}
+
+static struct obj_data *find_container_on_character(struct char_data *viewer,
+                                                    struct char_data *vict,
+                                                    const char *name)
+{
+  struct obj_data *obj;
+  int eq;
+
+  if (!viewer || !vict || !name || !*name)
+    return NULL;
+
+  for (obj = vict->carrying; obj; obj = obj->next_content) {
+    if (!CAN_SEE_OBJ(viewer, obj))
+      continue;
+    if (isname(name, obj->name))
+      return obj;
+  }
+
+  for (eq = 0; eq < NUM_WEARS; eq++) {
+    if (!(obj = GET_EQ(vict, eq)))
+      continue;
+    if (!CAN_SEE_OBJ(viewer, obj))
+      continue;
+    if (isname(name, obj->name))
+      return obj;
+  }
+
+  return NULL;
+}
+
+static bool sleight_can_take_obj(struct char_data *ch, struct obj_data *obj)
+{
+  if (!obj)
+    return FALSE;
+
+  if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+    update_money_obj(obj);
+
+  if (!CAN_WEAR(obj, ITEM_WEAR_TAKE)) {
+    act("$p: you can't take that!", FALSE, ch, obj, 0, TO_CHAR);
+    return FALSE;
+  }
+
+  if (!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_NOHASSLE)) {
+    if (IS_CARRYING_N(ch) >= CAN_CARRY_N(ch)) {
+      act("$p: you can't carry that many items.", FALSE, ch, obj, 0, TO_CHAR);
+      return FALSE;
+    }
+    if ((IS_CARRYING_W(ch) + GET_OBJ_WEIGHT(obj)) > CAN_CARRY_W(ch)) {
+      act("$p: you can't carry that much weight.", FALSE, ch, obj, 0, TO_CHAR);
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
+
+static void sleight_check_money(struct char_data *ch, struct obj_data *obj)
+{
+  if (!obj || GET_OBJ_TYPE(obj) != ITEM_MONEY)
+    return;
+  update_money_obj(obj);
+}
+
+static int count_coins_in_list(const struct obj_data *list)
+{
+  int total = 0;
+  const struct obj_data *obj;
+
+  for (obj = list; obj; obj = obj->next_content) {
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      total += MAX(0, GET_OBJ_VAL(obj, 0));
+    if (obj->contains)
+      total += count_coins_in_list(obj->contains);
+  }
+
+  return total;
+}
+
+static int remove_coins_from_list(struct obj_data *list, int amount)
+{
+  struct obj_data *obj, *next_obj;
+  int removed = 0;
+
+  for (obj = list; obj && removed < amount; obj = next_obj) {
+    next_obj = obj->next_content;
+
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY) {
+      int pile = MAX(0, GET_OBJ_VAL(obj, 0));
+      int take = MIN(pile, amount - removed);
+
+      if (take > 0) {
+        if (take == pile) {
+          removed += take;
+          extract_obj(obj);
+          continue;
+        }
+        GET_OBJ_VAL(obj, 0) = pile - take;
+        update_money_obj(obj);
+        removed += take;
+      }
+    }
+
+    if (obj->contains && removed < amount)
+      removed += remove_coins_from_list(obj->contains, amount - removed);
+  }
+
+  return removed;
+}
+
+static bool sleight_merge_money_pile(struct char_data *ch, struct obj_data *obj)
+{
+  struct obj_data *target;
+  int coins;
+
+  if (!ch || !obj || GET_OBJ_TYPE(obj) != ITEM_MONEY)
+    return FALSE;
+
+  for (target = ch->carrying; target; target = target->next_content) {
+    if (target != obj && GET_OBJ_TYPE(target) == ITEM_MONEY)
+      break;
+  }
+
+  if (!target)
+    return FALSE;
+
+  coins = MAX(0, GET_OBJ_VAL(obj, 0));
+  if (coins <= 0)
+    return FALSE;
+
+  GET_OBJ_VAL(target, 0) += coins;
+  update_money_obj(target);
+  GET_COINS(ch) = MIN(MAX_COINS, GET_COINS(ch) + coins);
+  extract_obj(obj);
+
+  return TRUE;
+}
+
+static bool sleight_observer_notices(struct char_data *actor,
+                                     struct char_data *viewer,
+                                     int sleight_total)
+{
+  int d20, total;
+
+  if (!viewer || viewer == actor)
+    return FALSE;
+  if (!AWAKE(viewer))
+    return FALSE;
+
+  if (GET_LEVEL(viewer) >= LVL_IMMORT) {
+    gain_skill(viewer, "perception", TRUE);
+    return TRUE;
+  }
+
+  if (can_scan_for_sneak(viewer)) {
+    total = roll_skill_check(viewer, SKILL_PERCEPTION, 0, &d20);
+    if (FIGHTING(viewer))
+      total -= 4;
+  } else {
+    d20 = roll_d20();
+    total = d20;
+  }
+
+  if (d20 == 1) {
+    gain_skill(viewer, "perception", FALSE);
+    return FALSE;
+  }
+
+  if (d20 == 20 || total >= sleight_total) {
+    gain_skill(viewer, "perception", TRUE);
+    return TRUE;
+  }
+
+  gain_skill(viewer, "perception", FALSE);
+  return FALSE;
+}
+
+static void sleight_send_notice(struct char_data *viewer,
+                                struct char_data *actor,
+                                const char *verb,
+                                const char *prep,
+                                const char *item_desc,
+                                const char *container_desc)
+{
+  char line[MAX_STRING_LENGTH];
+  char actor_desc[MAX_INPUT_LENGTH];
+  char item_clean[MAX_STRING_LENGTH];
+  char cont_clean[MAX_STRING_LENGTH];
+
+  strlcpy(actor_desc, PERS(actor, viewer), sizeof(actor_desc));
+  strlcpy(item_clean, item_desc ? item_desc : "something", sizeof(item_clean));
+  strlcpy(cont_clean, container_desc ? container_desc : "something", sizeof(cont_clean));
+
+  if (!strn_cmp(item_clean, "a ", 2))
+    memmove(item_clean, item_clean + 2, strlen(item_clean) - 1);
+  else if (!strn_cmp(item_clean, "an ", 3))
+    memmove(item_clean, item_clean + 3, strlen(item_clean) - 2);
+
+  if (!strn_cmp(cont_clean, "a ", 2))
+    memmove(cont_clean, cont_clean + 2, strlen(cont_clean) - 1);
+  else if (!strn_cmp(cont_clean, "an ", 3))
+    memmove(cont_clean, cont_clean + 3, strlen(cont_clean) - 2);
+
+  snprintf(line, sizeof(line), "%s tries to %s %s %s %s %s.",
+           actor_desc, verb, item_clean, prep, HSHR(actor), cont_clean);
+
+  send_to_char(viewer, "You notice:\r\n  %s\r\n", line);
+}
+
+static void sleight_check_observers(struct char_data *actor,
+                                    int sleight_total,
+                                    const char *verb,
+                                    const char *prep,
+                                    const char *item_desc,
+                                    const char *container_desc)
+{
+  struct char_data *viewer;
+
+  if (!actor || IN_ROOM(actor) == NOWHERE)
+    return;
+
+  for (viewer = world[IN_ROOM(actor)].people; viewer; viewer = viewer->next_in_room) {
+    if (viewer == actor)
+      continue;
+    if (sleight_observer_notices(actor, viewer, sleight_total))
+      sleight_send_notice(viewer, actor, verb, prep, item_desc, container_desc);
+  }
+}
+
+static int sneak_effect_duration(struct char_data *ch)
+{
+  int skill = get_stealth_skill_value(ch);
+  if (skill <= 0)
+    return 1;
+
+  return MAX(1, skill / 10);
+}
+
+bool can_scan_for_sneak(struct char_data *ch)
+{
+  if (!AFF_FLAGGED(ch, AFF_SCAN))
+    return FALSE;
+  if (!GET_SKILL(ch, SKILL_PERCEPTION))
+    return FALSE;
+  if (AFF_FLAGGED(ch, AFF_BLIND))
+    return FALSE;
+  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch))
+    return FALSE;
+  return TRUE;
+}
+
+int roll_scan_perception(struct char_data *ch)
+{
+  int total = roll_skill_check(ch, SKILL_PERCEPTION, 0, NULL);
+
+  if (FIGHTING(ch))
+    total -= 4;
+
+  return total;
+}
+
+static int listen_effect_duration(struct char_data *ch)
+{
+  int skill = GET_SKILL(ch, SKILL_PERCEPTION);
+
+  if (skill <= 0)
+    return 1;
+
+  return MAX(1, skill / 10);
+}
+
 ACMD(do_sneak)
 {
   struct affected_type af;
-  byte percent;
+  int total, dc;
+  int stealth_skill = get_stealth_skill_value(ch);
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_SNEAK)) {
+  if (!stealth_skill) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
+
+  if (FIGHTING(ch)){
+    send_to_char(ch, "While fighting!?\r\n");
+    return; 
+  }    /* you can't sneak while in active melee */
+
   send_to_char(ch, "Okay, you'll try to move silently for a while.\r\n");
+
+  /* Remove prior sneak affect if present (refresh logic) */
   if (AFF_FLAGGED(ch, AFF_SNEAK))
     affect_from_char(ch, SKILL_SNEAK);
 
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
+  /* --- 5e-style Stealth check (DEX + proficiency) --- */
+  total = roll_stealth_check(ch);
+  dc = STEALTH_BASE_DC;
 
-  if (percent > GET_SKILL(ch, SKILL_SNEAK) + dex_app_skill[GET_DEX(ch)].sneak)
+  if (total < dc) {
+    gain_skill(ch, "stealth", FALSE);
+    WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+    GET_MOVE(ch) -= 10;
     return;
+  }
 
+  /* Success: apply Sneak affect */
   new_affect(&af);
-  af.spell = SKILL_SNEAK;
-  af.duration = GET_LEVEL(ch);
+  af.spell    = SKILL_SNEAK;
+  af.location = APPLY_NONE;
+  af.modifier = 0;
+  af.duration = sneak_effect_duration(ch);
+  memset(af.bitvector, 0, sizeof(af.bitvector));
   SET_BIT_AR(af.bitvector, AFF_SNEAK);
   affect_to_char(ch, &af);
+
+  /* Store a stealth check value for movement contests (reuse Hide’s field) */
+  /* If you’ve already hidden with a higher roll, keep the stronger value. */
+  SET_STEALTH_CHECK(ch, MAX(GET_STEALTH_CHECK(ch), total));
+
+  gain_skill(ch, "stealth", TRUE);
+  GET_MOVE(ch) -= 10;
 }
 
 ACMD(do_hide)
 {
-  byte percent;
+  int total, dc;
+  int stealth_skill = get_stealth_skill_value(ch);
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_HIDE)) {
+  if (!stealth_skill) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
 
   send_to_char(ch, "You attempt to hide yourself.\r\n");
 
-  if (AFF_FLAGGED(ch, AFF_HIDE))
+  /* If already hidden, drop it before re-attempting */
+  if (AFF_FLAGGED(ch, AFF_HIDE)) {
     REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
+    GET_STEALTH_CHECK(ch) = 0;
+  }
 
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
+  if (FIGHTING(ch)){
+    send_to_char(ch, "While fighting!?\r\n");
+    return; 
+  }    /* you can't hide while in active melee */
 
-  if (percent > GET_SKILL(ch, SKILL_HIDE) + dex_app_skill[GET_DEX(ch)].hide)
+  /* --- 5e Stealth (DEX) ability check --- */
+  /* Baseline difficulty: hiding in general */
+  /* TODO: Maybe change dc based on terrain/populated rooms in the future */
+  dc = STEALTH_BASE_DC;
+  total = roll_stealth_check(ch);
+
+  if (total < dc) {
+    /* Failure */
+    gain_skill(ch, "stealth", FALSE);
+    WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+    GET_MOVE(ch) -= 10;
+    return;
+  }
+
+  /* Success: set flag and store this specific Stealth result */
+  SET_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
+  GET_STEALTH_CHECK(ch) = total;
+
+  send_to_char(ch, "You hide yourself as best you can.\r\n");
+  gain_skill(ch, "stealth", TRUE);
+  WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+  GET_MOVE(ch) -= 10;
+}
+
+static void remember_scan_target(struct char_data *ch, struct char_data *tch)
+{
+  struct scan_result_data *node;
+  long uid;
+
+  if (!ch || !tch)
+    return;
+  if (IS_NPC(ch))
+    return;
+  if (!ch->player_specials || ch->player_specials == &dummy_mob)
     return;
 
-  SET_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
+  uid = char_script_id(tch);
+  for (node = GET_SCAN_RESULTS(ch); node; node = node->next) {
+    if (node->target_uid == uid) {
+      node->room = IN_ROOM(ch);
+      return;
+    }
+  }
+
+  CREATE(node, struct scan_result_data, 1);
+  node->target_uid = uid;
+  node->room = IN_ROOM(ch);
+  node->next = GET_SCAN_RESULTS(ch);
+  GET_SCAN_RESULTS(ch) = node;
+}
+
+static void forget_scan_target(struct char_data *ch, struct char_data *tch)
+{
+  struct scan_result_data **node;
+  long uid;
+
+  if (!ch || !tch)
+    return;
+  if (IS_NPC(ch))
+    return;
+  if (!ch->player_specials || ch->player_specials == &dummy_mob)
+    return;
+
+  uid = char_script_id(tch);
+  for (node = &GET_SCAN_RESULTS(ch); *node; node = &((*node)->next)) {
+    if ((*node)->target_uid == uid) {
+      struct scan_result_data *old = *node;
+      *node = old->next;
+      free(old);
+      return;
+    }
+  }
+}
+
+void stealth_process_room_movement(struct char_data *ch, room_rnum room, int dir, bool leaving)
+{
+  struct char_data *viewer;
+  int stealth_total;
+  bool base_failure;
+  const char *dir_word;
+  char msg[MAX_INPUT_LENGTH];
+  char sdesc_buf[MAX_INPUT_LENGTH];
+  const char *name_desc;
+  const char *format;
+
+  if (!ch || room == NOWHERE)
+    return;
+
+  stealth_total = roll_stealth_check(ch);
+  base_failure = (stealth_total < STEALTH_BASE_DC);
+
+  if (dir >= 0 && dir < NUM_OF_DIRS) {
+    dir_word = leaving ? dirs[dir] : dirs[rev_dir[dir]];
+  } else {
+    dir_word = "somewhere";
+  }
+
+  if (get_char_sdesc(ch) && *get_char_sdesc(ch)) {
+    strlcpy(sdesc_buf, get_char_sdesc(ch), sizeof(sdesc_buf));
+    if (*sdesc_buf)
+      sdesc_buf[0] = UPPER(sdesc_buf[0]);
+    name_desc = sdesc_buf;
+  } else {
+    name_desc = "Someone";
+  }
+
+  format = leaving ?
+    "%s tries to stealthily move to the %s." :
+    "%s stealthily moves in from the %s.";
+  snprintf(msg, sizeof(msg), format, name_desc, dir_word);
+
+  for (viewer = world[room].people; viewer; viewer = viewer->next_in_room) {
+    bool viewer_can_scan, saw_with_scan = FALSE, send_echo = FALSE;
+
+    if (viewer == ch)
+      continue;
+
+    viewer_can_scan = can_scan_for_sneak(viewer);
+
+    if (viewer_can_scan) {
+      int perception_total = roll_scan_perception(viewer);
+
+      if (perception_total >= stealth_total) {
+        saw_with_scan = TRUE;
+        send_echo = TRUE;
+        remember_scan_target(viewer, ch);
+      } else if (!base_failure) {
+        forget_scan_target(viewer, ch);
+      }
+
+      gain_skill(viewer, "perception", saw_with_scan ? TRUE : FALSE);
+    }
+
+    if (!send_echo && base_failure) {
+      if (!viewer_can_scan && !CAN_SEE(viewer, ch))
+        continue;
+      send_echo = TRUE;
+      if (viewer_can_scan)
+        remember_scan_target(viewer, ch);
+    }
+
+    if (send_echo)
+      send_to_char(viewer, "%s\r\n", msg);
+  }
+}
+
+void clear_scan_results(struct char_data *ch)
+{
+  struct scan_result_data *node, *next;
+
+  if (!ch || IS_NPC(ch))
+    return;
+  if (!ch->player_specials || ch->player_specials == &dummy_mob)
+    return;
+
+  for (node = GET_SCAN_RESULTS(ch); node; node = next) {
+    next = node->next;
+    free(node);
+  }
+
+  GET_SCAN_RESULTS(ch) = NULL;
+}
+
+bool scan_can_target(struct char_data *ch, struct char_data *tch)
+{
+  struct scan_result_data *node;
+  long uid;
+
+  if (!ch || !tch)
+    return FALSE;
+  if (IS_NPC(ch))
+    return FALSE;
+  if (!ch->player_specials || ch->player_specials == &dummy_mob)
+    return FALSE;
+  if (!AFF_FLAGGED(ch, AFF_SCAN))
+    return FALSE;
+
+  uid = char_script_id(tch);
+
+  for (node = GET_SCAN_RESULTS(ch); node; node = node->next)
+    if (node->target_uid == uid && node->room == IN_ROOM(ch))
+      return TRUE;
+
+  return FALSE;
+}
+
+static int scan_target_dc(struct char_data *tch)
+{
+  if (GET_STEALTH_CHECK(tch) <= 0)
+    SET_STEALTH_CHECK(tch, 5);
+
+  /* Give hiders a modest buffer so high skill matters but success remains possible. */
+  return GET_STEALTH_CHECK(tch) + 2;
+}
+
+bool scan_confirm_target(struct char_data *ch, struct char_data *tch)
+{
+  int total;
+
+  if (!ch || !tch)
+    return FALSE;
+  if (!AFF_FLAGGED(ch, AFF_SCAN))
+    return FALSE;
+  if (!GET_SKILL(ch, SKILL_PERCEPTION))
+    return FALSE;
+
+  total = roll_skill_check(ch, SKILL_PERCEPTION, 0, NULL);
+
+  if (FIGHTING(ch))
+    total -= 4;
+
+  if (total >= scan_target_dc(tch)) {
+    remember_scan_target(ch, tch);
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+static int scan_effect_duration(struct char_data *ch)
+{
+  int skill = GET_SKILL(ch, SKILL_PERCEPTION);
+  int minutes;
+
+  if (skill < 20)
+    minutes = 15;
+  else if (skill < 40)
+    minutes = 20;
+  else if (skill < 60)
+    minutes = 25;
+  else if (skill < 80)
+    minutes = 30;
+  else
+    minutes = 45;
+
+  /* Affect durations tick once per mud hour (75 seconds). */
+  return MAX(1, (minutes * SECS_PER_REAL_MIN) / SECS_PER_MUD_HOUR);
+}
+
+bool perform_scan_sweep(struct char_data *ch)
+{
+  struct char_data *tch;
+  int total;
+  bool had_targets = FALSE;
+  bool found_any   = FALSE;
+
+  if (ch == NULL || IN_ROOM(ch) == NOWHERE)
+    return FALSE;
+  if (!AFF_FLAGGED(ch, AFF_SCAN))
+    return FALSE;
+  if (!GET_SKILL(ch, SKILL_PERCEPTION))
+    return FALSE;
+  if (AFF_FLAGGED(ch, AFF_BLIND))
+    return FALSE;
+  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch))
+    return FALSE;
+
+  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room) {
+    if (tch == ch)
+      continue;
+    if (!AFF_FLAGGED(tch, AFF_HIDE))
+      continue;
+    if (IS_NPC(tch))
+      continue;
+    had_targets = TRUE;
+  }
+
+  if (!had_targets)
+    return FALSE;
+
+  total = roll_skill_check(ch, SKILL_PERCEPTION, 0, NULL);
+
+  if (FIGHTING(ch))
+    total -= 4;
+
+  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room) {
+    if (tch == ch)
+      continue;
+    if (!AFF_FLAGGED(tch, AFF_HIDE))
+      continue;
+    if (IS_NPC(tch))
+      continue;
+
+    if (total >= scan_target_dc(tch)) {
+      send_to_char(ch, "A shadowy figure.\r\n");
+      remember_scan_target(ch, tch);
+      found_any = TRUE;
+    } else {
+      forget_scan_target(ch, tch);
+    }
+  }
+
+  gain_skill(ch, "perception", found_any ? TRUE : FALSE);
+  return found_any;
+}
+
+/* Scan: apply a perception-based buff that auto-checks rooms while it lasts */
+ACMD(do_scan)
+{
+  struct affected_type af;
+
+  if (!GET_SKILL(ch, SKILL_PERCEPTION)) {
+    send_to_char(ch, "You have no idea how to do that.\r\n");
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_SCAN)) {
+    affect_from_char(ch, SKILL_PERCEPTION);
+    affect_from_char(ch, SPELL_SCAN_AFFECT);
+    send_to_char(ch, "You lower your guard and stop scanning the area.\r\n");
+    act("$n relaxes, no longer scanning so intently.", TRUE, ch, 0, 0, TO_ROOM);
+    return;
+  }
+
+  new_affect(&af);
+  af.spell    = SPELL_SCAN_AFFECT;
+  af.location = APPLY_NONE;
+  af.modifier = 0;
+  af.duration = scan_effect_duration(ch);
+  memset(af.bitvector, 0, sizeof(af.bitvector));
+  SET_BIT_AR(af.bitvector, AFF_SCAN);
+  affect_to_char(ch, &af);
+
+  send_to_char(ch, "You sharpen your senses and begin scanning for hidden threats.\r\n");
+  act("$n studies $s surroundings with a wary gaze.", TRUE, ch, 0, 0, TO_ROOM);
+
+  WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+  GET_MOVE(ch) -= 10;
+}
+
+ACMD(do_listen)
+{
+  struct affected_type af;
+
+  if (!GET_SKILL(ch, SKILL_PERCEPTION)) {
+    send_to_char(ch, "You have no idea how to do that.\r\n");
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_LISTEN)) {
+    affect_from_char(ch, SPELL_LISTEN_AFFECT);
+    send_to_char(ch, "You stop actively listening for hushed voices.\r\n");
+    return;
+  }
+
+  new_affect(&af);
+  af.spell    = SPELL_LISTEN_AFFECT;
+  af.location = APPLY_NONE;
+  af.modifier = 0;
+  af.duration = listen_effect_duration(ch);
+  memset(af.bitvector, 0, sizeof(af.bitvector));
+  SET_BIT_AR(af.bitvector, AFF_LISTEN);
+  affect_to_char(ch, &af);
+
+  send_to_char(ch, "You focus entirely on every whisper and distant sound.\r\n");
+
+  WAIT_STATE(ch, PULSE_VIOLENCE / 2);
+  GET_MOVE(ch) -= 10;
+}
+
+ACMD(do_palm)
+{
+  struct obj_data *container, *item;
+  char item_name[MAX_INPUT_LENGTH], cont_name[MAX_INPUT_LENGTH];
+  char item_desc[MAX_STRING_LENGTH], cont_desc[MAX_STRING_LENGTH];
+  int sleight_total;
+  bool base_fail;
+
+  if (!GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND)) {
+    send_to_char(ch, "You have no idea how to do that.\r\n");
+    return;
+  }
+
+  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL)) {
+    send_to_char(ch, "This room just has such a peaceful, easy feeling...\r\n");
+    return;
+  }
+
+  two_arguments(argument, item_name, cont_name);
+
+  if (!*item_name || !*cont_name) {
+    send_to_char(ch, "Usage: palm <item> <container>\r\n");
+    return;
+  }
+
+  if (!(container = find_container_on_character(ch, ch, cont_name))) {
+    send_to_char(ch, "You aren't carrying or wearing anything like that.\r\n");
+    return;
+  }
+
+  if (!obj_is_storage(container) && GET_OBJ_TYPE(container) != ITEM_FURNITURE) {
+    send_to_char(ch, "That's not even a container.\r\n");
+    return;
+  }
+
+  if (obj_storage_is_closed(container)) {
+    send_to_char(ch, "You'd better open it first.\r\n");
+    return;
+  }
+
+  if (!(item = get_obj_in_list_vis(ch, item_name, NULL, container->contains))) {
+    send_to_char(ch, "You don't see that inside %s.\r\n", OBJS(container, ch));
+    return;
+  }
+
+  if (!sleight_can_take_obj(ch, item))
+    return;
+
+  strlcpy(item_desc, OBJS(item, ch), sizeof(item_desc));
+  strlcpy(cont_desc, OBJS(container, ch), sizeof(cont_desc));
+
+  sleight_total = roll_sleight_check(ch);
+  base_fail = (sleight_total < SLEIGHT_BASE_DC);
+
+  sleight_check_observers(ch, sleight_total,
+                          "palm", "from", item_desc, cont_desc);
+
+  if (!get_otrigger(item, ch))
+    return;
+
+  int coin_amt = (GET_OBJ_TYPE(item) == ITEM_MONEY) ? GET_OBJ_VAL(item, 0) : 0;
+
+  obj_from_obj(item);
+  obj_to_char(item, ch);
+  if (!sleight_merge_money_pile(ch, item))
+    sleight_check_money(ch, item);
+  if (coin_amt == 1)
+    send_to_char(ch, "There was one coin.\r\n");
+  else if (coin_amt > 1)
+    send_to_char(ch, "There were %d coins.\r\n", coin_amt);
+
+  if (base_fail)
+    send_to_char(ch, "You get %s from your %s.\r\n", item_desc, cont_desc);
+  else
+    send_to_char(ch, "You quietly palm %s from your %s.\r\n", item_desc, cont_desc);
+
+  gain_skill(ch, "sleight of hand", base_fail ? FALSE : TRUE);
+}
+
+ACMD(do_slip)
+{
+  struct obj_data *container, *obj;
+  char obj_name[MAX_INPUT_LENGTH], cont_name[MAX_INPUT_LENGTH], arg3[MAX_INPUT_LENGTH];
+  char item_desc[MAX_STRING_LENGTH], cont_desc[MAX_STRING_LENGTH];
+  int sleight_total;
+  bool base_fail;
+  int howmany = 1;
+  int amount_specified = 0;
+
+  if (!GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND)) {
+    send_to_char(ch, "You have no idea how to do that.\r\n");
+    return;
+  }
+
+  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL)) {
+    send_to_char(ch, "This room just has such a peaceful, easy feeling...\r\n");
+    return;
+  }
+
+  one_argument(two_arguments(argument, obj_name, cont_name), arg3);
+
+  if (*arg3 && is_number(obj_name)) {
+    howmany = atoi(obj_name);
+    strlcpy(obj_name, cont_name, sizeof(obj_name));
+    strlcpy(cont_name, arg3, sizeof(cont_name));
+    amount_specified = 1;
+  }
+
+  if (!*obj_name || !*cont_name) {
+    send_to_char(ch, "Usage: slip <item> <container>\r\n");
+    return;
+  }
+
+  if (!(container = find_container_on_character(ch, ch, cont_name))) {
+    send_to_char(ch, "You aren't carrying or wearing anything like that.\r\n");
+    return;
+  }
+
+  if (!obj_is_storage(container) && GET_OBJ_TYPE(container) != ITEM_FURNITURE) {
+    send_to_char(ch, "That's not even a container.\r\n");
+    return;
+  }
+
+  if (obj_storage_is_closed(container)) {
+    send_to_char(ch, "You'd better open it first.\r\n");
+    return;
+  }
+
+  if (!(obj = get_obj_in_list_vis(ch, obj_name, NULL, ch->carrying))) {
+    send_to_char(ch, "You aren't even carrying that.\r\n");
+    return;
+  }
+
+  if (amount_specified && GET_OBJ_TYPE(obj) == ITEM_MONEY && howmany > 0) {
+    int pile = GET_OBJ_VAL(obj, 0);
+
+    if (howmany < pile) {
+      struct obj_data *split = create_money(howmany);
+      if (!split) {
+        send_to_char(ch, "You fumble the coins.\r\n");
+        return;
+      }
+      GET_OBJ_VAL(obj, 0) = pile - howmany;
+      update_money_obj(obj);
+      GET_COINS(ch) = MAX(0, GET_COINS(ch) - howmany);
+      obj = split;
+    }
+  }
+
+  if (OBJ_FLAGGED(obj, ITEM_NODROP)) {
+    send_to_char(ch, "It refuses to leave your hands.\r\n");
+    return;
+  }
+
+  if ((GET_OBJ_VAL(container, 0) > 0) &&
+      (GET_OBJ_WEIGHT(container) + GET_OBJ_WEIGHT(obj) > GET_OBJ_VAL(container, 0))) {
+    act("$p won't fit inside $P.", FALSE, ch, obj, container, TO_CHAR);
+    return;
+  }
+
+  strlcpy(item_desc, OBJS(obj, ch), sizeof(item_desc));
+  strlcpy(cont_desc, OBJS(container, ch), sizeof(cont_desc));
+
+  sleight_total = roll_sleight_check(ch);
+  base_fail = (sleight_total < SLEIGHT_BASE_DC);
+
+  sleight_check_observers(ch, sleight_total,
+                          "slip", "into", item_desc, cont_desc);
+
+  if (!drop_otrigger(obj, ch))
+    return;
+
+  if (obj->carried_by)
+    obj_from_char(obj);
+  else if (obj->in_obj)
+    obj_from_obj(obj);
+  else if (IN_ROOM(obj) != NOWHERE)
+    obj_from_room(obj);
+  obj_to_obj(obj, container);
+
+  if (base_fail)
+    send_to_char(ch, "You put %s in your %s.\r\n", item_desc, cont_desc);
+  else
+    send_to_char(ch, "You quietly slip %s into your %s.\r\n", item_desc, cont_desc);
+
+  gain_skill(ch, "sleight of hand", base_fail ? FALSE : TRUE);
 }
 
 ACMD(do_steal)
@@ -148,9 +1155,10 @@ ACMD(do_steal)
   struct char_data *vict;
   struct obj_data *obj;
   char vict_name[MAX_INPUT_LENGTH], obj_name[MAX_INPUT_LENGTH];
-  int percent, gold, eq_pos, pcsteal = 0, ohoh = 0;
+  int coins, eq_pos, ohoh = 0;
+  int sleight_total, dc;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_STEAL)) {
+  if (!GET_SKILL(ch, SKILL_SLEIGHT_OF_HAND)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -169,23 +1177,14 @@ ACMD(do_steal)
     return;
   }
 
-  /* 101% is a complete failure */
-  percent = rand_number(1, 101) - dex_app_skill[GET_DEX(ch)].p_pocket;
+  if (GET_LEVEL(vict) >= LVL_IMMORT) {
+    send_to_char(ch, "You cannot steal from an immortal.\r\n");
+    return;
+  }
 
-  if (GET_POS(vict) < POS_SLEEPING)
-    percent = -1;		/* ALWAYS SUCCESS, unless heavy object. */
+  sleight_total = roll_sleight_check(ch);
 
-  if (!CONFIG_PT_ALLOWED && !IS_NPC(vict))
-    pcsteal = 1;
-
-  if (!AWAKE(vict))	/* Easier to steal from sleeping people. */
-    percent -= 50;
-
-  /* No stealing if not allowed. If it is no stealing from Imm's or Shopkeepers. */
-  if (GET_LEVEL(vict) >= LVL_IMMORT || pcsteal || GET_MOB_SPEC(vict) == shop_keeper)
-    percent = 101;		/* Failure */
-
-  if (str_cmp(obj_name, "coins") && str_cmp(obj_name, "gold")) {
+  if (str_cmp(obj_name, "coins") && str_cmp(obj_name, "coin")) {
 
     if (!(obj = get_obj_in_list_vis(ch, obj_name, NULL, vict->carrying))) {
 
@@ -216,19 +1215,19 @@ ACMD(do_steal)
       }
     } else {			/* obj found in inventory */
 
-      percent += GET_OBJ_WEIGHT(obj);	/* Make heavy harder */
+      dc = compute_steal_dc(ch, vict, GET_OBJ_WEIGHT(obj));
 
-      if (percent > GET_SKILL(ch, SKILL_STEAL)) {
-	ohoh = TRUE;
-	send_to_char(ch, "Oops..\r\n");
-	act("$n tried to steal something from you!", FALSE, ch, 0, vict, TO_VICT);
-	act("$n tries to steal something from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+      if (GET_LEVEL(ch) < LVL_IMMORT && sleight_total < dc) {
+        ohoh = TRUE;
+        send_to_char(ch, "Oops..\r\n");
+        act("$n tried to steal something from you!", FALSE, ch, 0, vict, TO_VICT);
+        act("$n tries to steal something from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+        gain_skill(ch, "sleight of hand", FALSE);
       } else {			/* Steal the item */
-	if (IS_CARRYING_N(ch) + 1 < CAN_CARRY_N(ch)) {
-          if (!give_otrigger(obj, vict, ch) ||
-              !receive_mtrigger(ch, vict, obj) ) {
-            send_to_char(ch, "Impossible!\r\n");
-            return;
+          if (IS_CARRYING_N(ch) + 1 < CAN_CARRY_N(ch)) {
+            if (!give_otrigger(obj, vict, ch) || !receive_mtrigger(ch, vict, obj) ) {
+              send_to_char(ch, "Impossible!\r\n");
+              return;
           }
 	  if (IS_CARRYING_W(ch) + GET_OBJ_WEIGHT(obj) < CAN_CARRY_W(ch)) {
 	    obj_from_char(obj);
@@ -240,24 +1239,33 @@ ACMD(do_steal)
       }
     }
   } else {			/* Steal some coins */
-    if (AWAKE(vict) && (percent > GET_SKILL(ch, SKILL_STEAL))) {
+    dc = compute_steal_dc(ch, vict, 0);
+    if (GET_LEVEL(ch) < LVL_IMMORT && AWAKE(vict) && (sleight_total < dc)) {
       ohoh = TRUE;
       send_to_char(ch, "Oops..\r\n");
       act("You discover that $n has $s hands in your wallet.", FALSE, ch, 0, vict, TO_VICT);
-      act("$n tries to steal gold from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+      act("$n tries to steal coins from $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+      gain_skill(ch, "sleight of hand", FALSE);
     } else {
-      /* Steal some gold coins */
-      gold = (GET_GOLD(vict) * rand_number(1, 10)) / 100;
-      gold = MIN(1782, gold);
-      if (gold > 0) {
-		increase_gold(ch, gold);
-		decrease_gold(vict, gold);
-        if (gold > 1)
-	  send_to_char(ch, "Bingo!  You got %d gold coins.\r\n", gold);
-	else
-	  send_to_char(ch, "You manage to swipe a solitary gold coin.\r\n");
+      int total = count_coins_in_list(vict->carrying);
+      int max_steal = total / 10;
+      if (max_steal > 0) {
+        coins = rand_number(1, max_steal);
+        coins = remove_coins_from_list(vict->carrying, coins);
       } else {
-	send_to_char(ch, "You couldn't get any gold...\r\n");
+        coins = 0;
+      }
+
+      if (coins > 0) {
+        GET_COINS(vict) = MAX(0, GET_COINS(vict) - coins);
+        add_coins_to_char(ch, coins);
+        gain_skill(ch, "sleight of hand", TRUE);
+        if (coins > 1)
+          send_to_char(ch, "Bingo!  You got %d coins.\r\n", coins);
+        else
+          send_to_char(ch, "You manage to swipe a solitary coin.\r\n");
+      } else {
+        send_to_char(ch, "You couldn't get any coins...\r\n");
       }
     }
   }
@@ -266,19 +1274,11 @@ ACMD(do_steal)
     hit(vict, ch, TYPE_UNDEFINED);
 }
 
-ACMD(do_practice)
+ACMD(do_skills)
 {
-  char arg[MAX_INPUT_LENGTH];
 
-  if (IS_NPC(ch))
-    return;
+  list_skills(ch);
 
-  one_argument(argument, arg);
-
-  if (*arg)
-    send_to_char(ch, "You can only practice skills in your guild.\r\n");
-  else
-    list_skills(ch);
 }
 
 ACMD(do_visible)
@@ -293,26 +1293,6 @@ ACMD(do_visible)
     send_to_char(ch, "You break the spell of invisibility.\r\n");
   } else
     send_to_char(ch, "You are already visible.\r\n");
-}
-
-ACMD(do_title)
-{
-  skip_spaces(&argument);
-  delete_doubledollar(argument);
-  parse_at(argument);
-
-  if (IS_NPC(ch))
-    send_to_char(ch, "Your title is fine... go away.\r\n");
-  else if (PLR_FLAGGED(ch, PLR_NOTITLE))
-    send_to_char(ch, "You can't title yourself -- you shouldn't have abused it!\r\n");
-  else if (strstr(argument, "(") || strstr(argument, ")"))
-    send_to_char(ch, "Titles can't contain the ( or ) characters.\r\n");
-  else if (strlen(argument) > MAX_TITLE_LENGTH)
-    send_to_char(ch, "Sorry, titles can't be longer than %d characters.\r\n", MAX_TITLE_LENGTH);
-  else {
-    set_title(ch, argument);
-    send_to_char(ch, "Okay, you're now %s%s%s.\r\n", GET_NAME(ch), *GET_TITLE(ch) ? " " : "", GET_TITLE(ch));
-  }
 }
 
 static void print_group(struct char_data *ch)
@@ -505,8 +1485,8 @@ ACMD(do_split)
       send_to_char(ch, "Sorry, you can't do that.\r\n");
       return;
     }
-    if (amount > GET_GOLD(ch)) {
-      send_to_char(ch, "You don't seem to have that much gold to split.\r\n");
+    if (amount > GET_COINS(ch)) {
+      send_to_char(ch, "You don't seem to have that many coins to split.\r\n");
       return;
     }
     
@@ -519,24 +1499,24 @@ ACMD(do_split)
       share = amount / num;
       rest = amount % num;
     } else {
-      send_to_char(ch, "With whom do you wish to share your gold?\r\n");
+      send_to_char(ch, "With whom do you wish to share your coins?\r\n");
       return;
     }
 
-    decrease_gold(ch, share * (num - 1));
+    decrease_coins(ch, share * (num - 1));
 
     /* Abusing signed/unsigned to make sizeof work. */
     len = snprintf(buf, sizeof(buf), "%s splits %d coins; you receive %d.\r\n",
 		GET_NAME(ch), amount, share);
     if (rest && len < sizeof(buf)) {
       snprintf(buf + len, sizeof(buf) - len,
-		"%d coin%s %s not splitable, so %s keeps the money.\r\n", rest,
+		"%d coin%s %s not splitable, so %s keeps the coins.\r\n", rest,
 		(rest == 1) ? "" : "s", (rest == 1) ? "was" : "were", GET_NAME(ch));
     }
 
     while ((k = (struct char_data *) simple_list(GROUP(ch)->members)) != NULL)
       if (k != ch && IN_ROOM(ch) == IN_ROOM(k) && !IS_NPC(k)) {
-	      increase_gold(k, share);
+	      increase_coins(k, share);
 	      send_to_char(k, "%s", buf);
 			}
 
@@ -544,7 +1524,7 @@ ACMD(do_split)
 	    amount, num, share);
 
     if (rest) {
-      send_to_char(ch, "%d coin%s %s not splitable, so you keep the money.\r\n",
+      send_to_char(ch, "%d coin%s %s not splitable, so you keep the coins.\r\n",
 		rest, (rest == 1) ? "" : "s", (rest == 1) ? "was" : "were");
     }
   } else {
@@ -681,16 +1661,8 @@ ACMD(do_gen_tog)
     "Brief mode on.\r\n"},
     {"Compact mode off.\r\n",
     "Compact mode on.\r\n"},
-    {"You can now hear tells.\r\n",
-    "You are now deaf to tells.\r\n"},
-    {"You can now hear auctions.\r\n",
-    "You are now deaf to auctions.\r\n"},
     {"You can now hear shouts.\r\n",
     "You are now deaf to shouts.\r\n"},
-    {"You can now hear gossip.\r\n",
-    "You are now deaf to gossip.\r\n"},
-    {"You can now hear the congratulation messages.\r\n",
-    "You are now deaf to the congratulation messages.\r\n"},
     {"You can now hear the Wiz-channel.\r\n",
     "You are now deaf to the Wiz-channel.\r\n"},
     {"You are no longer part of the Quest.\r\n",
@@ -715,12 +1687,8 @@ ACMD(do_gen_tog)
     "AFK flag is now on.\r\n"},
     {"Autoloot disabled.\r\n",
     "Autoloot enabled.\r\n"},
-    {"Autogold disabled.\r\n",
-    "Autogold enabled.\r\n"},
     {"Autosplit disabled.\r\n",
     "Autosplit enabled.\r\n"},
-    {"Autosacrifice disabled.\r\n",
-    "Autosacrifice enabled.\r\n"},
     {"Autoassist disabled.\r\n",
     "Autoassist enabled.\r\n"},
     {"Automap disabled.\r\n",
@@ -749,20 +1717,8 @@ ACMD(do_gen_tog)
   case SCMD_COMPACT:
     result = PRF_TOG_CHK(ch, PRF_COMPACT);
     break;
-  case SCMD_NOTELL:
-    result = PRF_TOG_CHK(ch, PRF_NOTELL);
-    break;
-  case SCMD_NOAUCTION:
-    result = PRF_TOG_CHK(ch, PRF_NOAUCT);
-    break;
   case SCMD_NOSHOUT:
     result = PRF_TOG_CHK(ch, PRF_NOSHOUT);
-    break;
-  case SCMD_NOGOSSIP:
-    result = PRF_TOG_CHK(ch, PRF_NOGOSS);
-    break;
-  case SCMD_NOGRATZ:
-    result = PRF_TOG_CHK(ch, PRF_NOGRATZ);
     break;
   case SCMD_NOWIZ:
     result = PRF_TOG_CHK(ch, PRF_NOWIZ);
@@ -820,14 +1776,8 @@ ACMD(do_gen_tog)
   case SCMD_AUTOLOOT:
     result = PRF_TOG_CHK(ch, PRF_AUTOLOOT);
     break;
-  case SCMD_AUTOGOLD:
-    result = PRF_TOG_CHK(ch, PRF_AUTOGOLD);
-    break;
   case SCMD_AUTOSPLIT:
     result = PRF_TOG_CHK(ch, PRF_AUTOSPLIT);
-    break;
-  case SCMD_AUTOSAC:
-    result = PRF_TOG_CHK(ch, PRF_AUTOSAC);
     break;
   case SCMD_AUTOASSIST:
     result = PRF_TOG_CHK(ch, PRF_AUTOASSIST);
@@ -855,117 +1805,4 @@ ACMD(do_gen_tog)
     send_to_char(ch, "%s", tog_messages[subcmd][TOG_OFF]);
 
   return;
-}
-
-static void show_happyhour(struct char_data *ch)
-{
-  char happyexp[80], happygold[80], happyqp[80];
-  int secs_left;
-
-  if ((IS_HAPPYHOUR) || (GET_LEVEL(ch) >= LVL_GRGOD))
-  {
-      if (HAPPY_TIME)
-        secs_left = ((HAPPY_TIME - 1) * SECS_PER_MUD_HOUR) + next_tick;
-      else
-        secs_left = 0;
-
-      sprintf(happyqp,   "%s+%d%%%s to Questpoints per quest\r\n", CCYEL(ch, C_NRM), HAPPY_QP,   CCNRM(ch, C_NRM));
-      sprintf(happygold, "%s+%d%%%s to Gold gained per kill\r\n",  CCYEL(ch, C_NRM), HAPPY_GOLD, CCNRM(ch, C_NRM));
-      sprintf(happyexp,  "%s+%d%%%s to Experience per kill\r\n",   CCYEL(ch, C_NRM), HAPPY_EXP,  CCNRM(ch, C_NRM));
-
-      send_to_char(ch, "tbaMUD Happy Hour!\r\n"
-                       "------------------\r\n"
-                       "%s%s%sTime Remaining: %s%d%s hours %s%d%s mins %s%d%s secs\r\n",
-                       (IS_HAPPYEXP || (GET_LEVEL(ch) >= LVL_GOD)) ? happyexp : "",
-                       (IS_HAPPYGOLD || (GET_LEVEL(ch) >= LVL_GOD)) ? happygold : "",
-                       (IS_HAPPYQP || (GET_LEVEL(ch) >= LVL_GOD)) ? happyqp : "",
-                       CCYEL(ch, C_NRM), (secs_left / 3600), CCNRM(ch, C_NRM),
-                       CCYEL(ch, C_NRM), (secs_left % 3600) / 60, CCNRM(ch, C_NRM),
-                       CCYEL(ch, C_NRM), (secs_left % 60), CCNRM(ch, C_NRM) );
-  }
-  else
-  {
-      send_to_char(ch, "Sorry, there is currently no happy hour!\r\n");
-  }
-}
-
-ACMD(do_happyhour)
-{
-  char arg[MAX_INPUT_LENGTH], val[MAX_INPUT_LENGTH];
-  int num;
-
-  if (GET_LEVEL(ch) < LVL_GOD)
-  {
-    show_happyhour(ch);
-    return;
-  }
-
-  /* Only Imms get here, so check args */
-  two_arguments(argument, arg, val);
-
-  if (is_abbrev(arg, "experience"))
-  {
-    num = MIN(MAX((atoi(val)), 0), 1000);
-    HAPPY_EXP = num;
-    send_to_char(ch, "Happy Hour Exp rate set to +%d%%\r\n", HAPPY_EXP);
-  }
-  else if ((is_abbrev(arg, "gold")) || (is_abbrev(arg, "coins")))
-  {
-    num = MIN(MAX((atoi(val)), 0), 1000);
-    HAPPY_GOLD = num;
-    send_to_char(ch, "Happy Hour Gold rate set to +%d%%\r\n", HAPPY_GOLD);
-  }
-  else if ((is_abbrev(arg, "time")) || (is_abbrev(arg, "ticks")))
-  {
-    num = MIN(MAX((atoi(val)), 0), 1000);
-    if (HAPPY_TIME && !num)
-      game_info("Happyhour has been stopped!");
-    else if (!HAPPY_TIME && num)
-      game_info("A Happyhour has started!");
-
-    HAPPY_TIME = num;
-    send_to_char(ch, "Happy Hour Time set to %d ticks (%d hours %d mins and %d secs)\r\n",
-                                HAPPY_TIME,
-                                 (HAPPY_TIME*SECS_PER_MUD_HOUR)/3600,
-                                ((HAPPY_TIME*SECS_PER_MUD_HOUR)%3600) / 60,
-                                 (HAPPY_TIME*SECS_PER_MUD_HOUR)%60 );
-  }
-  else if ((is_abbrev(arg, "qp")) || (is_abbrev(arg, "questpoints")))
-  {
-    num = MIN(MAX((atoi(val)), 0), 1000);
-    HAPPY_QP = num;
-    send_to_char(ch, "Happy Hour Questpoints rate set to +%d%%\r\n", HAPPY_QP);
-  }
-  else if (is_abbrev(arg, "show"))
-  {
-    show_happyhour(ch);
-  }
-  else if (is_abbrev(arg, "default"))
-  {
-    HAPPY_EXP = 100;
-    HAPPY_GOLD = 50;
-    HAPPY_QP  = 50;
-    HAPPY_TIME = 48;
-    game_info("A Happyhour has started!");
-  }
-  else
-  {
-    send_to_char(ch, "Usage: %shappyhour              %s- show usage (this info)\r\n"
-                     "       %shappyhour show         %s- display current settings (what mortals see)\r\n"
-                     "       %shappyhour time <ticks> %s- set happyhour time and start timer\r\n"
-                     "       %shappyhour qp <num>     %s- set qp percentage gain\r\n"
-                     "       %shappyhour exp <num>    %s- set exp percentage gain\r\n"
-                     "       %shappyhour gold <num>   %s- set gold percentage gain\r\n"
-                     "       \tyhappyhour default      \tw- sets a default setting for happyhour\r\n\r\n"
-                     "Configure the happyhour settings and start a happyhour.\r\n"
-                     "Currently 1 hour IRL = %d ticks\r\n"
-                     "If no number is specified, 0 (off) is assumed.\r\nThe command \tyhappyhour time\tn will therefore stop the happyhour timer.\r\n",
-                     CCYEL(ch, C_NRM), CCNRM(ch, C_NRM),
-                     CCYEL(ch, C_NRM), CCNRM(ch, C_NRM),
-                     CCYEL(ch, C_NRM), CCNRM(ch, C_NRM),
-                     CCYEL(ch, C_NRM), CCNRM(ch, C_NRM),
-                     CCYEL(ch, C_NRM), CCNRM(ch, C_NRM),
-                     CCYEL(ch, C_NRM), CCNRM(ch, C_NRM),
-                     (3600 / SECS_PER_MUD_HOUR) );
-  }
 }

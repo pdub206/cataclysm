@@ -17,7 +17,6 @@
 #define MAX_NAME_LENGTH		20  /* Used in char_file_u *DO*NOT*CHANGE* */
 
 #define MAX_PWD_LENGTH		30  /* Used in char_file_u *DO*NOT*CHANGE* */
-#define MAX_TITLE_LENGTH	80  /* Used in char_file_u *DO*NOT*CHANGE* */
 #define HOST_LENGTH		40  /* Used in char_file_u *DO*NOT*CHANGE* */
 #define MAX_TONGUE		3   /* Used in char_file_u *DO*NOT*CHANGE* */
 #define MAX_SKILLS		200 /* Used in char_file_u *DO*NOT*CHANGE* */
@@ -26,7 +25,6 @@
 /* Char's abilities.  Used in char_file_u *DO*NOT*CHANGE* */
 struct char_ability_data_plrtoascii {
    sbyte str;
-   sbyte str_add;      /* 000 - 100 if strength 18             */
    sbyte intel;
    sbyte wis;
    sbyte dex;
@@ -45,12 +43,10 @@ struct char_point_data_plrtoascii {
    sh_int max_move;     /* Max move for PC/NPC                     */
 
    sh_int armor;        /* Internal -100..100, external -10..10 AC */
-   int	gold;           /* Money carried                           */
-   int	bank_gold;	/* Gold the char has in a bank account	   */
+   int	coins;          /* Money carried                           */
+   int	bank_coins;	/* Coins the char has in a bank account	   */
    int	exp;            /* The experience of the player            */
 
-   sbyte hitroll;       /* Any bonus or penalty to the hit roll    */
-   sbyte damroll;       /* Any bonus or penalty to the damage roll */
 };
 
 
@@ -127,7 +123,6 @@ struct char_file_u_plrtoascii {
    /* char_player_data */
    char	name[MAX_NAME_LENGTH+1];
    char	description[PLR_DESC_LENGTH];
-   char	title[MAX_TITLE_LENGTH+1];
    byte sex;
    byte chclass;
    byte level;
@@ -198,7 +193,6 @@ void convert(char *filename)
 /* char_file_u */
     fprintf(outfile, "Name: %s\n", player.name);
     fprintf(outfile, "Pass: %s\n", player.pwd);
-    fprintf(outfile, "Titl: %s\n", player.title);
     if (*player.description)
       fprintf(outfile, "Desc:\n%s~\n", player.description);
     if (player.sex != PFDEF_SEX)
@@ -274,8 +268,8 @@ void convert(char *filename)
 
 /* char_ability_data */
     cad = &(player.abilities);
-    if (cad->str != PFDEF_STR || cad->str_add != PFDEF_STRADD)
-      fprintf(outfile, "Str : %d/%d\n", cad->str, cad->str_add);
+    if (cad->str != PFDEF_STR)
+      fprintf(outfile, "Str : %d/\n", cad->str);
     if (cad->intel != PFDEF_INT)
       fprintf(outfile, "Int : %d\n", cad->intel);
     if (cad->wis != PFDEF_WIS)
@@ -297,16 +291,12 @@ void convert(char *filename)
       fprintf(outfile, "Move: %d/%d\n", cpd->move, cpd->max_move);
     if (cpd->armor != PFDEF_AC)
       fprintf(outfile, "Ac  : %d\n", cpd->armor);
-    if (cpd->gold != PFDEF_GOLD)
-      fprintf(outfile, "Gold: %d\n", cpd->gold);
-    if (cpd->bank_gold != PFDEF_BANK)
-      fprintf(outfile, "Bank: %d\n", cpd->bank_gold);
+    if (cpd->coins != PFDEF_COINS)
+      fprintf(outfile, "Coin: %d\n", cpd->coins);
+    if (cpd->bank_coins != PFDEF_BANK_COINS)
+      fprintf(outfile, "BankCoins: %d\n", cpd->bank_coins);
     if (cpd->exp != PFDEF_EXP)
       fprintf(outfile, "Exp : %d\n", cpd->exp);
-    if (cpd->hitroll != PFDEF_HITROLL)
-      fprintf(outfile, "Hrol: %d\n", cpd->hitroll);
-    if (cpd->damroll != PFDEF_DAMROLL)
-      fprintf(outfile, "Drol: %d\n", cpd->damroll);
 
 /* affected_type */
     fprintf(outfile, "Affs:\n");

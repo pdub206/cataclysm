@@ -126,9 +126,11 @@ ACMD(do_backstab)
 {
   char buf[MAX_INPUT_LENGTH];
   struct char_data *vict;
-  int percent, prob;
+  struct obj_data *weap;
+  int roll, atk_bonus, total, target_ac;
+  bool crit_success = FALSE, crit_fail = FALSE;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_BACKSTAB)) {
+  if (!GET_SKILL(ch, SKILL_BACKSTAB)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -143,11 +145,12 @@ ACMD(do_backstab)
     send_to_char(ch, "How can you sneak up on yourself?\r\n");
     return;
   }
-  if (!GET_EQ(ch, WEAR_WIELD)) {
+  if (!(weap = GET_EQ(ch, WEAR_WIELD))) {
     send_to_char(ch, "You need to wield a weapon to make it a success.\r\n");
     return;
   }
-  if (GET_OBJ_VAL(GET_EQ(ch, WEAR_WIELD), 3) != TYPE_PIERCE - TYPE_HIT) {
+  /* Only piercing weapons allowed */
+  if (GET_OBJ_VAL(weap, 3) != TYPE_PIERCE - TYPE_HIT) {
     send_to_char(ch, "Only piercing weapons can be used for backstabbing.\r\n");
     return;
   }
@@ -164,13 +167,51 @@ ACMD(do_backstab)
     return;
   }
 
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
-  prob = GET_SKILL(ch, SKILL_BACKSTAB);
+  /* --- d20 vs ascending AC --- */
+  atk_bonus = GET_ABILITY_MOD(GET_DEX(ch)) +
+              GET_PROFICIENCY(GET_SKILL(ch, SKILL_BACKSTAB));
 
-  if (AWAKE(vict) && (percent > prob))
+  roll              = rand_number(1, 20);
+  crit_fail         = (roll == 1);
+  crit_success      = (roll == 20);
+
+  total     = roll + atk_bonus;
+  target_ac = compute_ascending_ac(vict);
+
+  if (!crit_fail && (crit_success || total >= target_ac)) {
+    /* Successful backstab */
+    act("You slip behind $N and drive your weapon home!", TRUE, ch, 0, vict, TO_CHAR);
+    act("$n slips behind you and drives a weapon into your back!", TRUE, ch, 0, vict, TO_VICT);
+    act("$n slips behind $N and drives a weapon home!", TRUE, ch, 0, vict, TO_NOTVICT);
+    
+    /* Keeping this logic really simple so it can be adjusted later if need be */
+    if (crit_success) {
+      /* Simple crit = 2x damage */
+      int base = dice(GET_OBJ_VAL(weap, 1), GET_OBJ_VAL(weap, 2));
+      int dmg = base + GET_ABILITY_MOD(GET_DEX(ch));
+      if (dmg < 1) dmg = 1;
+      dmg *= 2;
+      damage(ch, vict, dmg, SKILL_BACKSTAB);
+    } else {
+      /* Hit but not crit = 1.5x damage */
+      int base = dice(GET_OBJ_VAL(weap, 1), GET_OBJ_VAL(weap, 2));
+      int dmg = base + GET_ABILITY_MOD(GET_DEX(ch));
+      if (dmg < 1) dmg = 1;
+      dmg *= 1.5;
+      damage(ch, vict, dmg, SKILL_BACKSTAB);
+    }
+
+    gain_skill(ch, "backstab", TRUE);
+
+  } else {
+    /* Missed backstab */
+    act("You lunge at $N, but miss the mark.", TRUE, ch, 0, vict, TO_CHAR);
+    act("$n lunges at you, but misses the mark!", TRUE, ch, 0, vict, TO_VICT);
+    act("$n lunges at $N, but misses the mark!", TRUE, ch, 0, vict, TO_NOTVICT);
+
     damage(ch, vict, 0, SKILL_BACKSTAB);
-  else
-    hit(ch, vict, SKILL_BACKSTAB);
+    gain_skill(ch, "backstab", FALSE);
+  }
 
   WAIT_STATE(ch, 2 * PULSE_VIOLENCE);
 }
@@ -250,14 +291,13 @@ ACMD(do_flee)
         if (was_fighting && !IS_NPC(ch)) {
 	  loss = GET_MAX_HIT(was_fighting) - GET_HIT(was_fighting);
 	  loss *= GET_LEVEL(was_fighting);
-	  gain_exp(ch, -loss);
         }
       if (FIGHTING(ch)) 
         stop_fighting(ch); 
       if (was_fighting && ch == FIGHTING(was_fighting))
         stop_fighting(was_fighting); 
       } else {
-	act("$n tries to flee, but can't!", TRUE, ch, 0, 0, TO_ROOM);
+	        act("$n tries to flee, but can't!", TRUE, ch, 0, 0, TO_ROOM);
       }
       return;
     }
@@ -269,11 +309,12 @@ ACMD(do_bash)
 {
   char arg[MAX_INPUT_LENGTH];
   struct char_data *vict;
-  int percent, prob;
+  int roll, atk_bonus, total, target_ac;
+  bool crit_success = FALSE, crit_fail = FALSE;
 
   one_argument(argument, arg);
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_BASH)) {
+  if (!GET_SKILL(ch, SKILL_BASH)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
@@ -302,28 +343,59 @@ ACMD(do_bash)
     return;
   }
 
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
-  prob = GET_SKILL(ch, SKILL_BASH);
+  /* --- 5e-like attack roll vs ascending AC --- */
+  atk_bonus = GET_ABILITY_MOD(GET_STR(ch)) +
+              GET_PROFICIENCY(GET_SKILL(ch, SKILL_BASH));
 
+  roll = rand_number(1, 20);
+  crit_success = (roll == 1);
+  crit_fail      = (roll == 20);
+
+  total = roll + atk_bonus;
+  target_ac = compute_ascending_ac(vict);
+
+  /* Some mobs simply can't be bashed: force a miss like legacy code did. */
   if (MOB_FLAGGED(vict, MOB_NOBASH))
-    percent = 101;
+    crit_fail = TRUE;
 
-  if (percent > prob) {
+  if (!crit_fail && (crit_success || total >= target_ac)) {
+    /* ---- HIT: small damage + knockdown ---- */
+
+    /* Damage = 1 + STR mod (min 1); double on crit */
+    int dmg = 1 + GET_ABILITY_MOD(GET_STR(ch));
+    if (dmg < 1) dmg = 1;
+    if (crit_success) dmg *= 2;
+
+    if (crit_success) {
+      act("You slam into $N with a crushing bash!", TRUE, ch, 0, vict, TO_CHAR);
+      act("$n slams into you with a crushing bash!", TRUE, ch, 0, vict, TO_VICT);
+      act("$n slams into $N with a crushing bash!", TRUE, ch, 0, vict, TO_NOTVICT);
+    } else {
+      act("You bash $N off balance.", TRUE, ch, 0, vict, TO_CHAR);
+      act("$n bashes you off balance.", TRUE, ch, 0, vict, TO_VICT);
+      act("$n bashes $N off balance.", TRUE, ch, 0, vict, TO_NOTVICT);
+    }
+
+    /* Apply damage; legacy: >0 means still alive & not a pure miss */
+    if (damage(ch, vict, dmg, SKILL_BASH) > 0) {
+      WAIT_STATE(vict, PULSE_VIOLENCE);  /* brief stun */
+      if (IN_ROOM(ch) == IN_ROOM(vict)) {
+        GET_POS(vict) = POS_SITTING;     /* knockdown */
+        gain_skill(ch, "bash", TRUE);
+      }
+    }
+
+  } else {
+    /* ---- MISS: you eat the floor (attacker sits) ---- */
+    act("You miss your bash at $N and lose your footing!", TRUE, ch, 0, vict, TO_CHAR);
+    act("$n misses a bash at you and loses $s footing!", TRUE, ch, 0, vict, TO_VICT);
+    act("$n misses a bash at $N and loses $s footing!", TRUE, ch, 0, vict, TO_NOTVICT);
+
     damage(ch, vict, 0, SKILL_BASH);
     GET_POS(ch) = POS_SITTING;
-  } else {
-    /*
-     * If we bash a player and they wimp out, they will move to the previous
-     * room before we set them sitting.  If we try to set the victim sitting
-     * first to make sure they don't flee, then we can't bash them!  So now
-     * we only set them sitting if they didn't flee. -gg 9/21/98
-     */
-    if (damage(ch, vict, 1, SKILL_BASH) > 0) {	/* -1 = dead, 0 = miss */
-      WAIT_STATE(vict, PULSE_VIOLENCE);
-      if (IN_ROOM(ch) == IN_ROOM(vict))
-        GET_POS(vict) = POS_SITTING;
-    }
+    gain_skill(ch, "bash", FALSE);
   }
+
   WAIT_STATE(ch, PULSE_VIOLENCE * 2);
 }
 
@@ -331,9 +403,9 @@ ACMD(do_rescue)
 {
   char arg[MAX_INPUT_LENGTH];
   struct char_data *vict, *tmp_ch;
-  int percent, prob;
+  int roll, bonus, total, dc;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_RESCUE)) {
+  if (!GET_SKILL(ch, SKILL_RESCUE)) {
     send_to_char(ch, "You have no idea how to do that.\r\n");
     return;
   }
@@ -352,28 +424,40 @@ ACMD(do_rescue)
     send_to_char(ch, "How can you rescue someone you are trying to kill?\r\n");
     return;
   }
-  for (tmp_ch = world[IN_ROOM(ch)].people; tmp_ch &&
-       (FIGHTING(tmp_ch) != vict); tmp_ch = tmp_ch->next_in_room);
 
+  /* Find someone who is fighting the victim */
+  for (tmp_ch = world[IN_ROOM(ch)].people; tmp_ch && (FIGHTING(tmp_ch) != vict); tmp_ch = tmp_ch->next_in_room)
+    ;
+
+  /* Handle the “already rescued” edge case from your original */
   if ((FIGHTING(vict) != NULL) && (FIGHTING(ch) == FIGHTING(vict)) && (tmp_ch == NULL)) {
-     tmp_ch = FIGHTING(vict);
-     if (FIGHTING(tmp_ch) == ch) {
-     send_to_char(ch, "You have already rescued %s from %s.\r\n", GET_NAME(vict), GET_NAME(FIGHTING(ch)));
-     return;
-  }
+    tmp_ch = FIGHTING(vict);
+    if (FIGHTING(tmp_ch) == ch) {
+      send_to_char(ch, "You have already rescued %s from %s.\r\n", GET_NAME(vict), GET_NAME(FIGHTING(ch)));
+      return;
+    }
   }
 
   if (!tmp_ch) {
     act("But nobody is fighting $M!", FALSE, ch, 0, vict, TO_CHAR);
     return;
   }
-  percent = rand_number(1, 101);	/* 101% is a complete failure */
-  prob = GET_SKILL(ch, SKILL_RESCUE);
 
-  if (percent > prob) {
+  /* --- STR + proficiency ability check vs DC (no nat 1/20 rules) --- */
+  bonus = GET_ABILITY_MOD(GET_STR(ch)) + GET_PROFICIENCY(GET_SKILL(ch, SKILL_RESCUE));
+  dc = 10;
+  if (FIGHTING(ch)) dc += 5; /* harder to pull off while already in melee */
+
+  roll   = rand_number(1, 20);
+  total  = roll + bonus;
+
+  if (total < dc) {
     send_to_char(ch, "You fail the rescue!\r\n");
+    gain_skill(ch, "rescue", FALSE);
     return;
   }
+
+  /* Success: swap aggro */
   send_to_char(ch, "Banzai!  To the rescue...\r\n");
   act("You are rescued by $N, you are confused!", FALSE, vict, 0, ch, TO_CHAR);
   act("$n heroically rescues $N!", FALSE, ch, 0, vict, TO_NOTVICT);
@@ -388,64 +472,103 @@ ACMD(do_rescue)
   set_fighting(ch, tmp_ch);
   set_fighting(tmp_ch, ch);
 
+  gain_skill(ch, "rescue", TRUE);
+
   WAIT_STATE(vict, 2 * PULSE_VIOLENCE);
 }
 
+/* 5e-like whirlwind tick: random characters (PCs & NPCs), d20 vs AC, friendly fire possible */
 EVENTFUNC(event_whirlwind)
 {
   struct char_data *ch, *tch;
   struct mud_event_data *pMudEvent;
   struct list_data *room_list;
   int count;
-	
-  /* This is just a dummy check, but we'll do it anyway */
+
   if (event_obj == NULL)
     return 0;
-	  
-  /* For the sake of simplicity, we will place the event data in easily
-   * referenced pointers */  
+
   pMudEvent = (struct mud_event_data *) event_obj;
-  ch = (struct char_data *) pMudEvent->pStruct;    
-  
-  /* When using a list, we have to make sure to allocate the list as it
-   * uses dynamic memory */
+  ch = (struct char_data *) pMudEvent->pStruct;
+
+  if (!ch || IN_ROOM(ch) == NOWHERE || GET_POS(ch) < POS_FIGHTING)
+    return 0;
+
   room_list = create_list();
-  
-  /* We search through the "next_in_room", and grab all NPCs and add them
-   * to our list */
-  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room)  
-    if (IS_NPC(tch))
-      add_to_list(tch, room_list);
-      
-  /* If our list is empty or has "0" entries, we free it from memory and
-   * close off our event */    
+
+  /* === Target pool: everyone except self; skip protected mobs === */
+  for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room) {
+    if (tch == ch) continue;
+    if (IS_NPC(tch) && MOB_FLAGGED(tch, MOB_NOKILL)) continue;
+    if (GET_POS(tch) <= POS_DEAD) continue;
+    add_to_list(tch, room_list);
+  }
+
   if (room_list->iSize == 0) {
     free_list(room_list);
-    send_to_char(ch, "There is no one in the room to whirlwind!\r\n");
+    send_to_char(ch, "There is no one here to whirlwind!\r\n");
     return 0;
   }
-  
-  /* We spit out some ugly colour, making use of the new colour options,
-   * to let the player know they are performing their whirlwind strike */
-  send_to_char(ch, "\t[f313]You deliver a vicious \t[f014]\t[b451]WHIRLWIND!!!\tn\r\n");
-  
-  /* Lets grab some a random NPC from the list, and hit() them up */
+
+  send_to_char(ch, "\t[f313]You deliver a vicious \t[f014]\t[b451]attack, spinning wildly!!!\tn\r\n");
+
+  /* Up to 1–4 rapid strikes (friendly fire possible) */
   for (count = dice(1, 4); count > 0; count--) {
-    tch = random_from_list(room_list);
-    hit(ch, tch, TYPE_UNDEFINED);
+    int roll, atk_bonus, total, target_ac, dmg;
+    bool crit_success = FALSE, crit_fail = FALSE;
+
+    tch = (struct char_data *) random_from_list(room_list);
+    if (!tch || IN_ROOM(tch) != IN_ROOM(ch) || GET_POS(tch) <= POS_DEAD)
+      continue;
+
+    /* Attack roll vs ascending AC */
+    atk_bonus = GET_ABILITY_MOD(GET_STR(ch)) + GET_PROFICIENCY(GET_SKILL(ch, SKILL_WHIRLWIND));
+    roll       = rand_number(1, 20);
+    crit_fail = (roll == 1);
+    crit_success      = (roll == 20);
+
+    total     = roll + atk_bonus;
+    target_ac = compute_ascending_ac(tch);
+
+    if (!crit_fail && (crit_success || total >= target_ac)) {
+      dmg = dice(1, 4) + GET_ABILITY_MOD(GET_STR(ch)) + GET_PROFICIENCY(GET_SKILL(ch, SKILL_WHIRLWIND));
+      if (dmg < 1) dmg = 1;
+      if (crit_success)   dmg *= 2;
+
+      if (crit_success) {
+        act("Your whirlwind catches $N with a devastating slash!", TRUE, ch, 0, tch, TO_CHAR);
+        act("$n's whirlwind catches you with a devastating slash!", TRUE, ch, 0, tch, TO_VICT | TO_SLEEP);
+        act("$n's whirlwind catches $N with a devastating slash!", TRUE, ch, 0, tch, TO_NOTVICT);
+      } else {
+        act("Your whirlwind slices into $N.", TRUE, ch, 0, tch, TO_CHAR);
+        act("$n's whirlwind slices into you.", TRUE, ch, 0, tch, TO_VICT | TO_SLEEP);
+        act("$n's whirlwind slices into $N.", TRUE, ch, 0, tch, TO_NOTVICT);
+      }
+
+      damage(ch, tch, dmg, SKILL_WHIRLWIND);
+
+      /* Learning tick on a strong (crit) hit */
+      if (crit_success)
+        gain_skill(ch, "whirlwind", TRUE);
+
+    } else {
+      act("Your whirlwind arcs wide past $N.", TRUE, ch, 0, tch, TO_CHAR);
+      act("$n's whirlwind arcs wide past you.", TRUE, ch, 0, tch, TO_VICT | TO_SLEEP);
+      act("$n's whirlwind arcs wide past $N.", TRUE, ch, 0, tch, TO_NOTVICT);
+
+      damage(ch, tch, 0, SKILL_WHIRLWIND);
+      gain_skill(ch, "whirlwind", FALSE);
+    }
   }
-  
-  /* Now that our attack is done, let's free out list */
+
   free_list(room_list);
-  
-  /* The "return" of the event function is the time until the event is called
-   * again. If we return 0, then the event is freed and removed from the list, but
-   * any other numerical response will be the delay until the next call */
+
+  /* Continue spinning or stop */
   if (GET_SKILL(ch, SKILL_WHIRLWIND) < rand_number(1, 101)) {
-    send_to_char(ch, "You stop spinning.\r\n");
+    send_to_char(ch, "You stop spinning, but the world around you doesn't.\r\n");
     return 0;
-  } else
-    return 1.5 * PASSES_PER_SEC;
+  }
+  return (int)(1.5 * PASSES_PER_SEC);
 }
 
 /* The "Whirlwind" skill is designed to provide a basic understanding of the
@@ -453,12 +576,12 @@ EVENTFUNC(event_whirlwind)
 ACMD(do_whirlwind)
 {
   
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_WHIRLWIND)) {
+  if (!GET_SKILL(ch, SKILL_WHIRLWIND)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
   
-  if ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL) {
+  if (ROOM_FLAGGED(IN_ROOM(ch), ROOM_PEACEFUL)) {
     send_to_char(ch, "This room just has such a peaceful, easy feeling...\r\n");
     return;
   }
@@ -492,9 +615,10 @@ ACMD(do_kick)
 {
   char arg[MAX_INPUT_LENGTH];
   struct char_data *vict;
-  int percent, prob;
+  int roll, atk_bonus, total, target_ac;
+  bool crit_success = FALSE, crit_miss = FALSE;
 
-  if (IS_NPC(ch) || !GET_SKILL(ch, SKILL_KICK)) {
+  if (!GET_SKILL(ch, SKILL_KICK)) {
     send_to_char(ch, "You have no idea how.\r\n");
     return;
   }
@@ -509,18 +633,54 @@ ACMD(do_kick)
       return;
     }
   }
+
   if (vict == ch) {
     send_to_char(ch, "Aren't we funny today...\r\n");
     return;
   }
-  /* 101% is a complete failure */
-  percent = ((10 - (compute_armor_class(vict) / 10)) * 2) + rand_number(1, 101);
-  prob = GET_SKILL(ch, SKILL_KICK);
 
-  if (percent > prob) {
+  /* --- 5e-like attack roll vs ascending AC --- */
+  atk_bonus = GET_ABILITY_MOD(GET_STR(ch)) +
+              GET_PROFICIENCY(GET_SKILL(ch, SKILL_KICK));
+
+  roll = rand_number(1, 20);
+  crit_miss = (roll == 1);
+  crit_success      = (roll == 20);
+
+  total = roll + atk_bonus;
+  target_ac = compute_ascending_ac(vict);
+
+  if (!crit_miss && (crit_success || total >= target_ac)) {
+    /* HIT */
+
+    /* Damage = 1 + STR mod, floored at 1 */
+    int dmg = 1 + GET_ABILITY_MOD(GET_STR(ch));
+    if (dmg < 1)
+      dmg = 1;
+
+    if (crit_success) {
+      dmg *= 2;  /* simple crit rule: double damage */
+      act("You land a brutal, bone-jarring kick on $N!", TRUE, ch, 0, vict, TO_CHAR);
+      act("$n lands a brutal, bone-jarring kick on you!", TRUE, ch, 0, vict, TO_VICT);
+      act("$n lands a brutal, bone-jarring kick on $N!", TRUE, ch, 0, vict, TO_NOTVICT);
+    } else {
+      act("You kick $N solidly.", TRUE, ch, 0, vict, TO_CHAR);
+      act("$n kicks you solidly.", TRUE, ch, 0, vict, TO_VICT);
+      act("$n kicks $N solidly.", TRUE, ch, 0, vict, TO_NOTVICT);
+    }
+
+    damage(ch, vict, dmg, SKILL_KICK);
+    gain_skill(ch, "kick", TRUE);
+
+  } else {
+    /* MISS */
+    act("You miss your kick at $N.", TRUE, ch, 0, vict, TO_CHAR);
+    act("$n misses a kick at you.", TRUE, ch, 0, vict, TO_VICT);
+    act("$n misses a kick at $N.", TRUE, ch, 0, vict, TO_NOTVICT);
+
     damage(ch, vict, 0, SKILL_KICK);
-  } else
-    damage(ch, vict, GET_LEVEL(ch) / 2, SKILL_KICK);
+    gain_skill(ch, "kick", FALSE);
+  }
 
   WAIT_STATE(ch, PULSE_VIOLENCE * 3);
 }
@@ -528,11 +688,10 @@ ACMD(do_kick)
 ACMD(do_bandage)
 {
   char arg[MAX_INPUT_LENGTH];
-  struct char_data * vict;
-  int percent, prob;
+  struct char_data *vict;
+  int roll, bonus, total, dc;
 
-  if (!GET_SKILL(ch, SKILL_BANDAGE))
-  {
+  if (!GET_SKILL(ch, SKILL_BANDAGE)) {
     send_to_char(ch, "You are unskilled in the art of bandaging.\r\n");
     return;
   }
@@ -549,28 +708,63 @@ ACMD(do_bandage)
     return;
   }
 
-  if (GET_HIT(vict) >= 0) {
-    send_to_char(ch, "You can only bandage someone who is close to death.\r\n");
+  if (AFF_FLAGGED(vict, AFF_BANDAGED)) {
+    send_to_char(ch, "That person has already been bandaged recently.\r\n");
+    return;
+  }
+
+  if (GET_HIT(vict) >= GET_MAX_HIT(vict)) {
+    send_to_char(ch, "They don’t need bandaging right now.\r\n");
     return;
   }
 
   WAIT_STATE(ch, PULSE_VIOLENCE * 2);
 
-  percent = rand_number(1, 101);        /* 101% is a complete failure */
-  prob = GET_SKILL(ch, SKILL_BANDAGE);
+  /* --- WIS + proficiency ability check vs DC --- */
+  bonus = GET_ABILITY_MOD(GET_WIS(ch)) + GET_PROFICIENCY(GET_SKILL(ch, SKILL_BANDAGE));
+  dc = 10;
+  if (FIGHTING(ch)) dc += 2;  /* harder to bandage in combat */
 
-  if (percent <= prob) {
-    act("Your attempt to bandage fails.", FALSE, ch, 0, 0, TO_CHAR);
-    act("$n tries to bandage $N, but fails miserably.", TRUE, ch, 
-      0, vict, TO_NOTVICT);
+  roll   = rand_number(1, 20);
+  total = roll + bonus;
+
+  if (total < dc) {
+    /* Failure: hurt the patient slightly */
+    act("Your attempt to bandage fails.", FALSE, ch, 0, vict, TO_CHAR);
+    act("$n tries to bandage $N, but fails miserably.", TRUE, ch, 0, vict, TO_NOTVICT);
+    act("$n fumbles the bandage work on you. That hurts!", TRUE, ch, 0, vict, TO_VICT);
+
     damage(vict, vict, 2, TYPE_SUFFERING);
+    gain_skill(ch, "bandage", FALSE);
     return;
   }
 
+  /* Success: heal 1d4 + WIS mod + proficiency */
+  int heal = dice(1, 4) + GET_ABILITY_MOD(GET_WIS(ch)) +
+             GET_PROFICIENCY(GET_SKILL(ch, SKILL_BANDAGE));
+  if (heal < 1) heal = 1;
+
+  GET_HIT(vict) = MIN(GET_MAX_HIT(vict), GET_HIT(vict) + heal);
+
   act("You successfully bandage $N.", FALSE, ch, 0, vict, TO_CHAR);
-  act("$n bandages $N, who looks a bit better now.", TRUE, ch, 0, 
-    vict, TO_NOTVICT);
-  act("Someone bandages you, and you feel a bit better now.",
-         FALSE, ch, 0, vict, TO_VICT);
-  GET_HIT(vict) = 0;
+  act("$n bandages $N, who looks a bit better now.", TRUE, ch, 0, vict, TO_NOTVICT);
+  act("Someone bandages you, and you feel a bit better now.", FALSE, ch, 0, vict, TO_VICT);
+
+  /* Apply the bandaged cooldown: 30 minutes real-time (1800 sec) */
+  struct affected_type af;
+  new_affect(&af);
+
+  /* Field name is 'spell' in your headers (not 'type') */
+  af.spell    = SKILL_BANDAGE;
+  af.duration = 30 RL_SEC;          /* 30 minutes real time */
+  af.modifier = 0;
+  af.location = APPLY_NONE;
+
+  /* bitvector is an array; clear then set the AFF_BANDAGED bit */
+  memset(af.bitvector, 0, sizeof(af.bitvector));    /* clear all bits; macro usually zeros the array */
+  SET_BIT_AR(af.bitvector, AFF_BANDAGED);
+
+  affect_to_char(vict, &af);
+
+  gain_skill(ch, "bandage", TRUE);
 }

@@ -433,7 +433,7 @@ file called “syslog”. During tbaMUD’s boot sequence, the system log keeps 
 record of everything the MUD is doing to initialize itself; this can be useful 
 to determine what the problem is if the MUD dies while it is booting. Once the 
 game is up and running, the syslog contains player information, recording when 
-players connect, disconnect, rent, unrent, quit, die, hit death traps, etc. The 
+players connect, disconnect, save on logout, quit, die, hit death traps, etc. The 
 game also records status information about itself, falling generally into two 
 categories: usage information and errors. 
 
@@ -447,7 +447,7 @@ trap! tbaMUD is bound to contain bugs, but most of the core systems have been
 well tested, so you should take claims such as “I magically lost all my stuff!”
 with a grain of salt and check your system logs. 
 
-If a player ever asks you for reimbursement of equipment, money, gold, 
+If a player ever asks you for reimbursement of equipment, money, coins, 
 experience points (XP), or whatever, your gut reaction should always be to 
 check the logs first. 
 
@@ -469,20 +469,15 @@ syslog’s presence in the collective psyche of your players.
 
 Back to the point. When someone claims that they’ve been wronged by the evil 
 system, always check the logs. The logs give you power to say things like “What
-do you mean your items disappeared in rent? It says right here in the logs 
-‘Rasmussen has quit the game.’ You did not rent at all, you just quit!” 
+do you mean your items disappeared on logout? It says right here in the logs 
+‘Rasmussen has quit the game.’ You did not lose items, you just quit!” 
 
 To diffuse disputes such as, “The game dumped my stuff, but I had enough 
 money!!” or “I logged in and my stuff was gone, there must be a bug!!”, two 
-types of log entries are written. First, every time a character rents, the log 
-records the character’s per diem rent rate as well as the total amount of money 
-on hand and in the bank. Second, the log records makes a record of all 
-characters’ equipment dumped due to insufficient funds. 
+types of log entries are written. First, every time a character saves on logout, 
+the log records a summary along with total money on hand and in the bank. 
+Second, the log records all characters’ equipment dumped due to object limits.
 
-Remember, rent is specified as a daily rate but is amortized on a per-second 
-basis! In other words, if you rent at the rate of 100 coins per day and come 
-back 36 hours later, you’ll be charged 150 coins. Or you can be nice and leave
-rent disabled.
 
 The autorunscript saves 6 levels of raw system logs. In addition, it greps the 
 logs for certain pieces of extra-juicy information to save indefinitely. 

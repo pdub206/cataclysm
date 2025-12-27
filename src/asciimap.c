@@ -121,14 +121,14 @@ static struct map_info_type map_info[] =
   { SECT_WATER_NOSWIM, "\tc[\tb=\tc]\tn" },
   { SECT_FLYING,       "\tc[\tC^\tc]\tn" },
   { SECT_UNDERWATER,   "\tc[\tbU\tc]\tn" },
-  { -1,                ""        }, /* 10 */
-  { -1,                ""        },
-  { -1,                ""        },
-  { -1,                ""        },
-  { -1,                ""        },
-  { -1,                ""        }, /* 15 */
-  { -1,                ""        },
-  { -1,                ""        },
+  { SECT_SCRUBLAND,    "\tc[\tgS\tc]\tn" }, /* 10 */
+  { SECT_SAND,         "\tc[\tys\tc]\tn" },
+  { SECT_ROCKY,        "\tc[\trR\tc]\tn" },
+  { SECT_ROAD,         "\tc[\tw*\tc]\tn" },
+  { SECT_UNDERGROUND,  "\tc[\tb+\tc]\tn" },
+  { SECT_SILT_SEA,     "\tc[\tw#\tc]\tn" }, /* 15 */
+  { SECT_ASHLAND,      "\tc[\tg@\tc]\tn" },
+  { SECT_TABLELANDS,   "\tc[\tyT\tc]\tn" },
   { -1,                ""        },
   { -1,                ""        },
   { -1,                ""        }, /* 20 */
@@ -158,14 +158,14 @@ static struct map_info_type world_map_info[] =
   { SECT_WATER_NOSWIM, "\tb="  },
   { SECT_FLYING,       "\tC^"  },
   { SECT_UNDERWATER,   "\tbU"  },
-  { -1,                ""     }, /* 10 */
-  { -1,                ""     },
-  { -1,                ""     },
-  { -1,                ""     },
-  { -1,                ""     },
-  { -1,                ""     }, /* 15 */
-  { -1,                ""     },
-  { -1,                ""     },
+  { SECT_SCRUBLAND,    "\tgS"  }, /* 10 */
+  { SECT_SAND,         "\tys"  },
+  { SECT_ROCKY,        "\trR"  },
+  { SECT_ROAD,         "\tw*"  },
+  { SECT_UNDERGROUND,  "\tb+"  },
+  { SECT_SILT_SEA,     "\tw#"  }, /* 15 */
+  { SECT_ASHLAND,      "\tg@"  },
+  { SECT_TABLELANDS,   "\tyT"  },
   { -1,                ""     },
   { -1,                ""     },
   { -1,                ""     }, /* 20 */
@@ -513,10 +513,18 @@ static void perform_map( struct char_data *ch, char *argument, bool worldmap )
   count += sprintf(buf + count, "\tn%s Forest\\\\", map_info[SECT_FOREST].disp);
   count += sprintf(buf + count, "\tn%s Hills\\\\", map_info[SECT_HILLS].disp);
   count += sprintf(buf + count, "\tn%s Mountain\\\\", map_info[SECT_MOUNTAIN].disp);
-  count += sprintf(buf + count, "\tn%s Swim\\\\", map_info[SECT_WATER_SWIM].disp);
-  count += sprintf(buf + count, "\tn%s Boat\\\\", map_info[SECT_WATER_NOSWIM].disp);
+  count += sprintf(buf + count, "\tn%s Water\\\\", map_info[SECT_WATER_SWIM].disp);
+  count += sprintf(buf + count, "\tn%s Deep Water\\\\", map_info[SECT_WATER_NOSWIM].disp);
   count += sprintf(buf + count, "\tn%s Flying\\\\", map_info[SECT_FLYING].disp);
-  sprintf(buf + count, "\tn%s Underwater\\\\", map_info[SECT_UNDERWATER].disp);
+  count += sprintf(buf + count, "\tn%s Underwater\\\\", map_info[SECT_UNDERWATER].disp);
+  count += sprintf(buf + count, "\tn%s Scrubland\\\\", map_info[SECT_SCRUBLAND].disp);
+  count += sprintf(buf + count, "\tn%s Sand\\\\", map_info[SECT_SAND].disp);
+  count += sprintf(buf + count, "\tn%s Rocky\\\\", map_info[SECT_ROCKY].disp);
+  count += sprintf(buf + count, "\tn%s Road\\\\", map_info[SECT_ROAD].disp);
+  count += sprintf(buf + count, "\tn%s Underground\\\\", map_info[SECT_UNDERGROUND].disp);
+  count += sprintf(buf + count, "\tn%s Silt\\\\", map_info[SECT_SILT_SEA].disp);
+  count += sprintf(buf + count, "\tn%s Ashland\\\\", map_info[SECT_ASHLAND].disp);
+  sprintf(buf + count, "\tn%s Tablelands\\\\", map_info[SECT_TABLELANDS].disp);
 
   strcpy(buf, strfrmt(buf, LEGEND_WIDTH, CANVAS_HEIGHT + 2, FALSE, TRUE, TRUE));
 

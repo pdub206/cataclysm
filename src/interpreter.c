@@ -31,12 +31,13 @@
 #include "hedit.h"
 #include "house.h"
 #include "config.h"
-#include "modify.h" /* for do_skillset... */
 #include "quest.h"
 #include "asciimap.h"
 #include "prefedit.h"
 #include "ibt.h"
 #include "mud_event.h"
+#include "modify.h" /* to ensure page_string is available */
+#include "accounts.h"
 
 /* local (file scope) functions */
 static int perform_dupe_check(struct descriptor_data *d);
@@ -80,6 +81,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "sw"       , "sw"      , POS_STANDING, do_move     , 0, SCMD_SW },
   
   /* now, the main list */
+  { "acaudit"  , "acaudi"  , POS_DEAD    , do_acaudit  , LVL_IMMORT, 0 },
   { "at"       , "at"      , POS_DEAD    , do_at       , LVL_IMMORT, 0 },
   { "advance"  , "adv"     , POS_DEAD    , do_advance  , LVL_GRGOD, 0 },
   { "aedit"    , "aed"     , POS_DEAD    , do_oasis_aedit, LVL_GOD, 0 },
@@ -90,15 +92,12 @@ cpp_extern const struct command_info cmd_info[] = {
   { "ask"      , "ask"     , POS_RESTING , do_spec_comm, 0, SCMD_ASK },
   { "astat"    , "ast"     , POS_DEAD    , do_astat    , 0, 0 },
   { "attach"   , "attach"  , POS_DEAD    , do_attach   , LVL_BUILDER, 0 },
-  { "auction"  , "auc"     , POS_SLEEPING, do_gen_comm , 0, SCMD_AUCTION },
   { "autoexits" , "autoex"  , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOEXIT },
   { "autoassist","autoass" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOASSIST },
   { "autodoor" , "autodoor", POS_DEAD    , do_gen_tog , 0, SCMD_AUTODOOR },
-  { "autogold" , "autogold", POS_DEAD    , do_gen_tog , 0, SCMD_AUTOGOLD },
   { "autokey"  , "autokey" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOKEY },
   { "autoloot" , "autoloot", POS_DEAD    , do_gen_tog , 0, SCMD_AUTOLOOT },
   { "automap"  , "automap" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOMAP },
-  { "autosac"  , "autosac" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOSAC },
   { "autosplit", "autospl" , POS_DEAD    , do_gen_tog , 0, SCMD_AUTOSPLIT },
 
   { "backstab" , "ba"      , POS_STANDING, do_backstab , 1, 0 },
@@ -132,20 +131,20 @@ cpp_extern const struct command_info cmd_info[] = {
   { "diagnose" , "diag"    , POS_RESTING , do_diagnose , 0, 0 },
   { "dig"      , "dig"     , POS_DEAD    , do_dig      , LVL_BUILDER, 0 },
   { "display"  , "disp"    , POS_DEAD    , do_display  , 0, 0 },
-  { "donate"   , "don"     , POS_RESTING , do_drop     , 0, SCMD_DONATE },
   { "drink"    , "dri"     , POS_RESTING , do_drink    , 0, SCMD_DRINK },
   { "drop"     , "dro"     , POS_RESTING , do_drop     , 0, SCMD_DROP },
 
   { "eat"      , "ea"      , POS_RESTING , do_eat      , 0, SCMD_EAT },
   { "echo"     , "ec"      , POS_SLEEPING, do_echo     , LVL_IMMORT, SCMD_ECHO },
-  { "emote"    , "em"      , POS_RESTING , do_echo     , 0, SCMD_EMOTE },
-  { ":"        , ":"       , POS_RESTING, do_echo      , 1, SCMD_EMOTE },
+  { "emote"    , "em"      , POS_RESTING , do_emote     , 0, SCMD_EMOTE },
+  { "hemote"   , "hem"     , POS_RESTING , do_hemote    , 0, SCMD_HEMOTE },
   { "enter"    , "ent"     , POS_STANDING, do_enter    , 0, 0 },
   { "equipment", "eq"      , POS_SLEEPING, do_equipment, 0, 0 },
   { "exits"    , "ex"      , POS_RESTING , do_exits    , 0, 0 },
   { "examine"  , "exa"     , POS_SITTING , do_examine  , 0, 0 },
   { "export"   , "export"  , POS_DEAD    , do_export_zone, LVL_IMPL, 0 },
 
+  { "feel"     , "fee"     , POS_SLEEPING, do_feel    , 0, 0 },
   { "force"    , "force"   , POS_SLEEPING, do_force    , LVL_GOD, 0 },
   { "fill"     , "fil"     , POS_STANDING, do_pour     , 0, SCMD_FILL },
   { "file"     , "file"    , POS_SLEEPING, do_file     , LVL_GOD, 0 },
@@ -155,19 +154,14 @@ cpp_extern const struct command_info cmd_info[] = {
 
   { "get"      , "g"       , POS_RESTING , do_get      , 0, 0 },
   { "gecho"    , "gecho"   , POS_DEAD    , do_gecho    , LVL_GOD, 0 },
-  { "gemote"   , "gem"     , POS_SLEEPING, do_gen_comm , 0, SCMD_GEMOTE },
+  { "gemote"   , "gem"     , POS_SLEEPING, do_gen_comm , LVL_IMMORT, SCMD_GEMOTE },
   { "give"     , "giv"     , POS_RESTING , do_give     , 0, 0 },
   { "goto"     , "go"      , POS_SLEEPING, do_goto     , LVL_IMMORT, 0 },
-  { "gold"     , "gol"     , POS_RESTING , do_gold     , 0, 0 },
-  { "gossip"   , "gos"     , POS_SLEEPING, do_gen_comm , 0, SCMD_GOSSIP },
+  { "coins"    , "coin"    , POS_RESTING , do_coins    , 0, 0 },
   { "group"    , "gr"      , POS_RESTING , do_group    , 1, 0 },
   { "grab"     , "grab"    , POS_RESTING , do_grab     , 0, 0 },
-  { "grats"    , "grat"    , POS_SLEEPING, do_gen_comm , 0, SCMD_GRATZ },
-  { "gsay"     , "gsay"    , POS_SLEEPING, do_gsay     , 0, 0 },
-  { "gtell"    , "gt"      , POS_SLEEPING, do_gsay     , 0, 0 },
 
   { "help"     , "h"       , POS_DEAD    , do_help     , 0, 0 },
-  { "happyhour", "ha"      , POS_DEAD    , do_happyhour, 0, 0 },
   { "hedit"    , "hedit"   , POS_DEAD    , do_oasis_hedit, LVL_GOD , 0 },
   { "helpcheck", "helpch"  , POS_DEAD    , do_helpcheck, LVL_GOD, 0 },
   { "hide"     , "hi"      , POS_RESTING , do_hide     , 1, 0 },
@@ -177,12 +171,10 @@ cpp_extern const struct command_info cmd_info[] = {
   { "history"  , "history" , POS_DEAD    , do_history, 0, 0},
   { "hit"      , "hit"     , POS_FIGHTING, do_hit      , 0, SCMD_HIT },
   { "hold"     , "hold"    , POS_RESTING , do_grab     , 1, 0 },
-  { "holler"   , "holler"  , POS_RESTING , do_gen_comm , 1, SCMD_HOLLER },
   { "holylight", "holy"    , POS_DEAD    , do_gen_tog  , LVL_IMMORT, SCMD_HOLYLIGHT },
   { "house"    , "house"   , POS_RESTING , do_house    , 0, 0 },
 
   { "inventory", "i"       , POS_DEAD    , do_inventory, 0, 0 },
-  { "identify" , "id"      , POS_STANDING, do_not_here , 1, 0 },
   { "idea"     , "ide"      , POS_DEAD    , do_ibt      , 0, SCMD_IDEA },
   { "imotd"    , "imo"     , POS_DEAD    , do_gen_ps   , LVL_IMMORT, SCMD_IMOTD },
   { "immlist"  , "imm"     , POS_DEAD    , do_gen_ps   , 0, SCMD_IMMLIST },
@@ -195,10 +187,11 @@ cpp_extern const struct command_info cmd_info[] = {
   { "kick"     , "ki"      , POS_FIGHTING, do_kick     , 1, 0 },
 
   { "look"     , "l"       , POS_RESTING , do_look     , 0, SCMD_LOOK },
+  { "lower"    , "low"     , POS_SITTING , do_raise_lower_hood, 0, SCMD_LOWER_HOOD },
   { "last"     , "last"    , POS_DEAD    , do_last     , LVL_GOD, 0 },
   { "leave"    , "lea"     , POS_STANDING, do_leave    , 0, 0 },
-  { "levels"   , "lev"     , POS_DEAD    , do_levels   , 0, 0 },
   { "list"     , "lis"     , POS_STANDING, do_not_here , 0, 0 },
+  { "listen"   , "lisn"    , POS_RESTING , do_listen   , 0, 0 },
   { "links"    , "lin"     , POS_STANDING, do_links    , LVL_GOD, 0 },
   { "lock"     , "loc"     , POS_SITTING , do_gen_door , 0, SCMD_LOCK },
   { "load"     , "load"     , POS_DEAD    , do_load     , LVL_BUILDER, 0 },
@@ -209,36 +202,36 @@ cpp_extern const struct command_info cmd_info[] = {
   { "medit"    , "med"     , POS_DEAD    , do_oasis_medit, LVL_BUILDER, 0 },
   { "mlist"    , "mlist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_MLIST },
   { "mcopy"    , "mcopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_MEDIT },
+  { "msave"    , "msav"    , POS_DEAD    , do_msave,     LVL_BUILDER, 0 },
   { "msgedit"  , "msgedit" , POS_DEAD    , do_msgedit,   LVL_GOD, 0 },
   { "mute"     , "mute"    , POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_MUTE },
 
   { "news"     , "news"    , POS_SLEEPING, do_gen_ps   , 0, SCMD_NEWS },
-  { "noauction", "noauction",POS_DEAD    , do_gen_tog  , 0, SCMD_NOAUCTION },
-  { "nogossip" , "nogossip", POS_DEAD    , do_gen_tog  , 0, SCMD_NOGOSSIP },
-  { "nograts"  , "nograts" , POS_DEAD    , do_gen_tog  , 0, SCMD_NOGRATZ },
   { "nohassle" , "nohassle", POS_DEAD    , do_gen_tog  , LVL_IMMORT, SCMD_NOHASSLE },
   { "norepeat" , "norepeat", POS_DEAD    , do_gen_tog  , 0, SCMD_NOREPEAT },
   { "noshout"  , "noshout" , POS_SLEEPING, do_gen_tog  , 1, SCMD_NOSHOUT },
   { "nosummon" , "nosummon", POS_DEAD    , do_gen_tog  , 1, SCMD_NOSUMMON },
   { "notell"   , "notell"  , POS_DEAD    , do_gen_tog  , 1, SCMD_NOTELL },
-  { "notitle"  , "notitle" , POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_NOTITLE },
   { "nowiz"    , "nowiz"   , POS_DEAD    , do_gen_tog  , LVL_IMMORT, SCMD_NOWIZ },
 
   { "open"     , "o"       , POS_SITTING , do_gen_door , 0, SCMD_OPEN },
   { "order"    , "ord"     , POS_RESTING , do_order    , 1, 0 },
-  { "offer"    , "off"     , POS_STANDING, do_not_here , 1, 0 },
   { "olc"      , "olc"     , POS_DEAD    , do_show_save_list, LVL_BUILDER, 0 },
   { "olist"    , "olist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_OLIST },
   { "oedit"    , "oedit"   , POS_DEAD    , do_oasis_oedit, LVL_BUILDER, 0 },
+  { "ooc"      , "oo"      , POS_RESTING , do_ooc      , 0, 0 },
   { "oset"     , "oset"    , POS_DEAD    , do_oset,        LVL_BUILDER, 0 },  
   { "ocopy"    , "ocopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_OEDIT },
 
   { "put"      , "p"       , POS_RESTING , do_put      , 0, 0 },
   { "peace"    , "pe"      , POS_DEAD    , do_peace    , LVL_BUILDER, 0 },
+  { "pemote"   , "pem"     , POS_SLEEPING, do_pemote   , 0, SCMD_PEMOTE },
+  { "phemote"  , "phem"    , POS_SLEEPING, do_phemote  , 0, SCMD_PHEMOTE },
   { "pick"     , "pi"      , POS_STANDING, do_gen_door , 1, SCMD_PICK },
-  { "practice" , "pr"      , POS_RESTING , do_practice , 1, 0 },
   { "page"     , "pag"     , POS_DEAD    , do_page     , 1, 0 },
   { "pardon"   , "pardon"  , POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_PARDON },
+{ "perception","per"     , POS_RESTING , do_scan     , 0, 0 },
+  { "palm"     , "palm"    , POS_STANDING, do_palm     , 1, 0 },
   { "plist"    , "plist"   , POS_DEAD    , do_plist    , LVL_GOD, 0 },
   { "policy"   , "pol"     , POS_DEAD    , do_gen_ps   , 0, SCMD_POLICIES },
   { "pour"     , "pour"    , POS_STANDING, do_pour     , 0, SCMD_POUR },
@@ -253,9 +246,9 @@ cpp_extern const struct command_info cmd_info[] = {
   { "quest"    , "que"     , POS_DEAD    , do_quest    , 0, 0 },
   { "qui"      , "qui"     , POS_DEAD    , do_quit     , 0, 0 },
   { "quit"     , "quit"    , POS_DEAD    , do_quit     , 0, SCMD_QUIT },
-  { "qsay"     , "qsay"    , POS_RESTING , do_qcomm    , 0, SCMD_QSAY },
 
-  { "reply"    , "r"       , POS_SLEEPING, do_reply    , 0, 0 },
+  { "raise"    , "rai"     , POS_SITTING , do_raise_lower_hood, 0, SCMD_RAISE_HOOD },
+  { "reply"    , "r"       , POS_SLEEPING, do_reply    , LVL_IMMORT, 0 },
   { "rest"     , "res"     , POS_RESTING , do_rest     , 0, 0 },
   { "read"     , "rea"     , POS_RESTING , do_look     , 0, SCMD_READ },
   { "reload"   , "reload"  , POS_DEAD    , do_reboot   , LVL_IMPL, 0 },
@@ -263,7 +256,6 @@ cpp_extern const struct command_info cmd_info[] = {
   { "receive"  , "rece"    , POS_STANDING, do_not_here , 1, 0 },
   { "recent"   , "recent"  , POS_DEAD    , do_recent   , LVL_IMMORT, 0 },
   { "remove"   , "rem"     , POS_RESTING , do_remove   , 0, 0 },
-  { "rent"     , "rent"    , POS_STANDING, do_not_here , 1, 0 },
   { "report"   , "repo"    , POS_RESTING , do_report   , 0, 0 },
   { "reroll"   , "rero"    , POS_DEAD    , do_wizutil  , LVL_GRGOD, SCMD_REROLL },
   { "rescue"   , "resc"    , POS_FIGHTING, do_rescue   , 1, 0 },
@@ -273,8 +265,8 @@ cpp_extern const struct command_info cmd_info[] = {
   { "rlist"    , "rlist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_RLIST },
   { "rcopy"    , "rcopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_REDIT },
   { "roomflags", "roomflags", POS_DEAD   , do_gen_tog  , LVL_IMMORT, SCMD_SHOWVNUMS },
+  { "rsave"    , "rsave"   , POS_DEAD    , do_rsave    , LVL_BUILDER, 0 },
 
-  { "sacrifice", "sac"     , POS_RESTING , do_sac      , 0, 0 },
   { "say"      , "s"       , POS_RESTING , do_say      , 0, 0 },
   { "score"    , "sc"      , POS_DEAD    , do_score    , 0, 0 },
   { "scan"     , "sca"     , POS_RESTING , do_scan     , 0, 0 },
@@ -288,12 +280,15 @@ cpp_extern const struct command_info cmd_info[] = {
   { "send"     , "send"    , POS_SLEEPING, do_send     , LVL_GOD, 0 },
   { "set"      , "set"     , POS_DEAD    , do_set      , LVL_IMMORT, 0 },
   { "shout"    , "sho"     , POS_RESTING , do_gen_comm , 0, SCMD_SHOUT },
+  { "skills"   , "sk"      , POS_SLEEPING, do_skills   , 0, 0 },
+  { "forage"   , "for"     , POS_STANDING, do_forage   , 0, 0 },
+  { "skin"     , "skin"    , POS_STANDING, do_skin, 0, 0 },
   { "show"     , "show"    , POS_DEAD    , do_show     , LVL_IMMORT, 0 },
   { "shutdow"  , "shutdow" , POS_DEAD    , do_shutdown , LVL_IMPL, 0 },
   { "shutdown" , "shutdown", POS_DEAD    , do_shutdown , LVL_IMPL, SCMD_SHUTDOWN },
   { "sip"      , "sip"     , POS_RESTING , do_drink    , 0, SCMD_SIP },
-  { "skillset" , "skillset", POS_SLEEPING, do_skillset , LVL_GRGOD, 0 },
   { "sleep"    , "sl"      , POS_SLEEPING, do_sleep    , 0, 0 },
+  { "slip"     , "slip"    , POS_STANDING, do_slip     , 1, 0 },
   { "slist"    , "slist"   , POS_SLEEPING, do_oasis_list, LVL_BUILDER, SCMD_OASIS_SLIST },
   { "sneak"    , "sneak"   , POS_STANDING, do_sneak    , 1, 0 },
   { "snoop"    , "snoop"   , POS_DEAD    , do_snoop    , LVL_GOD, 0 },
@@ -304,13 +299,14 @@ cpp_extern const struct command_info cmd_info[] = {
   { "steal"    , "ste"     , POS_STANDING, do_steal    , 1, 0 },
   { "switch"   , "switch"  , POS_DEAD    , do_switch   , LVL_GOD, 0 },
 
-  { "tell"     , "t"       , POS_DEAD    , do_tell     , 0, 0 },
+  { "tell"     , "t"       , POS_DEAD    , do_tell     , LVL_IMMORT, 0 },
+  { "talk"     , "talk"    , POS_SITTING , do_talk     , 0, 0 },
   { "take"     , "ta"      , POS_RESTING , do_get      , 0, 0 },
   { "taste"    , "tas"     , POS_RESTING , do_eat      , 0, SCMD_TASTE },
   { "teleport" , "tele"    , POS_DEAD    , do_teleport , LVL_BUILDER, 0 },
   { "tedit"    , "tedit"   , POS_DEAD    , do_tedit    , LVL_GOD, 0 },  /* XXX: Oasisify */
   { "thaw"     , "thaw"    , POS_DEAD    , do_wizutil  , LVL_GRGOD, SCMD_THAW },
-  { "title"    , "title"   , POS_DEAD    , do_title    , 0, 0 },
+  { "think"    , "thin"    , POS_RESTING , do_think    , 0, 0 },
   { "time"     , "time"    , POS_DEAD    , do_time     , 0, 0 },
   { "toggle"   , "toggle"  , POS_DEAD    , do_toggle   , 0, 0 },
   { "track"    , "track"   , POS_STANDING, do_track    , 0, 0 },
@@ -331,6 +327,7 @@ cpp_extern const struct command_info cmd_info[] = {
 
   { "value"    , "val"     , POS_STANDING, do_not_here , 0, 0 },
   { "version"  , "ver"     , POS_DEAD    , do_gen_ps   , 0, SCMD_VERSION },
+  { "view"     , "vie"     , POS_STANDING, do_not_here , 0, 0 },
   { "visible"  , "vis"     , POS_RESTING , do_visible  , 1, 0 },
   { "vnum"     , "vnum"    , POS_DEAD    , do_vnum     , LVL_IMMORT, 0 },
   { "vstat"    , "vstat"   , POS_DEAD    , do_vstat    , LVL_IMMORT, 0 },
@@ -508,20 +505,20 @@ void command_interpreter(struct char_data *ch, char *argument)
   }
 
   /* Allow IMPLs to switch into mobs to test the commands. */
-   if (IS_NPC(ch) && ch->desc && GET_LEVEL(ch->desc->original) >= LVL_IMPL) {
-     if (script_command_interpreter(ch, argument))
-       return;
-   }
+  if (IS_NPC(ch) && ch->desc && GET_LEVEL(ch->desc->original) >= LVL_IMPL) {
+    if (script_command_interpreter(ch, argument))
+      return;
+  }
 
   for (length = strlen(arg), cmd = 0; *complete_cmd_info[cmd].command != '\n'; cmd++)
-    if(complete_cmd_info[cmd].command_pointer != do_action &&
-       !strncmp(complete_cmd_info[cmd].command, arg, length))
+    if (complete_cmd_info[cmd].command_pointer != do_action &&
+        !strncmp(complete_cmd_info[cmd].command, arg, length))
       if (GET_LEVEL(ch) >= complete_cmd_info[cmd].minimum_level)
         break;
 
   /* it's not a 'real' command, so it's a social */
 
-  if(*complete_cmd_info[cmd].command == '\n')
+  if (*complete_cmd_info[cmd].command == '\n')
     for (length = strlen(arg), cmd = 0; *complete_cmd_info[cmd].command != '\n'; cmd++)
       if (complete_cmd_info[cmd].command_pointer == do_action &&
           !strncmp(complete_cmd_info[cmd].command, arg, length))
@@ -532,17 +529,14 @@ void command_interpreter(struct char_data *ch, char *argument)
     int found = 0;
     send_to_char(ch, "%s", CONFIG_HUH);
 
-    for (cmd = 0; *cmd_info[cmd].command != '\n'; cmd++)
-    {
+    for (cmd = 0; *cmd_info[cmd].command != '\n'; cmd++) {
       if (*arg != *cmd_info[cmd].command || cmd_info[cmd].minimum_level > GET_LEVEL(ch))
         continue;
 
       /* Only apply levenshtein counts if the command is not a trigger command. */
-      if ( (levenshtein_distance(arg, cmd_info[cmd].command) <= 2) &&
-           (cmd_info[cmd].minimum_level >= 0) )
-      {
-        if (!found)
-        {
+      if ((levenshtein_distance(arg, cmd_info[cmd].command) <= 2) &&
+          (cmd_info[cmd].minimum_level >= 0)) {
+        if (!found) {
           send_to_char(ch, "\r\nDid you mean:\r\n");
           found = 1;
         }
@@ -558,30 +552,47 @@ void command_interpreter(struct char_data *ch, char *argument)
     send_to_char(ch, "You can't use immortal commands while switched.\r\n");
   else if (GET_POS(ch) < complete_cmd_info[cmd].minimum_position)
     switch (GET_POS(ch)) {
-    case POS_DEAD:
-      send_to_char(ch, "Lie still; you are DEAD!!! :-(\r\n");
-      break;
-    case POS_INCAP:
-    case POS_MORTALLYW:
-      send_to_char(ch, "You are in a pretty bad shape, unable to do anything!\r\n");
-      break;
-    case POS_STUNNED:
-      send_to_char(ch, "All you can do right now is think about the stars!\r\n");
-      break;
-    case POS_SLEEPING:
-      send_to_char(ch, "In your dreams, or what?\r\n");
-      break;
-    case POS_RESTING:
-      send_to_char(ch, "Nah... You feel too relaxed to do that..\r\n");
-      break;
-    case POS_SITTING:
-      send_to_char(ch, "Maybe you should get on your feet first?\r\n");
-      break;
-    case POS_FIGHTING:
-      send_to_char(ch, "No way!  You're fighting for your life!\r\n");
-      break;
-  } else if (no_specials || !special(ch, cmd, line))
-    ((*complete_cmd_info[cmd].command_pointer) (ch, line, cmd, complete_cmd_info[cmd].subcmd));
+      case POS_DEAD:
+        send_to_char(ch, "Lie still; you are DEAD!!! :-(\r\n");
+        break;
+      case POS_INCAP:
+      case POS_MORTALLYW:
+        send_to_char(ch, "You are in a pretty bad shape, unable to do anything!\r\n");
+        break;
+      case POS_STUNNED:
+        send_to_char(ch, "All you can do right now is think about the stars!\r\n");
+        break;
+      case POS_SLEEPING:
+        send_to_char(ch, "In your dreams, or what?\r\n");
+        break;
+      case POS_RESTING:
+        send_to_char(ch, "Nah... You feel too relaxed to do that..\r\n");
+        break;
+      case POS_SITTING:
+        send_to_char(ch, "Maybe you should get on your feet first?\r\n");
+        break;
+      case POS_FIGHTING:
+        send_to_char(ch, "No way!  You're fighting for your life!\r\n");
+        break;
+    }
+  else if (no_specials || !special(ch, cmd, line)) {
+    /* Execute the command */
+    ((*complete_cmd_info[cmd].command_pointer)(ch, line, cmd, complete_cmd_info[cmd].subcmd));
+
+    /* After successful execution, log any immortal command to log/godcmds. */
+    if (!IS_NPC(ch) && GET_LEVEL(ch) >= LVL_IMMORT) {
+      int rvnum = (IN_ROOM(ch) != NOWHERE) ? world[IN_ROOM(ch)].number : -1;
+      const char *line_safe = (line && *line) ? line : "";
+      godcmd_log("%s (lev %d, invis %d) in room %d: %s%s%s",
+                 GET_NAME(ch),
+                 GET_LEVEL(ch),
+                 GET_INVIS_LEV(ch),
+                 rvnum,
+                 complete_cmd_info[cmd].command,
+                 *line_safe ? " " : "",
+                 line_safe);
+    }
+  }
 }
 
 /* Routines to handle aliasing. */
@@ -1025,6 +1036,72 @@ static int _parse_name(char *arg, char *name)
   return (0);
 }
 
+static void show_account_character_list(struct descriptor_data *d)
+{
+  int i;
+
+  if (!d || !d->account)
+    return;
+
+  write_to_output(d, "\r\nCharacter history:\r\n");
+  if (d->account->pc_count == 0) {
+    write_to_output(d, "  (none)\r\n");
+    return;
+  }
+
+  for (i = 0; i < d->account->pc_count; i++) {
+    int pfilepos = get_ptable_by_name(d->account->pc_list[i]);
+    const char *status = "dead";
+
+    if (pfilepos >= 0 && !IS_SET(player_table[pfilepos].flags, PINDEX_DELETED))
+      status = "alive";
+
+    write_to_output(d, "  %s (%s)\r\n", d->account->pc_list[i], status);
+  }
+  write_to_output(d, "\r\n*** PRESS RETURN: ");
+}
+
+void send_account_menu(struct descriptor_data *d)
+{
+  int has_pc;
+
+  if (!d || !d->account)
+    return;
+
+  account_refresh_pc(d->account);
+  has_pc = account_has_alive_pc(d->account);
+
+  write_to_output(d,
+    "\r\n"
+    "                     .\r\n"
+    "                    /=\\\\\r\n"
+    "                   /===\\ \\\r\n"
+    "                  /=====\\' \\\r\n"
+    "                 /=======\\'' \\\r\n"
+    "                /=========\\ ' '\\\r\n"
+    "               /===========\\''   \\\r\n"
+    "              /=============\\ ' '  \\\r\n"
+    "             /===============\\   ''  \\\r\n"
+    "            /=================\\' ' ' ' \\\r\n"
+    "           /===================\\' ' '  ' \\\r\n"
+    "          /=====================\\' '   ' ' \\\r\n"
+    "         /=======================\\  '   ' /\r\n"
+    "        /=========================\\   ' /\r\n"
+    "       /===========================\\'  /\r\n"
+    "      /=============| |=============\\/\r\n"
+    "\r\n"
+    "      -Pyramid of Ikaros, current day.\r\n"
+    "\r\n");
+  write_to_output(d, "\r\n Account: %s\r\n", d->account->name);
+  if (has_pc)
+    write_to_output(d, "\t(  C\t)) Connect to %s.\r\n", d->account->pc_name);
+  else
+    write_to_output(d, "\t(  R\t)) Create a new PC.\r\n");
+  write_to_output(d, "\t(  L\t)) List previous characters.\r\n");
+  write_to_output(d, "\t(  X\t)) Exit from Miranthas.\r\n\r\n"
+                     "   Make your choice: ");
+}
+
 #define RECON		1
 #define USURP		2
 #define UNSWITCH	3
@@ -1230,50 +1307,112 @@ static bool perform_new_char_dupe_check(struct descriptor_data *d)
 int enter_player_game (struct descriptor_data *d)
 {
   int load_result;
-  room_vnum load_room;
+  room_vnum saved_vnum;         /* cache pfile value BEFORE any mutations */
+  room_rnum start_r = NOWHERE;
+
+  if (!d || !d->character)
+    return 0;
+
+  if (!d->account && GET_ACCOUNT(d->character) && *GET_ACCOUNT(d->character))
+    d->account = account_load(GET_ACCOUNT(d->character));
+
+  /* Cache the pfile's saved load room FIRST. */
+  saved_vnum = GET_LOADROOM(d->character);
 
   reset_char(d->character);
 
   if (PLR_FLAGGED(d->character, PLR_INVSTART))
     GET_INVIS_LEV(d->character) = GET_LEVEL(d->character);
 
-  /* We have to place the character in a room before equipping them
-   * or equip_char() will gripe about the person in NOWHERE. */
-  if ((load_room = GET_LOADROOM(d->character)) != NOWHERE)
-    load_room = real_room(load_room);
+  /* Resolve the room to enter (use cached vnum -> rnum). */
+  if (saved_vnum != NOWHERE)
+    start_r = real_room(saved_vnum);
 
-  /* If char was saved with NOWHERE, or real_room above failed... */
-  if (load_room == NOWHERE) {
-    if (GET_LEVEL(d->character) >= LVL_IMMORT)
-      load_room = r_immort_start_room;
+  /* Fallbacks if invalid/missing. */
+  if (start_r == NOWHERE) {
+    if (PLR_FLAGGED(d->character, PLR_FROZEN))
+      start_r = r_frozen_start_room;
+    else if (GET_LEVEL(d->character) >= LVL_IMMORT)
+      start_r = r_immort_start_room;
     else
-      load_room = r_mortal_start_room;
+      start_r = r_mortal_start_room;
   }
 
-  if (PLR_FLAGGED(d->character, PLR_FROZEN))
-    load_room = r_frozen_start_room;
-
-  /* copyover */
+  /* DG Scripts setup */
   d->character->script_id = GET_IDNUM(d->character);
-  /* find_char helper */
   add_to_lookup_table(d->character->script_id, (void *)d->character);
-
-  /* After moving saving of variables to the player file, this should only
-   * be called in case nothing was found in the pfile. If something was
-   * found, SCRIPT(ch) will be set. */
   if (!SCRIPT(d->character))
     read_saved_vars(d->character);
 
+  /* Link character and place before equipping. */
   d->character->next = character_list;
   character_list = d->character;
-  char_to_room(d->character, load_room);
-  load_result = Crash_load(d->character);
-  
-  /* Save the character and their object file */
-  save_char(d->character);
-  Crash_crashsave(d->character);
+  char_to_room(d->character, start_r);
 
-  /* Check for a login trigger in the players' start room */
+  /* Load inventory/equipment */
+  load_result = Crash_load(d->character);
+
+  {
+    static const struct {
+      obj_vnum vnum;
+      int wear_pos;
+    } starting_wear[] = {
+      { 153, WEAR_BACK },
+      { 165, WEAR_BODY },
+      { 166, WEAR_LEGS },
+      { 167, WEAR_FEET },
+    };
+    static const struct {
+      obj_vnum vnum;
+      int qty;
+    } starting_inv[] = {
+      { 142, 3 },
+      { 160, 1 },
+      { 121, 1 },
+    };
+    int i;
+    int has_eq = 0;
+
+    if (GET_LEVEL(d->character) <= 1 && GET_EXP(d->character) <= 1 &&
+        d->character->carrying == NULL) {
+      for (i = 0; i < NUM_WEARS; i++) {
+        if (GET_EQ(d->character, i)) {
+          has_eq = 1;
+          break;
+        }
+      }
+
+      if (!has_eq) {
+        for (i = 0; i < (int)(sizeof(starting_wear) / sizeof(starting_wear[0])); i++) {
+          struct obj_data *obj = read_object(starting_wear[i].vnum, VIRTUAL);
+          if (!obj) {
+            log("SYSERR: enter_player_game: missing starting wear obj vnum %d",
+                starting_wear[i].vnum);
+            continue;
+          }
+          equip_char(d->character, obj, starting_wear[i].wear_pos);
+        }
+
+        for (i = 0; i < (int)(sizeof(starting_inv) / sizeof(starting_inv[0])); i++) {
+          int qty = starting_inv[i].qty;
+          while (qty-- > 0) {
+            struct obj_data *obj = read_object(starting_inv[i].vnum, VIRTUAL);
+            if (!obj) {
+              log("SYSERR: enter_player_game: missing starting inventory obj vnum %d",
+                  starting_inv[i].vnum);
+              break;
+            }
+            obj_to_char(obj, d->character);
+          }
+        }
+
+        add_coins_to_char(d->character, rand_number(800, 1100));
+      }
+    }
+  }
+
+  /* DO NOT save here — avoids clobbering Room with NOWHERE on login. */
+  /* login_wtrigger can remain. */
   login_wtrigger(&world[IN_ROOM(d->character)], d->character);
 
   return load_result;
@@ -1311,7 +1450,7 @@ EVENTFUNC(get_protocols)
   write_to_output(d, buf, 0);
     
   write_to_output(d, GREETINGS, 0); 
-  STATE(d) = CON_GET_NAME;
+  STATE(d) = CON_GET_CONNECT;
   return 0;
 }
 
@@ -1356,14 +1495,81 @@ void nanny(struct descriptor_data *d, char *arg)
   case CON_GET_PROTOCOL:
     write_to_output(d, "Collecting Protocol Information... Please Wait.\r\n"); 
     return;
+  case CON_GET_CONNECT:
+    if (!*arg) {
+      write_to_output(d, GREETINGS, 0);
+      return;
+    }
+    switch (UPPER(*arg)) {
+      case 'C':
+        write_to_output(d, "Account name: ");
+        STATE(d) = CON_GET_ACCOUNT;
+        return;
+      case 'X':
+        write_to_output(d, "Goodbye.\r\n");
+        STATE(d) = CON_CLOSE;
+        return;
+      default:
+        write_to_output(d,
+          "That is an invalid selection.\r\n");
+        write_to_output(d, GREETINGS, 0);
+        return;
+    }
+  case CON_GET_ACCOUNT:
+    if (!*arg) {
+      STATE(d) = CON_CLOSE;
+      break;
+    } else {
+      char buf[MAX_INPUT_LENGTH], tmp_name[MAX_INPUT_LENGTH];
+
+      if ((_parse_name(arg, tmp_name)) || strlen(tmp_name) < 2 ||
+          strlen(tmp_name) > MAX_NAME_LENGTH || !valid_name(tmp_name) ||
+          fill_word(strcpy(buf, tmp_name)) || reserved_word(buf)) {	/* strcpy: OK (mutual MAX_INPUT_LENGTH) */
+        write_to_output(d, "Invalid account name, please try another.\r\nAccount name: ");
+        return;
+      }
+
+      if (d->account) {
+        account_free(d->account);
+        d->account = NULL;
+      }
+
+      d->account = account_load(tmp_name);
+      if (d->account) {
+        write_to_output(d, "Password: ");
+        echo_off(d);
+        d->idle_tics = 0;
+        STATE(d) = CON_ACCOUNT_PASSWORD;
+        return;
+      }
+
+      if ((player_i = get_ptable_by_name(tmp_name)) >= 0 &&
+          !IS_SET(player_table[player_i].flags, PINDEX_DELETED)) {
+        d->account = account_create(tmp_name);
+        account_set_pc(d->account, player_table[player_i].name);
+        write_to_output(d, "An existing character was found. Create an account to link it (\t(Y\t)/\t(N\t))? ");
+        STATE(d) = CON_ACCOUNT_CNFRM;
+        return;
+      }
+
+      d->account = account_create(tmp_name);
+      write_to_output(d, "Create a new account %s (\t(Y\t)/\t(N\t))? ", tmp_name);
+      STATE(d) = CON_ACCOUNT_CNFRM;
+      return;
+    }
+
   case CON_GET_NAME:		/* wait for input of name */
+    if (!d->account) {
+      STATE(d) = CON_CLOSE;
+      return;
+    }
     if (d->character == NULL) {
       CREATE(d->character, struct char_data, 1);
       clear_char(d->character);
       CREATE(d->character->player_specials, struct player_special_data, 1);
-      
+
       new_mobile_data(d->character);
-      
+
       GET_HOST(d->character) = strdup(d->host);
       d->character->desc = d;
     }
@@ -1373,70 +1579,127 @@ void nanny(struct descriptor_data *d, char *arg)
       char buf[MAX_INPUT_LENGTH], tmp_name[MAX_INPUT_LENGTH];
 
       if ((_parse_name(arg, tmp_name)) || strlen(tmp_name) < 2 ||
-       strlen(tmp_name) > MAX_NAME_LENGTH || !valid_name(tmp_name) ||
-       fill_word(strcpy(buf, tmp_name)) || reserved_word(buf)) {	/* strcpy: OK (mutual MAX_INPUT_LENGTH) */
-          write_to_output(d, "Invalid name, please try another.\r\nName: ");
-          return;
+          strlen(tmp_name) > MAX_NAME_LENGTH || !valid_name(tmp_name) ||
+          fill_word(strcpy(buf, tmp_name)) || reserved_word(buf)) {	/* strcpy: OK (mutual MAX_INPUT_LENGTH) */
+        write_to_output(d, "Invalid name, please try another.\r\nName: ");
+        return;
       }
-      if ((player_i = load_char(tmp_name, d->character)) > -1) {
-        GET_PFILEPOS(d->character) = player_i;
+      if (account_has_pc(d->account, tmp_name)) {
+        write_to_output(d, "That name has already been used, try something else.\r\nName: ");
+        return;
+      }
 
-        if (PLR_FLAGGED(d->character, PLR_DELETED)) {
-          /* Make sure old files are removed so the new player doesn't get the
-           * deleted player's equipment. */
-          if ((player_i = get_ptable_by_name(tmp_name)) >= 0)
-            remove_player(player_i);
-
-          /* We get a false positive from the original deleted character. */
-          free_char(d->character);
-
-          /* Check for multiple creations. */
-          if (!valid_name(tmp_name)) {
-            write_to_output(d, "Invalid name, please try another.\r\nName: ");
-            return;
-          }
-          CREATE(d->character, struct char_data, 1);
-          clear_char(d->character);
-          CREATE(d->character->player_specials, struct player_special_data, 1);
-
-          new_mobile_data(d->character);
-
-          if (GET_HOST(d->character))
-            free(GET_HOST(d->character));
-          GET_HOST(d->character) = strdup(d->host);
-
-          d->character->desc = d;
-          CREATE(d->character->player.name, char, strlen(tmp_name) + 1);
-          strcpy(d->character->player.name, CAP(tmp_name));	/* strcpy: OK (size checked above) */
-          GET_PFILEPOS(d->character) = player_i;
-          write_to_output(d, "Did I get that right, %s (\t(Y\t)/\t(N\t))? ", tmp_name);
-          STATE(d) = CON_NAME_CNFRM;
+      if ((player_i = get_ptable_by_name(tmp_name)) >= 0) {
+        if (IS_SET(player_table[player_i].flags, PINDEX_DELETED)) {
+          remove_player(player_i);
         } else {
-          /* undo it just in case they are set */
-          REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_WRITING);
-          REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_MAILING);
-          REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_CRYO);
-          d->character->player.time.logon = time(0);
-          write_to_output(d, "Password: ");
-          echo_off(d);
-          d->idle_tics = 0;
-          STATE(d) = CON_PASSWORD;
-        }
-      } else {
-        /* player unknown -- make new character */
-
-        /* Check for multiple creations of a character. */
-        if (!valid_name(tmp_name)) {
-          write_to_output(d, "Invalid name, please try another.\r\nName: ");
+          write_to_output(d, "That name is already taken.\r\nName: ");
           return;
         }
-        CREATE(d->character->player.name, char, strlen(tmp_name) + 1);
-        strcpy(d->character->player.name, CAP(tmp_name));	/* strcpy: OK (size checked above) */
-
-        write_to_output(d, "Did I get that right, %s (\t(Y\t)/\t(N\t))? ", tmp_name);
-        STATE(d) = CON_NAME_CNFRM;
       }
+
+      if (GET_NAME(d->character))
+        free(GET_NAME(d->character));
+      CREATE(d->character->player.name, char, strlen(tmp_name) + 1);
+      strcpy(d->character->player.name, CAP(tmp_name));	/* strcpy: OK (size checked above) */
+
+      write_to_output(d, "Did I get that right, %s (\t(Y\t)/\t(N\t))? ", tmp_name);
+      STATE(d) = CON_NAME_CNFRM;
     }
+    break;
+
+  case CON_ACCOUNT_CNFRM:
+    if (UPPER(*arg) == 'Y') {
+      if (isbanned(d->host) >= BAN_NEW) {
+        mudlog(NRM, LVL_GOD, TRUE, "Request for new account %s denied from [%s] (siteban)",
+               d->account ? d->account->name : "<unknown>", d->host);
+        write_to_output(d, "Sorry, new accounts are not allowed from your site!\r\n");
+        STATE(d) = CON_CLOSE;
+        return;
+      }
+      if (circle_restrict) {
+        write_to_output(d, "Sorry, new accounts can't be created at the moment.\r\n");
+        mudlog(NRM, LVL_GOD, TRUE, "Request for new account %s denied from [%s] (wizlock)",
+               d->account ? d->account->name : "<unknown>", d->host);
+        STATE(d) = CON_CLOSE;
+        return;
+      }
+      write_to_output(d, "New account.\r\nGive me a password: ");
+      echo_off(d);
+      STATE(d) = CON_ACCOUNT_NEWPASSWD;
+    } else if (*arg == 'n' || *arg == 'N') {
+      account_free(d->account);
+      d->account = NULL;
+      write_to_output(d, "Okay, what IS it, then?\r\nAccount name: ");
+      STATE(d) = CON_GET_ACCOUNT;
+    } else
+      write_to_output(d, "Please type Yes or No: ");
+    break;
+
+  case CON_ACCOUNT_PASSWORD:
+    echo_on(d);
+    write_to_output(d, "\r\n");
+
+    if (!*arg)
+      STATE(d) = CON_CLOSE;
+    else if (!d->account) {
+      STATE(d) = CON_CLOSE;
+    } else {
+      if (strncmp(CRYPT(arg, d->account->passwd), d->account->passwd, MAX_PWD_LENGTH)) {
+        mudlog(BRF, LVL_GOD, TRUE, "Bad account PW: %s [%s]", d->account->name, d->host);
+        if (++(d->bad_pws) >= CONFIG_MAX_BAD_PWS) {
+          write_to_output(d, "Wrong password... disconnecting.\r\n");
+          STATE(d) = CON_CLOSE;
+        } else {
+          write_to_output(d, "Wrong password.\r\nPassword: ");
+          echo_off(d);
+        }
+        return;
+      }
+
+      d->bad_pws = 0;
+      send_account_menu(d);
+      STATE(d) = CON_ACCOUNT_MENU;
+    }
+    break;
+
+  case CON_ACCOUNT_NEWPASSWD:
+    if (!*arg || strlen(arg) > MAX_PWD_LENGTH || strlen(arg) < 3 ||
+        !str_cmp(arg, d->account ? d->account->name : "")) {
+      write_to_output(d, "\r\nIllegal password.\r\nPassword: ");
+      return;
+    }
+    strncpy(d->account->passwd, CRYPT(arg, d->account->name), MAX_PWD_LENGTH);
+    d->account->passwd[MAX_PWD_LENGTH] = '\0';
+
+    write_to_output(d, "\r\nPlease retype password: ");
+    STATE(d) = CON_ACCOUNT_CNFPASSWD;
+    break;
+
+  case CON_ACCOUNT_CNFPASSWD:
+    if (strncmp(CRYPT(arg, d->account->passwd), d->account->passwd, MAX_PWD_LENGTH)) {
+      write_to_output(d, "\r\nPasswords don't match... start over.\r\nPassword: ");
+      STATE(d) = CON_ACCOUNT_NEWPASSWD;
+      return;
+    }
+    echo_on(d);
+
+    write_to_output(d, "\r\nEmail address (optional, press Enter to skip): ");
+    STATE(d) = CON_ACCOUNT_EMAIL;
+    break;
+
+  case CON_ACCOUNT_EMAIL:
+    if (d->account) {
+      if (d->account->email)
+        free(d->account->email);
+      d->account->email = NULL;
+      if (*arg)
+        d->account->email = strdup(arg);
+      account_save(d->account);
+    }
+    write_to_output(d, "\r\nAccount created.\r\n");
+    send_account_menu(d);
+    STATE(d) = CON_ACCOUNT_MENU;
     break;
 
   case CON_NAME_CNFRM:		/* wait for conf. of new name    */
@@ -1454,11 +1717,13 @@ void nanny(struct descriptor_data *d, char *arg)
 	return;
       }
       perform_new_char_dupe_check(d);
-      write_to_output(d, "New character.\r\nGive me a password for %s: ", GET_PC_NAME(d->character));
-      echo_off(d);
-      STATE(d) = CON_NEWPASSWD;
+      if (GET_ACCOUNT(d->character))
+        free(GET_ACCOUNT(d->character));
+      GET_ACCOUNT(d->character) = d->account ? strdup(d->account->name) : NULL;
+      write_to_output(d, "New character.\r\nWhat is your sex (\t(M\t)/\t(F\t))? ");
+      STATE(d) = CON_QSEX;
     } else if (*arg == 'n' || *arg == 'N') {
-      write_to_output(d, "Okay, what IS it, then? ");
+      write_to_output(d, "Okay, what IS it, then?\r\nName: ");
       free(d->character->player.name);
       d->character->player.name = NULL;
       STATE(d) = CON_GET_NAME;
@@ -1582,8 +1847,9 @@ void nanny(struct descriptor_data *d, char *arg)
       STATE(d) = CON_QSEX;
     } else {
       save_char(d->character);
-      write_to_output(d, "\r\nDone.\r\n%s", CONFIG_MENU);
-      STATE(d) = CON_MENU;
+      write_to_output(d, "\r\nDone.\r\n");
+      send_account_menu(d);
+      STATE(d) = CON_ACCOUNT_MENU;
     }
     break;
 
@@ -1607,134 +1873,357 @@ void nanny(struct descriptor_data *d, char *arg)
     STATE(d) = CON_QCLASS;
     break;
 
-  case CON_QCLASS:
-    load_result = parse_class(*arg);
-    if (load_result == CLASS_UNDEFINED) {
-      write_to_output(d, "\r\nThat's not a class.\r\nClass: ");
-      return;
-    } else
-      GET_CLASS(d->character) = load_result;
+case CON_QCLASS:
+  load_result = parse_class(*arg);
+  if (load_result == CLASS_UNDEFINED) {
+    write_to_output(d, "\r\nThat's not a class.\r\nClass: ");
+    return;
+  } else {
+    GET_CLASS(d->character) = load_result;
+  }
 
-      if (d->olc) {
-        free(d->olc);
-        d->olc = NULL;
+  /* Create player entry and initialize character now so file exists */
+  if (d->olc) {
+    free(d->olc);
+    d->olc = NULL;
+  }
+  if (GET_PFILEPOS(d->character) < 0)
+    GET_PFILEPOS(d->character) = create_entry(GET_PC_NAME(d->character));
+
+  /* Initialize base stats, starting level, etc. */
+  init_char(d->character);
+  if (d->account && d->account->name) {
+    if (GET_ACCOUNT(d->character))
+      free(GET_ACCOUNT(d->character));
+    GET_ACCOUNT(d->character) = strdup(d->account->name);
+  }
+  save_char(d->character);
+  save_player_index();
+  if (d->account) {
+    account_set_pc(d->account, GET_NAME(d->character));
+    account_save(d->account);
+  }
+
+  /* Log and register early so new players are tracked immediately */
+  GET_PREF(d->character) = rand_number(1, 128000);
+  GET_HOST(d->character) = strdup(d->host);
+  mudlog(NRM, LVL_GOD, TRUE, "%s [%s] new player created (awaiting description).",
+         GET_NAME(d->character), d->host);
+
+  if (AddRecentPlayer(GET_NAME(d->character), d->host, TRUE, FALSE) == FALSE)
+    mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE,
+           "Failure to AddRecentPlayer (returned FALSE).");
+
+  /* === NEW: mandatory short description before main description === */
+  write_to_output(d,
+    "\r\nBefore entering the world, you must choose a short description.\r\n"
+    "This is what others see in the room list and messages instead of your name.\r\n"
+    "It should describe your appearance, not identity.\r\n\r\n"
+    "Examples:\r\n"
+    "  the tall, muscular man\r\n"
+    "  the lanky, sharp-eyed elf\r\n"
+    "  the short, bald dwarf\r\n\r\n"
+    "Do not include your character's name here.\r\n"
+    "Short description: ");
+
+  STATE(d) = CON_QSHORTDESC;
+  return;
+
+  case CON_QSHORTDESC: {
+      skip_spaces(&arg);
+
+      if (!*arg) {
+          write_to_output(d, "\r\nA short description cannot be empty.\r\n"
+                            "Short description: ");
+          return;
       }
-      if (GET_PFILEPOS(d->character) < 0)
-      GET_PFILEPOS(d->character) = create_entry(GET_PC_NAME(d->character));
-    /* Now GET_NAME() will work properly. */
-    init_char(d->character);
-    save_char(d->character);
-    save_player_index();
-    write_to_output(d, "%s\r\n*** PRESS RETURN: ", motd);
-    STATE(d) = CON_RMOTD;
-    /* make sure the last log is updated correctly. */
-    GET_PREF(d->character)= rand_number(1, 128000);
-    GET_HOST(d->character)= strdup(d->host);
 
-    mudlog(NRM, LVL_GOD, TRUE, "%s [%s] new player.", GET_NAME(d->character), d->host);
+      /* Do not allow their character name in the sdesc */
+      if (str_str(arg, GET_NAME(d->character))) {
+          write_to_output(d, "\r\nYour short description must not include your name.\r\n"
+                            "Short description: ");
+          return;
+      }
 
-    /* Add to the list of 'recent' players (since last reboot) */
-    if (AddRecentPlayer(GET_NAME(d->character), d->host, TRUE, FALSE) == FALSE)
-    {
-      mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE, "Failure to AddRecentPlayer (returned FALSE).");
-    }
-    break;
+      /* Enforce length limit (optional, but recommended) */
+      if (strlen(arg) > MAX_NAME_LENGTH * 2) {
+          write_to_output(d, "\r\nThat description is too long.\r\n"
+                            "Short description: ");
+          return;
+      }
 
-  case CON_RMOTD:		/* read CR after printing motd   */
-    write_to_output(d, "%s", CONFIG_MENU);
-    if (IS_HAPPYHOUR > 0){
-      write_to_output(d, "\r\n");
-      write_to_output(d, "\tyThere is currently a Happyhour!\tn\r\n");
-      write_to_output(d, "\r\n");
-    }
-    add_llog_entry(d->character, LAST_CONNECT);
-    STATE(d) = CON_MENU;
-    break;
+      /* Store as player's short description */
+      if (GET_SHORT_DESC(d->character))
+          free(GET_SHORT_DESC(d->character));
 
-  case CON_MENU: {		/* get selection from main menu  */
+      GET_SHORT_DESC(d->character) = strdup(arg);
 
-    switch (*arg) {
-    case '0':
-      write_to_output(d, "Goodbye.\r\n");
-      add_llog_entry(d->character, LAST_QUIT);
-      STATE(d) = CON_CLOSE;
-      break;
-
-    case '1':
-      load_result = enter_player_game(d);
-      send_to_char(d->character, "%s", CONFIG_WELC_MESSG);
-
-      /* Clear their load room if it's not persistant. */
-      if (!PLR_FLAGGED(d->character, PLR_LOADROOM))
-        GET_LOADROOM(d->character) = NOWHERE;
+      /* Immediately save it to disk */
       save_char(d->character);
+      save_player_index();
 
-      greet_mtrigger(d->character, -1);
-      greet_memory_mtrigger(d->character);
+      /* Now transition to full description input */
+      write_to_output(d,
+        "\r\nBefore entering the world, please describe your character.\r\n"
+        "Focus on what others can immediately see — height, build, complexion,\r\n"
+        "facial structure, hair, eyes, and other physical details. Avoid names,\r\n"
+        "clothing, or personal information that someone would not know meeting\r\n"
+        "you for the first time.\r\n\r\n"
+        "Example:\r\n"
+        "  This broad-shouldered human stands with a relaxed but watchful bearing.\r\n"
+        "  Weather and sun have darkened their skin, and faint scars trace the backs\r\n"
+        "  of their hands. Their eyes are a pale, gray-green hue, steady and alert\r\n"
+        "  beneath a low brow. Thick, uneven hair falls around a strong jaw and\r\n"
+        "  angular features.\r\n\r\n");
 
-      act("$n has entered the game.", TRUE, d->character, 0, 0, TO_ROOM);
-
-      STATE(d) = CON_PLAYING;
-      MXPSendTag( d, "<VERSION>" );
-      if (GET_LEVEL(d->character) == 0) {
-	do_start(d->character);
-	send_to_char(d->character, "%s", CONFIG_START_MESSG);
-      }
-      look_at_room(d->character, 0);
-      if (has_mail(GET_IDNUM(d->character)))
-	send_to_char(d->character, "You have mail waiting.\r\n");
-      if (load_result == 2) {	/* rented items lost */
-	send_to_char(d->character, "\r\n\007You could not afford your rent!\r\n"
-		"Your possesions have been donated to the Salvation Army!\r\n");
-      }
-      d->has_prompt = 0;
-      /* We've updated to 3.1 - some bits might be set wrongly: */
-      REMOVE_BIT_AR(PRF_FLAGS(d->character), PRF_BUILDWALK);
-      break;
-
-    case '2':
-      if (d->character->player.description) {
-	write_to_output(d, "Current description:\r\n%s", d->character->player.description);
-	/* Don't free this now... so that the old description gets loaded as the
-	 * current buffer in the editor.  Do setup the ABORT buffer here, however. */
-	d->backstr = strdup(d->character->player.description);
-      }
-      write_to_output(d, "Enter the new text you'd like others to see when they look at you.\r\n");
-      send_editor_help(d);
+      d->backstr = NULL;
       d->str = &d->character->player.description;
       d->max_str = PLR_DESC_LENGTH;
       STATE(d) = CON_PLR_DESC;
-      break;
 
-    case '3':
-      page_string(d, background, 0);
-      STATE(d) = CON_RMOTD;
-      break;
+      send_editor_help(d);
+      return;
+  }
 
-    case '4':
-      write_to_output(d, "\r\nEnter your old password: ");
-      echo_off(d);
-      STATE(d) = CON_CHPWD_GETOLD;
-      break;
+  case CON_PLR_DESC:
+    /* Description accepted — save and continue */
+    save_char(d->character);
 
-    case '5':
-      write_to_output(d, "\r\nEnter your password for verification: ");
-      echo_off(d);
-      STATE(d) = CON_DELCNF1;
-      break;
+    if (!GET_BACKGROUND(d->character) || !*GET_BACKGROUND(d->character)) {
+      write_to_output(d,
+        "\r\nBefore stepping into Miranthas, share a bit of your character's background.\r\n"
+        "Guideline: aim for at least four lines that hint at where they came from,\r\n"
+        "who shaped them, and why they now walk the Caleran region. Touch on things like:\r\n"
+        "  - The city-state, tribe, or caravan that claimed them.\r\n"
+        "  - Mentors, slavers, or patrons who left a mark.\r\n"
+        "  - A defining hardship, triumph, oath, or secret.\r\n"
+        "  - The goal, vengeance, or hope that drives them back into the wastes.\r\n"
+        "\r\nExample 1:\r\n"
+        "   Raised beneath the ziggurat of Caleran, I learned to barter gossip between\r\n"
+        "   templars and gladiators just to stay alive. Freedom came when Kalak fell,\r\n"
+        "   but the slave-scar on my shoulder still aches. I now search the desert\r\n"
+        "   for the relic my clutch mates died protecting, hoping to buy their kin peace.\r\n"
+        "\r\nExample 2:\r\n"
+        "   I rode caravan outrider routes from Balic until giants shattered our train.\r\n"
+        "   Two nights buried in silt taught me to whisper with the wind and trust only\r\n"
+        "   my erdlu. I hunt the warlord who sold us out, yet coin and company on the\r\n"
+        "   road must come first.\r\n"
+        "\r\nExample 3:\r\n"
+        "   Born outside Raam, I was tempered by obsidian shards and psionic murmurs.\r\n"
+        "   A defiler ruined our oasis, so I swore to hound such spell-scars wherever\r\n"
+        "   they bloom. Rumor of a hidden well near Caleran is the lone hope that guides me.\r\n"
+        "\r\nType your background now. Use '/s' on a blank line when you finish.\r\n"
+        "If you'd rather keep it secret, just save immediately and we'll note the mystery.\r\n\r\n");
+      d->backstr = NULL;
+      if (GET_BACKGROUND(d->character) && *GET_BACKGROUND(d->character))
+        d->backstr = strdup(GET_BACKGROUND(d->character));
+      d->str = &d->character->player.background;
+      d->max_str = PLR_DESC_LENGTH;
+      STATE(d) = CON_PLR_BACKGROUND;
+      send_editor_help(d);
+      return;
+    }
 
+    write_to_output(d, "%s\r\n*** PRESS RETURN: ", motd);
+    STATE(d) = CON_RMOTD;
+
+    /* Final log confirmation */
+    mudlog(NRM, LVL_GOD, TRUE, "%s [%s] completed character creation.",
+           GET_NAME(d->character), d->host);
+    break;
+
+  case CON_RMOTD:		/* read CR after printing motd   */
+    if (!d->character) {
+      send_account_menu(d);
+      STATE(d) = CON_ACCOUNT_MENU;
+      break;
+    }
+    if (!d->account && GET_ACCOUNT(d->character) && *GET_ACCOUNT(d->character))
+      d->account = account_load(GET_ACCOUNT(d->character));
+    add_llog_entry(d->character, LAST_CONNECT);
+
+    load_result = enter_player_game(d);
+    send_to_char(d->character, "%s", CONFIG_WELC_MESSG);
+
+    save_char(d->character);
+
+    greet_mtrigger(d->character, -1);
+    greet_memory_mtrigger(d->character);
+
+    act("$n has entered the game.", TRUE, d->character, 0, 0, TO_ROOM);
+
+    STATE(d) = CON_PLAYING;
+    MXPSendTag(d, "<VERSION>");
+
+    if (GET_LEVEL(d->character) == 0) {
+      do_start(d->character);
+      send_to_char(d->character, "%s", CONFIG_START_MESSG);
+    }
+
+    look_at_room(d->character, 0);
+    if (has_mail(GET_IDNUM(d->character)))
+      send_to_char(d->character, "You have mail waiting.\r\n");
+
+    d->has_prompt = 0;
+    /* We've updated to 3.1 - some bits might be set wrongly: */
+    REMOVE_BIT_AR(PRF_FLAGS(d->character), PRF_BUILDWALK);
+    break;
+
+  case CON_ACCOUNT_MENU: {
+    int has_pc;
+
+    if (!d->account) {
+      STATE(d) = CON_CLOSE;
+      break;
+    }
+
+    account_refresh_pc(d->account);
+    has_pc = account_has_alive_pc(d->account);
+
+    switch (*arg) {
+    case 'X':
+    case 'x':
+      write_to_output(d, "Goodbye.\r\n");
+      if (d->character)
+        add_llog_entry(d->character, LAST_QUIT);
+      STATE(d) = CON_CLOSE;
+      break;
+    case 'L':
+    case 'l':
+      show_account_character_list(d);
+      STATE(d) = CON_ACCOUNT_LIST;
+      break;
+    case 'C':
+    case 'c':
+      if (has_pc) {
+        if (d->character) {
+          free_char(d->character);
+          d->character = NULL;
+        }
+        CREATE(d->character, struct char_data, 1);
+        clear_char(d->character);
+        CREATE(d->character->player_specials, struct player_special_data, 1);
+        new_mobile_data(d->character);
+
+        GET_HOST(d->character) = strdup(d->host);
+        d->character->desc = d;
+
+        if ((player_i = load_char(d->account->pc_name, d->character)) < 0) {
+          write_to_output(d, "Could not load that character.\r\n");
+          send_account_menu(d);
+          STATE(d) = CON_ACCOUNT_MENU;
+          break;
+        }
+        GET_PFILEPOS(d->character) = player_i;
+
+        if (GET_ACCOUNT(d->character) && str_cmp(GET_ACCOUNT(d->character), d->account->name)) {
+          write_to_output(d, "That character does not belong to this account.\r\n");
+          free_char(d->character);
+          d->character = NULL;
+          send_account_menu(d);
+          STATE(d) = CON_ACCOUNT_MENU;
+          break;
+        }
+        if (!GET_ACCOUNT(d->character) && d->account->name) {
+          GET_ACCOUNT(d->character) = strdup(d->account->name);
+          save_char(d->character);
+        }
+
+        /* undo it just in case they are set */
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_WRITING);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_MAILING);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_CRYO);
+        d->character->player.time.logon = time(0);
+
+        if (isbanned(d->host) == BAN_SELECT &&
+            !PLR_FLAGGED(d->character, PLR_SITEOK)) {
+          write_to_output(d, "Sorry, this char has not been cleared for login from your site!\r\n");
+          STATE(d) = CON_CLOSE;
+          mudlog(NRM, LVL_GOD, TRUE, "Connection attempt for %s denied from %s",
+                 GET_NAME(d->character), d->host);
+          return;
+        }
+        if (GET_LEVEL(d->character) < circle_restrict) {
+          write_to_output(d, "The game is temporarily restricted.. try again later.\r\n");
+          STATE(d) = CON_CLOSE;
+          mudlog(NRM, LVL_GOD, TRUE, "Request for login denied for %s [%s] (wizlock)",
+                 GET_NAME(d->character), d->host);
+          return;
+        }
+
+        if (perform_dupe_check(d))
+          return;
+
+        if (GET_LEVEL(d->character) >= LVL_IMMORT)
+          write_to_output(d, "%s", imotd);
+        else
+          write_to_output(d, "%s", motd);
+
+        if (GET_INVIS_LEV(d->character))
+          mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE,
+                 "%s has connected. (invis %d)", GET_NAME(d->character),
+                 GET_INVIS_LEV(d->character));
+        else
+          mudlog(BRF, LVL_IMMORT, TRUE, "%s has connected.", GET_NAME(d->character));
+
+        if (AddRecentPlayer(GET_NAME(d->character), d->host, FALSE, FALSE) == FALSE) {
+          mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(d->character)), TRUE,
+                 "Failure to AddRecentPlayer (returned FALSE).");
+        }
+
+        write_to_output(d, "\r\n*** PRESS RETURN: ");
+        STATE(d) = CON_RMOTD;
+      } else {
+        write_to_output(d, "You do not have a character to connect.\r\n");
+        send_account_menu(d);
+        STATE(d) = CON_ACCOUNT_MENU;
+      }
+      break;
+    case 'R':
+    case 'r':
+      if (has_pc) {
+        write_to_output(d, "You already have a character. Delete it before creating another.\r\n");
+        send_account_menu(d);
+        STATE(d) = CON_ACCOUNT_MENU;
+      } else {
+        if (d->character) {
+          free_char(d->character);
+          d->character = NULL;
+        }
+        write_to_output(d, "By what name do you wish to be known? ");
+        STATE(d) = CON_GET_NAME;
+      }
+      break;
     default:
-      write_to_output(d, "\r\nThat's not a menu choice!\r\n%s", CONFIG_MENU);
+      write_to_output(d, "\r\nThat's not a menu choice!\r\n");
+      send_account_menu(d);
       break;
     }
     break;
   }
 
+  case CON_MENU: {		/* get selection from main menu  */
+    if (!d->account) {
+      write_to_output(d, "No account loaded.\r\n");
+      STATE(d) = CON_CLOSE;
+      break;
+    }
+    send_account_menu(d);
+    STATE(d) = CON_ACCOUNT_MENU;
+    break;
+  }
+
+  case CON_ACCOUNT_LIST:
+    send_account_menu(d);
+    STATE(d) = CON_ACCOUNT_MENU;
+    break;
+
   case CON_CHPWD_GETOLD:
     if (strncmp(CRYPT(arg, GET_PASSWD(d->character)), GET_PASSWD(d->character), MAX_PWD_LENGTH)) {
       echo_on(d);
-      write_to_output(d, "\r\nIncorrect password.\r\n%s", CONFIG_MENU);
-      STATE(d) = CON_MENU;
+      write_to_output(d, "\r\nIncorrect password.\r\n");
+      send_account_menu(d);
+      STATE(d) = CON_ACCOUNT_MENU;
     } else {
       write_to_output(d, "\r\nEnter a new password: ");
       STATE(d) = CON_CHPWD_GETNEW;
@@ -1744,8 +2233,9 @@ void nanny(struct descriptor_data *d, char *arg)
   case CON_DELCNF1:
     echo_on(d);
     if (strncmp(CRYPT(arg, GET_PASSWD(d->character)), GET_PASSWD(d->character), MAX_PWD_LENGTH)) {
-      write_to_output(d, "\r\nIncorrect password.\r\n%s", CONFIG_MENU);
-      STATE(d) = CON_MENU;
+      write_to_output(d, "\r\nIncorrect password.\r\n");
+      send_account_menu(d);
+      STATE(d) = CON_ACCOUNT_MENU;
     } else {
       write_to_output(d, "\r\nYOU ARE ABOUT TO DELETE THIS CHARACTER PERMANENTLY.\r\n"
 		"ARE YOU ABSOLUTELY SURE?\r\n\r\n"
@@ -1781,8 +2271,9 @@ void nanny(struct descriptor_data *d, char *arg)
       STATE(d) = CON_CLOSE;
       return;
     } else {
-      write_to_output(d, "\r\nCharacter not deleted.\r\n%s", CONFIG_MENU);
-      STATE(d) = CON_MENU;
+      write_to_output(d, "\r\nCharacter not deleted.\r\n");
+      send_account_menu(d);
+      STATE(d) = CON_ACCOUNT_MENU;
     }
     break;
 

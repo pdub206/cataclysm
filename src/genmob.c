@@ -112,10 +112,6 @@ static void extract_mobile_all(mob_vnum vnum)
           free(ch->player.name);
 				ch->player.name = NULL;
 				
-        if (ch->player.title && ch->player.title != mob_proto[i].player.title)
-          free(ch->player.title);
-				ch->player.title = NULL;
-				
         if (ch->player.short_descr && ch->player.short_descr != mob_proto[i].player.short_descr)
           free(ch->player.short_descr);
 				ch->player.short_descr = NULL;
@@ -127,6 +123,10 @@ static void extract_mobile_all(mob_vnum vnum)
         if (ch->player.description && ch->player.description != mob_proto[i].player.description)
           free(ch->player.description);
 				ch->player.description = NULL;
+				
+        if (ch->player.background && ch->player.background != mob_proto[i].player.background)
+          free(ch->player.background);
+        ch->player.background = NULL;
     
         /* free script proto list if it's not the prototype */
         if (ch->proto_script && ch->proto_script != mob_proto[i].proto_script)
@@ -199,14 +199,14 @@ int copy_mobile_strings(struct char_data *t, struct char_data *f)
 {
   if (f->player.name)
     t->player.name = strdup(f->player.name);
-  if (f->player.title)
-    t->player.title = strdup(f->player.title);
   if (f->player.short_descr)
     t->player.short_descr = strdup(f->player.short_descr);
   if (f->player.long_descr)
     t->player.long_descr = strdup(f->player.long_descr);
   if (f->player.description)
     t->player.description = strdup(f->player.description);
+  if (f->player.background)
+    t->player.background = strdup(f->player.background);
   return TRUE;
 }
 
@@ -214,14 +214,14 @@ int update_mobile_strings(struct char_data *t, struct char_data *f)
 {
   if (f->player.name)
     t->player.name = f->player.name;
-  if (f->player.title)
-    t->player.title = f->player.title;
   if (f->player.short_descr)
     t->player.short_descr = f->player.short_descr;
   if (f->player.long_descr)
     t->player.long_descr = f->player.long_descr;
   if (f->player.description)
     t->player.description = f->player.description;
+  if (f->player.background)
+    t->player.background = f->player.background;
   return TRUE;
 }
 
@@ -229,14 +229,14 @@ int free_mobile_strings(struct char_data *mob)
 {
   if (mob->player.name)
     free(mob->player.name);
-  if (mob->player.title)
-    free(mob->player.title);
   if (mob->player.short_descr)
     free(mob->player.short_descr);
   if (mob->player.long_descr)
     free(mob->player.long_descr);
   if (mob->player.description)
     free(mob->player.description);
+  if (mob->player.background)
+    free(mob->player.background);
   return TRUE;
 }
 
@@ -257,14 +257,14 @@ int free_mobile(struct char_data *mob)
    } else {	/* Prototyped mobile. */
     if (mob->player.name && mob->player.name != mob_proto[i].player.name)
       free(mob->player.name);
-    if (mob->player.title && mob->player.title != mob_proto[i].player.title)
-      free(mob->player.title);
     if (mob->player.short_descr && mob->player.short_descr != mob_proto[i].player.short_descr)
       free(mob->player.short_descr);
     if (mob->player.long_descr && mob->player.long_descr != mob_proto[i].player.long_descr)
       free(mob->player.long_descr);
     if (mob->player.description && mob->player.description != mob_proto[i].player.description)
       free(mob->player.description);
+    if (mob->player.background && mob->player.background != mob_proto[i].player.background)
+      free(mob->player.background);
     /* free script proto list if it's not the prototype */
     if (mob->proto_script && mob->proto_script != mob_proto[i].proto_script)
       free_proto_script(mob, MOB_TRIGGER);
@@ -327,105 +327,191 @@ int save_mobiles(zone_rnum rznum)
 
 int write_mobile_espec(mob_vnum mvnum, struct char_data *mob, FILE *fd)
 {
-  if (GET_ATTACK(mob) != 0)
-    fprintf(fd, "BareHandAttack: %d\n", GET_ATTACK(mob));
-  if (GET_STR(mob) != 11)
+  int count = 0;
+
+  /* --- Ability scores (only write non-defaults) --- */
+  if (GET_STR(mob) != 11) {
     fprintf(fd, "Str: %d\n", GET_STR(mob));
-  if (GET_ADD(mob) != 0)
-    fprintf(fd, "StrAdd: %d\n", GET_ADD(mob));
-  if (GET_DEX(mob) != 11)
+    count++;
+  }
+  if (GET_DEX(mob) != 11) {
     fprintf(fd, "Dex: %d\n", GET_DEX(mob));
-  if (GET_INT(mob) != 11)
+    count++;
+  }
+  if (GET_INT(mob) != 11) {
     fprintf(fd, "Int: %d\n", GET_INT(mob));
-  if (GET_WIS(mob) != 11)
+    count++;
+  }
+  if (GET_WIS(mob) != 11) {
     fprintf(fd, "Wis: %d\n", GET_WIS(mob));
-  if (GET_CON(mob) != 11)
+    count++;
+  }
+  if (GET_CON(mob) != 11) {
     fprintf(fd, "Con: %d\n", GET_CON(mob));
-  if (GET_CHA(mob) != 11)
+    count++;
+  }
+  if (GET_CHA(mob) != 11) {
     fprintf(fd, "Cha: %d\n", GET_CHA(mob));
-  if (GET_SAVE(mob, SAVING_PARA) != 0)
-    fprintf(fd, "SavingPara: %d\n", GET_SAVE(mob, SAVING_PARA));
-  if (GET_SAVE(mob, SAVING_ROD) != 0)
-    fprintf(fd, "SavingRod: %d\n", GET_SAVE(mob, SAVING_ROD));
-  if (GET_SAVE(mob, SAVING_PETRI) != 0)
-    fprintf(fd, "SavingPetri: %d\n", GET_SAVE(mob, SAVING_PETRI));
-  if (GET_SAVE(mob, SAVING_BREATH) != 0)
-    fprintf(fd, "SavingBreath: %d\n", GET_SAVE(mob, SAVING_BREATH));
-  if (GET_SAVE(mob, SAVING_SPELL) != 0)
-    fprintf(fd, "SavingSpell: %d\n", GET_SAVE(mob, SAVING_SPELL));
-  fputs("E\n", fd);
-  return TRUE;
+    count++;
+  }
+
+  if (HAS_VALID_CLASS(mob)) {
+    fprintf(fd, "Class: %d\n", (int)GET_CLASS(mob));
+    count++;
+  }
+
+  /* --- 5e-style saving throws --- */
+  if (GET_SAVE(mob, ABIL_STR) != 0) {
+    fprintf(fd, "SaveStr: %d\n", GET_SAVE(mob, ABIL_STR));
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_DEX) != 0) {
+    fprintf(fd, "SaveDex: %d\n", GET_SAVE(mob, ABIL_DEX));
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_CON) != 0) {
+    fprintf(fd, "SaveCon: %d\n", GET_SAVE(mob, ABIL_CON));
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_INT) != 0) {
+    fprintf(fd, "SaveInt: %d\n", GET_SAVE(mob, ABIL_INT));
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_WIS) != 0) {
+    fprintf(fd, "SaveWis: %d\n", GET_SAVE(mob, ABIL_WIS));
+    count++;
+  }
+  if (GET_SAVE(mob, ABIL_CHA) != 0) {
+    fprintf(fd, "SaveCha: %d\n", GET_SAVE(mob, ABIL_CHA));
+    count++;
+  }
+
+  /* DO NOT print "E" here — handled by write_mobile_record() */
+  return count;
 }
 
 int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
 {
   char ldesc[MAX_STRING_LENGTH];
   char ddesc[MAX_STRING_LENGTH];
+  char bdesc[MAX_STRING_LENGTH];
   char buf[MAX_STRING_LENGTH];
 
   ldesc[MAX_STRING_LENGTH - 1] = '\0';
   ddesc[MAX_STRING_LENGTH - 1] = '\0';
+  bdesc[MAX_STRING_LENGTH - 1] = '\0';
   strip_cr(strncpy(ldesc, GET_LDESC(mob), MAX_STRING_LENGTH - 1));
   strip_cr(strncpy(ddesc, GET_DDESC(mob), MAX_STRING_LENGTH - 1));
+  if (GET_BDESC(mob))
+    strip_cr(strncpy(bdesc, GET_BDESC(mob), MAX_STRING_LENGTH - 1));
+  else
+    bdesc[0] = '\0';
 
-  int n = snprintf(buf, MAX_STRING_LENGTH, "#%d\n"
-		"%s%c\n"
-		"%s%c\n"
-		"%s%c\n"
-		"%s%c\n",
-	mvnum,
-	GET_ALIAS(mob), STRING_TERMINATOR,
-	GET_SDESC(mob), STRING_TERMINATOR,
-	ldesc, STRING_TERMINATOR,
-	ddesc, STRING_TERMINATOR
-  );
+  int n = snprintf(buf, MAX_STRING_LENGTH,
+                   "#%d\n"
+                   "%s%c\n"
+                   "%s%c\n"
+                   "%s%c\n"
+                   "%s%c\n"
+                   "%s%c\n"
+                   "B\n"
+                   "%s%c\n",
+                   mvnum,
+                   GET_NAME(mob), STRING_TERMINATOR,
+                   GET_KEYWORDS(mob), STRING_TERMINATOR,
+                   GET_SDESC(mob), STRING_TERMINATOR,
+                   ldesc, STRING_TERMINATOR,
+                   ddesc, STRING_TERMINATOR,
+                   bdesc, STRING_TERMINATOR);
 
-  if(n < MAX_STRING_LENGTH) {
-    fprintf(fd, "%s", convert_from_tabs(buf));
-  
-    fprintf(fd, "%d %d %d %d %d %d %d %d %d E\n"
-        "%d %d %d %dd%d+%d %dd%d+%d\n",
-        MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
-        MOB_FLAGS(mob)[2], MOB_FLAGS(mob)[3],
-        AFF_FLAGS(mob)[0], AFF_FLAGS(mob)[1],
-        AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3],
-        GET_ALIGNMENT(mob),
-        GET_LEVEL(mob), 20 - GET_HITROLL(mob), GET_AC(mob) / 10, GET_HIT(mob),
-        GET_MANA(mob), GET_MOVE(mob), GET_NDD(mob), GET_SDD(mob),
-        GET_DAMROLL(mob));
-  
-    fprintf(fd, 	"%d %d\n"
-      "%d %d %d\n",
-      GET_GOLD(mob), GET_EXP(mob),
-      GET_POS(mob), GET_DEFAULT_POS(mob), GET_SEX(mob)
-    );
-  
-    if (write_mobile_espec(mvnum, mob, fd) < 0)
-      log("SYSERR: GenOLC: Error writing E-specs for mobile #%d.", mvnum);
-  
-    script_save_to_disk(fd, mob, MOB_TRIGGER);
-  
-  
-  #if CONFIG_GENOLC_MOBPROG
-    if (write_mobile_mobprog(mvnum, mob, fd) < 0)
-      log("SYSERR: GenOLC: Error writing MobProgs for mobile #%d.", mvnum);
-  #endif
-  } else {
-    mudlog(BRF,LVL_BUILDER,TRUE,
+  if (n >= MAX_STRING_LENGTH) {
+    mudlog(BRF, LVL_BUILDER, TRUE,
            "SYSERR: Could not save mobile #%d due to size (%d > maximum of %d)",
            mvnum, n, MAX_STRING_LENGTH);
+    return TRUE;
   }
-  
+
+  fprintf(fd, "%s", convert_from_tabs(buf));
+
+  /* --- FLAGS/AFFECT/ALIGN line --- */
+  fprintf(fd,
+          "%d %d %d %d %d %d %d %d %d E\n",
+          MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
+          MOB_FLAGS(mob)[2], MOB_FLAGS(mob)[3],
+          AFF_FLAGS(mob)[0], AFF_FLAGS(mob)[1],
+          AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3],
+          GET_ALIGNMENT(mob));
+
+  /* --- Level, hitdice, mana, move --- */
+  fprintf(fd, "%d %dd%d+%d\n",
+          GET_LEVEL(mob),
+          GET_HIT(mob),
+          GET_MANA(mob),
+          GET_MOVE(mob));
+
+  /* --- Position / default position / sex --- */
+  fprintf(fd, "%d %d %d\n",
+          GET_POS(mob),
+          GET_DEFAULT_POS(mob),
+          GET_SEX(mob));
+
+  /* --- Enhanced (E-spec + Skills) --- */
+  if (write_mobile_espec(mvnum, mob, fd) < 0)
+    log("SYSERR: GenOLC: Error writing E-specs for mobile #%d.", mvnum);
+
+  /* Write NPC skills (if any set) */
+  for (int s = 0; s < MAX_SKILLS; s++) {
+    if (mob->mob_specials.skills[s] > 0)
+      fprintf(fd, "Skill %d %d\n", s, mob->mob_specials.skills[s]);
+  }
+
+  /* Write attack type (if set) */
+  if (mob->mob_specials.attack_type > 0)
+    fprintf(fd, "AtkT %d\n", mob->mob_specials.attack_type);
+
+  /* Single proper terminator */
+  fprintf(fd, "E\n");
+
+  /* --- Loadout lines --- */
+  for (struct mob_loadout *e = mob->proto_loadout; e; e = e->next) {
+    fprintf(fd, "L %d %d %d\n",
+            (int)e->wear_pos,
+            (int)e->vnum,
+            MAX(1, e->quantity));
+  }
+
+  /* --- DG Scripts --- */
+  script_save_to_disk(fd, mob, MOB_TRIGGER);
+
+  /* --- Skinning yields --- */
+  {
+    mob_rnum rmob = real_mobile(mvnum);
+    struct skin_yield_entry *sy;
+
+    if (rmob != NOBODY && mob_index[rmob].skin_yields) {
+      fprintf(fd, "Y\n");
+      for (sy = mob_index[rmob].skin_yields; sy; sy = sy->next)
+        fprintf(fd, "%d %d\n", sy->obj_vnum, sy->dc);
+      fprintf(fd, "0 0\n");
+    }
+  }
+
+#if CONFIG_GENOLC_MOBPROG
+  if (write_mobile_mobprog(mvnum, mob, fd) < 0)
+    log("SYSERR: GenOLC: Error writing MobProgs for mobile #%d.", mvnum);
+#endif
+
   return TRUE;
 }
 
 void check_mobile_strings(struct char_data *mob)
 {
   mob_vnum mvnum = mob_index[mob->nr].vnum;
+  check_mobile_string(mvnum, &GET_NAME(mob), "npc name");
+  check_mobile_string(mvnum, &GET_KEYWORDS(mob), "alias list");
+  check_mobile_string(mvnum, &GET_SDESC(mob), "short description");
   check_mobile_string(mvnum, &GET_LDESC(mob), "long description");
   check_mobile_string(mvnum, &GET_DDESC(mob), "detailed description");
-  check_mobile_string(mvnum, &GET_ALIAS(mob), "alias list");
-  check_mobile_string(mvnum, &GET_SDESC(mob), "short description");
 }
 
 void check_mobile_string(mob_vnum i, char **string, const char *desc)

@@ -48,7 +48,7 @@ struct aq_data {
   int      target;              /* Target value                         */
   obj_vnum prereq;              /* Object required to undertake quest   */
   int      value[7];            /* Quest values                         */
-  int      gold_reward;         /* Number of gold coins given as reward */
+  int      coins_reward;        /* Number of coins given as reward */
   int      exp_reward;          /* Experience points given as a reward  */
   obj_vnum obj_reward;          /* vnum of object given as a reward     */
   qst_vnum prev_quest;          /* Link to prev quest, NOTHING is open  */
@@ -73,7 +73,7 @@ struct aq_data {
 #define QST_TIME(i)            (aquest_table[i].value[4])
 #define QST_RETURNMOB(i)       (aquest_table[i].value[5])
 #define QST_QUANTITY(i)        (aquest_table[i].value[6])
-#define QST_GOLD(i)            (aquest_table[i].gold_reward)
+#define QST_COINS(i)            (aquest_table[i].coins_reward)
 #define QST_EXP(i)             (aquest_table[i].exp_reward)
 #define QST_OBJ(i)             (aquest_table[i].obj_reward)
 
@@ -135,7 +135,7 @@ int save_quests(zone_rnum zone_num);
 #define QEDIT_NEXTQUEST                19
 #define QEDIT_PREVQUEST                20
 #define QEDIT_CONFIRM_DELETE           21
-#define QEDIT_GOLD                     22
+#define QEDIT_COINS                     22
 #define QEDIT_EXP                      23
 #define QEDIT_OBJ                      24
 /* ******************************************************************** */

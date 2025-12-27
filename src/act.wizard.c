@@ -26,6 +26,7 @@
 #include "act.h"
 #include "genzon.h" /* for real_zone_by_thing */
 #include "class.h"
+#include "genmob.h"
 #include "genolc.h"
 #include "genobj.h"
 #include "fight.h"
@@ -34,15 +35,17 @@
 #include "quest.h"
 #include "ban.h"
 #include "screen.h"
+#include "roomsave.h"
 
 /* local utility functions with file scope */
 static int perform_set(struct char_data *ch, struct char_data *vict, int mode, char *val_arg);
 static void perform_immort_invis(struct char_data *ch, int level);
-static void list_zone_commands_room(struct char_data *ch, room_vnum rvnum);
 static void do_stat_room(struct char_data *ch, struct room_data *rm);
 static void do_stat_object(struct char_data *ch, struct obj_data *j);
 static void do_stat_character(struct char_data *ch, struct char_data *k);
 static void stop_snooping(struct char_data *ch);
+static struct obj_data *find_inventory_coin(struct char_data *ch);
+static void remove_other_coins_from_list(struct obj_data *list, struct obj_data *keep);
 static size_t print_zone_to_buf(char *bufptr, size_t left, zone_rnum zone, int listall);
 static struct char_data *is_in_game(long idnum);
 static void mob_checkload(struct char_data *ch, mob_vnum mvnum);
@@ -55,8 +58,506 @@ static struct recent_player *create_recent(void);
 const char *get_spec_func_name(SPECIAL(*func));
 bool zedit_get_levels(struct descriptor_data *d, char *buf);
 
+/* Modern stat table helpers */
+#define STAT_LABEL_WIDTH 18
+#define STAT_VALUE_WIDTH 55
+
+static const char *stat_border_line(void);
+static void stat_table_border(struct char_data *ch);
+static void stat_table_row(struct char_data *ch, const char *label, const char *value);
+static void stat_table_row_fmt(struct char_data *ch, const char *label, const char *fmt, ...) __attribute__((format(printf,3,4)));
+static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fmt, ...) __attribute__((format(printf,4,5)));
+static void stat_format_script_triggers(struct script_data *sc, char *buf, size_t buf_size);
+static void stat_format_script_globals(struct script_data *sc, char *buf, size_t buf_size);
+static void stat_format_script_memory(struct script_memory *mem, char *buf, size_t buf_size);
+static void stat_format_character_list(struct char_data *viewer, struct char_data *list, char *buf, size_t buf_size);
+static void stat_format_object_list(struct char_data *viewer, struct obj_data *list, char *buf, size_t buf_size);
+static void stat_format_exit_summary(struct room_data *rm, char *buf, size_t buf_size);
+static void stat_format_char_effects(struct char_data *k, char *buf, size_t buf_size);
+static void stat_format_obj_affects(struct obj_data *j, char *buf, size_t buf_size);
+static void stat_format_obj_special(struct obj_data *j, char *buf, size_t buf_size);
+static void stat_format_zone_cmds_room(room_vnum rvnum, char *buf, size_t buf_size);
+
 /* Local Globals */
 static struct recent_player *recent_list = NULL;  /** Global list of recent players */
+
+static const char *stat_border_line(void)
+{
+  static char border[STAT_LABEL_WIDTH + STAT_VALUE_WIDTH + 16];
+  if (!*border) {
+    size_t pos = 0;
+    border[pos++] = '+';
+    for (int i = 0; i < STAT_LABEL_WIDTH + 2 && pos < sizeof(border) - 1; i++)
+      border[pos++] = '-';
+    border[pos++] = '+';
+    for (int i = 0; i < STAT_VALUE_WIDTH + 2 && pos < sizeof(border) - 1; i++)
+      border[pos++] = '-';
+    border[pos++] = '+';
+    border[pos++] = '\r';
+    border[pos++] = '\n';
+    border[pos] = '\0';
+  }
+  return border;
+}
+
+static void stat_table_border(struct char_data *ch)
+{
+  send_to_char(ch, "%s", stat_border_line());
+}
+
+static const char *stat_next_chunk(const char *text, char *chunk, size_t width)
+{
+  const char *ptr = text;
+  size_t chunk_len = 0;
+
+  chunk[0] = '\0';
+
+  while (*ptr == ' ')
+    ptr++;
+
+  while (*ptr && *ptr != '\n' && *ptr != '\r') {
+    const char *word_start = ptr;
+    size_t word_len = 0;
+
+    while (word_start[word_len] &&
+           word_start[word_len] != ' ' &&
+           word_start[word_len] != '\n' &&
+           word_start[word_len] != '\r')
+      word_len++;
+
+    if (word_len == 0)
+      break;
+
+    if (chunk_len == 0 && word_len > width) {
+      word_len = width;
+      memcpy(chunk, word_start, word_len);
+      chunk_len = word_len;
+      chunk[chunk_len] = '\0';
+      ptr = word_start + word_len;
+      return ptr;
+    }
+
+    size_t needed = word_len + (chunk_len ? 1 : 0);
+    if (chunk_len + needed > width)
+      break;
+
+    if (chunk_len)
+      chunk[chunk_len++] = ' ';
+    memcpy(chunk + chunk_len, word_start, word_len);
+    chunk_len += word_len;
+    chunk[chunk_len] = '\0';
+
+    ptr = word_start + word_len;
+
+    while (*ptr == ' ')
+      ptr++;
+  }
+
+  while (*ptr == '\r' || *ptr == '\n')
+    ptr++;
+
+  return ptr;
+}
+
+static void stat_table_row(struct char_data *ch, const char *label, const char *value)
+{
+  const char *text = (value && *value) ? value : "<None>";
+  bool printed = FALSE;
+
+  while (*text) {
+    while (*text == '\r' || *text == '\n')
+      text++;
+    if (!*text)
+      break;
+
+    char chunk[STAT_VALUE_WIDTH + 1];
+    const char *next = stat_next_chunk(text, chunk, STAT_VALUE_WIDTH);
+
+    if (!*chunk) {
+      text = next;
+      continue;
+    }
+
+    send_to_char(ch, "| %-*s | %-*s |\r\n",
+      STAT_LABEL_WIDTH,
+      printed || !label ? "" : label,
+      STAT_VALUE_WIDTH,
+      chunk);
+
+    printed = TRUE;
+    text = next;
+  }
+
+  if (!printed)
+    send_to_char(ch, "| %-*s | %-*s |\r\n",
+      STAT_LABEL_WIDTH,
+      label ? label : "",
+      STAT_VALUE_WIDTH,
+      (value && *value) ? value : "<None>");
+}
+
+static void stat_table_row_fmt(struct char_data *ch, const char *label, const char *fmt, ...)
+{
+  char buf[MAX_STRING_LENGTH];
+  va_list args;
+
+  va_start(args, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+
+  stat_table_row(ch, label, buf);
+}
+
+static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fmt, ...)
+{
+  if (*len >= buf_size)
+    return;
+
+  va_list args;
+  va_start(args, fmt);
+  int wrote = vsnprintf(buf + *len, buf_size - *len, fmt, args);
+  va_end(args);
+
+  if (wrote < 0)
+    return;
+
+  if ((size_t)wrote >= buf_size - *len)
+    *len = buf_size - 1;
+  else
+    *len += wrote;
+}
+
+static void stat_format_script_triggers(struct script_data *sc, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  if (!sc || !TRIGGERS(sc)) {
+    strlcpy(buf, "None", buf_size);
+    return;
+  }
+
+  for (trig_data *t = TRIGGERS(sc); t; t = t->next) {
+    const char *attach = (t->attach_type == OBJ_TRIGGER) ? "obj" :
+                         (t->attach_type == WLD_TRIGGER) ? "room" : "mob";
+    const char **type_names = (t->attach_type == OBJ_TRIGGER) ? otrig_types :
+                              (t->attach_type == WLD_TRIGGER) ? wtrig_types : trig_types;
+    char type_buf[MAX_STRING_LENGTH];
+    sprintbit(GET_TRIG_TYPE(t), type_names, type_buf, sizeof(type_buf));
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    stat_appendf(buf, buf_size, &len, "#%d %s (%s %s) narg=%d arg=%s",
+      GET_TRIG_VNUM(t),
+      GET_TRIG_NAME(t),
+      attach,
+      type_buf,
+      GET_TRIG_NARG(t),
+      (GET_TRIG_ARG(t) && *GET_TRIG_ARG(t)) ? GET_TRIG_ARG(t) : "None");
+
+    if (GET_TRIG_WAIT(t))
+      stat_appendf(buf, buf_size, &len, " [wait]");
+  }
+}
+
+static void stat_format_script_globals(struct script_data *sc, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  if (!sc || !sc->global_vars) {
+    strlcpy(buf, "None", buf_size);
+    return;
+  }
+
+  for (struct trig_var_data *tv = sc->global_vars; tv; tv = tv->next) {
+    char value[MAX_INPUT_LENGTH];
+
+    if (*(tv->value) == UID_CHAR)
+      find_uid_name(tv->value, value, sizeof(value));
+    else
+      strlcpy(value, tv->value, sizeof(value));
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    if (tv->context)
+      stat_appendf(buf, buf_size, &len, "%s:%ld = %s", tv->name, tv->context, value);
+    else
+      stat_appendf(buf, buf_size, &len, "%s = %s", tv->name, value);
+  }
+}
+
+static void stat_format_script_memory(struct script_memory *mem, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  if (!mem) {
+    strlcpy(buf, "None", buf_size);
+    return;
+  }
+
+  for (struct script_memory *cur = mem; cur; cur = cur->next) {
+    struct char_data *mc = find_char(cur->id);
+    const char *name = mc ? GET_NAME(mc) : "**Corrupted**";
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    stat_appendf(buf, buf_size, &len, "%-15s %s",
+      name,
+      cur->cmd ? cur->cmd : "<default>");
+  }
+}
+
+static void stat_format_character_list(struct char_data *viewer, struct char_data *list, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (struct char_data *k = list; k; k = k->next_in_room) {
+    if (viewer && !CAN_SEE(viewer, k))
+      continue;
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, ", ");
+
+    stat_appendf(buf, buf_size, &len, "%s (%s)",
+      GET_NAME(k),
+      !IS_NPC(k) ? "PC" : (!IS_MOB(k) ? "NPC" : "MOB"));
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_object_list(struct char_data *viewer, struct obj_data *list, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (struct obj_data *j = list; j; j = j->next_content) {
+    if (viewer && !CAN_SEE_OBJ(viewer, j))
+      continue;
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, ", ");
+
+    stat_appendf(buf, buf_size, &len, "%s", j->short_description ? j->short_description : "<Unnamed>");
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_exit_summary(struct room_data *rm, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (int i = 0; i < DIR_COUNT; i++) {
+    if (!rm->dir_option[i])
+      continue;
+
+    const char *dir = dirs[i];
+    char exit_buf[MAX_STRING_LENGTH];
+    sprintbit(rm->dir_option[i]->exit_info, exit_bits, exit_buf, sizeof(exit_buf));
+
+    room_rnum to = rm->dir_option[i]->to_room;
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    if (to == NOWHERE)
+      stat_appendf(buf, buf_size, &len, "%s -> NOWHERE (flags: %s)", dir, exit_buf);
+    else
+      stat_appendf(buf, buf_size, &len, "%s -> #%d %s (flags: %s, key: %d, keywords: %s)",
+        dir,
+        GET_ROOM_VNUM(to),
+        world[to].name,
+        exit_buf,
+        rm->dir_option[i]->key == NOTHING ? -1 : rm->dir_option[i]->key,
+        rm->dir_option[i]->keyword ? rm->dir_option[i]->keyword : "None");
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_char_effects(struct char_data *k, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (struct affected_type *aff = k->affected; aff; aff = aff->next) {
+    char flags[MAX_STRING_LENGTH];
+    bool has_flags = FALSE;
+
+    for (int i = 0; i < NUM_AFF_FLAGS; i++) {
+      if (IS_SET_AR(aff->bitvector, i)) {
+        if (!has_flags) {
+          flags[0] = '\0';
+          has_flags = TRUE;
+        }
+        size_t f_len = strlen(flags);
+        snprintf(flags + f_len, sizeof(flags) - f_len, "%s%s",
+          f_len ? " " : "",
+          affected_bits[i]);
+      }
+    }
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    const char *dur_unit = "hr";
+    int display_dur = aff->duration + 1;
+
+    if (aff->spell == SKILL_PERCEPTION ||
+        aff->spell == SPELL_SCAN_AFFECT ||
+        aff->spell == SPELL_LISTEN_AFFECT) {
+      /* convert mud-hours -> real minutes (round up) */
+      int total_seconds = display_dur * SECS_PER_MUD_HOUR;
+      display_dur = (total_seconds + SECS_PER_REAL_MIN - 1) / SECS_PER_REAL_MIN;
+      dur_unit = "min";
+    }
+
+    stat_appendf(buf, buf_size, &len, "%s (%d%s)",
+      skill_name(aff->spell),
+      display_dur,
+      dur_unit);
+
+    if (aff->modifier)
+      stat_appendf(buf, buf_size, &len, " %+d %s",
+        aff->modifier,
+        apply_types[(int)aff->location]);
+
+    if (has_flags)
+      stat_appendf(buf, buf_size, &len, " [sets %s]", flags);
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_obj_affects(struct obj_data *j, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+
+  for (int i = 0; i < MAX_OBJ_AFFECT; i++) {
+    if (!j->affected[i].modifier)
+      continue;
+
+    if (len)
+      stat_appendf(buf, buf_size, &len, "\n");
+
+    stat_appendf(buf, buf_size, &len, "%+d %s",
+      j->affected[i].modifier,
+      apply_types[j->affected[i].location]);
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
+
+static void stat_format_obj_special(struct obj_data *j, char *buf, size_t buf_size)
+{
+  size_t len = 0;
+  buf[0] = '\0';
+  struct char_data *tempch;
+
+  switch (GET_OBJ_TYPE(j)) {
+  case ITEM_LIGHT:
+    if (GET_OBJ_VAL(j, 2) == -1)
+      stat_appendf(buf, buf_size, &len, "Infinite light");
+    else
+      stat_appendf(buf, buf_size, &len, "Hours left: %d", GET_OBJ_VAL(j, 2));
+    break;
+  case ITEM_SCROLL:
+  case ITEM_POTION:
+    stat_appendf(buf, buf_size, &len, "Level %d spells: %s, %s, %s",
+      GET_OBJ_VAL(j, 0),
+      skill_name(GET_OBJ_VAL(j, 1)),
+      skill_name(GET_OBJ_VAL(j, 2)),
+      skill_name(GET_OBJ_VAL(j, 3)));
+    break;
+  case ITEM_WAND:
+  case ITEM_STAFF:
+    stat_appendf(buf, buf_size, &len, "%s at level %d, %d/%d charges",
+      skill_name(GET_OBJ_VAL(j, 3)),
+      GET_OBJ_VAL(j, 0),
+      GET_OBJ_VAL(j, 2),
+      GET_OBJ_VAL(j, 1));
+    break;
+  case ITEM_WEAPON:
+    stat_appendf(buf, buf_size, &len, "Damage %dd%d (avg %.1f), type %s",
+      GET_OBJ_VAL(j, 1),
+      GET_OBJ_VAL(j, 2),
+      ((GET_OBJ_VAL(j, 2) + 1) / 2.0) * GET_OBJ_VAL(j, 1),
+      attack_hit_text[GET_OBJ_VAL(j, 3)].singular);
+    break;
+  case ITEM_ARMOR:
+    stat_appendf(buf, buf_size, &len, "Piece AC %d, bulk %d, magic %+d, stealth %s, durability %d, str req %d",
+      GET_OBJ_VAL(j, VAL_ARMOR_PIECE_AC),
+      GET_OBJ_VAL(j, VAL_ARMOR_BULK),
+      GET_OBJ_VAL(j, VAL_ARMOR_MAGIC_BONUS),
+      YESNO(GET_OBJ_VAL(j, VAL_ARMOR_STEALTH_DISADV)),
+      GET_OBJ_VAL(j, VAL_ARMOR_DURABILITY),
+      GET_OBJ_VAL(j, VAL_ARMOR_STR_REQ));
+    break;
+  case ITEM_CONTAINER: {
+    char flags[MAX_STRING_LENGTH];
+    sprintbit(GET_OBJ_VAL(j, 1), container_bits, flags, sizeof(flags));
+    stat_appendf(buf, buf_size, &len, "Capacity %d, Flags %s, Key %d, Corpse %s",
+      GET_OBJ_VAL(j, 0),
+      flags,
+      GET_OBJ_VAL(j, 2),
+      YESNO(GET_OBJ_VAL(j, 3)));
+    break;
+  }
+  case ITEM_DRINKCON:
+  case ITEM_FOUNTAIN: {
+    char drink[MAX_INPUT_LENGTH];
+    sprinttype(GET_OBJ_VAL(j, 2), drinks, drink, sizeof(drink));
+    stat_appendf(buf, buf_size, &len, "Capacity %d, Contains %d, Liquid %s, Poisoned %s",
+      GET_OBJ_VAL(j, 0),
+      GET_OBJ_VAL(j, 1),
+      drink,
+      YESNO(GET_OBJ_VAL(j, 3)));
+    break;
+  }
+  case ITEM_NOTE:
+    stat_appendf(buf, buf_size, &len, "Tongue %d", GET_OBJ_VAL(j, 0));
+    break;
+  case ITEM_FOOD:
+    stat_appendf(buf, buf_size, &len, "Bites %d/%d, Hours full %d, Poisoned %s",
+      GET_OBJ_VAL(j, 1),
+      GET_OBJ_VAL(j, 0),
+      GET_OBJ_VAL(j, 2),
+      YESNO(GET_OBJ_VAL(j, 3)));
+    break;
+  case ITEM_MONEY:
+    stat_appendf(buf, buf_size, &len, "Coins: %d", GET_OBJ_VAL(j, 0));
+    break;
+  case ITEM_FURNITURE:
+    stat_appendf(buf, buf_size, &len, "Seats %d/%d, Allowed pos %d",
+      GET_OBJ_VAL(j, 1),
+      GET_OBJ_VAL(j, 0),
+      GET_OBJ_VAL(j, 2));
+    if (OBJ_SAT_IN_BY(j)) {
+      stat_appendf(buf, buf_size, &len, ", Occupied by:");
+      for (tempch = OBJ_SAT_IN_BY(j); tempch; tempch = NEXT_SITTING(tempch))
+        stat_appendf(buf, buf_size, &len, " %s", GET_NAME(tempch));
+    }
+    break;
+  default:
+    break;
+  }
+
+  if (!len)
+    strlcpy(buf, "None", buf_size);
+}
 
 static int purge_room(room_rnum room)
 {
@@ -88,6 +589,565 @@ static int purge_room(room_rnum room)
 
   return 1;
 }
+
+/* ===================== Emote engine ===================== */
+
+/* Operators:
+ *
+ *   ~ (name)                   / target sees "you"
+ *   ! him/her/them             / target sees "you"
+ *   % (name)'s                 / target sees "your"
+ *   ^ his/her/their            / target sees "your"
+ *   # he/she/they              / target sees "you"
+ *   & himself/herself/themself / target sees "yourself"
+ *   = (name)'s                 / target sees "yours"
+ *   + his/hers/theirs          / target sees "yours"
+ *   @ moves actor name (or actor's possessive for pemote) to that position
+ */
+
+/* --- Pronoun & string helpers --- */
+static const char *pron_obj(struct char_data *tch) { /* him/her/them */
+  switch (GET_SEX(tch)) { case SEX_MALE: return "him"; case SEX_FEMALE: return "her"; default: return "them"; }
+}
+static const char *pron_pos_adj(struct char_data *tch) { /* his/her/their */
+  switch (GET_SEX(tch)) { case SEX_MALE: return "his"; case SEX_FEMALE: return "her"; default: return "their"; }
+}
+static const char *pron_pos_pron(struct char_data *tch) { /* his/hers/theirs */
+  switch (GET_SEX(tch)) { case SEX_MALE: return "his"; case SEX_FEMALE: return "hers"; default: return "theirs"; }
+}
+static const char *pron_subj(struct char_data *tch) { /* he/she/they */
+  switch (GET_SEX(tch)) { case SEX_MALE: return "he"; case SEX_FEMALE: return "she"; default: return "they"; }
+}
+static const char *pron_refl(struct char_data *tch) { /* himself/herself/themself */
+  switch (GET_SEX(tch)) { case SEX_MALE: return "himself"; case SEX_FEMALE: return "herself"; default: return "themself"; }
+}
+
+static void make_possessive(const char *name, char *out, size_t outsz) {
+  size_t n = strlcpy(out, name, outsz);
+  if (n > 0 && out[n-1] == 's') strlcat(out, "'", outsz);
+  else                          strlcat(out, "'s", outsz);
+}
+
+static bool is_end_punct(char c) { return (c == '.' || c == '!' || c == '?'); }
+
+static void collapse_spaces(char *s) {
+  char *src = s, *dst = s; bool last_space = false;
+  while (*src) {
+    if (isspace((unsigned char)*src)) { if (!last_space) *dst++ = ' '; last_space = true; }
+    else { *dst++ = *src; last_space = false; }
+    src++;
+  }
+  *dst = '\0';
+}
+
+static void build_actor_name(struct char_data *actor,
+                             bool possessive,
+                             char *out, size_t outsz)
+{
+  /* Prefer short description if present; fall back to personal name */
+  const char *base =
+    (GET_SHORT_DESC(actor) && *GET_SHORT_DESC(actor))
+      ? GET_SHORT_DESC(actor)
+      : GET_NAME(actor);
+
+  if (!possessive)
+    strlcpy(out, base, outsz);
+  else
+    make_possessive(base, out, outsz);
+}
+
+/* Replace all occurrences of 'needle' in 'hay' with 'repl'. */
+static void replace_all_tokens(char *hay, size_t haysz, const char *needle, const char *repl) {
+  char work[MAX_STRING_LENGTH]; work[0] = '\0';
+  const char *src = hay; size_t nlen = strlen(needle);
+  while (*src) {
+    const char *pos = strstr(src, needle);
+    if (!pos) { strlcat(work, src, sizeof(work)); break; }
+    size_t head = (size_t)(pos - src);
+    if (head) {
+      char chunk[2048];
+      if (head >= sizeof(chunk)) head = sizeof(chunk) - 1;
+      memcpy(chunk, src, head); chunk[head] = '\0';
+      strlcat(work, chunk, sizeof(work));
+    }
+    strlcat(work, repl, sizeof(work));
+    src = pos + nlen;
+  }
+  strlcpy(hay, work, haysz);
+}
+
+static bool is_token_operator(char c) {
+  switch (c) {
+    case '~': case '!': case '%': case '^': case '#':
+    case '&': case '=': case '+': case '@':
+      return TRUE;
+  }
+  return FALSE;
+}
+
+/* Capitalize the first alphabetic character of every sentence (start and after .?!).
+   Skips any number of spaces and common closers (quotes/brackets) between sentences. */
+static void capitalize_sentences(char *s) {
+  bool new_sent = true;
+  for (char *p = s; *p; ++p) {
+    unsigned char c = (unsigned char)*p;
+    if (new_sent) {
+      if (isalpha(c)) {
+        *p = toupper(c);
+        new_sent = false;
+      } else if (!isspace(c) && c != '"' && c != '\'' && c != ')' && c != ']' && c != '}') {
+        /* Non-space symbol at sentence start; don't flip flag yet unless it's a letter later. */
+      }
+    }
+    if (*p == '.' || *p == '!' || *p == '?')
+      new_sent = true;
+  }
+}
+
+/* --- Numbered target parsing --- */
+/* Parse "2.corpse" => out_num=2, out_name="corpse". "corpse" => out_num=1, out_name="corpse". */
+static void split_numbered_name(const char *raw, int *out_num, char *out_name, size_t outsz) {
+  char tmp[MAX_NAME_LENGTH];
+  strlcpy(tmp, raw, sizeof(tmp));
+  char *p = tmp;
+  int num = get_number(&p);   /* advances p if leading "N." is present */
+  if (num <= 0) num = 1;
+  if (*p) strlcpy(out_name, p, outsz);
+  else    strlcpy(out_name, tmp, outsz);
+  *out_num = num;
+}
+
+/* Case-insensitive strcmp helper (tiny) */
+static bool ieq(const char *a, const char *b) {
+  while (*a && *b) {
+    char ca = tolower((unsigned char)*a++);
+    char cb = tolower((unsigned char)*b++);
+    if (ca != cb) return false;
+  }
+  return *a == '\0' && *b == '\0';
+}
+
+/* Resolve a char/obj with support for numbered refs, searching room chars, room objs, inventory, equipment.
+   Special: "me"/"self" (any operator) resolves to the actor. */
+static bool resolve_reference(struct char_data *actor,
+                              const char *raw,
+                              struct char_data **out_ch,
+                              struct obj_data **out_obj) {
+  char name[MAX_NAME_LENGTH];
+  int ordinal = 1;
+
+  *out_ch = NULL; *out_obj = NULL;
+
+  if (ieq(raw, "me") || ieq(raw, "self")) { *out_ch = actor; return true; }
+
+  split_numbered_name(raw, &ordinal, name, sizeof(name));
+
+  /* Characters in room (ordinal applies to this list) */
+  {
+    int num = ordinal;
+    struct char_data *tch = get_char_room_vis(actor, name, &num);
+    if (tch) { *out_ch = tch; return true; }
+  }
+
+  /* Objects in room */
+  {
+    int num = ordinal;
+    struct obj_data *obj = get_obj_in_list_vis(actor, name, &num, world[IN_ROOM(actor)].contents);
+    if (obj) { *out_obj = obj; return true; }
+  }
+  /* Objects carried */
+  {
+    int num = ordinal;
+    struct obj_data *obj = get_obj_in_list_vis(actor, name, &num, actor->carrying);
+    if (obj) { *out_obj = obj; return true; }
+  }
+  /* Objects equipped */
+  {
+    int num = ordinal;
+    struct obj_data *obj = get_obj_in_equip_vis(actor, name, &num, actor->equipment);
+    if (obj) { *out_obj = obj; return true; }
+  }
+
+  return false;
+}
+
+/* Build replacement text for a token as seen by 'viewer'. */
+static void build_replacement(const struct emote_token *tok,
+                              struct char_data *actor,
+                              struct char_data *viewer,
+                              bool actor_possessive_for_at,
+                              char *out, size_t outsz) {
+  out[0] = '\0';
+
+  if (tok->op == '@') {
+    /* Use actor's sdesc if present, otherwise their name */
+    const char *ref = (GET_SHORT_DESC(actor) && *GET_SHORT_DESC(actor))
+                      ? GET_SHORT_DESC(actor)
+                      : GET_NAME(actor);
+
+    if (!actor_possessive_for_at)
+      strlcpy(out, ref, outsz);
+    else
+      make_possessive(ref, out, outsz);
+    return;
+  }
+
+  if (tok->tch) {
+    bool you = (viewer == tok->tch);
+    /* For non-you views, prefer sdesc over name */
+    const char *ref = (GET_SHORT_DESC(tok->tch) && *GET_SHORT_DESC(tok->tch))
+                      ? GET_SHORT_DESC(tok->tch)
+                      : GET_NAME(tok->tch);
+
+    switch (tok->op) {
+      case '~':
+        if (you) strlcpy(out, "you", outsz);
+        else     strlcpy(out, ref, outsz);
+        break;
+
+      case '!':
+        if (you) strlcpy(out, "you", outsz);
+        else     strlcpy(out, pron_obj(tok->tch), outsz);
+        break;
+
+      case '%':
+        if (you) strlcpy(out, "your", outsz);
+        else     make_possessive(ref, out, outsz);
+        break;
+
+      case '^':
+        if (you) strlcpy(out, "your", outsz);
+        else     strlcpy(out, pron_pos_adj(tok->tch), outsz);
+        break;
+
+      case '#':
+        if (you) strlcpy(out, "you", outsz);
+        else     strlcpy(out, pron_subj(tok->tch), outsz);
+        break;
+
+      case '&':
+        if (you) strlcpy(out, "yourself", outsz);
+        else     strlcpy(out, pron_refl(tok->tch), outsz);
+        break;
+
+      case '=':
+        if (you) strlcpy(out, "yours", outsz);
+        else     make_possessive(ref, out, outsz);
+        break;
+
+      case '+':
+        if (you) strlcpy(out, "yours", outsz);
+        else     strlcpy(out, pron_pos_pron(tok->tch), outsz);
+        break;
+
+      default:
+        strlcpy(out, ref, outsz);
+        break;
+    }
+    return;
+  }
+
+  if (tok->tobj) {
+    const char *sdesc = (tok->tobj->short_description && *tok->tobj->short_description)
+                        ? tok->tobj->short_description : "something";
+    char posbuf[MAX_INPUT_LENGTH];
+    switch (tok->op) {
+      case '~': strlcpy(out, sdesc, outsz); break;
+      case '!': strlcpy(out, "it", outsz);  break;
+      case '#': strlcpy(out, "it", outsz);  break;
+      case '%':
+      case '=': make_possessive(sdesc, posbuf, sizeof(posbuf)); strlcpy(out, posbuf, outsz); break;
+      case '^':
+      case '+': strlcpy(out, "its", outsz); break;
+      case '&': strlcpy(out, "itself", outsz); break;
+      default:  strlcpy(out, sdesc, outsz); break;
+    }
+    return;
+  }
+
+  strlcpy(out, "something", outsz);
+}
+
+bool build_targeted_phrase(struct char_data *ch, const char *input, bool allow_actor_at, struct targeted_phrase *phrase) {
+  struct emote_token tokens[MAX_EMOTE_TOKENS];
+  int tokc = 0;
+  char out[MAX_STRING_LENGTH];
+  char working[MAX_STRING_LENGTH];
+  const char *p;
+
+  if (!phrase)
+    return FALSE;
+
+  phrase->template[0] = '\0';
+  phrase->token_count = 0;
+
+  if (!input || !*input)
+    return TRUE;
+
+  strlcpy(working, input, sizeof(working));
+  out[0] = '\0';
+  p = working;
+
+  while (*p) {
+    if (is_token_operator(*p)) {
+      char op = *p++;
+      char name[MAX_NAME_LENGTH];
+      int ni = 0;
+
+      if (op == '@' && !allow_actor_at) {
+        send_to_char(ch, "You can't use '@' in that phrase.\r\n");
+        return FALSE;
+      }
+
+      if (op != '@') {
+        const char *q = p;
+
+        while (*q && isdigit((unsigned char)*q) && ni < (int)sizeof(name) - 1)
+          name[ni++] = *q++;
+
+        if (ni > 0 && *q == '.' && ni < (int)sizeof(name) - 1)
+          name[ni++] = *q++;
+
+        while (*q && (isalnum((unsigned char)*q) || *q == '_') && ni < (int)sizeof(name) - 1)
+          name[ni++] = *q++;
+
+        name[ni] = '\0';
+        p = q;
+      } else {
+        name[0] = '\0';
+      }
+
+      if (tokc >= MAX_EMOTE_TOKENS) {
+        send_to_char(ch, "That's too many references for one phrase.\r\n");
+        return FALSE;
+      }
+
+      tokens[tokc].op = op;
+      tokens[tokc].name[0] = '\0';
+      tokens[tokc].tch = NULL;
+      tokens[tokc].tobj = NULL;
+
+      if (op != '@') {
+        if (!*name) {
+          send_to_char(ch, "You need to specify who or what you're referencing.\r\n");
+          return FALSE;
+        }
+        strlcpy(tokens[tokc].name, name, sizeof(tokens[tokc].name));
+        if (!resolve_reference(ch, name, &tokens[tokc].tch, &tokens[tokc].tobj)) {
+          send_to_char(ch, "You can't find one of the references here.\r\n");
+          return FALSE;
+        }
+      }
+
+      char ph[16];
+      snprintf(ph, sizeof(ph), "$T%d", tokc + 1);
+      strlcat(out, ph, sizeof(out));
+      tokc++;
+      continue;
+    }
+
+    char buf[2] = { *p++, '\0' };
+    strlcat(out, buf, sizeof(out));
+  }
+
+  strlcpy(phrase->template, out, sizeof(phrase->template));
+  phrase->token_count = tokc;
+  for (int i = 0; i < tokc; i++)
+    phrase->tokens[i] = tokens[i];
+
+  return TRUE;
+}
+
+void render_targeted_phrase(struct char_data *actor,
+                            const struct targeted_phrase *phrase,
+                            bool actor_possessive_for_at,
+                            struct char_data *viewer,
+                            char *out,
+                            size_t outsz)
+{
+  char msg[MAX_STRING_LENGTH];
+
+  if (!out || !phrase) {
+    if (out && outsz > 0)
+      *out = '\0';
+    return;
+  }
+
+  if (!phrase->template[0]) {
+    if (outsz > 0)
+      *out = '\0';
+    return;
+  }
+
+  strlcpy(msg, phrase->template, sizeof(msg));
+
+  for (int i = 0; i < phrase->token_count; i++) {
+    char token[16], repl[MAX_INPUT_LENGTH];
+    snprintf(token, sizeof(token), "$T%d", i + 1);
+    build_replacement(&phrase->tokens[i], actor, viewer, actor_possessive_for_at, repl, sizeof(repl));
+    replace_all_tokens(msg, sizeof(msg), token, repl);
+  }
+
+  collapse_spaces(msg);
+  strlcpy(out, msg, outsz);
+}
+
+static bool hidden_emote_can_view(struct char_data *actor,
+                                  struct char_data *viewer,
+                                  int stealth_total) {
+  int opposed;
+
+  if (!viewer || viewer == actor)
+    return TRUE;
+  if (GET_LEVEL(viewer) >= LVL_IMMORT)
+    return TRUE;
+  if (!AWAKE(viewer))
+    return FALSE;
+
+  if (can_scan_for_sneak(viewer))
+    opposed = roll_scan_perception(viewer);
+  else
+    opposed = rand_number(1, 20);
+
+  return opposed >= stealth_total;
+}
+
+/* ===================== Main entry ===================== */
+void perform_emote(struct char_data *ch, char *argument, bool possessive, bool hidden) {
+  char base[MAX_STRING_LENGTH];
+  char with_placeholders[MAX_STRING_LENGTH];
+  int at_count = 0;
+  int stealth_total = 0;
+
+  struct emote_token toks[MAX_EMOTE_TOKENS];
+  int tokc = 0;
+
+  skip_spaces(&argument);
+  if (!*argument) { send_to_char(ch, "Yes... but what?\r\n"); return; }
+
+  if (hidden)
+    stealth_total = roll_stealth_check(ch);
+
+  /* Only one '@' allowed (inserts actor name/possessive at that spot) */
+  for (const char *c = argument; *c; ++c) if (*c == '@') at_count++;
+  if (at_count > 1) { send_to_char(ch, "You can only use '@' once in an emote.\r\n"); return; }
+  bool has_at = (at_count == 1);
+
+  /* Prefix actor name unless '@' is used */
+  if (!has_at) {
+    char who[MAX_INPUT_LENGTH];
+    build_actor_name(ch, possessive, who, sizeof(who));
+    snprintf(base, sizeof(base), "%s %s", who, argument);
+  } else {
+    strlcpy(base, argument, sizeof(base));
+  }
+
+  /* Parse operators to placeholders ($Tn) and capture tokens in order */
+  {
+    char out[MAX_STRING_LENGTH]; out[0] = '\0';
+    const char *p = base;
+
+    while (*p && tokc < MAX_EMOTE_TOKENS) {
+      if (*p == '@' || *p == '~' || *p == '!' || *p == '%' ||
+          *p == '^' || *p == '#' || *p == '&' || *p == '=' || *p == '+') {
+
+        char op = *p++;
+        char name[MAX_NAME_LENGTH]; int ni = 0;
+
+        if (op == '@') {
+          name[0] = '\0';
+        } else {
+          /* Allow numbered refs like "2.corpse" but strip trailing punctuation. */
+          const char *q = p;
+
+          /* optional leading digits */
+          while (*q && isdigit((unsigned char)*q) && ni < (int)sizeof(name) - 1)
+            name[ni++] = *q++;
+
+          /* include a single '.' only if we had digits (for "2.corpse") */
+          if (ni > 0 && *q == '.' && ni < (int)sizeof(name) - 1)
+            name[ni++] = *q++;
+
+          /* base name (letters/digits/underscore only) */
+          while (*q && (isalnum((unsigned char)*q) || *q == '_') && ni < (int)sizeof(name) - 1)
+            name[ni++] = *q++;
+
+          name[ni] = '\0';
+          p = q;
+        }
+
+        toks[tokc].op = op;
+        toks[tokc].name[0] = '\0';
+        toks[tokc].tch = NULL;
+        toks[tokc].tobj = NULL;
+
+        if (op != '@') {
+          strlcpy(toks[tokc].name, name, sizeof(toks[tokc].name));
+          if (!resolve_reference(ch, name, &toks[tokc].tch, &toks[tokc].tobj)) {
+            send_to_char(ch, "You can't find one of the references here.\r\n");
+            return;
+          }
+        }
+
+        char ph[16]; snprintf(ph, sizeof(ph), "$T%d", tokc + 1);
+        strlcat(out, ph, sizeof(out));
+        tokc++;
+        continue;
+      }
+
+      char buf[2] = { *p++, '\0' };
+      strlcat(out, buf, sizeof(out));
+    }
+    strlcat(out, p, sizeof(out));
+    strlcpy(with_placeholders, out, sizeof(with_placeholders));
+  }
+
+  /* Replace literal '@' with a placeholder if present */
+  if (has_at && tokc < MAX_EMOTE_TOKENS) {
+    toks[tokc].op = '@'; toks[tokc].name[0] = '\0'; toks[tokc].tch = NULL; toks[tokc].tobj = NULL;
+    char ph[16]; snprintf(ph, sizeof(ph), "$T%d", tokc + 1);
+    replace_all_tokens(with_placeholders, sizeof(with_placeholders), "@", ph);
+    tokc++;
+  }
+
+  /* Polish: ensure final punctuation (only if the string lacks any .?! at the very end), collapse spaces */
+  {
+    size_t n = strlen(with_placeholders);
+    bool ends_with_punct = (n > 0 && is_end_punct(with_placeholders[n - 1]));
+    if (!ends_with_punct) strlcat(with_placeholders, ".", sizeof(with_placeholders));
+    collapse_spaces(with_placeholders);
+  }
+
+  struct targeted_phrase phrase;
+  strlcpy(phrase.template, with_placeholders, sizeof(phrase.template));
+  phrase.token_count = tokc;
+  for (int i = 0; i < tokc && i < MAX_EMOTE_TOKENS; i++)
+    phrase.tokens[i] = toks[i];
+
+  /* Deliver personalized message to everyone in the room (including actor) */
+  for (struct descriptor_data *d = descriptor_list; d; d = d->next) {
+    if (STATE(d) != CON_PLAYING || !d->character) continue;
+    if (IN_ROOM(d->character) != IN_ROOM(ch))     continue;
+    if (hidden && !hidden_emote_can_view(ch, d->character, stealth_total))
+      continue;
+
+    char msg[MAX_STRING_LENGTH];
+    render_targeted_phrase(ch, &phrase, possessive, d->character, msg, sizeof(msg));
+
+    /* Final per-viewer cleanup: spaces + multi-sentence capitalization */
+    collapse_spaces(msg);
+    capitalize_sentences(msg);
+
+    if (d->character == ch) {
+      act(msg, FALSE, ch, NULL, NULL, TO_CHAR);
+    } else if (hidden) {
+      send_to_char(d->character, "You notice:\r\n%s\r\n", msg);
+    } else {
+      act(msg, FALSE, ch, NULL, d->character, TO_VICT);
+    }
+  }
+}
+/* =================== End emote engine =================== */
 
 ACMD(do_wizhelp) 
 { 
@@ -139,6 +1199,26 @@ ACMD(do_echo)
     else
       act(buf, FALSE, ch, 0, 0, TO_CHAR);
   }
+}
+
+ACMD(do_emote)
+{
+  perform_emote(ch, argument, FALSE, FALSE);
+}
+
+ACMD(do_pemote)
+{
+  perform_emote(ch, argument, TRUE, FALSE);
+}
+
+ACMD(do_hemote)
+{
+  perform_emote(ch, argument, FALSE, TRUE);
+}
+
+ACMD(do_phemote)
+{
+  perform_emote(ch, argument, TRUE, TRUE);
 }
 
 ACMD(do_send)
@@ -403,20 +1483,21 @@ ACMD(do_vnum)
 
 #define ZOCMD zone_table[zrnum].cmd[subcmd]
 
-static void list_zone_commands_room(struct char_data *ch, room_vnum rvnum)
+static void stat_format_zone_cmds_room(room_vnum rvnum, char *buf, size_t buf_size)
 {
   zone_rnum zrnum = real_zone_by_thing(rvnum);
   room_rnum rrnum = real_room(rvnum), cmd_room = NOWHERE;
   int subcmd = 0, count = 0;
+  size_t len = 0;
+
+  buf[0] = '\0';
 
   if (zrnum == NOWHERE || rrnum == NOWHERE) {
-    send_to_char(ch, "No zone information available.\r\n");
+    strlcpy(buf, "None", buf_size);
     return;
   }
 
-  get_char_colors(ch);
-
-  send_to_char(ch, "Zone commands in this room:%s\r\n", yel);
+#define ZOCMD zone_table[zrnum].cmd[subcmd]
   while (ZOCMD.command != 'S') {
     switch (ZOCMD.command) {
       case 'M':
@@ -430,557 +1511,426 @@ static void list_zone_commands_room(struct char_data *ch, room_vnum rvnum)
         cmd_room = ZOCMD.arg1;
         break;
       default:
+        cmd_room = NOWHERE;
         break;
     }
+
     if (cmd_room == rrnum) {
+      if (len)
+        stat_appendf(buf, buf_size, &len, "\n");
+
       count++;
-      /* start listing */
       switch (ZOCMD.command) {
         case 'M':
-          send_to_char(ch, "%sLoad %s [%s%d%s], Max : %d\r\n",
-                  ZOCMD.if_flag ? " then " : "",
-                  mob_proto[ZOCMD.arg1].player.short_descr, cyn,
-                  mob_index[ZOCMD.arg1].vnum, yel, ZOCMD.arg2
-                  );
+          stat_appendf(buf, buf_size, &len, "%sLoad mob %s (#%d) max %d",
+            ZOCMD.if_flag ? "then " : "",
+            mob_proto[ZOCMD.arg1].player.short_descr,
+            mob_index[ZOCMD.arg1].vnum,
+            ZOCMD.arg2);
           break;
         case 'G':
-          send_to_char(ch, "%sGive it %s [%s%d%s], Max : %d\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg1].short_description,
-    	      cyn, obj_index[ZOCMD.arg1].vnum, yel,
-    	      ZOCMD.arg2
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sGive %s (#%d) max %d",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg1].short_description,
+            obj_index[ZOCMD.arg1].vnum,
+            ZOCMD.arg2);
           break;
         case 'O':
-          send_to_char(ch, "%sLoad %s [%s%d%s], Max : %d\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg1].short_description,
-    	      cyn, obj_index[ZOCMD.arg1].vnum, yel,
-    	      ZOCMD.arg2
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sLoad obj %s (#%d) max %d",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg1].short_description,
+            obj_index[ZOCMD.arg1].vnum,
+            ZOCMD.arg2);
           break;
         case 'E':
-          send_to_char(ch, "%sEquip with %s [%s%d%s], %s, Max : %d\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg1].short_description,
-    	      cyn, obj_index[ZOCMD.arg1].vnum, yel,
-    	      equipment_types[ZOCMD.arg3],
-    	      ZOCMD.arg2
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sEquip %s (#%d) %s max %d",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg1].short_description,
+            obj_index[ZOCMD.arg1].vnum,
+            equipment_types[ZOCMD.arg3],
+            ZOCMD.arg2);
           break;
         case 'P':
-          send_to_char(ch, "%sPut %s [%s%d%s] in %s [%s%d%s], Max : %d\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg1].short_description,
-    	      cyn, obj_index[ZOCMD.arg1].vnum, yel,
-    	      obj_proto[ZOCMD.arg3].short_description,
-    	      cyn, obj_index[ZOCMD.arg3].vnum, yel,
-    	      ZOCMD.arg2
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sPut %s (#%d) in %s (#%d) max %d",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg1].short_description,
+            obj_index[ZOCMD.arg1].vnum,
+            obj_proto[ZOCMD.arg3].short_description,
+            obj_index[ZOCMD.arg3].vnum,
+            ZOCMD.arg2);
           break;
         case 'R':
-          send_to_char(ch, "%sRemove %s [%s%d%s] from room.\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      obj_proto[ZOCMD.arg2].short_description,
-    	      cyn, obj_index[ZOCMD.arg2].vnum, yel
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sRemove %s (#%d)",
+            ZOCMD.if_flag ? "then " : "",
+            obj_proto[ZOCMD.arg2].short_description,
+            obj_index[ZOCMD.arg2].vnum);
           break;
         case 'D':
-          send_to_char(ch, "%sSet door %s as %s.\r\n",
-    	      ZOCMD.if_flag ? " then " : "",
-    	      dirs[ZOCMD.arg2],
-    	      ZOCMD.arg3 ? ((ZOCMD.arg3 == 1) ? "closed" : "locked") : "open"
-    	      );
+          stat_appendf(buf, buf_size, &len, "%sSet door %s %s",
+            ZOCMD.if_flag ? "then " : "",
+            dirs[ZOCMD.arg2],
+            ZOCMD.arg3 ? ((ZOCMD.arg3 == 1) ? "closed" : "locked") : "open");
           break;
         case 'T':
-          send_to_char(ch, "%sAttach trigger %s%s%s [%s%d%s] to %s\r\n",
-            ZOCMD.if_flag ? " then " : "",
-            cyn, trig_index[ZOCMD.arg2]->proto->name, yel,
-            cyn, trig_index[ZOCMD.arg2]->vnum, yel,
-            ((ZOCMD.arg1 == MOB_TRIGGER) ? "mobile" :
-              ((ZOCMD.arg1 == OBJ_TRIGGER) ? "object" :
-                ((ZOCMD.arg1 == WLD_TRIGGER)? "room" : "????"))));
+          stat_appendf(buf, buf_size, &len, "%sAttach trig %s (#%d) to %s",
+            ZOCMD.if_flag ? "then " : "",
+            trig_index[ZOCMD.arg2]->proto->name,
+            trig_index[ZOCMD.arg2]->vnum,
+            (ZOCMD.arg1 == MOB_TRIGGER) ? "mobile" :
+            (ZOCMD.arg1 == OBJ_TRIGGER) ? "object" :
+            (ZOCMD.arg1 == WLD_TRIGGER) ? "room" : "unknown");
           break;
         case 'V':
-          send_to_char(ch, "%sAssign global %s:%d to %s = %s\r\n",
-            ZOCMD.if_flag ? " then " : "",
-            ZOCMD.sarg1, ZOCMD.arg2,
-            ((ZOCMD.arg1 == MOB_TRIGGER) ? "mobile" :
-              ((ZOCMD.arg1 == OBJ_TRIGGER) ? "object" :
-                ((ZOCMD.arg1 == WLD_TRIGGER)? "room" : "????"))),
-            ZOCMD.sarg2);
+          stat_appendf(buf, buf_size, &len, "%sAssign global %s:%d to %s = %s",
+            ZOCMD.if_flag ? "then " : "",
+            ZOCMD.sarg1,
+            ZOCMD.arg2,
+            (ZOCMD.arg1 == MOB_TRIGGER) ? "mobile" :
+            (ZOCMD.arg1 == OBJ_TRIGGER) ? "object" :
+            (ZOCMD.arg1 == WLD_TRIGGER) ? "room" : "unknown",
+            ZOCMD.sarg2 ? ZOCMD.sarg2 : "");
           break;
         default:
-          send_to_char(ch, "<Unknown Command>\r\n");
+          stat_appendf(buf, buf_size, &len, "%s<Unknown command %c>",
+            ZOCMD.if_flag ? "then " : "",
+            ZOCMD.command);
           break;
       }
     }
     subcmd++;
   }
-  send_to_char(ch, "%s", nrm);
-  if (!count)
-    send_to_char(ch, "None!\r\n");
-}
 #undef ZOCMD
+
+  if (!count)
+    strlcpy(buf, "None", buf_size);
+}
 
 static void do_stat_room(struct char_data *ch, struct room_data *rm)
 {
-  char buf2[MAX_STRING_LENGTH];
-  struct extra_descr_data *desc;
-  int i, found, column;
-  struct obj_data *j;
-  struct char_data *k;
+  char buf[MAX_STRING_LENGTH];
+  char chars[MAX_STRING_LENGTH];
+  char objs[MAX_STRING_LENGTH];
+  char exits[MAX_STRING_LENGTH];
+  char triggers[MAX_STRING_LENGTH];
+  char globals[MAX_STRING_LENGTH];
+  char zone_cmds[MAX_STRING_LENGTH];
+  size_t len = 0;
 
-  send_to_char(ch, "Room name: %s%s%s\r\n", CCCYN(ch, C_NRM), rm->name, CCNRM(ch, C_NRM));
+  stat_table_border(ch);
+  stat_table_row(ch, "Name", rm->name ? rm->name : "<None>");
 
-  sprinttype(rm->sector_type, sector_types, buf2, sizeof(buf2));
-  send_to_char(ch, "Zone: [%3d], VNum: [%s%5d%s], RNum: [%5d], IDNum: [%5ld], Type: %s\r\n",
-	  zone_table[rm->zone].number, CCGRN(ch, C_NRM), rm->number,
-	  CCNRM(ch, C_NRM), real_room(rm->number), room_script_id(rm), buf2);
+  stat_table_row_fmt(ch, "Identifiers", "Zone %d (%s), VNum #%d (RNum %d), ID %ld",
+    zone_table[rm->zone].number, zone_table[rm->zone].name,
+    rm->number, real_room(rm->number), room_script_id(rm));
 
-  sprintbitarray(rm->room_flags, room_bits, RF_ARRAY_MAX, buf2);
-  send_to_char(ch, "SpecProc: %s, Flags: %s\r\n", rm->func == NULL ? "None" : get_spec_func_name(rm->func), buf2);
+  sprinttype(rm->sector_type, sector_types, buf, sizeof(buf));
+  stat_table_row_fmt(ch, "Type", "Sector %s, SpecProc %s",
+    buf,
+    rm->func ? get_spec_func_name(rm->func) : "None");
 
-  send_to_char(ch, "Description:\r\n%s", rm->description ? rm->description : "  None.\r\n");
+  sprintbitarray(rm->room_flags, room_bits, RF_ARRAY_MAX, buf);
+  stat_table_row(ch, "Room Flags", buf);
 
-  if (rm->ex_description) {
-    send_to_char(ch, "Extra descs:%s", CCCYN(ch, C_NRM));
-    for (desc = rm->ex_description; desc; desc = desc->next)
-      send_to_char(ch, " [%s]", desc->keyword);
-    send_to_char(ch, "%s\r\n", CCNRM(ch, C_NRM));
-  }
+  buf[0] = '\0';
+  len = 0;
+  for (struct extra_descr_data *desc = rm->ex_description; desc; desc = desc->next)
+    stat_appendf(buf, sizeof(buf), &len, "%s%s", len ? ", " : "", desc->keyword ? desc->keyword : "<None>");
+  if (!len)
+    strlcpy(buf, "None", sizeof(buf));
+  stat_table_row(ch, "Extra Descs", buf);
 
-  send_to_char(ch, "Chars present:%s", CCYEL(ch, C_NRM));
-  column = 14;	/* ^^^ strlen ^^^ */
-  for (found = FALSE, k = rm->people; k; k = k->next_in_room) {
-    if (!CAN_SEE(ch, k))
-      continue;
+  stat_format_character_list(ch, rm->people, chars, sizeof(chars));
+  stat_table_row(ch, "Characters", chars);
 
-    column += send_to_char(ch, "%s %s(%s)", found++ ? "," : "", GET_NAME(k),
-		!IS_NPC(k) ? "PC" : (!IS_MOB(k) ? "NPC" : "MOB"));
-    if (column >= 62) {
-      send_to_char(ch, "%s\r\n", k->next_in_room ? "," : "");
-      found = FALSE;
-      column = 0;
-    }
-  }
-  send_to_char(ch, "%s", CCNRM(ch, C_NRM));
+  stat_format_object_list(ch, rm->contents, objs, sizeof(objs));
+  stat_table_row(ch, "Contents", objs);
 
-  if (rm->contents) {
-    send_to_char(ch, "Contents:%s", CCGRN(ch, C_NRM));
-    column = 9;	/* ^^^ strlen ^^^ */
+  stat_format_exit_summary(rm, exits, sizeof(exits));
+  stat_table_row(ch, "Exits", exits);
 
-    for (found = 0, j = rm->contents; j; j = j->next_content) {
-      if (!CAN_SEE_OBJ(ch, j))
-	continue;
+  stat_format_script_triggers(SCRIPT(rm), triggers, sizeof(triggers));
+  stat_table_row(ch, "Triggers", triggers);
 
-      column += send_to_char(ch, "%s %s", found++ ? "," : "", j->short_description);
-      if (column >= 62) {
-	send_to_char(ch, "%s\r\n", j->next_content ? "," : "");
-	found = FALSE;
-        column = 0;
-      }
-    }
-    send_to_char(ch, "%s", CCNRM(ch, C_NRM));
-  }
+  stat_format_script_globals(SCRIPT(rm), globals, sizeof(globals));
+  stat_table_row(ch, "Script Vars", globals);
 
-  for (i = 0; i < DIR_COUNT; i++) {
-    char buf1[128];
+  stat_format_zone_cmds_room(rm->number, zone_cmds, sizeof(zone_cmds));
+  stat_table_row(ch, "Zone Commands", zone_cmds);
 
-    if (!rm->dir_option[i])
-      continue;
-
-    if (rm->dir_option[i]->to_room == NOWHERE)
-      snprintf(buf1, sizeof(buf1), " %sNONE%s", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
-    else
-      snprintf(buf1, sizeof(buf1), "%s%5d%s", CCCYN(ch, C_NRM), GET_ROOM_VNUM(rm->dir_option[i]->to_room), CCNRM(ch, C_NRM));
-
-    sprintbit(rm->dir_option[i]->exit_info, exit_bits, buf2, sizeof(buf2));
-
-    send_to_char(ch, "Exit %s%-5s%s:  To: [%s], Key: [%5d], Keywords: %s, Type: %s\r\n%s",
-	CCCYN(ch, C_NRM), dirs[i], CCNRM(ch, C_NRM), buf1,
-	rm->dir_option[i]->key == NOTHING ? -1 : rm->dir_option[i]->key,
-	rm->dir_option[i]->keyword ? rm->dir_option[i]->keyword : "None", buf2,
-	rm->dir_option[i]->general_description ? rm->dir_option[i]->general_description : "  No exit description.\r\n");
-  }
-
-  /* check the room for a script */
-  do_sstat_room(ch, rm);
-
-  list_zone_commands_room(ch, rm->number);
+  stat_table_border(ch);
 }
 
 static void do_stat_object(struct char_data *ch, struct obj_data *j)
 {
-  int i, found;
-  obj_vnum vnum;
-  struct obj_data *j2;
-  struct extra_descr_data *desc;
   char buf[MAX_STRING_LENGTH];
-  struct char_data *tempch;
+  char values[MAX_STRING_LENGTH];
+  char affects[MAX_STRING_LENGTH];
+  char contents[MAX_STRING_LENGTH];
+  char triggers[MAX_STRING_LENGTH];
+  char globals[MAX_STRING_LENGTH];
+  const char *const *labels = obj_value_labels(GET_OBJ_TYPE(j));
+  size_t len = 0;
 
-  send_to_char(ch, "Name: '%s%s%s', Keywords: %s\r\n", CCYEL(ch, C_NRM),
-	  j->short_description ? j->short_description : "<None>",
-	  CCNRM(ch, C_NRM), j->name);
+  stat_table_border(ch);
+  stat_table_row(ch, "Name", j->short_description ? j->short_description : "<None>");
+  stat_table_row(ch, "Keywords", j->name ? j->name : "<None>");
+  stat_table_row(ch, "Long Desc", j->description ? j->description : "<None>");
 
-  vnum = GET_OBJ_VNUM(j);
-  sprinttype(GET_OBJ_TYPE(j), item_types, buf, sizeof(buf));
-  send_to_char(ch, "VNum: [%s%5d%s], RNum: [%5d], Idnum: [%5ld], Type: %s, SpecProc: %s\r\n",
-    CCGRN(ch, C_NRM), vnum, CCNRM(ch, C_NRM), GET_OBJ_RNUM(j), obj_script_id(j), buf,
-    GET_OBJ_SPEC(j) ? (get_spec_func_name(GET_OBJ_SPEC(j))) : "None");
-
-  send_to_char(ch, "L-Desc: '%s%s%s'\r\n", CCYEL(ch, C_NRM),
-	  j->description ? j->description : "<None>",
-	  CCNRM(ch, C_NRM));
-
-  send_to_char(ch, "A-Desc: '%s%s%s'\r\n", CCYEL(ch, C_NRM),
-	  j->action_description ? j->action_description : "<None>",
-	  CCNRM(ch, C_NRM));
-
-  if (j->ex_description) {
-    send_to_char(ch, "Extra descs:%s", CCCYN(ch, C_NRM));
-    for (desc = j->ex_description; desc; desc = desc->next)
-      send_to_char(ch, " [%s]", desc->keyword);
-    send_to_char(ch, "%s\r\n", CCNRM(ch, C_NRM));
+  buf[0] = '\0';
+  len = 0;
+  for (struct extra_descr_data *desc = j->ex_description; desc; desc = desc->next) {
+    stat_appendf(buf, sizeof(buf), &len, "%s%s", len ? ", " : "", desc->keyword ? desc->keyword : "<None>");
   }
+  if (!len)
+    strlcpy(buf, "None", sizeof(buf));
+  stat_table_row(ch, "Extra Descs", buf);
+
+  stat_table_row_fmt(ch, "Identifiers", "VNum #%d (RNum %d) ID %ld",
+    GET_OBJ_VNUM(j), GET_OBJ_RNUM(j), obj_script_id(j));
+
+  sprinttype(GET_OBJ_TYPE(j), item_types, buf, sizeof(buf));
+  stat_table_row_fmt(ch, "Type", "%s, SpecProc %s",
+    buf,
+    GET_OBJ_SPEC(j) ? get_spec_func_name(GET_OBJ_SPEC(j)) : "None");
+
+  buf[0] = '\0';
+  len = 0;
+  if (IN_ROOM(j) != NOWHERE)
+    stat_appendf(buf, sizeof(buf), &len, "Room #%d %s",
+      GET_ROOM_VNUM(IN_ROOM(j)), world[IN_ROOM(j)].name);
+  else
+    stat_appendf(buf, sizeof(buf), &len, "Room <None>");
+  stat_appendf(buf, sizeof(buf), &len, ", In Obj %s",
+    j->in_obj ? (j->in_obj->short_description ? j->in_obj->short_description : j->in_obj->name) : "None");
+  stat_appendf(buf, sizeof(buf), &len, ", Carried by %s",
+    j->carried_by ? GET_NAME(j->carried_by) : "Nobody");
+  stat_appendf(buf, sizeof(buf), &len, ", Worn by %s",
+    j->worn_by ? GET_NAME(j->worn_by) : "Nobody");
+  stat_table_row(ch, "Location", buf);
+
+  stat_table_row_fmt(ch, "Stats", "Weight %d, Cost %d",
+    GET_OBJ_WEIGHT(j), GET_OBJ_COST(j));
 
   sprintbitarray(GET_OBJ_WEAR(j), wear_bits, TW_ARRAY_MAX, buf);
-  send_to_char(ch, "Can be worn on: %s\r\n", buf);
-
-  sprintbitarray(GET_OBJ_AFFECT(j), affected_bits, AF_ARRAY_MAX, buf);
-  send_to_char(ch, "Set char bits : %s\r\n", buf);
+  stat_table_row(ch, "Wear Slots", buf);
 
   sprintbitarray(GET_OBJ_EXTRA(j), extra_bits, EF_ARRAY_MAX, buf);
-  send_to_char(ch, "Extra flags   : %s\r\n", buf);
+  stat_table_row(ch, "Extra Flags", buf);
 
-  send_to_char(ch, "Weight: %d, Value: %d, Cost/day: %d, Timer: %d, Min level: %d\r\n",
-     GET_OBJ_WEIGHT(j), GET_OBJ_COST(j), GET_OBJ_RENT(j), GET_OBJ_TIMER(j), GET_OBJ_LEVEL(j));
+  sprintbitarray(GET_OBJ_AFFECT(j), affected_bits, AF_ARRAY_MAX, buf);
+  stat_table_row(ch, "Affect Flags", buf);
 
-  send_to_char(ch, "In room: %d (%s), ", GET_ROOM_VNUM(IN_ROOM(j)),
-	IN_ROOM(j) == NOWHERE ? "Nowhere" : world[IN_ROOM(j)].name);
-
-  /* In order to make it this far, we must already be able to see the character
-   * holding the object. Therefore, we do not need CAN_SEE(). */
-  send_to_char(ch, "In object: %s, ", j->in_obj ? j->in_obj->short_description : "None");
-  send_to_char(ch, "Carried by: %s, ", j->carried_by ? GET_NAME(j->carried_by) : "Nobody");
-  send_to_char(ch, "Worn by: %s\r\n", j->worn_by ? GET_NAME(j->worn_by) : "Nobody");
-
-  switch (GET_OBJ_TYPE(j)) {
-  case ITEM_LIGHT:
-    if (GET_OBJ_VAL(j, 2) == -1)
-      send_to_char(ch, "Hours left: Infinite\r\n");
-    else
-      send_to_char(ch, "Hours left: [%d]\r\n", GET_OBJ_VAL(j, 2));
-    break;
-  case ITEM_SCROLL:
-  case ITEM_POTION:
-    send_to_char(ch, "Spells: (Level %d) %s, %s, %s\r\n", GET_OBJ_VAL(j, 0),
-	    skill_name(GET_OBJ_VAL(j, 1)), skill_name(GET_OBJ_VAL(j, 2)),
-	    skill_name(GET_OBJ_VAL(j, 3)));
-    break;
-  case ITEM_WAND:
-  case ITEM_STAFF:
-    send_to_char(ch, "Spell: %s at level %d, %d (of %d) charges remaining\r\n",
-	    skill_name(GET_OBJ_VAL(j, 3)), GET_OBJ_VAL(j, 0),
-	    GET_OBJ_VAL(j, 2), GET_OBJ_VAL(j, 1));
-    break;
-  case ITEM_WEAPON:
-    send_to_char(ch, "Todam: %dd%d, Avg Damage: %.1f. Message type: %s\r\n",
-	    GET_OBJ_VAL(j, 1), GET_OBJ_VAL(j, 2), ((GET_OBJ_VAL(j, 2) + 1) / 2.0) * GET_OBJ_VAL(j, 1),  attack_hit_text[GET_OBJ_VAL(j, 3)].singular);
-    break;
-  case ITEM_ARMOR:
-    send_to_char(ch, "AC-apply: [%d]\r\n", GET_OBJ_VAL(j, 0));
-    break;
-  case ITEM_CONTAINER:
-    sprintbit(GET_OBJ_VAL(j, 1), container_bits, buf, sizeof(buf));
-    send_to_char(ch, "Weight capacity: %d, Lock Type: %s, Key Num: %d, Corpse: %s\r\n",
-	    GET_OBJ_VAL(j, 0), buf, GET_OBJ_VAL(j, 2),
-	    YESNO(GET_OBJ_VAL(j, 3)));
-    break;
-  case ITEM_DRINKCON:
-  case ITEM_FOUNTAIN:
-    sprinttype(GET_OBJ_VAL(j, 2), drinks, buf, sizeof(buf));
-    send_to_char(ch, "Capacity: %d, Contains: %d, Poisoned: %s, Liquid: %s\r\n",
-	    GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1), YESNO(GET_OBJ_VAL(j, 3)), buf);
-    break;
-  case ITEM_NOTE:
-    send_to_char(ch, "Tongue: %d\r\n", GET_OBJ_VAL(j, 0));
-    break;
-  case ITEM_KEY: /* Nothing */
-    break;
-  case ITEM_FOOD:
-    send_to_char(ch, "Makes full: %d, Poisoned: %s\r\n", GET_OBJ_VAL(j, 0), YESNO(GET_OBJ_VAL(j, 3)));
-    break;
-  case ITEM_MONEY:
-    send_to_char(ch, "Coins: %d\r\n", GET_OBJ_VAL(j, 0));
-    break;
-  case ITEM_FURNITURE:
-    send_to_char(ch, "Can hold: [%d] Num. of People in: [%d]\r\n", GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1));
-    send_to_char(ch, "Holding : ");
-    for (tempch = OBJ_SAT_IN_BY(j); tempch; tempch = NEXT_SITTING(tempch))
-      send_to_char(ch, "%s ", GET_NAME(tempch));
-    send_to_char(ch, "\r\n");
-    break;
-  default:
-    send_to_char(ch, "Values 0-3: [%d] [%d] [%d] [%d]\r\n",
-	    GET_OBJ_VAL(j, 0), GET_OBJ_VAL(j, 1),
-	    GET_OBJ_VAL(j, 2), GET_OBJ_VAL(j, 3));
-    break;
+  values[0] = '\0';
+  len = 0;
+  for (int i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
+    stat_appendf(values, sizeof(values), &len, "%s%s=%d",
+      len ? ", " : "", labels[i], GET_OBJ_VAL(j, i));
   }
+  stat_table_row(ch, "Object Values", values);
+
+  stat_format_obj_special(j, buf, sizeof(buf));
+  stat_table_row(ch, "Special", buf);
 
   if (j->contains) {
-    int column;
+    stat_format_object_list(ch, j->contains, contents, sizeof(contents));
+    stat_table_row(ch, "Contains", contents);
+  } else
+    stat_table_row(ch, "Contains", "None");
 
-    send_to_char(ch, "\r\nContents:%s", CCGRN(ch, C_NRM));
-    column = 9;	/* ^^^ strlen ^^^ */
+  stat_format_obj_affects(j, affects, sizeof(affects));
+  stat_table_row(ch, "Apply Mods", affects);
 
-    for (found = 0, j2 = j->contains; j2; j2 = j2->next_content) {
-      column += send_to_char(ch, "%s %s", found++ ? "," : "", j2->short_description);
-      if (column >= 62) {
-	send_to_char(ch, "%s\r\n", j2->next_content ? "," : "");
-	found = FALSE;
-        column = 0;
-      }
-    }
-    send_to_char(ch, "%s", CCNRM(ch, C_NRM));
-  }
+  stat_format_script_triggers(SCRIPT(j), triggers, sizeof(triggers));
+  stat_table_row(ch, "Triggers", triggers);
 
-  found = FALSE;
-  send_to_char(ch, "Affections:");
-  for (i = 0; i < MAX_OBJ_AFFECT; i++)
-    if (j->affected[i].modifier) {
-      sprinttype(j->affected[i].location, apply_types, buf, sizeof(buf));
-      send_to_char(ch, "%s %+d to %s", found++ ? "," : "", j->affected[i].modifier, buf);
-    }
-  if (!found)
-    send_to_char(ch, " None");
+  stat_format_script_globals(SCRIPT(j), globals, sizeof(globals));
+  stat_table_row(ch, "Script Vars", globals);
 
-  send_to_char(ch, "\r\n");
-
-  /* check the object for a script */
-  do_sstat_object(ch, j);
+  stat_table_border(ch);
 }
 
 static void do_stat_character(struct char_data *ch, struct char_data *k)
 {
   char buf[MAX_STRING_LENGTH];
-  int i, i2, column, found = FALSE;
-  struct obj_data *j;
-  struct follow_type *fol;
-  struct affected_type *aff;
+  char buf2[MAX_STRING_LENGTH];
+  char effects[MAX_STRING_LENGTH];
+  char triggers[MAX_STRING_LENGTH];
+  char globals[MAX_STRING_LENGTH];
+  struct ac_breakdown acb;
+  const char *sex = genders[(int) GET_SEX(k)];
+  const char *ctype = !IS_NPC(k) ? "PC" : (!IS_MOB(k) ? "NPC" : "MOB");
 
-  sprinttype(GET_SEX(k), genders, buf, sizeof(buf));
-  send_to_char(ch, "%s %s '%s'  IDNum: [%5ld], In room [%5d], Loadroom : [%5d]\r\n",
-	  buf, (!IS_NPC(k) ? "PC" : (!IS_MOB(k) ? "NPC" : "MOB")),
-	  GET_NAME(k), IS_NPC(k) ? char_script_id(k) : GET_IDNUM(k), GET_ROOM_VNUM(IN_ROOM(k)), IS_NPC(k) ? NOWHERE : GET_LOADROOM(k));
+  stat_table_border(ch);
+  stat_table_row_fmt(ch, "Name", "%s (%s %s)", GET_NAME(k), sex, ctype);
+
+  if (IS_NPC(k) && k->player.name && *k->player.name)
+    stat_table_row(ch, "Keywords", k->player.name);
+
+  if (k->player.short_descr && *k->player.short_descr)
+    stat_table_row(ch, "Short Desc", k->player.short_descr);
+
+  if (k->player.long_descr && *k->player.long_descr)
+    stat_table_row(ch, "Long Desc", k->player.long_descr);
 
   if (IS_MOB(k)) {
-    send_to_char(ch, "Keyword: %s, VNum: [%5d], RNum: [%5d]\r\n", k->player.name, GET_MOB_VNUM(k), GET_MOB_RNUM(k));
-    send_to_char(ch, "L-Des: %s", k->player.long_descr ? k->player.long_descr : "<None>\r\n");
+    stat_table_row_fmt(ch, "Identifiers", "VNum #%d (RNum %d) ID %ld",
+      GET_MOB_VNUM(k), GET_MOB_RNUM(k), char_script_id(k));
+  } else {
+    room_vnum loadroom = GET_LOADROOM(k);
+    if (loadroom == NOWHERE)
+      stat_table_row_fmt(ch, "Identifiers", "ID %ld, Loadroom <None>", GET_IDNUM(k));
+    else
+      stat_table_row_fmt(ch, "Identifiers", "ID %ld, Loadroom #%d", GET_IDNUM(k), loadroom);
   }
 
-  if (!IS_MOB(k))
-    send_to_char(ch, "Title: %s\r\n", k->player.title ? k->player.title : "<None>");
-
-  send_to_char(ch, "D-Des: %s", k->player.description ? k->player.description : "<None>\r\n");
-
-  sprinttype(k->player.chclass, pc_class_types, buf, sizeof(buf));
-  send_to_char(ch, "%s%s, Lev: [%s%2d%s], XP: [%s%7d%s], Align: [%4d]\r\n",
-	IS_NPC(k) ? "Mobile" : "Class: ", IS_NPC(k) ? "" : buf, CCYEL(ch, C_NRM), GET_LEVEL(k), CCNRM(ch, C_NRM),
-	CCYEL(ch, C_NRM), GET_EXP(k), CCNRM(ch, C_NRM), GET_ALIGNMENT(k));
+  if (IN_ROOM(k) == NOWHERE)
+    stat_table_row(ch, "Current Room", "Nowhere");
+  else
+    stat_table_row_fmt(ch, "Current Room", "#%d %s (Zone %d)",
+      GET_ROOM_VNUM(IN_ROOM(k)),
+      world[IN_ROOM(k)].name,
+      zone_table[world[IN_ROOM(k)].zone].number);
 
   if (!IS_NPC(k)) {
-    char buf1[64], buf2[64];
+    char created[64], logon[64], olc[64] = "";
+    strftime(created, sizeof(created), "%b %d %Y", localtime(&(k->player.time.birth)));
+    strftime(logon, sizeof(logon), "%b %d %Y", localtime(&(k->player.time.logon)));
 
-    strftime(buf1, sizeof(buf1), "%a %b %d %Y", localtime(&(k->player.time.birth)));
-    strftime(buf2, sizeof(buf2), "%a %b %d %Y", localtime(&(k->player.time.logon)));
-
-    send_to_char(ch, "Created: [%s], Last Logon: [%s]\r\n", buf1, buf2);
-
-    send_to_char(ch, "Played: [%dh %dm], Age: [%d], STL[%d]/per[%d]/NSTL[%d]",
-            k->player.time.played / 3600, (k->player.time.played % 3600) / 60,
-            age(k)->year, GET_PRACTICES(k), int_app[GET_INT(k)].learn,
-	    wis_app[GET_WIS(k)].bonus);
-    /* Display OLC zone for immorts. */
     if (GET_LEVEL(k) >= LVL_BUILDER) {
-      if (GET_OLC_ZONE(k)==AEDIT_PERMISSION)
-        send_to_char(ch, ", OLC[%sAedit%s]", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
-      else if (GET_OLC_ZONE(k)==HEDIT_PERMISSION)
-        send_to_char(ch, ", OLC[%sHedit%s]", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
+      if (GET_OLC_ZONE(k) == AEDIT_PERMISSION)
+        snprintf(olc, sizeof(olc), ", OLC Aedit");
+      else if (GET_OLC_ZONE(k) == HEDIT_PERMISSION)
+        snprintf(olc, sizeof(olc), ", OLC Hedit");
       else if (GET_OLC_ZONE(k) == ALL_PERMISSION)
-        send_to_char(ch, ", OLC[%sAll%s]", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
-      else if (GET_OLC_ZONE(k)==NOWHERE)
-        send_to_char(ch, ", OLC[%sOFF%s]", CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
+        snprintf(olc, sizeof(olc), ", OLC All");
+      else if (GET_OLC_ZONE(k) == NOWHERE)
+        snprintf(olc, sizeof(olc), ", OLC OFF");
       else
-        send_to_char(ch, ", OLC[%s%d%s]", CCCYN(ch, C_NRM), GET_OLC_ZONE(k), CCNRM(ch, C_NRM));
+        snprintf(olc, sizeof(olc), ", OLC %d", GET_OLC_ZONE(k));
     }
-    send_to_char(ch, "\r\n");
+
+    stat_table_row_fmt(ch, "Account", "Created %s, Last %s%s",
+      created, logon, olc);
+    stat_table_row_fmt(ch, "Age/Play", "Age %d, Played %dh %dm",
+      age(k)->year,
+      k->player.time.played / 3600,
+      (k->player.time.played % 3600) / 60);
   }
-  send_to_char(ch, "Str: [%s%d/%d%s]  Int: [%s%d%s]  Wis: [%s%d%s]  "
-	  "Dex: [%s%d%s]  Con: [%s%d%s]  Cha: [%s%d%s]\r\n",
-	  CCCYN(ch, C_NRM), GET_STR(k), GET_ADD(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_INT(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_WIS(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_DEX(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_CON(k), CCNRM(ch, C_NRM),
-	  CCCYN(ch, C_NRM), GET_CHA(k), CCNRM(ch, C_NRM));
 
-  send_to_char(ch, "Hit p.:[%s%d/%d+%d%s]  Mana p.:[%s%d/%d+%d%s]  Move p.:[%s%d/%d+%d%s]\r\n",
-	  CCGRN(ch, C_NRM), GET_HIT(k), GET_MAX_HIT(k), hit_gain(k), CCNRM(ch, C_NRM),
-	  CCGRN(ch, C_NRM), GET_MANA(k), GET_MAX_MANA(k), mana_gain(k), CCNRM(ch, C_NRM),
-	  CCGRN(ch, C_NRM), GET_MOVE(k), GET_MAX_MOVE(k), move_gain(k), CCNRM(ch, C_NRM));
+  stat_table_row_fmt(ch, "Class", "%s", CLASS_NAME(k));
 
-  send_to_char(ch, "Gold: [%9d], Bank: [%9d] (Total: %d), ",
-	  GET_GOLD(k), GET_BANK_GOLD(k), GET_GOLD(k) + GET_BANK_GOLD(k));
+  stat_table_row_fmt(ch, "Attributes",
+    "Str %d Int %d Wis %d Dex %d Con %d Cha %d",
+    GET_STR(k), GET_INT(k), GET_WIS(k),
+    GET_DEX(k), GET_CON(k), GET_CHA(k));
 
-  if (!IS_NPC(k))
-    send_to_char(ch, "Screen %s[%s%d%sx%s%d%s]%s\r\n",
-                      CCCYN(ch, C_NRM), CCYEL(ch, C_NRM), GET_SCREEN_WIDTH(k), CCNRM(ch, C_NRM),
-                      CCYEL(ch, C_NRM), GET_PAGE_LENGTH(k), CCCYN(ch, C_NRM), CCNRM(ch, C_NRM));
+  stat_table_row_fmt(ch, "Saving Throws",
+    "Str %+d (%+d) Dex %+d (%+d) Con %+d (%+d) Int %+d (%+d) Wis %+d (%+d) Cha %+d (%+d)",
+    get_save_mod(k, ABIL_STR), GET_SAVE(k, ABIL_STR),
+    get_save_mod(k, ABIL_DEX), GET_SAVE(k, ABIL_DEX),
+    get_save_mod(k, ABIL_CON), GET_SAVE(k, ABIL_CON),
+    get_save_mod(k, ABIL_INT), GET_SAVE(k, ABIL_INT),
+    get_save_mod(k, ABIL_WIS), GET_SAVE(k, ABIL_WIS),
+    get_save_mod(k, ABIL_CHA), GET_SAVE(k, ABIL_CHA));
 
-  send_to_char(ch, "AC: [%d%+d/10], Hitroll: [%2d], Damroll: [%2d], Saving throws: [%d/%d/%d/%d/%d]\r\n",
-	  GET_AC(k), dex_app[GET_DEX(k)].defensive, k->points.hitroll,
-	  k->points.damroll, GET_SAVE(k, 0), GET_SAVE(k, 1), GET_SAVE(k, 2),
-	  GET_SAVE(k, 3), GET_SAVE(k, 4));
+  stat_table_row_fmt(ch, "Vitals",
+    "HP %d/%d (+%d) | Mana %d/%d (+%d) | Move %d/%d (+%d)",
+    GET_HIT(k), GET_MAX_HIT(k), hit_gain(k),
+    GET_MANA(k), GET_MAX_MANA(k), mana_gain(k),
+    GET_MOVE(k), GET_MAX_MOVE(k), move_gain(k));
+
+  stat_table_row_fmt(ch, "Currency", "Coins %d, Bank %d (Total %d)",
+    GET_COINS(k), GET_BANK_COINS(k), GET_COINS(k) + GET_BANK_COINS(k));
+
+  if (!IS_NPC(k)) {
+    if (GET_QUEST(k) != NOTHING)
+      stat_table_row_fmt(ch, "Quests", "Points %d, Completed %d, Current #%d (%d tics left)",
+        GET_QUESTPOINTS(k), GET_NUM_QUESTS(k), GET_QUEST(k), GET_QUEST_TIME(k));
+    else
+      stat_table_row_fmt(ch, "Quests", "Points %d, Completed %d",
+        GET_QUESTPOINTS(k), GET_NUM_QUESTS(k));
+  }
+
+  compute_ac_breakdown(k, &acb);
+  stat_table_row_fmt(ch, "Armor Class",
+    "%d (base %d, armor %d, magic %+d, Dex cap %d => %+d, situ %+d)",
+    acb.total, acb.base, acb.armor_piece_sum, acb.armor_magic_sum,
+    acb.dex_cap, acb.dex_mod_applied, acb.situational);
 
   sprinttype(GET_POS(k), position_types, buf, sizeof(buf));
-  send_to_char(ch, "Pos: %s, Fighting: %s", buf, FIGHTING(k) ? GET_NAME(FIGHTING(k)) : "Nobody");
-
-  if (IS_NPC(k))
-    send_to_char(ch, ", Attack type: %s", attack_hit_text[(int) k->mob_specials.attack_type].singular);
-
-  if (k->desc) {
-    sprinttype(STATE(k->desc), connected_types, buf, sizeof(buf));
-    send_to_char(ch, ", Connected: %s", buf);
-  }
+  const char *fighting = FIGHTING(k) ? GET_NAME(FIGHTING(k)) : "Nobody";
+  buf2[0] = '\0';
+  size_t pos_len = 0;
+  stat_appendf(buf2, sizeof(buf2), &pos_len, "%s, Fighting %s", buf, fighting);
 
   if (IS_NPC(k)) {
     sprinttype(k->mob_specials.default_pos, position_types, buf, sizeof(buf));
-    send_to_char(ch, ", Default position: %s\r\n", buf);
+    stat_appendf(buf2, sizeof(buf2), &pos_len, ", Default %s, Attack %s",
+      buf, attack_hit_text[(int) k->mob_specials.attack_type].singular);
+  } else
+    stat_appendf(buf2, sizeof(buf2), &pos_len, ", Idle %d tics", k->char_specials.timer);
+
+  if (k->desc) {
+    sprinttype(STATE(k->desc), connected_types, buf, sizeof(buf));
+    stat_appendf(buf2, sizeof(buf2), &pos_len, ", Conn %s", buf);
+  }
+
+  stat_table_row(ch, "Position", buf2);
+
+  if (IS_MOB(k)) {
+    stat_table_row_fmt(ch, "SpecProc", "%s",
+      (mob_index[GET_MOB_RNUM(k)].func ? get_spec_func_name(mob_index[GET_MOB_RNUM(k)].func) : "None"));
     sprintbitarray(MOB_FLAGS(k), action_bits, PM_ARRAY_MAX, buf);
-    send_to_char(ch, "NPC flags: %s%s%s\r\n", CCCYN(ch, C_NRM), buf, CCNRM(ch, C_NRM));
+    stat_table_row(ch, "NPC Flags", buf);
   } else {
-    send_to_char(ch, ", Idle Timer (in tics) [%d]\r\n", k->char_specials.timer);
-
     sprintbitarray(PLR_FLAGS(k), player_bits, PM_ARRAY_MAX, buf);
-    send_to_char(ch, "PLR: %s%s%s\r\n", CCCYN(ch, C_NRM), buf, CCNRM(ch, C_NRM));
-
+    stat_table_row(ch, "Player Flags", buf);
     sprintbitarray(PRF_FLAGS(k), preference_bits, PR_ARRAY_MAX, buf);
-    send_to_char(ch, "PRF: %s%s%s\r\n", CCGRN(ch, C_NRM), buf, CCNRM(ch, C_NRM));
-
-    send_to_char(ch, "Quest Points: [%9d] Quests Completed: [%5d]\r\n",
-       GET_QUESTPOINTS(k), GET_NUM_QUESTS(k));
-    if (GET_QUEST(k) != NOTHING)
-      send_to_char(ch, "Current Quest: [%5d] Time Left: [%5d]\r\n",
-      GET_QUEST(k), GET_QUEST_TIME(k));
+    stat_table_row(ch, "Pref Flags", buf);
   }
 
-  if (IS_MOB(k))
-    send_to_char(ch, "Mob Spec-Proc: %s, NPC Bare Hand Dam: %dd%d\r\n",
-        (mob_index[GET_MOB_RNUM(k)].func ? get_spec_func_name(mob_index[GET_MOB_RNUM(k)].func) : "None"),
-	    k->mob_specials.damnodice, k->mob_specials.damsizedice);
+  int inv_items = 0;
+  for (struct obj_data *j = k->carrying; j; j = j->next_content)
+    inv_items++;
 
-  for (i = 0, j = k->carrying; j; j = j->next_content, i++);
-  send_to_char(ch, "Carried: weight: %d, items: %d; Items in: inventory: %d, ", IS_CARRYING_W(k), IS_CARRYING_N(k), i);
-
-  for (i = 0, i2 = 0; i < NUM_WEARS; i++)
+  int eq_items = 0;
+  for (int i = 0; i < NUM_WEARS; i++)
     if (GET_EQ(k, i))
-      i2++;
-  send_to_char(ch, "eq: %d\r\n", i2);
+      eq_items++;
 
-  if (!IS_NPC(k))
-    send_to_char(ch, "Hunger: %d, Thirst: %d, Drunk: %d\r\n", GET_COND(k, HUNGER), GET_COND(k, THIRST), GET_COND(k, DRUNK));
+  stat_table_row_fmt(ch, "Carry Weight",
+    "Weight %d/%d, Items %d/%d, Inventory %d, Equipped %d",
+    IS_CARRYING_W(k), CAN_CARRY_W(k),
+    IS_CARRYING_N(k), CAN_CARRY_N(k),
+    inv_items, eq_items);
 
-  column = send_to_char(ch, "Master is: %s, Followers are:", k->master ? GET_NAME(k->master) : "<none>");
-  if (!k->followers)
-    send_to_char(ch, " <none>\r\n");
-  else {
-    for (fol = k->followers; fol; fol = fol->next) {
-      column += send_to_char(ch, "%s %s", found++ ? "," : "", PERS(fol->follower, ch));
-      if (column >= 62) {
-        send_to_char(ch, "%s\r\n", fol->next ? "," : "");
-        found = FALSE;
-        column = 0;
-      }
-    }
-    if (column != 0)
-      send_to_char(ch, "\r\n");
-  }
-
-  /* Showing the bitvector */
   sprintbitarray(AFF_FLAGS(k), affected_bits, AF_ARRAY_MAX, buf);
-  send_to_char(ch, "AFF: %s%s%s\r\n", CCYEL(ch, C_NRM), buf, CCNRM(ch, C_NRM));
+  stat_table_row(ch, "Affect Flags", buf);
 
-  /* Routine to show what spells a char is affected by */
-  if (k->affected) {
-    for (aff = k->affected; aff; aff = aff->next) {
-      send_to_char(ch, "SPL: (%3dhr) %s%-21s%s ", aff->duration + 1, CCCYN(ch, C_NRM), skill_name(aff->spell), CCNRM(ch, C_NRM));
+  stat_format_char_effects(k, effects, sizeof(effects));
+  stat_table_row(ch, "Active Effects", effects);
 
-      if (aff->modifier)
-	send_to_char(ch, "%+d to %s", aff->modifier, apply_types[(int) aff->location]);
+  stat_format_script_triggers(SCRIPT(k), triggers, sizeof(triggers));
+  stat_table_row(ch, "Triggers", triggers);
 
-      if (aff->bitvector[0] || aff->bitvector[1] || aff->bitvector[2] || aff->bitvector[3]) {
-        if (aff->modifier)
-          send_to_char(ch, ", ");
-        for (i=1; i<NUM_AFF_FLAGS; i++) {
-          if (IS_SET_AR(aff->bitvector, i)) {
-            send_to_char(ch, "sets %s, ", affected_bits[i]);
-          }
-        }
-      }
-      send_to_char(ch, "\r\n");
-    }
-  }
+  stat_format_script_globals(SCRIPT(k), globals, sizeof(globals));
+  stat_table_row(ch, "Script Vars", globals);
 
-  if (!IS_NPC(k) && (GET_LEVEL(k) >= LVL_IMMORT)) {
-    if (POOFIN(k))
-      send_to_char(ch, "%sPOOFIN:  %s%s %s%s\r\n", QYEL, QCYN, GET_NAME(k), POOFIN(k), QNRM);
-    else
-      send_to_char(ch, "%sPOOFIN:  %s%s appears with an ear-splitting bang.%s\r\n", QYEL, QCYN, GET_NAME(k), QNRM);
-
-    if (POOFOUT(k))
-      send_to_char(ch, "%sPOOFOUT: %s%s %s%s\r\n", QYEL, QCYN, GET_NAME(k), POOFOUT(k), QNRM);
-    else
-      send_to_char(ch, "%sPOOFOUT: %s%s disappears in a puff of smoke.%s\r\n", QYEL, QCYN, GET_NAME(k), QNRM);
-  }
-
-  /* check mobiles for a script */
-  do_sstat_character(ch, k);
   if (SCRIPT_MEM(k)) {
-    struct script_memory *mem = SCRIPT_MEM(k);
-    send_to_char(ch, "Script memory:\r\n  Remember             Command\r\n");
-    while (mem) {
-      struct char_data *mc = find_char(mem->id);
-      if (!mc)
-        send_to_char(ch, "  ** Corrupted!\r\n");
-      else {
-        if (mem->cmd)
-          send_to_char(ch, "  %-20.20s%s\r\n",GET_NAME(mc),mem->cmd);
-        else
-          send_to_char(ch, "  %-20.20s <default>\r\n",GET_NAME(mc));
-      }
-    mem = mem->next;
-    }
+    stat_format_script_memory(SCRIPT_MEM(k), buf, sizeof(buf));
+    stat_table_row(ch, "Script Memory", buf);
   }
-  if (!(IS_NPC(k))) {
-    /* this is a PC, display their global variables */
-    if (k->script && k->script->global_vars) {
-      struct trig_var_data *tv;
-      char uname[MAX_INPUT_LENGTH];
 
-      send_to_char(ch, "Global Variables:\r\n");
-
-      /* currently, variable context for players is always 0, so it is not
-       * displayed here. in the future, this might change */
-      for (tv = k->script->global_vars; tv; tv = tv->next) {
-        if (*(tv->value) == UID_CHAR) {
-          find_uid_name(tv->value, uname, sizeof(uname));
-          send_to_char(ch, "    %10s:  [UID]: %s\r\n", tv->name, uname);
-        } else
-          send_to_char(ch, "    %10s:  %s\r\n", tv->name, tv->value);
-      }
-    }
+  if (!IS_NPC(k) && GET_LEVEL(k) >= LVL_IMMORT) {
+    stat_table_row_fmt(ch, "Poofin", "%s %s",
+      GET_NAME(k),
+      POOFIN(k) ? POOFIN(k) : "appears with an ear-splitting bang.");
+    stat_table_row_fmt(ch, "Poofout", "%s %s",
+      GET_NAME(k),
+      POOFOUT(k) ? POOFOUT(k) : "disappears in a puff of smoke.");
   }
+
+  stat_table_border(ch);
 }
 
 ACMD(do_stat)
@@ -1327,6 +2277,7 @@ ACMD(do_load)
     for (i=0; i < n; i++) {
       mob = read_mobile(r_num, REAL);
       char_to_room(mob, IN_ROOM(ch));
+      equip_mob_from_loadout(mob);
 
       act("$n makes a quaint, magical gesture with one hand.", TRUE, ch, 0, 0, TO_ROOM);
       act("$n has created $N!", FALSE, ch, 0, mob, TO_ROOM);
@@ -1613,7 +2564,6 @@ ACMD(do_restore)
           SET_SKILL(vict, i, 100);
 
       if (GET_LEVEL(vict) >= LVL_GRGOD) {
-	vict->real_abils.str_add = 100;
 	vict->real_abils.intel = 25;
 	vict->real_abils.wis = 25;
 	vict->real_abils.dex = 25;
@@ -2089,7 +3039,7 @@ ACMD(do_last)
 
     send_to_char(ch, "[%5ld] [%2d %s] %-12s : %-18s : %-24s\r\n",
     GET_IDNUM(vict), (int) GET_LEVEL(vict),
-    class_abbrevs[(int) GET_CLASS(vict)], GET_NAME(vict),
+    CLASS_ABBR(vict), GET_NAME(vict),
     GET_HOST(vict) && *GET_HOST(vict) ? GET_HOST(vict) : "(NOHOST)", timestr);
     free_char(vict);
     return;
@@ -2290,24 +3240,35 @@ ACMD(do_zreset)
     if (GET_LEVEL(ch) < LVL_GOD){
       send_to_char(ch, "You do not have permission to reset the entire world.\r\n");
       return;
-   } else {
+    } else {
       for (i = 0; i <= top_of_zone_table; i++)
-      reset_zone(i);
-    send_to_char(ch, "Reset world.\r\n");
-    mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s reset entire world.", GET_NAME(ch));
-    return; }
+        reset_zone(i);
+
+      /* NEW: re-apply persistent room contents across the world */
+      RoomSave_boot();
+
+      send_to_char(ch, "Reset world.\r\n");
+      mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s reset entire world.", GET_NAME(ch));
+      return;
+    }
   } else if (*arg == '.' || !*arg)
     i = world[IN_ROOM(ch)].zone;
   else {
     j = atoi(arg);
     for (i = 0; i <= top_of_zone_table; i++)
       if (zone_table[i].number == j)
-	break;
+        break;
   }
+
   if (i <= top_of_zone_table && (can_edit_zone(ch, i) || GET_LEVEL(ch) > LVL_IMMORT)) {
     reset_zone(i);
+
+    /* NEW: re-apply persistent room contents for the zone that was reset */
+    RoomSave_boot();  /* If you later add a zone-scoped loader, call that here instead */
+
     send_to_char(ch, "Reset zone #%d: %s.\r\n", zone_table[i].number, zone_table[i].name);
-    mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s reset zone %d (%s)", GET_NAME(ch), zone_table[i].number, zone_table[i].name);
+    mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
+           "(GC) %s reset zone %d (%s)", GET_NAME(ch), zone_table[i].number, zone_table[i].name);
   } else
     send_to_char(ch, "You do not have permission to reset this zone. Try %d.\r\n", GET_OLC_ZONE(ch));
 }
@@ -2336,8 +3297,8 @@ ACMD(do_wizutil)
       send_to_char(ch, "Rerolled...\r\n");
       roll_real_abils(vict);
       log("(GC) %s has rerolled %s.", GET_NAME(ch), GET_NAME(vict));
-      send_to_char(ch, "New stats: Str %d/%d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
-	      GET_STR(vict), GET_ADD(vict), GET_INT(vict), GET_WIS(vict),
+      send_to_char(ch, "New stats: Str %d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+	      GET_STR(vict), GET_INT(vict), GET_WIS(vict),
 	      GET_DEX(vict), GET_CON(vict), GET_CHA(vict));
       break;
     case SCMD_PARDON:
@@ -2350,12 +3311,6 @@ ACMD(do_wizutil)
       send_to_char(ch, "Pardoned.\r\n");
       send_to_char(vict, "You have been pardoned by the Gods!\r\n");
       mudlog(BRF, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s pardoned by %s", GET_NAME(vict), GET_NAME(ch));
-      break;
-    case SCMD_NOTITLE:
-      result = PLR_TOG_CHK(vict, PLR_NOTITLE);
-      mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) Notitle %s for %s by %s.",
-		ONOFF(result), GET_NAME(vict), GET_NAME(ch));
-      send_to_char(ch, "(GC) Notitle %s for %s by %s.\r\n", ONOFF(result), GET_NAME(vict), GET_NAME(ch));
       break;
     case SCMD_MUTE:
       result = PLR_TOG_CHK(vict, PLR_NOSHOUT);
@@ -2396,7 +3351,7 @@ ACMD(do_wizutil)
       act("A sudden fireball conjured from nowhere thaws $n!", FALSE, vict, 0, 0, TO_ROOM);
       break;
     case SCMD_UNAFFECT:
-      if (vict->affected || AFF_FLAGS(vict)) {
+      if (vict->affected || ANY_AFF_FLAGS(vict)) {
 	while (vict->affected)
 	  affect_remove(vict, vict->affected);
     for(taeller=0; taeller < AF_ARRAY_MAX; taeller++)
@@ -2506,7 +3461,6 @@ ACMD(do_show)
     { "nothing",	0  },				/* 0 */
     { "zones",		LVL_IMMORT },			/* 1 */
     { "player",		LVL_IMMORT },
-    { "rent",		LVL_IMMORT },
     { "stats",		LVL_IMMORT },
     { "errors",		LVL_IMMORT },			/* 5 */
     { "death",		LVL_IMMORT },
@@ -2514,7 +3468,6 @@ ACMD(do_show)
     { "shops",		LVL_IMMORT },
     { "houses",		LVL_IMMORT },
     { "snoop",		LVL_IMMORT },			/* 10 */
-    { "thaco",      LVL_IMMORT },
     { "exp",        LVL_IMMORT },
     { "colour",     LVL_IMMORT },
     { "\n", 0 }
@@ -2613,11 +3566,10 @@ ACMD(do_show)
     strftime(buf2, sizeof(buf2), "%a %b %d %H:%H:%S %Y", localtime(&(vict->player.time.logon)));
 
     send_to_char(ch, "Player: %-12s (%s) [%2d %s]\r\n", GET_NAME(vict),
-      genders[(int) GET_SEX(vict)], GET_LEVEL(vict), class_abbrevs[(int)
-      GET_CLASS(vict)]);
-    send_to_char(ch, "Gold: %-8d  Bal: %-8d Exp: %-8d  Align: %-5d  Lessons: %-3d\r\n",
-      GET_GOLD(vict), GET_BANK_GOLD(vict), GET_EXP(vict),
-      GET_ALIGNMENT(vict), GET_PRACTICES(vict));
+      genders[(int) GET_SEX(vict)], GET_LEVEL(vict), CLASS_ABBR(vict));
+    send_to_char(ch, "Coins: %-8d  Bal: %-8d Exp: %-8d  Align: %-5d\r\n",
+      GET_COINS(vict), GET_BANK_COINS(vict), GET_EXP(vict),
+      GET_ALIGNMENT(vict));
     send_to_char(ch, "Started: %-25.25s  Last: %-25.25s\r\n", buf1, buf2);
     send_to_char(ch, "Played: %dh %dm\r\n",
       (int) (vict->player.time.played / 3600),
@@ -2626,17 +3578,8 @@ ACMD(do_show)
     free_char(vict);
     break;
   }
-  /* show rent */
-  case 3:
-    if (!*value) {
-      send_to_char(ch, "A name would help.\r\n");
-      return;
-    }
-    Crash_listrent(ch, value);
-    break;
-
   /* show stats */
-  case 4:
+  case 3:
     i = 0;
     j = 0;
     k = 0;
@@ -2675,7 +3618,7 @@ ACMD(do_show)
     break;
 
   /* show errors */
-  case 5:
+  case 4:
     len = strlcpy(buf, "Errant Rooms\r\n------------\r\n", sizeof(buf));
     for (i = 0, k = 0; i <= top_of_world; i++)
       for (j = 0; j < DIR_COUNT; j++) {
@@ -2698,7 +3641,7 @@ ACMD(do_show)
     break;
 
   /* show death */
-  case 6:
+  case 5:
     len = strlcpy(buf, "Death Traps\r\n-----------\r\n", sizeof(buf));
     for (i = 0, j = 0; i <= top_of_world; i++)
       if (ROOM_FLAGGED(i, ROOM_DEATH)) {
@@ -2711,7 +3654,7 @@ ACMD(do_show)
     break;
 
   /* show godrooms */
-  case 7:
+  case 6:
     len = strlcpy(buf, "Godrooms\r\n--------------------------\r\n", sizeof(buf));
     for (i = 0, j = 0; i <= top_of_world; i++)
       if (ROOM_FLAGGED(i, ROOM_GODROOM)) {
@@ -2724,17 +3667,17 @@ ACMD(do_show)
     break;
 
   /* show shops */
-  case 8:
+  case 7:
     show_shops(ch, value);
     break;
 
   /* show houses */
-  case 9:
+  case 8:
     hcontrol_list_houses(ch, value);
     break;
 
   /* show snoop */
-  case 10:
+  case 9:
     i = 0;
     send_to_char(ch, "People currently snooping:\r\n--------------------------\r\n");
     for (d = descriptor_list; d; d = d->next) {
@@ -2751,34 +3694,20 @@ ACMD(do_show)
       send_to_char(ch, "No one is currently snooping.\r\n");
     break;
 
-  /* show thaco */
-  case 11:
-    len = strlcpy(buf, "LvL - Mu Cl Th Wa\r\n----------------\r\n", sizeof(buf));
-
-    for (j = 1; j < LVL_IMMORT; j++) {
-      nlen = snprintf(buf + len, sizeof(buf) - len,  "%-3d - %-2d %-2d %-2d %-2d\r\n", j, 
-				thaco(CLASS_MAGIC_USER, j),
-				thaco(CLASS_CLERIC, j),
-				thaco(CLASS_THIEF, j),
-				thaco(CLASS_WARRIOR, j));
-      if (len + nlen >= sizeof(buf))
-        break;
-      len += nlen;
-    }
-
-    page_string(ch->desc, buf, TRUE);
-    break;
-
   /* show experience tables */
-  case 12:
-    len = strlcpy(buf, "LvL - Mu     Cl     Th     Wa\r\n--------------------------\r\n", sizeof(buf));
+  case 10:
+    len = strlcpy(buf, "LvL - Mu     Cl     Th     Wa     BA     Ra     Br     Dr\r\n--------------------------\r\n", sizeof(buf));
 
     for (i = 1; i < LVL_IMMORT; i++) { 
-      nlen = snprintf(buf + len, sizeof(buf) - len,  "%-3d - %-6d %-6d %-6d %-6d\r\n", i,  
-				level_exp(CLASS_MAGIC_USER, i) - level_exp(CLASS_MAGIC_USER, i - 1),
+      nlen = snprintf(buf + len, sizeof(buf) - len,  "%-3d - %-6d %-6d %-6d %-6d %-6d %-6d %-6d %-6d\r\n", i,  
+				level_exp(CLASS_SORCEROR, i) - level_exp(CLASS_SORCEROR, i - 1),
 				level_exp(CLASS_CLERIC, i) - level_exp(CLASS_CLERIC, i - 1),
-				level_exp(CLASS_THIEF, i) - level_exp(CLASS_THIEF, i - 1),
-				level_exp(CLASS_WARRIOR, i) - level_exp(CLASS_WARRIOR, i - 1));
+				level_exp(CLASS_ROGUE, i) - level_exp(CLASS_ROGUE, i - 1),
+				level_exp(CLASS_FIGHTER, i) - level_exp(CLASS_FIGHTER, i - 1),
+				level_exp(CLASS_BARBARIAN, i) - level_exp(CLASS_BARBARIAN, i - 1),
+				level_exp(CLASS_RANGER, i) - level_exp(CLASS_RANGER, i - 1),
+				level_exp(CLASS_BARD, i) - level_exp(CLASS_BARD, i - 1),
+				level_exp(CLASS_DRUID, i) - level_exp(CLASS_DRUID, i - 1));
       if (len + nlen >= sizeof(buf))
         break;
       len += nlen;
@@ -2787,7 +3716,7 @@ ACMD(do_show)
     page_string(ch->desc, buf, TRUE);
     break;
 
-  case 13:
+  case 11:
     len = strlcpy(buf, "Colours\r\n--------------------------\r\n", sizeof(buf));
     k = 0;
     for (r = 0; r < 6; r++)
@@ -2842,16 +3771,14 @@ static struct set_struct {
    { "class",		LVL_BUILDER, 	BOTH, 	MISC },
    { "color",		LVL_GOD, 	PC, 	BINARY },
    { "con", 		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "damroll",		LVL_BUILDER, 	BOTH, 	NUMBER },  /* 10 */
    { "deleted",		LVL_IMPL, 	PC, 	BINARY },
    { "dex", 		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "drunk",		LVL_BUILDER, 	BOTH, 	MISC },
    { "exp", 		LVL_GOD, 	BOTH, 	NUMBER },
    { "frozen",		LVL_GRGOD, 	PC,	BINARY },  /* 15 */
-   { "gold",		LVL_BUILDER, 	BOTH, 	NUMBER },
+   { "coins",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "height",		LVL_BUILDER,	BOTH,	NUMBER },
    { "hitpoints",       LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "hitroll",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "hunger",		LVL_BUILDER, 	BOTH, 	MISC },    /* 20 */
    { "int", 		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "invis",		LVL_GOD, 	PC, 	NUMBER },
@@ -2873,23 +3800,21 @@ static struct set_struct {
    { "password",	LVL_GRGOD,	PC,	MISC },
    { "poofin",		LVL_IMMORT,	PC,	MISC },
    { "poofout",         LVL_IMMORT,	PC,	MISC },   /* 40 */
-   { "practices", 	LVL_GOD, 	PC, 	NUMBER },
    { "quest",		LVL_GOD, 	PC, 	BINARY },
    { "room",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "screenwidth", LVL_GOD,  PC,   NUMBER },
-   { "sex", 		LVL_GOD, 	BOTH, 	MISC },  /* 45 */
-   { "showvnums",  LVL_BUILDER,  PC, BINARY },
+   { "sex", 		LVL_GOD, 	BOTH, 	MISC },
+   { "showvnums",  LVL_BUILDER,  PC, BINARY }, /* 45 */
    { "siteok",   LVL_GOD,  PC,   BINARY },
+   { "skill",   LVL_GOD,  BOTH,   NUMBER },
    { "str",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "stradd",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "thief",		LVL_GOD, 	PC, 	BINARY }, /* 50 */
-   { "thirst",		LVL_BUILDER, 	BOTH, 	MISC },
-   { "title",		LVL_GOD, 	PC, 	MISC   },
+   { "thief",		LVL_GOD, 	PC, 	BINARY }, 
+   { "thirst",		LVL_BUILDER, 	BOTH, 	MISC }, /* 50 */
    { "variable",        LVL_GRGOD,	PC,	MISC },
    { "weight",		LVL_BUILDER,	BOTH,	NUMBER },
-   { "wis", 		LVL_BUILDER, 	BOTH, 	NUMBER }, /* 55 */
-   { "questpoints",     LVL_GOD,        PC,     NUMBER },
-   { "questhistory",    LVL_GOD,        PC,   NUMBER },
+   { "wis", 		LVL_BUILDER, 	BOTH, 	NUMBER }, 
+   { "questpoints",     LVL_GOD,        PC,     NUMBER }, 
+   { "questhistory",    LVL_GOD,        PC,   NUMBER }, /* 55 */
    { "\n", 0, BOTH, MISC }
   };
 
@@ -2956,7 +3881,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       affect_total(vict);
       break;
     case 4: /* bank */
-      GET_BANK_GOLD(vict) = RANGE(0, 100000000);
+      GET_BANK_COINS(vict) = RANGE(0, 100000000);
       break;
     case 5: /* brief */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_BRIEF);
@@ -2988,14 +3913,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.con = value;
       affect_total(vict);
       break;
-    case 10:  /* damroll */
-      vict->points.damroll = RANGE(-20, 20);
-      affect_total(vict);
-      break;
-    case 11: /* delete */
+    case 10: /* delete */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_DELETED);
       break;
-    case 12: /* dex */
+    case 11: /* dex */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3003,7 +3924,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.dex = value;
       affect_total(vict);
       break;
-    case 13: /* drunk */
+    case 12: /* drunk */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, DRUNK) = -1;
         send_to_char(ch, "%s's drunkenness is now off.\r\n", GET_NAME(vict));
@@ -3017,32 +3938,61 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 14: /* exp */
+    case 13: /* exp */
       vict->points.exp = RANGE(0, 50000000);
       break;
-    case 15: /* frozen */
+    case 14: /* frozen */
       if (ch == vict && on) {
         send_to_char(ch, "Better not -- could be a long winter!\r\n");
         return (0);
       }
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_FROZEN);
       break;
-    case 16: /* gold */
-      GET_GOLD(vict) = RANGE(0, 100000000);
-      break;
-    case 17: /* height */
+    case 15: { /* coins */
+      struct obj_data *coin_obj;
+      int i;
+
+      value = MIN(MAX(value, 0), 100000000);
+      coin_obj = find_inventory_coin(vict);
+
+      if (value == 0) {
+        remove_other_coins_from_list(vict->carrying, NULL);
+        for (i = 0; i < NUM_WEARS; i++)
+          remove_other_coins_from_list(GET_EQ(vict, i), NULL);
+        GET_COINS(vict) = 0;
+        send_to_char(ch, "Ok.\r\n");
+        return (1);
+      }
+
+      if (coin_obj) {
+        GET_OBJ_VAL(coin_obj, 0) = value;
+        update_money_obj(coin_obj);
+      } else {
+        coin_obj = create_money(value);
+        if (!coin_obj) {
+          send_to_char(ch, "Ok.\r\n");
+          return (1);
+        }
+        obj_to_char(coin_obj, vict);
+      }
+
+      remove_other_coins_from_list(vict->carrying, coin_obj);
+      for (i = 0; i < NUM_WEARS; i++)
+        remove_other_coins_from_list(GET_EQ(vict, i), coin_obj);
+
+      GET_COINS(vict) = value;
+      send_to_char(ch, "Ok.\r\n");
+      return (1);
+    }
+    case 16: /* height */
       GET_HEIGHT(vict) = value;
       affect_total(vict);
       break;
-    case 18: /* hit */
+    case 17: /* hit */
       vict->points.hit = RANGE(-9, vict->points.max_hit);
       affect_total(vict);
       break;
-    case 19: /* hitroll */
-      vict->points.hitroll = RANGE(-20, 20);
-      affect_total(vict);
-      break;
-    case 20: /* hunger */
+    case 18: /* hunger */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, HUNGER) = -1;
         send_to_char(ch, "%s's hunger is now off.\r\n", GET_NAME(vict));
@@ -3056,7 +4006,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
        }
        break;
-   case 21: /* int */
+   case 19: /* int */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3064,20 +4014,20 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.intel = value;
       affect_total(vict);
       break;
-    case 22: /* invis */
+    case 20: /* invis */
       if (GET_LEVEL(ch) < LVL_IMPL && ch != vict) {
         send_to_char(ch, "You aren't godly enough for that!\r\n");
         return (0);
       }
       GET_INVIS_LEV(vict) = RANGE(0, GET_LEVEL(vict));
       break;
-    case 23: /* invistart */
+    case 21: /* invistart */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_INVSTART);
       break;
-    case 24: /* killer */
+    case 22: /* killer */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_KILLER);
       break;
-    case 25: /* level */
+    case 23: /* level */
       if ((!IS_NPC(vict) && value > GET_LEVEL(ch)) || value > LVL_IMPL) {
         send_to_char(ch, "You can't do that.\r\n");
         return (0);
@@ -3085,7 +4035,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       RANGE(1, LVL_IMPL);
       vict->player.level = value;
       break;
-    case 26: /* loadroom */
+    case 24: /* loadroom */
       if (!str_cmp(val_arg, "off")) {
         REMOVE_BIT_AR(PLR_FLAGS(vict), PLR_LOADROOM);
       } else if (is_number(val_arg)) {
@@ -3103,27 +4053,27 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 27: /* mana */
+    case 25: /* mana */
       vict->points.mana = RANGE(0, vict->points.max_mana);
       affect_total(vict);
       break;
-    case 28: /* maxhit */
+    case 26: /* maxhit */
       vict->points.max_hit = RANGE(1, 5000);
       affect_total(vict);
       break;
-    case 29: /* maxmana */
+    case 27: /* maxmana */
       vict->points.max_mana = RANGE(1, 5000);
       affect_total(vict);
       break;
-    case 30: /* maxmove */
+    case 28: /* maxmove */
       vict->points.max_move = RANGE(1, 5000);
       affect_total(vict);
       break;
-    case 31: /* move */
+    case 29: /* move */
       vict->points.move = RANGE(0, vict->points.max_move);
       affect_total(vict);
       break;
-    case 32: /* name */
+    case 30: /* name */
       if (ch != vict && GET_LEVEL(ch) < LVL_IMPL) {
         send_to_char(ch, "Only Imps can change the name of other players.\r\n");
         return (0);
@@ -3133,24 +4083,24 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 33: /* nodelete */
+    case 31: /* nodelete */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_NODELETE);
       break;
-    case 34: /* nohassle */
+    case 32: /* nohassle */
       if (GET_LEVEL(ch) < LVL_GOD && ch != vict) {
         send_to_char(ch, "You aren't godly enough for that!\r\n");
         return (0);
       }
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_NOHASSLE);
       break;
-    case 35: /* nosummon */
+    case 33: /* nosummon */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_SUMMONABLE);
       send_to_char(ch, "Nosummon %s for %s.\r\n", ONOFF(!on), GET_NAME(vict));
       break;
-    case 36: /* nowiz */
+    case 34: /* nowiz */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_NOWIZLIST);
       break;
-    case 37: /* olc */
+    case 35: /* olc */
       if (is_abbrev(val_arg, "socials") || is_abbrev(val_arg, "actions") || is_abbrev(val_arg, "aedit"))
         GET_OLC_ZONE(vict) = AEDIT_PERMISSION;
       else if (is_abbrev(val_arg, "hedit") || is_abbrev(val_arg, "help"))
@@ -3165,7 +4115,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       } else
         GET_OLC_ZONE(vict) = atoi(val_arg);
       break;
-    case 38: /* password */
+    case 36: /* password */
       if (GET_LEVEL(vict) >= LVL_GRGOD) {
         send_to_char(ch, "You cannot change that.\r\n");
         return (0);
@@ -3174,7 +4124,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       *(GET_PASSWD(vict) + MAX_PWD_LENGTH) = '\0';
       send_to_char(ch, "Password changed to '%s'.\r\n", val_arg);
       break;
-    case 39: /* poofin */
+    case 37: /* poofin */
       if ((vict == ch) || (GET_LEVEL(ch) == LVL_IMPL)) {
         skip_spaces(&val_arg);
         parse_at(val_arg);
@@ -3188,7 +4138,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
           POOFIN(vict) = strdup(val_arg);
         }
       break;
-    case 40: /* poofout */
+    case 38: /* poofout */
       if ((vict == ch) || (GET_LEVEL(ch) == LVL_IMPL)) {
         skip_spaces(&val_arg);
         parse_at(val_arg);
@@ -3202,13 +4152,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
           POOFOUT(vict) = strdup(val_arg);
         }
       break;
-    case 41: /* practices */
-      GET_PRACTICES(vict) = RANGE(0, 100);
-      break;
-    case 42: /* quest */
+    case 39: /* quest */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_QUEST);
       break;
-    case 43: /* room */
+    case 40: /* room */
       if ((rnum = real_room(value)) == NOWHERE) {
         send_to_char(ch, "No room exists with that number.\r\n");
         return (0);
@@ -3217,41 +4164,119 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         char_from_room(vict);
       char_to_room(vict, rnum);
       break;
-    case 44: /* screenwidth */
+    case 41: /* screenwidth */
       GET_SCREEN_WIDTH(vict) = RANGE(40, 200);
       break;
-    case 45: /* sex */
+    case 42: /* sex */
       if ((i = search_block(val_arg, genders, FALSE)) < 0) {
         send_to_char(ch, "Must be 'male', 'female', or 'neutral'.\r\n");
         return (0);
       }
       GET_SEX(vict) = i;
       break;
-    case 46: /* showvnums */
+    case 43: /* showvnums */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_SHOWVNUMS);
       break;
-    case 47: /* siteok */
+    case 44: /* siteok */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_SITEOK);
       break;
-    case 48: /* str */
+    case 45: /* skills/spells */
+    {
+      char local_buf[MAX_INPUT_LENGTH], *value_arg, *name_end;
+      char skill_name[MAX_INPUT_LENGTH];
+      int snum;
+
+      /* Make a writable copy and trim trailing spaces */
+      strlcpy(local_buf, val_arg, sizeof(local_buf));
+      {
+        int len = strlen(local_buf);
+        while (len > 0 && isspace((unsigned char)local_buf[len - 1])) {
+          local_buf[--len] = '\0';
+        }
+      }
+
+      if (!*local_buf) {
+        send_to_char(ch, "Usage: set <player> skill <skill-name> <0-100>\r\n");
+        return (0);
+      }
+
+      /* Find last word (the numeric value) by walking backwards */
+      name_end = local_buf + strlen(local_buf) - 1;
+      while (name_end > local_buf && !isspace((unsigned char)*name_end))
+        name_end--;
+
+      if (name_end <= local_buf) {
+        send_to_char(ch, "Usage: set <player> skill <skill-name> <0-100>\r\n");
+        return (0);
+      }
+
+      *name_end = '\0';             /* terminate skill name string */
+      value_arg = name_end + 1;     /* point to numeric string */
+
+      /* Trim trailing whitespace from skill name */
+      while (name_end > local_buf && isspace((unsigned char)name_end[-1])) {
+        *--name_end = '\0';
+      }
+
+      char *skill_ptr = local_buf;
+      skip_spaces(&skill_ptr);
+      strlcpy(skill_name, skill_ptr, sizeof(skill_name));
+
+      if (!*skill_name || !*value_arg) {
+        send_to_char(ch, "Usage: set <player> skill <skill-name> <0-100>\r\n");
+        return (0);
+      }
+
+      if (IS_NPC(vict)) {
+        send_to_char(ch, "You can only set skills on player characters.\r\n");
+        return (0);
+      }
+
+      if (!is_number(value_arg)) {
+        send_to_char(ch, "The skill value must be a number from 0 to 100.\r\n");
+        return (0);
+      }
+
+      value = atoi(value_arg);
+      if (value < 0)   value = 0;
+      if (value > 100) value = 100;
+
+      snum = find_skill_num(skill_name); /* handles case-insensitive, abbrev match */
+      if (snum <= 0) {
+        send_to_char(ch, "That skill or spell doesn't exist.\r\n");
+        return (0);
+      }
+
+      SET_SKILL(vict, snum, value);
+
+      send_to_char(ch, "Set %s's %s to %d%%.\r\n",
+                  GET_NAME(vict), spell_info[snum].name, value);
+
+      if (vict != ch)
+        send_to_char(vict, "%s has set your %s to %d%%.\r\n",
+                    GET_NAME(ch), spell_info[snum].name, value);
+
+      save_char(vict);
+
+      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
+            "%s set %s's %s skill to %d.",
+            GET_NAME(ch), GET_NAME(vict), spell_info[snum].name, value);
+
+    }
+    break;
+
+    case 46: /* str */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
         RANGE(3, 18);
       vict->real_abils.str = value;
-      vict->real_abils.str_add = 0;
       affect_total(vict);
       break;
-    case 49: /* stradd */
-      vict->real_abils.str_add = RANGE(0, 100);
-      if (value > 0)
-        vict->real_abils.str = 18;
-      affect_total(vict);
-      break;
-    case 50: /* thief */
+    case 47: /* thief */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_THIEF);
       break;
-    case 51: /* thirst */
+    case 48: /* thirst */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, THIRST) = -1;
         send_to_char(ch, "%s's thirst is now off.\r\n", GET_NAME(vict));
@@ -3265,17 +4290,13 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 52: /* title */
-      set_title(vict, val_arg);
-      send_to_char(ch, "%s's title is now: %s\r\n", GET_NAME(vict), GET_TITLE(vict));
-      break;
-    case 53: /* variable */
+    case 49: /* variable */
       return perform_set_dg_var(ch, vict, val_arg);
-    case 54: /* weight */
+    case 50: /* weight */
       GET_WEIGHT(vict) = value;
       affect_total(vict);
       break;
-    case 55: /* wis */
+    case 51: /* wis */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3283,10 +4304,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.wis = value;
       affect_total(vict);
       break;
-    case 56: /* questpoints */
+    case 52: /* questpoints */
       GET_QUESTPOINTS(vict) = RANGE(0, 100000000);
       break;
-    case 57: /* questhistory */
+    case 53: /* questhistory */
       qvnum = atoi(val_arg);
       if (real_quest(qvnum) == NOTHING) {
         send_to_char(ch, "That quest doesn't exist.\r\n");
@@ -3337,6 +4358,35 @@ static void show_set_help(struct char_data *ch)
     }
   }
   page_string(ch->desc, buf, TRUE);
+}
+
+static struct obj_data *find_inventory_coin(struct char_data *ch)
+{
+  struct obj_data *obj;
+
+  if (!ch)
+    return NULL;
+
+  for (obj = ch->carrying; obj; obj = obj->next_content)
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      return obj;
+
+  return NULL;
+}
+
+static void remove_other_coins_from_list(struct obj_data *list, struct obj_data *keep)
+{
+  struct obj_data *obj, *next_obj;
+
+  for (obj = list; obj; obj = next_obj) {
+    next_obj = obj->next_content;
+
+    if (obj->contains)
+      remove_other_coins_from_list(obj->contains, keep);
+
+    if (obj != keep && GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      extract_obj(obj);
+  }
 }
 
 ACMD(do_set)
@@ -3488,9 +4538,6 @@ ACMD(do_links)
 
 /* Zone Checker Code below */
 /*mob limits*/
-#define MAX_DAMROLL_ALLOWED      MAX(GET_LEVEL(mob)/5, 1)
-#define MAX_HITROLL_ALLOWED      MAX(GET_LEVEL(mob)/3, 1)
-#define MAX_MOB_GOLD_ALLOWED     GET_LEVEL(mob)*3000
 #define MAX_EXP_ALLOWED          GET_LEVEL(mob)*GET_LEVEL(mob) * 120
 #define MAX_LEVEL_ALLOWED        LVL_IMPL
 #define GET_OBJ_AVG_DAM(obj)     (((GET_OBJ_VAL(obj, 2) + 1) / 2.0) * GET_OBJ_VAL(obj, 1))
@@ -3502,7 +4549,7 @@ ACMD(do_links)
 /*item limits*/
 #define MAX_DAM_ALLOWED            50    /* for weapons  - avg. dam*/
 #define MAX_AFFECTS_ALLOWED        3
-#define MAX_OBJ_GOLD_ALLOWED       1000000
+#define MAX_OBJ_COINS_ALLOWED       1000000
 
 /* Armor class limits*/
 #define TOTAL_WEAR_CHECKS  (NUM_ITEM_WEARS-2)  /*minus Wield and Take*/
@@ -3513,6 +4560,7 @@ static struct zcheck_armor {
 } zarmor[] = {
   {ITEM_WEAR_FINGER, 10, "Ring"},
   {ITEM_WEAR_NECK,   10, "Necklace"},
+  {ITEM_WEAR_BACK,   10, "Backpack"},
   {ITEM_WEAR_BODY,   10, "Body armor"},
   {ITEM_WEAR_HEAD,   10, "Head gear"},
   {ITEM_WEAR_LEGS,   10, "Legwear"},
@@ -3549,21 +4597,16 @@ static struct zcheck_affs {
   {APPLY_MANA,       -50,  50, "mana"},
   {APPLY_HIT,        -50,  50, "hit points"},
   {APPLY_MOVE,       -50,  50, "movement"},
-  {APPLY_GOLD,         0,   0, "gold"},
+  {APPLY_COINS,         0,   0, "coins"},
   {APPLY_EXP,          0,   0, "experience"},
   {APPLY_AC,         -10,  10, "magical AC"},
-  {APPLY_HITROLL,      0, -99, "hitroll"},       /* Handled seperately below */
-  {APPLY_DAMROLL,      0, -99, "damroll"},       /* Handled seperately below */
-  {APPLY_SAVING_PARA, -2,   2, "saving throw (paralysis)"},
-  {APPLY_SAVING_ROD,  -2,   2, "saving throw (rod)"},
-  {APPLY_SAVING_PETRI,-2,   2, "saving throw (death)"},
-  {APPLY_SAVING_BREATH,-2,  2, "saving throw (breath)"},
-  {APPLY_SAVING_SPELL,-2,   2, "saving throw (spell)"}
+  {APPLY_SAVE_STR, -2, 2, "saving throw (Strength)"},
+  {APPLY_SAVE_DEX, -2, 2, "saving throw (Dexterity)"},
+  {APPLY_SAVE_CON, -2, 2, "saving throw (Constitution)"},
+  {APPLY_SAVE_INT, -2, 2, "saving throw (Intelligence)"},
+  {APPLY_SAVE_WIS, -2, 2, "saving throw (Wisdom)"},
+  {APPLY_SAVE_CHA, -2, 2, "saving throw (Charisma)"}
 };
-
-/* These are ABS() values. */
-#define MAX_APPLY_HITROLL_TOTAL   5
-#define MAX_APPLY_DAMROLL_TOTAL   5
 
 /*room limits*/
 /* Off limit zones are any zones a player should NOT be able to walk to (ex. Limbo) */
@@ -3578,7 +4621,7 @@ ACMD (do_zcheck)
   struct char_data *mob = NULL;
   room_vnum exroom=0;
   int ac=0;
-  int affs=0, tohit, todam, value;
+  int affs=0, value;
   int i = 0, j = 0, k = 0, l = 0, m = 0, found = 0; /* found is used as a 'send now' flag*/
   char buf[MAX_STRING_LENGTH];
   float avg_dam;
@@ -3630,39 +4673,41 @@ ACMD (do_zcheck)
                           "- Is level %d (limit: 1-%d)\r\n",
                           GET_LEVEL(mob), MAX_LEVEL_ALLOWED);
 
-        if (GET_DAMROLL(mob)>MAX_DAMROLL_ALLOWED && (found=1))
-          len += snprintf(buf + len, sizeof(buf) - len,
-                          "- Damroll of %d is too high (limit: %d)\r\n",
-                          GET_DAMROLL(mob), MAX_DAMROLL_ALLOWED);
+        /* --- 5e-style average unarmed damage check --- */
+        {
+          int prof = 0;
+          int str_mod = GET_ABILITY_MOD(GET_STR(mob));
+          int die_size;
 
-        if (GET_HITROLL(mob)>MAX_HITROLL_ALLOWED && (found=1))
-          len += snprintf(buf + len, sizeof(buf) - len,
-                          "- Hitroll of %d is too high (limit: %d)\r\n",
-                          GET_HITROLL(mob), MAX_HITROLL_ALLOWED);
+          /* derive proficiency tier; mobs use their stored unarmed skill */
+          prof = GET_PROFICIENCY(GET_SKILL(mob, SKILL_UNARMED));
 
-        /* avg. dam including damroll per round of combat */
-        avg_dam = (((mob->mob_specials.damsizedice / 2.0) * mob->mob_specials.damnodice)+GET_DAMROLL(mob));
-        if (avg_dam>MAX_MOB_DAM_ALLOWED && (found=1))
-          len += snprintf(buf + len, sizeof(buf) - len,
-                          "- average damage of %4.1f is too high (limit: %d)\r\n",
-                          avg_dam, MAX_MOB_DAM_ALLOWED);
+          switch (prof) {
+            case 0:  die_size = 4; break; /* initial unarmed skill die size */
+            case 1:  die_size = 4; break;
+            case 2:  die_size = 6; break; /* ~40 skill level */
+            case 3:  die_size = 6; break;
+            case 4:  die_size = 8; break; /* ~80 skill level */
+            case 5:  die_size = 10; break; /* max skill level */
+            default: die_size = 12; break;
+          }
 
-        if (mob->mob_specials.damsizedice == 1 &&
-            mob->mob_specials.damnodice == 1 &&
-            GET_LEVEL(mob) == 0 &&
-            (found=1))
-          len += snprintf(buf + len, sizeof(buf) - len,
-                          "- Needs to be fixed - %sAutogenerate!%s\r\n", CCYEL(ch, C_NRM), CCNRM(ch, C_NRM));
+          /* expected average damage = average roll + STR + proficiency */
+          avg_dam = ((die_size + 1) / 2.0) + str_mod + prof;
+
+          if (avg_dam > MAX_MOB_DAM_ALLOWED && (found=1))
+            len += snprintf(buf + len, sizeof(buf) - len,
+                            "- average unarmed damage of %4.1f is too high (limit: %d)\r\n",
+                            avg_dam, MAX_MOB_DAM_ALLOWED);
+
+          if (prof == 0 && str_mod <= 0 && (found=1))
+            len += snprintf(buf + len, sizeof(buf) - len,
+                            "- No unarmed combat proficiency set (add skill or weapon)\r\n");
+        }
 
         if (MOB_FLAGGED(mob, MOB_AGGRESSIVE) && (MOB_FLAGGED(mob, MOB_AGGR_GOOD) || MOB_FLAGGED(mob, MOB_AGGR_EVIL) || MOB_FLAGGED(mob, MOB_AGGR_NEUTRAL)) && (found=1))
 	 len += snprintf(buf + len, sizeof(buf) - len,
           "- Both aggresive and agressive to align.\r\n");
-
-        if ((GET_GOLD(mob) > MAX_MOB_GOLD_ALLOWED) && (found=1))
-          len += snprintf(buf + len, sizeof(buf) - len,
-                          "- Set to %d Gold (limit : %d).\r\n",
-                                  GET_GOLD(mob),
-                                  MAX_MOB_GOLD_ALLOWED);
 
         if (GET_EXP(mob)>MAX_EXP_ALLOWED && (found=1))
           len += snprintf(buf + len, sizeof(buf) - len,
@@ -3706,10 +4751,10 @@ ACMD (do_zcheck)
       obj = &obj_proto[i];
       switch (GET_OBJ_TYPE(obj)) {
         case ITEM_MONEY:
-          if ((value = GET_OBJ_VAL(obj, 0))>MAX_OBJ_GOLD_ALLOWED && (found=1))
+          if ((value = GET_OBJ_VAL(obj, 0))>MAX_OBJ_COINS_ALLOWED && (found=1))
             len += snprintf(buf + len, sizeof(buf) - len,
                             "- Is worth %d (money limit %d coins).\r\n",
-                                 value, MAX_OBJ_GOLD_ALLOWED);
+                                 value, MAX_OBJ_COINS_ALLOWED);
           break;
         case ITEM_WEAPON:
           if (GET_OBJ_VAL(obj, 3) >= NUM_ATTACK_TYPES && (found=1))
@@ -3735,11 +4780,11 @@ ACMD (do_zcheck)
       }  /*switch on Item_Type*/
 
       if (!CAN_WEAR(obj, ITEM_WEAR_TAKE)) {
-        if ((GET_OBJ_COST(obj) || (GET_OBJ_WEIGHT(obj) && GET_OBJ_TYPE(obj) != ITEM_FOUNTAIN) ||
-           GET_OBJ_RENT(obj)) && (found = 1))
+        if ((GET_OBJ_COST(obj) || (GET_OBJ_WEIGHT(obj) && GET_OBJ_TYPE(obj) != ITEM_FOUNTAIN)) &&
+           (found = 1))
           len += snprintf(buf + len, sizeof(buf) - len,
-                          "- is NO_TAKE, but has cost (%d) weight (%d) or rent (%d) set.\r\n",
-                          GET_OBJ_COST(obj), GET_OBJ_WEIGHT(obj), GET_OBJ_RENT(obj));
+                          "- is NO_TAKE, but has cost (%d) or weight (%d) set.\r\n",
+                          GET_OBJ_COST(obj), GET_OBJ_WEIGHT(obj));
       } else {
         if (GET_OBJ_COST(obj) == 0 && (found=1) && GET_OBJ_TYPE(obj) != ITEM_TRASH)
           len += snprintf(buf + len, sizeof(buf) - len,
@@ -3766,13 +4811,13 @@ ACMD (do_zcheck)
                           "- has min level set to %d (max %d).\r\n",
                           GET_OBJ_LEVEL(obj), LVL_IMMORT-1);
 
-      if (obj->action_description && *obj->action_description &&
+      if (obj->main_description && *obj->main_description &&
           GET_OBJ_TYPE(obj) != ITEM_STAFF &&
           GET_OBJ_TYPE(obj) != ITEM_WAND &&
           GET_OBJ_TYPE(obj) != ITEM_SCROLL &&
           GET_OBJ_TYPE(obj) != ITEM_NOTE && (found=1))
         len += snprintf(buf + len, sizeof(buf) - len,
-                          "- has action_description set, but is inappropriate type.\r\n");
+                          "- has main_description set, but is inappropriate type.\r\n");
 
       /*first check for over-all affections*/
       for (affs=0, j = 0; j < MAX_OBJ_AFFECT; j++)
@@ -3795,22 +4840,6 @@ ACMD (do_zcheck)
                                obj->affected[j].modifier,
                                zaffs[(int)obj->affected[j].location].min_aff,
                                zaffs[(int)obj->affected[j].location].max_aff);
-
-     /* special handling of +hit and +dam because of +hit_n_dam */
-     for (todam=0, tohit=0, j=0;j<MAX_OBJ_AFFECT;j++) {
-       if (obj->affected[j].location == APPLY_HITROLL)
-         tohit += obj->affected[j].modifier;
-       if (obj->affected[j].location == APPLY_DAMROLL)
-         todam += obj->affected[j].modifier;
-     }
-     if (abs(todam) > MAX_APPLY_DAMROLL_TOTAL && (found=1))
-       len += snprintf(buf + len, sizeof(buf) - len,
-                       "- total damroll %d out of range (limit +/-%d.\r\n",
-                       todam, MAX_APPLY_DAMROLL_TOTAL);
-     if (abs(tohit) > MAX_APPLY_HITROLL_TOTAL && (found=1))
-       len += snprintf(buf + len, sizeof(buf) - len,
-                       "- total hitroll %d out of range (limit +/-%d).\r\n",
-                       tohit, MAX_APPLY_HITROLL_TOTAL);
 
 
      for (ext2 = NULL, ext = obj->ex_description; ext; ext = ext->next)
@@ -4323,7 +5352,6 @@ ACMD(do_file)
     { "levels",         LVL_GOD,    LEVELS_LOGFILE,      TRUE},
     { "rip",            LVL_GOD,    RIP_LOGFILE,         TRUE},
     { "players",        LVL_GOD,    NEWPLAYERS_LOGFILE,  TRUE},
-    { "rentgone",       LVL_GOD,    RENTGONE_LOGFILE,    TRUE},
     { "errors",         LVL_GOD,    ERRORS_LOGFILE,      TRUE},
     { "godcmds",        LVL_GOD,    GODCMDS_LOGFILE,     TRUE},
     { "syslog",         LVL_GOD,    SYSLOG_LOGFILE,      TRUE},
@@ -5108,4 +6136,356 @@ ACMD(do_oset)
        }
      }
   }
+}
+
+/* 5e system helpers */
+
+/* Helper: map wear flags to our armor_slots[] index (-1 if not an armor slot) */
+static int armor_slot_index_from_wear(const struct obj_data *obj) {
+  if (!obj) return -1;
+
+  /* IMPORTANT: use your project's wear flag macros.
+     Typical tbaMUD macros: CAN_WEAR(obj, ITEM_WEAR_*) */
+  if (CAN_WEAR(obj, ITEM_WEAR_HEAD))   return 0; /* "head"  */
+  if (CAN_WEAR(obj, ITEM_WEAR_BODY))   return 1; /* "body"  */
+  if (CAN_WEAR(obj, ITEM_WEAR_LEGS))   return 2; /* "legs"  */
+  if (CAN_WEAR(obj, ITEM_WEAR_ARMS))   return 3; /* "arms"  */
+  if (CAN_WEAR(obj, ITEM_WEAR_HANDS))  return 4; /* "hands" */
+  if (CAN_WEAR(obj, ITEM_WEAR_FEET))   return 5; /* "feet"  */
+
+  /* Shield is audited separately in AC compute; skip it here */
+  if (CAN_WEAR(obj, ITEM_WEAR_SHIELD)) return -2; /* special */
+
+  return -1;
+}
+
+/* Pretty: slot name (matches armor_slots[] order) */
+static const char *slot_name_from_index(int idx) {
+  switch (idx) {
+    case 0: return "head";
+    case 1: return "body";
+    case 2: return "legs";
+    case 3: return "arms";
+    case 4: return "hands";
+    case 5: return "feet";
+    default: return "unknown";
+  }
+}
+
+/* Wizard command: scan armor prototypes, validate per-piece fields (compact, paged, 25 lines) */
+ACMD(do_acaudit)
+{
+  int found = 0, warned = 0;
+
+  if (IS_NPC(ch) || GET_LEVEL(ch) < LVL_IMMORT) {
+    send_to_char(ch, "You lack the authority to use this.\r\n");
+    return;
+  }
+
+  /* --- dynamic buffer builder --- */
+  size_t cap = 8192, len = 0;
+  char *out = (char *)malloc(cap);
+  if (!out) { send_to_char(ch, "Memory error.\r\n"); return; }
+  out[0] = '\0';
+
+#define APPEND_FMT(...) do {                                               \
+    int need = snprintf(NULL, 0, __VA_ARGS__);                              \
+    if (need < 0) need = 0;                                                 \
+    if (len + (size_t)need + 1 > cap) {                                     \
+      size_t ncap = cap * 2;                                                \
+      if (ncap < len + (size_t)need + 1) ncap = len + (size_t)need + 1;     \
+      char *tmp = (char *)realloc(out, ncap);                               \
+      if (!tmp) { free(out); send_to_char(ch, "Memory error.\r\n"); return; } \
+      out = tmp; cap = ncap;                                                \
+    }                                                                       \
+    len += (size_t)snprintf(out + len, cap - len, __VA_ARGS__);             \
+  } while (0)
+
+  /* Header (short so it won’t wrap) */
+  APPEND_FMT("\r\n\tY[Armor Audit]\tn ITEM_ARMOR scan\r\n");
+  APPEND_FMT("Legend: \tR!\tn over-cap, \tY?\tn warn, S stealth-disadv\r\n");
+
+  for (obj_rnum r = 0; r <= top_of_objt; r++) {
+    struct obj_data *obj = &obj_proto[r];
+    char namebuf[128] = {0};
+    int idx, vnum, piece_ac, bulk, magic, stealth, strreq;
+
+    if (GET_OBJ_TYPE(obj) != ITEM_ARMOR)
+      continue;
+
+    /* Identify slot (skip shields here) */
+    idx = armor_slot_index_from_wear(obj);
+    if (idx == -2) continue; /* shield handled in AC; skip */
+    if (idx < 0)  continue;  /* not a supported armor slot */
+
+    vnum     = GET_OBJ_VNUM(obj);
+    piece_ac = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
+    bulk     = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
+    magic    = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
+    stealth  = GET_OBJ_VAL(obj, VAL_ARMOR_STEALTH_DISADV); /* 1/0, yes or no */
+    strreq   = GET_OBJ_VAL(obj, VAL_ARMOR_STR_REQ);        /* 0 or 13/15/16 typically */
+
+    /* Display name (trim to keep line width < ~78 cols) */
+    if (obj->short_description)
+      snprintf(namebuf, sizeof(namebuf), "%s", obj->short_description);
+    else if (obj->name)
+      snprintf(namebuf, sizeof(namebuf), "%s", obj->name);
+    else
+      snprintf(namebuf, sizeof(namebuf), "object");
+
+    /* Slot caps */
+    const int max_piece_ac = armor_slots[idx].max_piece_ac;
+    const int max_magic    = armor_slots[idx].max_magic;
+
+    /* Validations */
+    bool over_ac    = (piece_ac > max_piece_ac);
+    bool over_magic = (magic    > max_magic);
+    bool bad_ac     = (piece_ac < 0 || piece_ac > 3);
+    bool bad_bulk   = (bulk     < 0 || bulk     > 3);
+    bool bad_magic  = (magic    < 0 || magic    > 3);
+
+    found++;
+
+    /* Compact, non-wrapping row (~70 cols worst case) */
+    APPEND_FMT("\tc[#%5d]\tn %-24.24s sl=%-5.5s ac=%2d%s b=%d%s m=%+d%s sd=%d str=%d\r\n",
+      vnum,
+      namebuf,
+      slot_name_from_index(idx),
+      piece_ac,  over_ac    ? " \tR!\tn" : (bad_ac   ? " \tY?\tn" : ""),
+      bulk,      bad_bulk   ? " \tY?\tn" : "",
+      magic,     over_magic ? " \tR!\tn" : (bad_magic? " \tY?\tn" : ""),
+      stealth, strreq);
+
+    if (over_ac || over_magic || bad_ac || bad_bulk || bad_magic)
+      warned++;
+  }
+
+  if (!found) {
+    free(out);
+    send_to_char(ch, "No ITEM_ARMOR prototypes found for the audited slots.\r\n");
+    return;
+  }
+
+  /* Footer */
+  APPEND_FMT("\r\nScanned: %d items, %d with issues. Armor magic cap +%d (shield separate).\r\n",
+             found, warned, MAX_TOTAL_ARMOR_MAGIC);
+
+  /* Page it (copy mode) and try to force 25-line pages */
+  if (ch->desc) {
+    int old_len = 0; bool changed = false;
+#if defined(GET_SCREEN_HEIGHT)
+    old_len = GET_SCREEN_HEIGHT(ch); GET_SCREEN_HEIGHT(ch) = 25; changed = true;
+#elif defined(GET_PAGE_LENGTH)
+    old_len = GET_PAGE_LENGTH(ch);   GET_PAGE_LENGTH(ch)   = 25; changed = true;
+#endif
+    page_string(ch->desc, out, 0); /* copy; we free out */
+    free(out);
+    if (changed) {
+#if defined(GET_SCREEN_HEIGHT)
+      GET_SCREEN_HEIGHT(ch) = old_len;
+#elif defined(GET_PAGE_LENGTH)
+      GET_PAGE_LENGTH(ch)   = old_len;
+#endif
+    }
+  } else {
+    send_to_char(ch, "%s", out);
+    free(out);
+  }
+
+#undef APPEND_FMT
+}
+
+/* ====== Builder snapshot: save a staged mob's gear as its prototype loadout ====== */
+/* Put these helpers near the top of act.wizard.c (or a shared .c) */
+struct inv_count { obj_vnum vnum; int qty; struct inv_count *next; };
+
+static void inv_add(struct inv_count **head, obj_vnum v, int q) {
+  struct inv_count *p;
+  if (q < 1) q = 1;
+  for (p = *head; p; p = p->next)
+    if (p->vnum == v) { p->qty += q; return; }
+  CREATE(p, struct inv_count, 1);
+  p->vnum = v; p->qty = q; p->next = *head; *head = p;
+}
+
+static void inv_free_all(struct inv_count **head) {
+  struct inv_count *n, *p = *head;
+  while (p) { n = p->next; free(p); p = n; }
+  *head = NULL;
+}
+
+/* Add ACMD prototype to interpreter.h:  ACMD(do_msave); */
+
+ACMD(do_msave)
+{
+  char a1[MAX_INPUT_LENGTH], a2[MAX_INPUT_LENGTH];
+  char target[MAX_INPUT_LENGTH] = {0}, flags[MAX_INPUT_LENGTH] = {0};
+  struct char_data *vict = NULL, *tmp = NULL;
+  mob_rnum rnum;
+  int include_inv = 0;      /* -all */
+  int clear_first = 1;      /* default replace; -append flips this to 0 */
+  int equips_added = 0, inv_entries = 0;
+  struct inv_count *inv = NULL;
+  int pos;
+  struct obj_data *o;
+
+  two_arguments(argument, a1, a2);
+  if (*a1 && *a1 == '-') {
+    /* user wrote: msave -flags <mob> */
+    strcpy(flags, a1);
+    strcpy(target, a2);
+  } else {
+    /* user wrote: msave <mob> [-flags] */
+    strcpy(target, a1);
+    strcpy(flags, a2);
+  }
+
+  /* Parse flags (space-separated, any order) */
+  if (*flags) {
+    char buf[MAX_INPUT_LENGTH], *p = flags;
+    while (*p) {
+      p = one_argument(p, buf);
+      if (!*buf) break;
+      if (!str_cmp(buf, "-all")) include_inv = 1;
+      else if (!str_cmp(buf, "-append")) clear_first = 0;
+      else if (!str_cmp(buf, "-clear")) clear_first = 1;
+      else {
+        send_to_char(ch, "Unknown flag '%s'. Try -all, -append, or -clear.\r\n", buf);
+        return;
+      }
+    }
+  }
+
+  /* Find target mob in the room */
+  if (*target)
+    vict = get_char_vis(ch, target, NULL, FIND_CHAR_ROOM);
+  else {
+    /* No name: pick the first NPC only if exactly one exists */
+    for (tmp = world[IN_ROOM(ch)].people; tmp; tmp = tmp->next_in_room) {
+      if (IS_NPC(tmp)) {
+        if (vict) { vict = NULL; break; } /* more than one — force explicit name */
+        vict = tmp;
+      }
+    }
+  }
+
+  if (!vict || !IS_NPC(vict)) {
+    send_to_char(ch, "Target an NPC in this room: msave <mob> [-all] [-append|-clear]\r\n");
+    return;
+  }
+
+  /* Resolve prototype and permission to edit its zone */
+  rnum = GET_MOB_RNUM(vict);
+  if (rnum < 0) {
+    send_to_char(ch, "I can’t resolve that mob's prototype.\r\n");
+    return;
+  }
+
+#ifdef CAN_EDIT_ZONE
+  if (!can_edit_zone(ch, real_zone_by_thing(GET_MOB_VNUM(vict)))) {
+    send_to_char(ch, "You don’t have permission to modify that mob’s zone.\r\n");
+    return;
+  }
+#endif
+
+  /* Build the new loadout into the PROTOTYPE */
+  if (clear_first)
+    loadout_free_list(&mob_proto[rnum].proto_loadout);
+
+  /* Capture equipment: one entry per worn slot */
+  for (pos = 0; pos < NUM_WEARS; pos++) {
+    o = GET_EQ(vict, pos);
+    if (!o) continue;
+    if (GET_OBJ_VNUM(o) <= 0) continue;
+    loadout_add_entry(&mob_proto[rnum].proto_loadout, GET_OBJ_VNUM(o), (int)pos, 1);
+    equips_added++;
+  }
+
+  /* Capture inventory (compressed by vnum) if requested */
+  if (include_inv) {
+    for (o = vict->carrying; o; o = o->next_content) {
+      if (GET_OBJ_VNUM(o) <= 0) continue;
+      inv_add(&inv, GET_OBJ_VNUM(o), 1);
+    }
+    {
+      struct inv_count *p;
+      for (p = inv; p; p = p->next) {
+        loadout_add_entry(&mob_proto[rnum].proto_loadout, p->vnum, -1, MAX(1, p->qty));
+        inv_entries++;
+      }
+    }
+  }
+
+  /* Persist to disk: save the zone owning this mob vnum */
+  {
+    zone_rnum zr = real_zone_by_thing(GET_MOB_VNUM(vict));
+    if (zr == NOWHERE) {
+      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
+             "msave: could not resolve zone for mob %d", GET_MOB_VNUM(vict));
+      send_to_char(ch, "Saved in memory, but couldn’t resolve zone to write disk.\r\n");
+    } else {
+      save_mobiles(zr);
+      send_to_char(ch,
+        "Loadout saved for mob [%d]. Equipped: %d, Inventory lines: %d%s\r\n",
+        GET_MOB_VNUM(vict), equips_added, inv_entries, include_inv ? "" : " (use -all to include inventory)");
+      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
+             "msave: %s saved loadout for mob %d (eq=%d, inv=%d) in zone %d",
+             GET_NAME(ch), GET_MOB_VNUM(vict), equips_added, inv_entries,
+             zone_table[zr].number);
+    }
+  }
+
+  inv_free_all(&inv);
+}
+
+ACMD(do_rsave)
+{
+  room_rnum rnum;
+  zone_rnum znum;
+  int ok;
+
+  if (IS_NPC(ch)) {
+    send_to_char(ch, "Mobiles can’t use this.\r\n");
+    return;
+  }
+
+  /* IN_ROOM(ch) is already a room_rnum (index into world[]). Do NOT pass it to real_room(). */
+  rnum = IN_ROOM(ch);
+
+  if (rnum == NOWHERE || rnum < 0 || rnum > top_of_world) {
+    send_to_char(ch, "You are not in a valid room.\r\n");
+    return;
+  }
+
+  znum = world[rnum].zone;
+  if (znum < 0 || znum > top_of_zone_table) {
+    send_to_char(ch, "This room is not attached to a valid zone.\r\n");
+    return;
+  }
+
+  /* Optional: permission check */
+  if (!can_edit_zone(ch, znum)) {
+    send_to_char(ch, "You don’t have permission to modify zone %d.\r\n",
+                 zone_table[znum].number);
+    return;
+  }
+
+  /* Save just this room into the correct zone’s .rsv file */
+  ok = RoomSave_now(rnum);
+
+  if (!ok) {
+    send_to_char(ch, "rsave: failed.\r\n");
+    mudlog(BRF, GET_LEVEL(ch), TRUE,
+           "RSAVE FAIL: %s room %d (rnum=%d) zone %d (znum=%d)",
+           GET_NAME(ch), GET_ROOM_VNUM(rnum), rnum,
+           zone_table[znum].number, znum);
+    return;
+  }
+
+  send_to_char(ch, "rsave: room %d saved to roomsave file for zone %d.\r\n",
+               GET_ROOM_VNUM(rnum), zone_table[znum].number);
+
+  mudlog(CMP, GET_LEVEL(ch), TRUE,
+         "RSAVE OK: %s room %d (rnum=%d) -> world/rsv/%d.rsv",
+         GET_NAME(ch), GET_ROOM_VNUM(rnum), rnum, zone_table[znum].number);
 }

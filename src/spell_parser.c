@@ -208,13 +208,13 @@ int call_magic(struct char_data *caster, struct char_data *cvict,
   case CAST_SCROLL:
   case CAST_POTION:
   case CAST_WAND:
-    savetype = SAVING_ROD;
+    savetype = SAVING_WIS; 
     break;
   case CAST_SPELL:
-    savetype = SAVING_SPELL;
+    savetype = SAVING_WIS; 
     break;
   default:
-    savetype = SAVING_BREATH;
+    savetype = SAVING_DEX; 
     break;
   }
 
@@ -318,8 +318,8 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
   switch (GET_OBJ_TYPE(obj)) {
   case ITEM_STAFF:
     act("You tap $p three times on the ground.", FALSE, ch, obj, 0, TO_CHAR);
-    if (obj->action_description)
-      act(obj->action_description, FALSE, ch, obj, 0, TO_ROOM);
+    if (obj->main_description)
+      act(obj->main_description, FALSE, ch, obj, 0, TO_ROOM);
     else
       act("$n taps $p three times on the ground.", FALSE, ch, obj, 0, TO_ROOM);
 
@@ -356,15 +356,15 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
         act("$n points $p at $mself.", FALSE, ch, obj, 0, TO_ROOM);
       } else {
         act("You point $p at $N.", FALSE, ch, obj, tch, TO_CHAR);
-        if (obj->action_description)
-          act(obj->action_description, FALSE, ch, obj, tch, TO_ROOM);
+        if (obj->main_description)
+          act(obj->main_description, FALSE, ch, obj, tch, TO_ROOM);
         else
           act("$n points $p at $N.", TRUE, ch, obj, tch, TO_ROOM);
       }
     } else if (tobj != NULL) {
       act("You point $p at $P.", FALSE, ch, obj, tobj, TO_CHAR);
-      if (obj->action_description)
-        act(obj->action_description, FALSE, ch, obj, tobj, TO_ROOM);
+      if (obj->main_description)
+        act(obj->main_description, FALSE, ch, obj, tobj, TO_ROOM);
       else
         act("$n points $p at $P.", TRUE, ch, obj, tobj, TO_ROOM);
     } else if (IS_SET(spell_info[GET_OBJ_VAL(obj, 3)].routines,
@@ -402,8 +402,8 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
       tch = ch;
 
     act("You recite $p which dissolves.", TRUE, ch, obj, 0, TO_CHAR);
-    if (obj->action_description)
-      act(obj->action_description, FALSE, ch, obj, tch, TO_ROOM);
+    if (obj->main_description)
+      act(obj->main_description, FALSE, ch, obj, tch, TO_ROOM);
     else
       act("$n recites $p.", FALSE, ch, obj, NULL, TO_ROOM);
 
@@ -423,8 +423,8 @@ void mag_objectmagic(struct char_data *ch, struct obj_data *obj, char *argument)
       return;
 
     act("You quaff $p.", FALSE, ch, obj, NULL, TO_CHAR);
-    if (obj->action_description)
-      act(obj->action_description, FALSE, ch, obj, NULL, TO_ROOM);
+    if (obj->main_description)
+      act(obj->main_description, FALSE, ch, obj, NULL, TO_ROOM);
     else
       act("$n quaffs $p.", TRUE, ch, obj, NULL, TO_ROOM);
 
@@ -627,6 +627,7 @@ ACMD(do_cast) {
   /* You throws the dice and you takes your chances.. 101% is total failure */
   if (rand_number(0, 101) > GET_SKILL(ch, spellnum)) {
     WAIT_STATE(ch, PULSE_VIOLENCE);
+    gain_skill(ch, s, FALSE);
     if (!tch || !skill_message(0, ch, tch, spellnum))
       send_to_char(ch, "You lost your concentration!\r\n");
     if (mana > 0)
@@ -636,6 +637,7 @@ ACMD(do_cast) {
   } else { /* cast spell returns 1 on success; subtract mana & set waitstate */
     if (cast_spell(ch, tch, tobj, spellnum)) {
       WAIT_STATE(ch, PULSE_VIOLENCE);
+      gain_skill(ch, s, TRUE);
       if (mana > 0)
         GET_MANA(ch) = MAX(0, MIN(GET_MAX_MANA(ch), GET_MANA(ch) - mana));
     }
@@ -913,6 +915,12 @@ void mag_assign_spells(void) {
   spello(SPELL_DG_AFFECT, "Script-inflicted", 0, 0, 0, POS_SITTING,
   TAR_IGNORE, TRUE, 0, NULL);
 
+  /* Non-castable affects for skill-driven detection */
+  spello(SPELL_SCAN_AFFECT, "Scanning", 0, 0, 0, POS_SITTING,
+  TAR_IGNORE, TRUE, 0, NULL);
+  spello(SPELL_LISTEN_AFFECT, "Listening", 0, 0, 0, POS_SITTING,
+  TAR_IGNORE, TRUE, 0, NULL);
+
   /* Declaration of skills - this actually doesn't do anything except set it up
    * so that immortals can use these skills by default.  The min level to use
    * the skill for other classes is set up in class.c. */
@@ -923,9 +931,31 @@ void mag_assign_spells(void) {
   skillo(SKILL_PICK_LOCK, "pick lock");
   skillo(SKILL_RESCUE, "rescue");
   skillo(SKILL_SNEAK, "sneak");
-  skillo(SKILL_STEAL, "steal");
   skillo(SKILL_TRACK, "track");
   skillo(SKILL_WHIRLWIND, "whirlwind");
   skillo(SKILL_BANDAGE, "bandage");
-}
+  skillo(SKILL_UNARMED, "unarmed fighting");
+  skillo(SKILL_SHIELD_USE, "shield use");
+  skillo(SKILL_PIERCING_WEAPONS, "piercing weapons");
+  skillo(SKILL_SLASHING_WEAPONS, "slashing weapons");
+  skillo(SKILL_BLUDGEONING_WEAPONS, "bludgeoning weapons");
+  skillo(SKILL_PERCEPTION, "perception");
+  skillo(SKILL_STEALTH, "stealth");
+  skillo(SKILL_SLEIGHT_OF_HAND, "sleight of hand");
+  skillo(SKILL_ACROBATICS, "acrobatics");
+  skillo(SKILL_ANIMAL_HANDLING, "animal handling");
+  skillo(SKILL_ARCANA, "arcana");
+  skillo(SKILL_ATHLETICS, "athletics");
+  skillo(SKILL_DECEPTION, "deception");
+  skillo(SKILL_HISTORY, "history");
+  skillo(SKILL_INSIGHT, "insight");
+  skillo(SKILL_INTIMIDATION, "intimidation");
+  skillo(SKILL_INVESTIGATION, "investigation");
+  skillo(SKILL_MEDICINE, "medicine");
+  skillo(SKILL_NATURE, "nature");
+  skillo(SKILL_PERFORMANCE, "performance");
+  skillo(SKILL_PERSUASION, "persuasion");
+  skillo(SKILL_RELIGION, "religion");
+  skillo(SKILL_SURVIVAL, "survival");
 
+}

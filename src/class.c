@@ -26,18 +26,26 @@
 
 /* Names first */
 const char *class_abbrevs[] = {
-  "Mu",
+  "So",
   "Cl",
-  "Th",
-  "Wa",
+  "Ro",
+  "Fi",
+  "Ba",
+  "Ra",
+  "Br",
+  "Dr",
   "\n"
 };
 
 const char *pc_class_types[] = {
-  "Magic User",
+  "Sorceror",
   "Cleric",
-  "Thief",
-  "Warrior",
+  "Rogue",
+  "Fighter",
+  "Barbarian",
+  "Ranger",
+  "Bard",
+  "Druid",
   "\n"
 };
 
@@ -46,9 +54,13 @@ const char *class_menu =
 "\r\n"
 "Select a class:\r\n"
 "  [\t(C\t)]leric\r\n"
-"  [\t(T\t)]hief\r\n"
-"  [\t(W\t)]arrior\r\n"
-"  [\t(M\t)]agic-user\r\n";
+"  R[\t(o\t)]gue\r\n"
+"  [\t(F\t)]ighter\r\n"
+"  [\t(S\t)]orceror\r\n"
+"  [\t(B\t)]arbarian\r\n"
+"  [\t(R\t)]anger\r\n"
+"  B[\t(a\t)]rd\r\n"
+"  [\t(D\t)]ruid\r\n";
 
 /* The code to interpret a class letter -- used in interpreter.c when a new
  * character is selecting a class and by 'set class' in act.wizard.c. */
@@ -57,10 +69,14 @@ int parse_class(char arg)
   arg = LOWER(arg);
 
   switch (arg) {
-  case 'm': return CLASS_MAGIC_USER;
+  case 's': return CLASS_SORCEROR;
   case 'c': return CLASS_CLERIC;
-  case 'w': return CLASS_WARRIOR;
-  case 't': return CLASS_THIEF;
+  case 'f': return CLASS_FIGHTER;
+  case 'o': return CLASS_ROGUE;
+  case 'b': return CLASS_BARBARIAN;
+  case 'r': return CLASS_RANGER;
+  case 'a': return CLASS_BARD;
+  case 'd': return CLASS_DRUID;
   default:  return CLASS_UNDEFINED;
   }
 }
@@ -106,28 +122,33 @@ bitvector_t find_class_bitvector(const char *arg)
 /* #define PRAC_TYPE		3  should it say 'spell' or 'skill'?	*/
 
 int prac_params[4][NUM_CLASSES] = {
-  /* MAG	CLE	THE	WAR */
-  { 95,		95,	85,	80	},	/* learned level */
-  { 100,	100,	12,	12	},	/* max per practice */
-  { 25,		25,	0,	0	},	/* min per practice */
-  { SPELL,	SPELL,	SKILL,	SKILL	},	/* prac name */
+  /* SOR	CLE	THE	FIG BAR RAN BARD DRU */
+  { 95,		95,	85,	80, 75, 85, 85, 95	},	/* learned level */
+  { 100,	100,	12,	12, 11, 12, 13, 90	},	/* max per practice */
+  { 25,		25,	0,	0, 0, 0, 25, 25	},	/* min per practice */
+  { SPELL,	SPELL,	SKILL,	SKILL, SKILL, SKILL, SKILL, SKILL	},	/* prac name */
 };
 
 /* The appropriate rooms for each guildmaster/guildguard; controls which types
  * of people the various guildguards let through.  i.e., the first line shows
- * that from room 3017, only MAGIC_USERS are allowed to go south. Don't forget
+ * that from room 3017, only SORCERORS are allowed to go south. Don't forget
  * to visit spec_assign.c if you create any new mobiles that should be a guild
  * master or guard so they can act appropriately. If you "recycle" the
  * existing mobs that are used in other guilds for your new guild, then you
  * don't have to change that file, only here. Guildguards are now implemented
  * via triggers. This code remains as an example. */
+/* TO-DO: Is this necessary anymore now that there are no official guild rooms? */
 struct guild_info_type guild_info[] = {
 
 /* Midgaard */
- { CLASS_MAGIC_USER,    3017,    SOUTH   },
+ { CLASS_SORCEROR,      3017,    SOUTH   },
  { CLASS_CLERIC,        3004,    NORTH   },
- { CLASS_THIEF,         3027,    EAST   },
- { CLASS_WARRIOR,       3021,    EAST   },
+ { CLASS_ROGUE,         3027,    EAST   },
+ { CLASS_FIGHTER,       3021,    EAST   },
+ { CLASS_BARBARIAN,     3021,    EAST   },
+ { CLASS_RANGER,        3021,    EAST   },
+ { CLASS_BARD,          3021,    EAST   },
+ { CLASS_DRUID,         3021,    EAST   },
 
 /* Brass Dragon */
   { -999 /* all */ ,	5065,	WEST	},
@@ -136,1209 +157,20 @@ struct guild_info_type guild_info[] = {
   { -1, NOWHERE, -1}
 };
 
-/* Saving throws for : MCTW : PARA, ROD, PETRI, BREATH, SPELL. Levels 0-40. Do
- * not forget to change extern declaration in magic.c if you add to this. */
-byte saving_throws(int class_num, int type, int level)
-{
+/* 5e system saving throws per class*/
+bool has_save_proficiency(int class_num, int ability) {
   switch (class_num) {
-  case CLASS_MAGIC_USER:
-    switch (type) {
-    case SAVING_PARA:	/* Paralyzation */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 70;
-      case  2: return 69;
-      case  3: return 68;
-      case  4: return 67;
-      case  5: return 66;
-      case  6: return 65;
-      case  7: return 63;
-      case  8: return 61;
-      case  9: return 60;
-      case 10: return 59;
-      case 11: return 57;
-      case 12: return 55;
-      case 13: return 54;
-      case 14: return 53;
-      case 15: return 53;
-      case 16: return 52;
-      case 17: return 51;
-      case 18: return 50;
-      case 19: return 48;
-      case 20: return 46;
-      case 21: return 45;
-      case 22: return 44;
-      case 23: return 42;
-      case 24: return 40;
-      case 25: return 38;
-      case 26: return 36;
-      case 27: return 34;
-      case 28: return 32;
-      case 29: return 30;
-      case 30: return 28;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for mage paralyzation saving throw.");
-	break;
-      }
-    case SAVING_ROD:	/* Rods */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 55;
-      case  2: return 53;
-      case  3: return 51;
-      case  4: return 49;
-      case  5: return 47;
-      case  6: return 45;
-      case  7: return 43;
-      case  8: return 41;
-      case  9: return 40;
-      case 10: return 39;
-      case 11: return 37;
-      case 12: return 35;
-      case 13: return 33;
-      case 14: return 31;
-      case 15: return 30;
-      case 16: return 29;
-      case 17: return 27;
-      case 18: return 25;
-      case 19: return 23;
-      case 20: return 21;
-      case 21: return 20;
-      case 22: return 19;
-      case 23: return 17;
-      case 24: return 15;
-      case 25: return 14;
-      case 26: return 13;
-      case 27: return 12;
-      case 28: return 11;
-      case 29: return 10;
-      case 30: return  9;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for mage rod saving throw.");
-	break;
-      }
-    case SAVING_PETRI:	/* Petrification */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 65;
-      case  2: return 63;
-      case  3: return 61;
-      case  4: return 59;
-      case  5: return 57;
-      case  6: return 55;
-      case  7: return 53;
-      case  8: return 51;
-      case  9: return 50;
-      case 10: return 49;
-      case 11: return 47;
-      case 12: return 45;
-      case 13: return 43;
-      case 14: return 41;
-      case 15: return 40;
-      case 16: return 39;
-      case 17: return 37;
-      case 18: return 35;
-      case 19: return 33;
-      case 20: return 31;
-      case 21: return 30;
-      case 22: return 29;
-      case 23: return 27;
-      case 24: return 25;
-      case 25: return 23;
-      case 26: return 21;
-      case 27: return 19;
-      case 28: return 17;
-      case 29: return 15;
-      case 30: return 13;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for mage petrification saving throw.");
-	break;
-      }
-    case SAVING_BREATH:	/* Breath weapons */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 75;
-      case  2: return 73;
-      case  3: return 71;
-      case  4: return 69;
-      case  5: return 67;
-      case  6: return 65;
-      case  7: return 63;
-      case  8: return 61;
-      case  9: return 60;
-      case 10: return 59;
-      case 11: return 57;
-      case 12: return 55;
-      case 13: return 53;
-      case 14: return 51;
-      case 15: return 50;
-      case 16: return 49;
-      case 17: return 47;
-      case 18: return 45;
-      case 19: return 43;
-      case 20: return 41;
-      case 21: return 40;
-      case 22: return 39;
-      case 23: return 37;
-      case 24: return 35;
-      case 25: return 33;
-      case 26: return 31;
-      case 27: return 29;
-      case 28: return 27;
-      case 29: return 25;
-      case 30: return 23;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for mage breath saving throw.");
-	break;
-      }
-    case SAVING_SPELL:	/* Generic spells */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 60;
-      case  2: return 58;
-      case  3: return 56;
-      case  4: return 54;
-      case  5: return 52;
-      case  6: return 50;
-      case  7: return 48;
-      case  8: return 46;
-      case  9: return 45;
-      case 10: return 44;
-      case 11: return 42;
-      case 12: return 40;
-      case 13: return 38;
-      case 14: return 36;
-      case 15: return 35;
-      case 16: return 34;
-      case 17: return 32;
-      case 18: return 30;
-      case 19: return 28;
-      case 20: return 26;
-      case 21: return 25;
-      case 22: return 24;
-      case 23: return 22;
-      case 24: return 20;
-      case 25: return 18;
-      case 26: return 16;
-      case 27: return 14;
-      case 28: return 12;
-      case 29: return 10;
-      case 30: return  8;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for mage spell saving throw.");
-	break;
-      }
-    default:
-      log("SYSERR: Invalid saving throw type.");
-      break;
-    }
-    break;
-  case CLASS_CLERIC:
-    switch (type) {
-    case SAVING_PARA:	/* Paralyzation */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 60;
-      case  2: return 59;
-      case  3: return 48;
-      case  4: return 46;
-      case  5: return 45;
-      case  6: return 43;
-      case  7: return 40;
-      case  8: return 37;
-      case  9: return 35;
-      case 10: return 34;
-      case 11: return 33;
-      case 12: return 31;
-      case 13: return 30;
-      case 14: return 29;
-      case 15: return 27;
-      case 16: return 26;
-      case 17: return 25;
-      case 18: return 24;
-      case 19: return 23;
-      case 20: return 22;
-      case 21: return 21;
-      case 22: return 20;
-      case 23: return 18;
-      case 24: return 15;
-      case 25: return 14;
-      case 26: return 12;
-      case 27: return 10;
-      case 28: return  9;
-      case 29: return  8;
-      case 30: return  7;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for cleric paralyzation saving throw.");
-	break;
-      }
-    case SAVING_ROD:	/* Rods */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 70;
-      case  2: return 69;
-      case  3: return 68;
-      case  4: return 66;
-      case  5: return 65;
-      case  6: return 63;
-      case  7: return 60;
-      case  8: return 57;
-      case  9: return 55;
-      case 10: return 54;
-      case 11: return 53;
-      case 12: return 51;
-      case 13: return 50;
-      case 14: return 49;
-      case 15: return 47;
-      case 16: return 46;
-      case 17: return 45;
-      case 18: return 44;
-      case 19: return 43;
-      case 20: return 42;
-      case 21: return 41;
-      case 22: return 40;
-      case 23: return 38;
-      case 24: return 35;
-      case 25: return 34;
-      case 26: return 32;
-      case 27: return 30;
-      case 28: return 29;
-      case 29: return 28;
-      case 30: return 27;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for cleric rod saving throw.");
-	break;
-      }
-    case SAVING_PETRI:	/* Petrification */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 65;
-      case  2: return 64;
-      case  3: return 63;
-      case  4: return 61;
-      case  5: return 60;
-      case  6: return 58;
-      case  7: return 55;
-      case  8: return 53;
-      case  9: return 50;
-      case 10: return 49;
-      case 11: return 48;
-      case 12: return 46;
-      case 13: return 45;
-      case 14: return 44;
-      case 15: return 43;
-      case 16: return 41;
-      case 17: return 40;
-      case 18: return 39;
-      case 19: return 38;
-      case 20: return 37;
-      case 21: return 36;
-      case 22: return 35;
-      case 23: return 33;
-      case 24: return 31;
-      case 25: return 29;
-      case 26: return 27;
-      case 27: return 25;
-      case 28: return 24;
-      case 29: return 23;
-      case 30: return 22;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for cleric petrification saving throw.");
-	break;
-      }
-    case SAVING_BREATH:	/* Breath weapons */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 80;
-      case  2: return 79;
-      case  3: return 78;
-      case  4: return 76;
-      case  5: return 75;
-      case  6: return 73;
-      case  7: return 70;
-      case  8: return 67;
-      case  9: return 65;
-      case 10: return 64;
-      case 11: return 63;
-      case 12: return 61;
-      case 13: return 60;
-      case 14: return 59;
-      case 15: return 57;
-      case 16: return 56;
-      case 17: return 55;
-      case 18: return 54;
-      case 19: return 53;
-      case 20: return 52;
-      case 21: return 51;
-      case 22: return 50;
-      case 23: return 48;
-      case 24: return 45;
-      case 25: return 44;
-      case 26: return 42;
-      case 27: return 40;
-      case 28: return 39;
-      case 29: return 38;
-      case 30: return 37;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for cleric breath saving throw.");
-	break;
-      }
-    case SAVING_SPELL:	/* Generic spells */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 75;
-      case  2: return 74;
-      case  3: return 73;
-      case  4: return 71;
-      case  5: return 70;
-      case  6: return 68;
-      case  7: return 65;
-      case  8: return 63;
-      case  9: return 60;
-      case 10: return 59;
-      case 11: return 58;
-      case 12: return 56;
-      case 13: return 55;
-      case 14: return 54;
-      case 15: return 53;
-      case 16: return 51;
-      case 17: return 50;
-      case 18: return 49;
-      case 19: return 48;
-      case 20: return 47;
-      case 21: return 46;
-      case 22: return 45;
-      case 23: return 43;
-      case 24: return 41;
-      case 25: return 39;
-      case 26: return 37;
-      case 27: return 35;
-      case 28: return 34;
-      case 29: return 33;
-      case 30: return 32;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for cleric spell saving throw.");
-	break;
-      }
-    default:
-      log("SYSERR: Invalid saving throw type.");
-      break;
-    }
-    break;
-  case CLASS_THIEF:
-    switch (type) {
-    case SAVING_PARA:	/* Paralyzation */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 65;
-      case  2: return 64;
-      case  3: return 63;
-      case  4: return 62;
-      case  5: return 61;
-      case  6: return 60;
-      case  7: return 59;
-      case  8: return 58;
-      case  9: return 57;
-      case 10: return 56;
-      case 11: return 55;
-      case 12: return 54;
-      case 13: return 53;
-      case 14: return 52;
-      case 15: return 51;
-      case 16: return 50;
-      case 17: return 49;
-      case 18: return 48;
-      case 19: return 47;
-      case 20: return 46;
-      case 21: return 45;
-      case 22: return 44;
-      case 23: return 43;
-      case 24: return 42;
-      case 25: return 41;
-      case 26: return 40;
-      case 27: return 39;
-      case 28: return 38;
-      case 29: return 37;
-      case 30: return 36;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for thief paralyzation saving throw.");
-	break;
-      }
-    case SAVING_ROD:	/* Rods */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 70;
-      case  2: return 68;
-      case  3: return 66;
-      case  4: return 64;
-      case  5: return 62;
-      case  6: return 60;
-      case  7: return 58;
-      case  8: return 56;
-      case  9: return 54;
-      case 10: return 52;
-      case 11: return 50;
-      case 12: return 48;
-      case 13: return 46;
-      case 14: return 44;
-      case 15: return 42;
-      case 16: return 40;
-      case 17: return 38;
-      case 18: return 36;
-      case 19: return 34;
-      case 20: return 32;
-      case 21: return 30;
-      case 22: return 28;
-      case 23: return 26;
-      case 24: return 24;
-      case 25: return 22;
-      case 26: return 20;
-      case 27: return 18;
-      case 28: return 16;
-      case 29: return 14;
-      case 30: return 13;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for thief rod saving throw.");
-	break;
-      }
-    case SAVING_PETRI:	/* Petrification */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 60;
-      case  2: return 59;
-      case  3: return 58;
-      case  4: return 58;
-      case  5: return 56;
-      case  6: return 55;
-      case  7: return 54;
-      case  8: return 53;
-      case  9: return 52;
-      case 10: return 51;
-      case 11: return 50;
-      case 12: return 49;
-      case 13: return 48;
-      case 14: return 47;
-      case 15: return 46;
-      case 16: return 45;
-      case 17: return 44;
-      case 18: return 43;
-      case 19: return 42;
-      case 20: return 41;
-      case 21: return 40;
-      case 22: return 39;
-      case 23: return 38;
-      case 24: return 37;
-      case 25: return 36;
-      case 26: return 35;
-      case 27: return 34;
-      case 28: return 33;
-      case 29: return 32;
-      case 30: return 31;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for thief petrification saving throw.");
-	break;
-      }
-    case SAVING_BREATH:	/* Breath weapons */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 80;
-      case  2: return 79;
-      case  3: return 78;
-      case  4: return 77;
-      case  5: return 76;
-      case  6: return 75;
-      case  7: return 74;
-      case  8: return 73;
-      case  9: return 72;
-      case 10: return 71;
-      case 11: return 70;
-      case 12: return 69;
-      case 13: return 68;
-      case 14: return 67;
-      case 15: return 66;
-      case 16: return 65;
-      case 17: return 64;
-      case 18: return 63;
-      case 19: return 62;
-      case 20: return 61;
-      case 21: return 60;
-      case 22: return 59;
-      case 23: return 58;
-      case 24: return 57;
-      case 25: return 56;
-      case 26: return 55;
-      case 27: return 54;
-      case 28: return 53;
-      case 29: return 52;
-      case 30: return 51;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for thief breath saving throw.");
-	break;
-      }
-    case SAVING_SPELL:	/* Generic spells */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 75;
-      case  2: return 73;
-      case  3: return 71;
-      case  4: return 69;
-      case  5: return 67;
-      case  6: return 65;
-      case  7: return 63;
-      case  8: return 61;
-      case  9: return 59;
-      case 10: return 57;
-      case 11: return 55;
-      case 12: return 53;
-      case 13: return 51;
-      case 14: return 49;
-      case 15: return 47;
-      case 16: return 45;
-      case 17: return 43;
-      case 18: return 41;
-      case 19: return 39;
-      case 20: return 37;
-      case 21: return 35;
-      case 22: return 33;
-      case 23: return 31;
-      case 24: return 29;
-      case 25: return 27;
-      case 26: return 25;
-      case 27: return 23;
-      case 28: return 21;
-      case 29: return 19;
-      case 30: return 17;
-      case 31: return  0;
-      case 32: return  0;
-      case 33: return  0;
-      case 34: return  0;
-      case 35: return  0;
-      case 36: return  0;
-      case 37: return  0;
-      case 38: return  0;
-      case 39: return  0;
-      case 40: return  0;
-      default:
-	log("SYSERR: Missing level for thief spell saving throw.");
-	break;
-      }
-    default:
-      log("SYSERR: Invalid saving throw type.");
-      break;
-    }
-    break;
-  case CLASS_WARRIOR:
-    switch (type) {
-    case SAVING_PARA:	/* Paralyzation */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 70;
-      case  2: return 68;
-      case  3: return 67;
-      case  4: return 65;
-      case  5: return 62;
-      case  6: return 58;
-      case  7: return 55;
-      case  8: return 53;
-      case  9: return 52;
-      case 10: return 50;
-      case 11: return 47;
-      case 12: return 43;
-      case 13: return 40;
-      case 14: return 38;
-      case 15: return 37;
-      case 16: return 35;
-      case 17: return 32;
-      case 18: return 28;
-      case 19: return 25;
-      case 20: return 24;
-      case 21: return 23;
-      case 22: return 22;
-      case 23: return 20;
-      case 24: return 19;
-      case 25: return 17;
-      case 26: return 16;
-      case 27: return 15;
-      case 28: return 14;
-      case 29: return 13;
-      case 30: return 12;
-      case 31: return 11;
-      case 32: return 10;
-      case 33: return  9;
-      case 34: return  8;
-      case 35: return  7;
-      case 36: return  6;
-      case 37: return  5;
-      case 38: return  4;
-      case 39: return  3;
-      case 40: return  2;
-      case 41: return  1;	/* Some mobiles. */
-      case 42: return  0;
-      case 43: return  0;
-      case 44: return  0;
-      case 45: return  0;
-      case 46: return  0;
-      case 47: return  0;
-      case 48: return  0;
-      case 49: return  0;
-      case 50: return  0;
-      default:
-	log("SYSERR: Missing level for warrior paralyzation saving throw.");
-	break;
-      }
-    case SAVING_ROD:	/* Rods */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 80;
-      case  2: return 78;
-      case  3: return 77;
-      case  4: return 75;
-      case  5: return 72;
-      case  6: return 68;
-      case  7: return 65;
-      case  8: return 63;
-      case  9: return 62;
-      case 10: return 60;
-      case 11: return 57;
-      case 12: return 53;
-      case 13: return 50;
-      case 14: return 48;
-      case 15: return 47;
-      case 16: return 45;
-      case 17: return 42;
-      case 18: return 38;
-      case 19: return 35;
-      case 20: return 34;
-      case 21: return 33;
-      case 22: return 32;
-      case 23: return 30;
-      case 24: return 29;
-      case 25: return 27;
-      case 26: return 26;
-      case 27: return 25;
-      case 28: return 24;
-      case 29: return 23;
-      case 30: return 22;
-      case 31: return 20;
-      case 32: return 18;
-      case 33: return 16;
-      case 34: return 14;
-      case 35: return 12;
-      case 36: return 10;
-      case 37: return  8;
-      case 38: return  6;
-      case 39: return  5;
-      case 40: return  4;
-      case 41: return  3;
-      case 42: return  2;
-      case 43: return  1;
-      case 44: return  0;
-      case 45: return  0;
-      case 46: return  0;
-      case 47: return  0;
-      case 48: return  0;
-      case 49: return  0;
-      case 50: return  0;
-      default:
-	log("SYSERR: Missing level for warrior rod saving throw.");
-	break;
-      }
-    case SAVING_PETRI:	/* Petrification */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 75;
-      case  2: return 73;
-      case  3: return 72;
-      case  4: return 70;
-      case  5: return 67;
-      case  6: return 63;
-      case  7: return 60;
-      case  8: return 58;
-      case  9: return 57;
-      case 10: return 55;
-      case 11: return 52;
-      case 12: return 48;
-      case 13: return 45;
-      case 14: return 43;
-      case 15: return 42;
-      case 16: return 40;
-      case 17: return 37;
-      case 18: return 33;
-      case 19: return 30;
-      case 20: return 29;
-      case 21: return 28;
-      case 22: return 26;
-      case 23: return 25;
-      case 24: return 24;
-      case 25: return 23;
-      case 26: return 21;
-      case 27: return 20;
-      case 28: return 19;
-      case 29: return 18;
-      case 30: return 17;
-      case 31: return 16;
-      case 32: return 15;
-      case 33: return 14;
-      case 34: return 13;
-      case 35: return 12;
-      case 36: return 11;
-      case 37: return 10;
-      case 38: return  9;
-      case 39: return  8;
-      case 40: return  7;
-      case 41: return  6;
-      case 42: return  5;
-      case 43: return  4;
-      case 44: return  3;
-      case 45: return  2;
-      case 46: return  1;
-      case 47: return  0;
-      case 48: return  0;
-      case 49: return  0;
-      case 50: return  0;
-      default:
-	log("SYSERR: Missing level for warrior petrification saving throw.");
-	break;
-      }
-    case SAVING_BREATH:	/* Breath weapons */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 85;
-      case  2: return 83;
-      case  3: return 82;
-      case  4: return 80;
-      case  5: return 75;
-      case  6: return 70;
-      case  7: return 65;
-      case  8: return 63;
-      case  9: return 62;
-      case 10: return 60;
-      case 11: return 55;
-      case 12: return 50;
-      case 13: return 45;
-      case 14: return 43;
-      case 15: return 42;
-      case 16: return 40;
-      case 17: return 37;
-      case 18: return 33;
-      case 19: return 30;
-      case 20: return 29;
-      case 21: return 28;
-      case 22: return 26;
-      case 23: return 25;
-      case 24: return 24;
-      case 25: return 23;
-      case 26: return 21;
-      case 27: return 20;
-      case 28: return 19;
-      case 29: return 18;
-      case 30: return 17;
-      case 31: return 16;
-      case 32: return 15;
-      case 33: return 14;
-      case 34: return 13;
-      case 35: return 12;
-      case 36: return 11;
-      case 37: return 10;
-      case 38: return  9;
-      case 39: return  8;
-      case 40: return  7;
-      case 41: return  6;
-      case 42: return  5;
-      case 43: return  4;
-      case 44: return  3;
-      case 45: return  2;
-      case 46: return  1;
-      case 47: return  0;
-      case 48: return  0;
-      case 49: return  0;
-      case 50: return  0;
-      default:
-	log("SYSERR: Missing level for warrior breath saving throw.");
-	break;
-      }
-    case SAVING_SPELL:	/* Generic spells */
-      switch (level) {
-      case  0: return 90;
-      case  1: return 85;
-      case  2: return 83;
-      case  3: return 82;
-      case  4: return 80;
-      case  5: return 77;
-      case  6: return 73;
-      case  7: return 70;
-      case  8: return 68;
-      case  9: return 67;
-      case 10: return 65;
-      case 11: return 62;
-      case 12: return 58;
-      case 13: return 55;
-      case 14: return 53;
-      case 15: return 52;
-      case 16: return 50;
-      case 17: return 47;
-      case 18: return 43;
-      case 19: return 40;
-      case 20: return 39;
-      case 21: return 38;
-      case 22: return 36;
-      case 23: return 35;
-      case 24: return 34;
-      case 25: return 33;
-      case 26: return 31;
-      case 27: return 30;
-      case 28: return 29;
-      case 29: return 28;
-      case 30: return 27;
-      case 31: return 25;
-      case 32: return 23;
-      case 33: return 21;
-      case 34: return 19;
-      case 35: return 17;
-      case 36: return 15;
-      case 37: return 13;
-      case 38: return 11;
-      case 39: return  9;
-      case 40: return  7;
-      case 41: return  6;
-      case 42: return  5;
-      case 43: return  4;
-      case 44: return  3;
-      case 45: return  2;
-      case 46: return  1;
-      case 47: return  0;
-      case 48: return  0;
-      case 49: return  0;
-      case 50: return  0;
-      default:
-	log("SYSERR: Missing level for warrior spell saving throw.");
-	break;
-      }
-    default:
-      log("SYSERR: Invalid saving throw type.");
-      break;
-    }
-  default:
-    log("SYSERR: Invalid class saving throw.");
-    break;
+    case CLASS_SORCEROR:   return (ability == ABIL_CON || ability == ABIL_CHA);
+    case CLASS_CLERIC:     return (ability == ABIL_WIS || ability == ABIL_CHA);
+    case CLASS_ROGUE:      return (ability == ABIL_DEX || ability == ABIL_INT);
+    case CLASS_FIGHTER:    return (ability == ABIL_STR || ability == ABIL_CON);
+    case CLASS_BARBARIAN:  return (ability == ABIL_STR || ability == ABIL_CON);
+    case CLASS_RANGER:     return (ability == ABIL_STR || ability == ABIL_DEX);
+    case CLASS_BARD:       return (ability == ABIL_DEX || ability == ABIL_CHA);
+    case CLASS_DRUID:      return (ability == ABIL_INT || ability == ABIL_WIS);
+    default: return FALSE;
   }
-
-  /* Should not get here unless something is wrong. */
-  return 100;
 }
-
-/* THAC0 for classes and levels.  (To Hit Armor Class 0) */
-int thaco(int class_num, int level)
-{
-  switch (class_num) {
-  case CLASS_MAGIC_USER:
-    switch (level) {
-    case  0: return 100;
-    case  1: return  20;
-    case  2: return  20;
-    case  3: return  20;
-    case  4: return  19;
-    case  5: return  19;
-    case  6: return  19;
-    case  7: return  18;
-    case  8: return  18;
-    case  9: return  18;
-    case 10: return  17;
-    case 11: return  17;
-    case 12: return  17;
-    case 13: return  16;
-    case 14: return  16;
-    case 15: return  16;
-    case 16: return  15;
-    case 17: return  15;
-    case 18: return  15;
-    case 19: return  14;
-    case 20: return  14;
-    case 21: return  14;
-    case 22: return  13;
-    case 23: return  13;
-    case 24: return  13;
-    case 25: return  12;
-    case 26: return  12;
-    case 27: return  12;
-    case 28: return  11;
-    case 29: return  11;
-    case 30: return  11;
-    case 31: return  10;
-    case 32: return  10;
-    case 33: return  10;
-    case 34: return   9;
-    default:
-      log("SYSERR: Missing level for mage thac0.");
-    }
-  case CLASS_CLERIC:
-    switch (level) {
-    case  0: return 100;
-    case  1: return  20;
-    case  2: return  20;
-    case  3: return  20;
-    case  4: return  18;
-    case  5: return  18;
-    case  6: return  18;
-    case  7: return  16;
-    case  8: return  16;
-    case  9: return  16;
-    case 10: return  14;
-    case 11: return  14;
-    case 12: return  14;
-    case 13: return  12;
-    case 14: return  12;
-    case 15: return  12;
-    case 16: return  10;
-    case 17: return  10;
-    case 18: return  10;
-    case 19: return   8;
-    case 20: return   8;
-    case 21: return   8;
-    case 22: return   6;
-    case 23: return   6;
-    case 24: return   6;
-    case 25: return   4;
-    case 26: return   4;
-    case 27: return   4;
-    case 28: return   2;
-    case 29: return   2;
-    case 30: return   2;
-    case 31: return   1;
-    case 32: return   1;
-    case 33: return   1;
-    case 34: return   1;
-    default:
-      log("SYSERR: Missing level for cleric thac0.");
-    }
-  case CLASS_THIEF:
-    switch (level) {
-    case  0: return 100;
-    case  1: return  20;
-    case  2: return  20;
-    case  3: return  19;
-    case  4: return  19;
-    case  5: return  18;
-    case  6: return  18;
-    case  7: return  17;
-    case  8: return  17;
-    case  9: return  16;
-    case 10: return  16;
-    case 11: return  15;
-    case 12: return  15;
-    case 13: return  14;
-    case 14: return  14;
-    case 15: return  13;
-    case 16: return  13;
-    case 17: return  12;
-    case 18: return  12;
-    case 19: return  11;
-    case 20: return  11;
-    case 21: return  10;
-    case 22: return  10;
-    case 23: return   9;
-    case 24: return   9;
-    case 25: return   8;
-    case 26: return   8;
-    case 27: return   7;
-    case 28: return   7;
-    case 29: return   6;
-    case 30: return   6;
-    case 31: return   5;
-    case 32: return   5;
-    case 33: return   4;
-    case 34: return   4;
-    default:
-      log("SYSERR: Missing level for thief thac0.");
-    }
-  case CLASS_WARRIOR:
-    switch (level) {
-    case  0: return 100;
-    case  1: return  20;
-    case  2: return  19;
-    case  3: return  18;
-    case  4: return  17;
-    case  5: return  16;
-    case  6: return  15;
-    case  7: return  14;
-    case  8: return  14;
-    case  9: return  13;
-    case 10: return  12;
-    case 11: return  11;
-    case 12: return  10;
-    case 13: return   9;
-    case 14: return   8;
-    case 15: return   7;
-    case 16: return   6;
-    case 17: return   5;
-    case 18: return   4;
-    case 19: return   3;
-    case 20: return   2;
-    case 21: return   1;
-    case 22: return   1;
-    case 23: return   1;
-    case 24: return   1;
-    case 25: return   1;
-    case 26: return   1;
-    case 27: return   1;
-    case 28: return   1;
-    case 29: return   1;
-    case 30: return   1;
-    case 31: return   1;
-    case 32: return   1;
-    case 33: return   1;
-    case 34: return   1;
-    default:
-      log("SYSERR: Missing level for warrior thac0.");
-    }
-  default:
-    log("SYSERR: Unknown class in thac0 chart.");
-  }
-
-  /* Will not get there unless something is wrong. */
-  return 100;
-}
-
 
 /* Roll the 6 stats for a character... each stat is made of the sum of the best
  * 3 out of 4 rolls of a 6-sided die.  Each class then decides which priority
@@ -1368,16 +200,14 @@ void roll_real_abils(struct char_data *ch)
       }
   }
 
-  ch->real_abils.str_add = 0;
-
   switch (GET_CLASS(ch)) {
-  case CLASS_MAGIC_USER:
-    ch->real_abils.intel = table[0];
-    ch->real_abils.wis = table[1];
+  case CLASS_SORCEROR:
+    ch->real_abils.cha = table[0];
+    ch->real_abils.intel = table[1];
     ch->real_abils.dex = table[2];
-    ch->real_abils.str = table[3];
+    ch->real_abils.wis = table[3];
     ch->real_abils.con = table[4];
-    ch->real_abils.cha = table[5];
+    ch->real_abils.str = table[5];
     break;
   case CLASS_CLERIC:
     ch->real_abils.wis = table[0];
@@ -1387,7 +217,7 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.con = table[4];
     ch->real_abils.cha = table[5];
     break;
-  case CLASS_THIEF:
+  case CLASS_ROGUE:
     ch->real_abils.dex = table[0];
     ch->real_abils.str = table[1];
     ch->real_abils.con = table[2];
@@ -1395,18 +225,236 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.wis = table[4];
     ch->real_abils.cha = table[5];
     break;
-  case CLASS_WARRIOR:
+  case CLASS_FIGHTER:
     ch->real_abils.str = table[0];
     ch->real_abils.dex = table[1];
     ch->real_abils.con = table[2];
     ch->real_abils.wis = table[3];
     ch->real_abils.intel = table[4];
     ch->real_abils.cha = table[5];
-    if (ch->real_abils.str == 18)
-      ch->real_abils.str_add = rand_number(0, 100);
+  case CLASS_BARBARIAN:
+    ch->real_abils.str = table[0];
+    ch->real_abils.con = table[1];
+    ch->real_abils.dex = table[2];
+    ch->real_abils.wis = table[3];
+    ch->real_abils.intel = table[4];
+    ch->real_abils.cha = table[5];
+    break;
+  case CLASS_RANGER:
+    ch->real_abils.dex = table[0];
+    ch->real_abils.con = table[1];
+    ch->real_abils.str = table[2];
+    ch->real_abils.wis = table[3];
+    ch->real_abils.intel = table[4];
+    ch->real_abils.cha = table[5];
+    break;
+  case CLASS_BARD:
+    ch->real_abils.cha = table[0];
+    ch->real_abils.dex = table[1];
+    ch->real_abils.con = table[2];
+    ch->real_abils.intel = table[3];
+    ch->real_abils.wis = table[4];
+    ch->real_abils.str = table[5];
+    break;
+  case CLASS_DRUID:
+    ch->real_abils.wis = table[0];
+    ch->real_abils.dex = table[1];
+    ch->real_abils.con = table[2];
+    ch->real_abils.intel = table[3];
+    ch->real_abils.str = table[4];
+    ch->real_abils.cha = table[5];
     break;
   }
   ch->aff_abils = ch->real_abils;
+}
+
+void grant_class_skills(struct char_data *ch, bool reset)
+{
+  int i;
+
+  if (!ch)
+    return;
+
+  if (reset)
+    for (i = 1; i <= MAX_SKILLS; i++)
+      SET_SKILL(ch, i, 0);
+
+  if (GET_CLASS(ch) < CLASS_SORCEROR || GET_CLASS(ch) >= NUM_CLASSES)
+    return;
+
+  switch (GET_CLASS(ch)) {
+
+  case CLASS_SORCEROR:
+    SET_SKILL(ch, SPELL_MAGIC_MISSILE, 5);
+    SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
+    SET_SKILL(ch, SPELL_DETECT_MAGIC, 5);
+    SET_SKILL(ch, SPELL_CHILL_TOUCH, 5);
+    SET_SKILL(ch, SPELL_INFRAVISION, 5);
+    SET_SKILL(ch, SPELL_INVISIBLE, 5);
+    SET_SKILL(ch, SPELL_ARMOR, 5);
+    SET_SKILL(ch, SPELL_BURNING_HANDS, 5);
+    SET_SKILL(ch, SPELL_LOCATE_OBJECT, 5);
+    SET_SKILL(ch, SPELL_STRENGTH, 5);
+    SET_SKILL(ch, SPELL_SHOCKING_GRASP, 5);
+    SET_SKILL(ch, SPELL_SLEEP, 5);
+    SET_SKILL(ch, SPELL_LIGHTNING_BOLT, 5);
+    SET_SKILL(ch, SPELL_BLINDNESS, 5);
+    SET_SKILL(ch, SPELL_DETECT_POISON, 5);
+    SET_SKILL(ch, SPELL_COLOR_SPRAY, 5);
+    SET_SKILL(ch, SPELL_ENERGY_DRAIN, 5);
+    SET_SKILL(ch, SPELL_CURSE, 5);
+    SET_SKILL(ch, SPELL_POISON, 5);
+    SET_SKILL(ch, SPELL_FIREBALL, 5);
+    SET_SKILL(ch, SPELL_CHARM, 5);
+    SET_SKILL(ch, SPELL_IDENTIFY, 5);
+    SET_SKILL(ch, SPELL_FLY, 5);
+    SET_SKILL(ch, SPELL_ENCHANT_WEAPON, 5);
+    SET_SKILL(ch, SPELL_CLONE, 5);
+    SET_SKILL(ch, SKILL_UNARMED, 5);
+    SET_SKILL(ch, SKILL_ARCANA, 5);
+    SET_SKILL(ch, SKILL_HISTORY, 5);
+    SET_SKILL(ch, SKILL_INSIGHT, 5);
+    break;
+
+  case CLASS_CLERIC:
+    SET_SKILL(ch, SPELL_CURE_LIGHT, 5);
+    SET_SKILL(ch, SPELL_ARMOR, 5);
+    SET_SKILL(ch, SPELL_CREATE_FOOD, 5);
+    SET_SKILL(ch, SPELL_CREATE_WATER, 5);
+    SET_SKILL(ch, SPELL_DETECT_POISON, 5);
+    SET_SKILL(ch, SPELL_DETECT_ALIGN, 5);
+    SET_SKILL(ch, SPELL_CURE_BLIND, 5);
+    SET_SKILL(ch, SPELL_BLESS, 5);
+    SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
+    SET_SKILL(ch, SPELL_BLINDNESS, 5);
+    SET_SKILL(ch, SPELL_INFRAVISION, 5);
+    SET_SKILL(ch, SPELL_PROT_FROM_EVIL, 5);
+    SET_SKILL(ch, SPELL_POISON, 5);
+    SET_SKILL(ch, SPELL_GROUP_ARMOR, 5);
+    SET_SKILL(ch, SPELL_CURE_CRITIC, 5);
+    SET_SKILL(ch, SPELL_SUMMON, 5);
+    SET_SKILL(ch, SPELL_REMOVE_POISON, 5);
+    SET_SKILL(ch, SPELL_IDENTIFY, 5);
+    SET_SKILL(ch, SPELL_WORD_OF_RECALL, 5);
+    SET_SKILL(ch, SPELL_DARKNESS, 5);
+    SET_SKILL(ch, SPELL_EARTHQUAKE, 5);
+    SET_SKILL(ch, SPELL_DISPEL_EVIL, 5);
+    SET_SKILL(ch, SPELL_DISPEL_GOOD, 5);
+    SET_SKILL(ch, SPELL_SANCTUARY, 5);
+    SET_SKILL(ch, SPELL_CALL_LIGHTNING, 5);
+    SET_SKILL(ch, SPELL_HEAL, 5);
+    SET_SKILL(ch, SPELL_CONTROL_WEATHER, 5);
+    SET_SKILL(ch, SPELL_SENSE_LIFE, 5);
+    SET_SKILL(ch, SPELL_HARM, 5);
+    SET_SKILL(ch, SPELL_GROUP_HEAL, 5);
+    SET_SKILL(ch, SPELL_REMOVE_CURSE, 5);
+    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_ACROBATICS, 5);
+    SET_SKILL(ch, SKILL_ARCANA, 5);
+    SET_SKILL(ch, SKILL_RELIGION, 5);
+    break;
+
+  case CLASS_ROGUE:
+    SET_SKILL(ch, SKILL_STEALTH, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
+    SET_SKILL(ch, SKILL_BACKSTAB, 5);
+    SET_SKILL(ch, SKILL_PICK_LOCK, 5);
+    SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
+    SET_SKILL(ch, SKILL_UNARMED, 5);
+    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ACROBATICS, 5);
+    SET_SKILL(ch, SKILL_DECEPTION, 5);
+    SET_SKILL(ch, SKILL_INVESTIGATION, 5);
+    break;
+
+  case CLASS_FIGHTER:
+    SET_SKILL(ch, SKILL_KICK, 5);
+    SET_SKILL(ch, SKILL_RESCUE, 5);
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_BASH, 5);
+    SET_SKILL(ch, SKILL_UNARMED, 5);
+    SET_SKILL(ch, SKILL_SLASHING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_BLUDGEONING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ATHLETICS, 5);
+    SET_SKILL(ch, SKILL_INTIMIDATION, 5);
+    SET_SKILL(ch, SKILL_SURVIVAL, 5);
+    break;
+
+  case CLASS_BARBARIAN:
+    SET_SKILL(ch, SKILL_KICK, 5);
+    SET_SKILL(ch, SKILL_RESCUE, 5);
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_WHIRLWIND, 5);
+    SET_SKILL(ch, SKILL_UNARMED, 5);
+    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_BLUDGEONING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ATHLETICS, 5);
+    SET_SKILL(ch, SKILL_INTIMIDATION, 5);
+    break;
+
+  case CLASS_RANGER:
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
+    SET_SKILL(ch, SKILL_BASH, 5);
+    SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
+    SET_SKILL(ch, SKILL_UNARMED, 5);
+    SET_SKILL(ch, SKILL_SLASHING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_NATURE, 5);
+    SET_SKILL(ch, SKILL_ANIMAL_HANDLING, 5);
+    SET_SKILL(ch, SKILL_SURVIVAL, 5);
+    SET_SKILL(ch, SKILL_ATHLETICS, 5);
+    SET_SKILL(ch, SKILL_PERSUASION, 5);
+    SET_SKILL(ch, SKILL_STEALTH, 5);
+    break;
+
+  case CLASS_BARD:
+    SET_SKILL(ch, SPELL_ARMOR, 5);
+    SET_SKILL(ch, SPELL_IDENTIFY, 5);
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
+    SET_SKILL(ch, SKILL_PICK_LOCK, 5);
+    SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
+    SET_SKILL(ch, SKILL_UNARMED, 5);
+    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ACROBATICS, 5);
+    SET_SKILL(ch, SKILL_HISTORY, 5);
+    SET_SKILL(ch, SKILL_INVESTIGATION, 5);
+    SET_SKILL(ch, SKILL_SURVIVAL, 5);
+    SET_SKILL(ch, SKILL_STEALTH, 5);
+    break;
+
+  case CLASS_DRUID:
+    SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
+    SET_SKILL(ch, SPELL_DETECT_MAGIC, 5);
+    SET_SKILL(ch, SPELL_LOCATE_OBJECT, 5);
+    SET_SKILL(ch, SKILL_BANDAGE, 5);
+    SET_SKILL(ch, SKILL_TRACK, 5);
+    SET_SKILL(ch, SKILL_UNARMED, 5);
+    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
+    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
+    SET_SKILL(ch, SKILL_PERCEPTION, 5);
+    SET_SKILL(ch, SKILL_ACROBATICS, 5);
+    SET_SKILL(ch, SKILL_ARCANA, 5);
+    SET_SKILL(ch, SKILL_HISTORY, 5);
+    SET_SKILL(ch, SKILL_INSIGHT, 5);
+    SET_SKILL(ch, SKILL_INVESTIGATION, 5);
+    SET_SKILL(ch, SKILL_PERSUASION, 5);
+    SET_SKILL(ch, SKILL_RELIGION, 5);
+    SET_SKILL(ch, SKILL_SURVIVAL, 5);
+    break;
+  }
+
 }
 
 /* Some initializations for characters, including initial skills */
@@ -1415,33 +463,13 @@ void do_start(struct char_data *ch)
   GET_LEVEL(ch) = 1;
   GET_EXP(ch) = 1;
 
-  set_title(ch, NULL);
   roll_real_abils(ch);
 
-  GET_MAX_HIT(ch)  = 10;
+  GET_MAX_HIT(ch)  = 90;
   GET_MAX_MANA(ch) = 100;
-  GET_MAX_MOVE(ch) = 82;
+  GET_MAX_MOVE(ch) = 90;
 
-  switch (GET_CLASS(ch)) {
-
-  case CLASS_MAGIC_USER:
-    break;
-
-  case CLASS_CLERIC:
-    break;
-
-  case CLASS_THIEF:
-    SET_SKILL(ch, SKILL_SNEAK, 10);
-    SET_SKILL(ch, SKILL_HIDE, 5);
-    SET_SKILL(ch, SKILL_STEAL, 15);
-    SET_SKILL(ch, SKILL_BACKSTAB, 10);
-    SET_SKILL(ch, SKILL_PICK_LOCK, 10);
-    SET_SKILL(ch, SKILL_TRACK, 10);
-    break;
-
-  case CLASS_WARRIOR:
-    break;
-  }
+  grant_class_skills(ch, TRUE);
 
   advance_level(ch);
 
@@ -1463,11 +491,11 @@ void advance_level(struct char_data *ch)
 {
   int add_hp, add_mana = 0, add_move = 0, i;
 
-  add_hp = con_app[GET_CON(ch)].hitp;
+  add_hp = GET_ABILITY_MOD(GET_CON(ch));
 
   switch (GET_CLASS(ch)) {
 
-  case CLASS_MAGIC_USER:
+  case CLASS_SORCEROR:
     add_hp += rand_number(3, 8);
     add_mana = rand_number(GET_LEVEL(ch), (int)(1.5 * GET_LEVEL(ch)));
     add_mana = MIN(add_mana, 10);
@@ -1481,16 +509,42 @@ void advance_level(struct char_data *ch)
     add_move = rand_number(0, 2);
     break;
 
-  case CLASS_THIEF:
+  case CLASS_ROGUE:
     add_hp += rand_number(7, 13);
     add_mana = 0;
     add_move = rand_number(1, 3);
     break;
 
-  case CLASS_WARRIOR:
+  case CLASS_FIGHTER:
     add_hp += rand_number(10, 15);
     add_mana = 0;
     add_move = rand_number(1, 3);
+    break;
+
+  case CLASS_BARBARIAN:
+    add_hp += rand_number(12, 18);
+    add_mana = 0;
+    add_move = rand_number(1, 3);
+    break;
+
+  case CLASS_RANGER:
+    add_hp += rand_number(10, 15);
+    add_mana = 0;
+    add_move = rand_number(2, 4);
+    break;
+
+  case CLASS_BARD:
+    add_hp += rand_number(7, 13);
+    add_mana = rand_number(GET_LEVEL(ch), (int)(1.5 * GET_LEVEL(ch)));
+    add_mana = MIN(add_mana, 10);
+    add_move = rand_number(1, 3);
+    break;
+
+  case CLASS_DRUID:
+    add_hp += rand_number(10, 15);
+    add_mana = rand_number(GET_LEVEL(ch), (int)(1.5 * GET_LEVEL(ch)));
+    add_mana = MIN(add_mana, 10);
+    add_move = rand_number(1, 4);
     break;
   }
 
@@ -1499,11 +553,6 @@ void advance_level(struct char_data *ch)
 
   if (GET_LEVEL(ch) > 1)
     ch->points.max_mana += add_mana;
-
-  if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
-    GET_PRACTICES(ch) += MAX(2, wis_app[GET_WIS(ch)].bonus);
-  else
-    GET_PRACTICES(ch) += MIN(2, MAX(1, wis_app[GET_WIS(ch)].bonus));
 
   if (GET_LEVEL(ch) >= LVL_IMMORT) {
     for (i = 0; i < 3; i++)
@@ -1521,16 +570,8 @@ void advance_level(struct char_data *ch)
  * performance hit because it's not used very often. */
 int backstab_mult(int level)
 {
-  if (level <= 7)
-    return 2;	  /* level 1 - 7 */
-  else if (level <= 13)
-    return 3;	  /* level 8 - 13 */
-  else if (level <= 20)
-    return 4;	  /* level 14 - 20 */
-  else if (level <= 28)
-    return 5;	  /* level 21 - 28 */
-  else if (level < LVL_IMMORT)
-    return 6;	  /* all remaining mortal levels */
+  if (level < LVL_IMMORT)
+    return 2;  /* mortal levels */
   else
     return 20;	  /* immortals */
 }
@@ -1539,16 +580,28 @@ int backstab_mult(int level)
  * usable by a particular class, based on the ITEM_ANTI_{class} bitvectors. */
 int invalid_class(struct char_data *ch, struct obj_data *obj)
 {
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_MAGIC_USER) && IS_MAGIC_USER(ch))
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_SORCEROR) && IS_SORCEROR(ch))
     return TRUE;
 
   if (OBJ_FLAGGED(obj, ITEM_ANTI_CLERIC) && IS_CLERIC(ch))
     return TRUE;
 
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_WARRIOR) && IS_WARRIOR(ch))
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_FIGHTER) && IS_FIGHTER(ch))
     return TRUE;
 
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_THIEF) && IS_THIEF(ch))
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_ROGUE) && IS_ROGUE(ch))
+    return TRUE;
+
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_BARBARIAN) && IS_BARBARIAN(ch))
+    return TRUE;
+
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_RANGER) && IS_RANGER(ch))
+    return TRUE;
+
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_BARD) && IS_BARD(ch))
+    return TRUE;
+
+  if (OBJ_FLAGGED(obj, ITEM_ANTI_DRUID) && IS_DRUID(ch))
     return TRUE;
 
   return FALSE;
@@ -1559,81 +612,167 @@ int invalid_class(struct char_data *ch, struct obj_data *obj)
  * skill. */
 void init_spell_levels(void)
 {
-  /* MAGES */
-  spell_level(SPELL_MAGIC_MISSILE, CLASS_MAGIC_USER, 1);
-  spell_level(SPELL_DETECT_INVIS, CLASS_MAGIC_USER, 2);
-  spell_level(SPELL_DETECT_MAGIC, CLASS_MAGIC_USER, 2);
-  spell_level(SPELL_CHILL_TOUCH, CLASS_MAGIC_USER, 3);
-  spell_level(SPELL_INFRAVISION, CLASS_MAGIC_USER, 3);
-  spell_level(SPELL_INVISIBLE, CLASS_MAGIC_USER, 4);
-  spell_level(SPELL_ARMOR, CLASS_MAGIC_USER, 4);
-  spell_level(SPELL_BURNING_HANDS, CLASS_MAGIC_USER, 5);
-  spell_level(SPELL_LOCATE_OBJECT, CLASS_MAGIC_USER, 6);
-  spell_level(SPELL_STRENGTH, CLASS_MAGIC_USER, 6);
-  spell_level(SPELL_SHOCKING_GRASP, CLASS_MAGIC_USER, 7);
-  spell_level(SPELL_SLEEP, CLASS_MAGIC_USER, 8);
-  spell_level(SPELL_LIGHTNING_BOLT, CLASS_MAGIC_USER, 9);
-  spell_level(SPELL_BLINDNESS, CLASS_MAGIC_USER, 9);
-  spell_level(SPELL_DETECT_POISON, CLASS_MAGIC_USER, 10);
-  spell_level(SPELL_COLOR_SPRAY, CLASS_MAGIC_USER, 11);
-  spell_level(SPELL_ENERGY_DRAIN, CLASS_MAGIC_USER, 13);
-  spell_level(SPELL_CURSE, CLASS_MAGIC_USER, 14);
-  spell_level(SPELL_POISON, CLASS_MAGIC_USER, 14);
-  spell_level(SPELL_FIREBALL, CLASS_MAGIC_USER, 15);
-  spell_level(SPELL_CHARM, CLASS_MAGIC_USER, 16);
-  spell_level(SPELL_IDENTIFY, CLASS_MAGIC_USER, 20);
-  spell_level(SPELL_FLY, CLASS_MAGIC_USER, 22);
-  spell_level(SPELL_ENCHANT_WEAPON, CLASS_MAGIC_USER, 26);
-  spell_level(SPELL_CLONE, CLASS_MAGIC_USER, 30);
+  /* SORCERORS */
+  spell_level(SPELL_MAGIC_MISSILE, CLASS_SORCEROR, 1);
+  spell_level(SPELL_DETECT_INVIS, CLASS_SORCEROR, 1);
+  spell_level(SPELL_DETECT_MAGIC, CLASS_SORCEROR, 1);
+  spell_level(SPELL_CHILL_TOUCH, CLASS_SORCEROR, 1);
+  spell_level(SPELL_INFRAVISION, CLASS_SORCEROR, 1);
+  spell_level(SPELL_INVISIBLE, CLASS_SORCEROR, 1);
+  spell_level(SPELL_ARMOR, CLASS_SORCEROR, 1);
+  spell_level(SPELL_BURNING_HANDS, CLASS_SORCEROR, 1);
+  spell_level(SPELL_LOCATE_OBJECT, CLASS_SORCEROR, 1);
+  spell_level(SPELL_STRENGTH, CLASS_SORCEROR, 1);
+  spell_level(SPELL_SHOCKING_GRASP, CLASS_SORCEROR, 1);
+  spell_level(SPELL_SLEEP, CLASS_SORCEROR, 1);
+  spell_level(SPELL_LIGHTNING_BOLT, CLASS_SORCEROR, 1);
+  spell_level(SPELL_BLINDNESS, CLASS_SORCEROR, 1);
+  spell_level(SPELL_DETECT_POISON, CLASS_SORCEROR, 1);
+  spell_level(SPELL_COLOR_SPRAY, CLASS_SORCEROR, 1);
+  spell_level(SPELL_ENERGY_DRAIN, CLASS_SORCEROR, 1);
+  spell_level(SPELL_CURSE, CLASS_SORCEROR, 1);
+  spell_level(SPELL_POISON, CLASS_SORCEROR, 1);
+  spell_level(SPELL_FIREBALL, CLASS_SORCEROR, 1);
+  spell_level(SPELL_CHARM, CLASS_SORCEROR, 1);
+  spell_level(SPELL_IDENTIFY, CLASS_SORCEROR, 1);
+  spell_level(SPELL_FLY, CLASS_SORCEROR, 1);
+  spell_level(SPELL_ENCHANT_WEAPON, CLASS_SORCEROR, 1);
+  spell_level(SPELL_CLONE, CLASS_SORCEROR, 1);
+  spell_level(SKILL_UNARMED, CLASS_SORCEROR, 1);
+  spell_level(SKILL_ARCANA, CLASS_SORCEROR, 1);
+  spell_level(SKILL_HISTORY, CLASS_SORCEROR, 1);
+  spell_level(SKILL_INSIGHT, CLASS_SORCEROR, 1);
 
   /* CLERICS */
   spell_level(SPELL_CURE_LIGHT, CLASS_CLERIC, 1);
   spell_level(SPELL_ARMOR, CLASS_CLERIC, 1);
-  spell_level(SPELL_CREATE_FOOD, CLASS_CLERIC, 2);
-  spell_level(SPELL_CREATE_WATER, CLASS_CLERIC, 2);
-  spell_level(SPELL_DETECT_POISON, CLASS_CLERIC, 3);
-  spell_level(SPELL_DETECT_ALIGN, CLASS_CLERIC, 4);
-  spell_level(SPELL_CURE_BLIND, CLASS_CLERIC, 4);
-  spell_level(SPELL_BLESS, CLASS_CLERIC, 5);
-  spell_level(SPELL_DETECT_INVIS, CLASS_CLERIC, 6);
-  spell_level(SPELL_BLINDNESS, CLASS_CLERIC, 6);
-  spell_level(SPELL_INFRAVISION, CLASS_CLERIC, 7);
-  spell_level(SPELL_PROT_FROM_EVIL, CLASS_CLERIC, 8);
-  spell_level(SPELL_POISON, CLASS_CLERIC, 8);
-  spell_level(SPELL_GROUP_ARMOR, CLASS_CLERIC, 9);
-  spell_level(SPELL_CURE_CRITIC, CLASS_CLERIC, 9);
-  spell_level(SPELL_SUMMON, CLASS_CLERIC, 10);
-  spell_level(SPELL_REMOVE_POISON, CLASS_CLERIC, 10);
-  spell_level(SPELL_IDENTIFY, CLASS_CLERIC, 11);
-  spell_level(SPELL_WORD_OF_RECALL, CLASS_CLERIC, 12);
-  spell_level(SPELL_DARKNESS, CLASS_CLERIC, 12);
-  spell_level(SPELL_EARTHQUAKE, CLASS_CLERIC, 12);
-  spell_level(SPELL_DISPEL_EVIL, CLASS_CLERIC, 14);
-  spell_level(SPELL_DISPEL_GOOD, CLASS_CLERIC, 14);
-  spell_level(SPELL_SANCTUARY, CLASS_CLERIC, 15);
-  spell_level(SPELL_CALL_LIGHTNING, CLASS_CLERIC, 15);
-  spell_level(SPELL_HEAL, CLASS_CLERIC, 16);
-  spell_level(SPELL_CONTROL_WEATHER, CLASS_CLERIC, 17);
-  spell_level(SPELL_SENSE_LIFE, CLASS_CLERIC, 18);
-  spell_level(SPELL_HARM, CLASS_CLERIC, 19);
-  spell_level(SPELL_GROUP_HEAL, CLASS_CLERIC, 22);
-  spell_level(SPELL_REMOVE_CURSE, CLASS_CLERIC, 26);
+  spell_level(SPELL_CREATE_FOOD, CLASS_CLERIC, 1);
+  spell_level(SPELL_CREATE_WATER, CLASS_CLERIC, 1);
+  spell_level(SPELL_DETECT_POISON, CLASS_CLERIC, 1);
+  spell_level(SPELL_DETECT_ALIGN, CLASS_CLERIC, 1);
+  spell_level(SPELL_CURE_BLIND, CLASS_CLERIC, 1);
+  spell_level(SPELL_BLESS, CLASS_CLERIC, 1);
+  spell_level(SPELL_DETECT_INVIS, CLASS_CLERIC, 1);
+  spell_level(SPELL_BLINDNESS, CLASS_CLERIC, 1);
+  spell_level(SPELL_INFRAVISION, CLASS_CLERIC, 1);
+  spell_level(SPELL_PROT_FROM_EVIL, CLASS_CLERIC, 1);
+  spell_level(SPELL_POISON, CLASS_CLERIC, 1);
+  spell_level(SPELL_GROUP_ARMOR, CLASS_CLERIC, 1);
+  spell_level(SPELL_CURE_CRITIC, CLASS_CLERIC, 1);
+  spell_level(SPELL_SUMMON, CLASS_CLERIC, 1);
+  spell_level(SPELL_REMOVE_POISON, CLASS_CLERIC, 1);
+  spell_level(SPELL_IDENTIFY, CLASS_CLERIC, 1);
+  spell_level(SPELL_WORD_OF_RECALL, CLASS_CLERIC, 1);
+  spell_level(SPELL_DARKNESS, CLASS_CLERIC, 1);
+  spell_level(SPELL_EARTHQUAKE, CLASS_CLERIC, 1);
+  spell_level(SPELL_DISPEL_EVIL, CLASS_CLERIC, 1);
+  spell_level(SPELL_DISPEL_GOOD, CLASS_CLERIC, 1);
+  spell_level(SPELL_SANCTUARY, CLASS_CLERIC, 1);
+  spell_level(SPELL_CALL_LIGHTNING, CLASS_CLERIC, 1);
+  spell_level(SPELL_HEAL, CLASS_CLERIC, 1);
+  spell_level(SPELL_CONTROL_WEATHER, CLASS_CLERIC, 1);
+  spell_level(SPELL_SENSE_LIFE, CLASS_CLERIC, 1);
+  spell_level(SPELL_HARM, CLASS_CLERIC, 1);
+  spell_level(SPELL_GROUP_HEAL, CLASS_CLERIC, 1);
+  spell_level(SPELL_REMOVE_CURSE, CLASS_CLERIC, 1);
+  spell_level(SKILL_SHIELD_USE, CLASS_CLERIC, 1);
+  spell_level(SKILL_ACROBATICS, CLASS_CLERIC, 1);
+  spell_level(SKILL_ARCANA, CLASS_CLERIC, 1);
+  spell_level(SKILL_RELIGION, CLASS_CLERIC, 1);
 
-  /* THIEVES */
-  spell_level(SKILL_SNEAK, CLASS_THIEF, 1);
-  spell_level(SKILL_PICK_LOCK, CLASS_THIEF, 2);
-  spell_level(SKILL_BACKSTAB, CLASS_THIEF, 3);
-  spell_level(SKILL_STEAL, CLASS_THIEF, 4);
-  spell_level(SKILL_HIDE, CLASS_THIEF, 5);
-  spell_level(SKILL_TRACK, CLASS_THIEF, 6);
+  /* ROGUES */
+  spell_level(SKILL_PICK_LOCK, CLASS_ROGUE, 1);
+  spell_level(SKILL_BACKSTAB, CLASS_ROGUE, 1);
+  spell_level(SKILL_TRACK, CLASS_ROGUE, 1);
+  spell_level(SKILL_UNARMED, CLASS_ROGUE, 1);
+  spell_level(SKILL_PIERCING_WEAPONS, CLASS_ROGUE, 1);
+  spell_level(SKILL_SHIELD_USE, CLASS_ROGUE, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_ROGUE, 1);
+  spell_level(SKILL_SLEIGHT_OF_HAND, CLASS_ROGUE, 1);
+  spell_level(SKILL_STEALTH, CLASS_ROGUE, 1);
+  spell_level(SKILL_ACROBATICS, CLASS_ROGUE, 1);
+  spell_level(SKILL_DECEPTION, CLASS_ROGUE, 1);
+  spell_level(SKILL_INVESTIGATION, CLASS_ROGUE, 1);
 
-  /* WARRIORS */
-  spell_level(SKILL_KICK, CLASS_WARRIOR, 1);
-  spell_level(SKILL_RESCUE, CLASS_WARRIOR, 3);
-  spell_level(SKILL_BANDAGE, CLASS_WARRIOR, 7);
-  spell_level(SKILL_TRACK, CLASS_WARRIOR, 9);
-  spell_level(SKILL_BASH, CLASS_WARRIOR, 12);
-  spell_level(SKILL_WHIRLWIND, CLASS_WARRIOR, 16);
+  /* FIGHTERS */
+  spell_level(SKILL_KICK, CLASS_FIGHTER, 1);
+  spell_level(SKILL_RESCUE, CLASS_FIGHTER, 1);
+  spell_level(SKILL_BANDAGE, CLASS_FIGHTER, 1);
+  spell_level(SKILL_BASH, CLASS_FIGHTER, 1);
+  spell_level(SKILL_UNARMED, CLASS_FIGHTER, 1);
+  spell_level(SKILL_SLASHING_WEAPONS, CLASS_FIGHTER, 1);
+  spell_level(SKILL_PIERCING_WEAPONS, CLASS_FIGHTER, 1);
+  spell_level(SKILL_BLUDGEONING_WEAPONS, CLASS_FIGHTER, 1);
+  spell_level(SKILL_SHIELD_USE, CLASS_FIGHTER, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_FIGHTER, 1);
+  spell_level(SKILL_ATHLETICS, CLASS_FIGHTER, 1);
+  spell_level(SKILL_INTIMIDATION, CLASS_FIGHTER, 1);
+  spell_level(SKILL_SURVIVAL, CLASS_FIGHTER, 1);
+
+  /* BARBARIANS */
+  spell_level(SKILL_KICK, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_RESCUE, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_BANDAGE, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_WHIRLWIND, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_UNARMED, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_PIERCING_WEAPONS, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_BLUDGEONING_WEAPONS, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_ATHLETICS, CLASS_BARBARIAN, 1);
+  spell_level(SKILL_INTIMIDATION, CLASS_BARBARIAN, 1);
+
+  /* RANGERS */
+  spell_level(SKILL_BANDAGE, CLASS_RANGER, 1);
+  spell_level(SKILL_TRACK, CLASS_RANGER, 1);
+  spell_level(SKILL_BASH, CLASS_RANGER, 1);
+  spell_level(SKILL_UNARMED, CLASS_RANGER, 1);
+  spell_level(SKILL_SLASHING_WEAPONS, CLASS_RANGER, 1);
+  spell_level(SKILL_PIERCING_WEAPONS, CLASS_RANGER, 1);
+  spell_level(SKILL_SHIELD_USE, CLASS_RANGER, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_RANGER, 1);
+  spell_level(SKILL_SLEIGHT_OF_HAND, CLASS_RANGER, 1);
+  spell_level(SKILL_STEALTH, CLASS_RANGER, 1);
+  spell_level(SKILL_NATURE, CLASS_RANGER, 1);
+  spell_level(SKILL_ANIMAL_HANDLING, CLASS_RANGER, 1);
+  spell_level(SKILL_SURVIVAL, CLASS_RANGER, 1);
+  spell_level(SKILL_ATHLETICS, CLASS_RANGER, 1);
+  spell_level(SKILL_PERSUASION, CLASS_RANGER, 1);
+
+  /* BARDS */
+  spell_level(SPELL_ARMOR, CLASS_BARD, 1);
+  spell_level(SPELL_IDENTIFY, CLASS_BARD, 1);
+  spell_level(SKILL_BANDAGE, CLASS_BARD, 1);
+  spell_level(SKILL_TRACK, CLASS_BARD, 1);
+  spell_level(SKILL_PICK_LOCK, CLASS_BARD, 1);
+  spell_level(SKILL_UNARMED, CLASS_BARD, 1);
+  spell_level(SKILL_PIERCING_WEAPONS, CLASS_BARD, 1);
+  spell_level(SKILL_SHIELD_USE, CLASS_BARD, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_BARD, 1);
+  spell_level(SKILL_SLEIGHT_OF_HAND, CLASS_BARD, 1);
+  spell_level(SKILL_ACROBATICS, CLASS_BARD, 1);
+  spell_level(SKILL_HISTORY, CLASS_BARD, 1);
+  spell_level(SKILL_INVESTIGATION, CLASS_BARD, 1);
+  spell_level(SKILL_SURVIVAL, CLASS_BARD, 1);
+  spell_level(SKILL_STEALTH, CLASS_BARD, 1);
+
+  /* DRUIDS */
+  spell_level(SPELL_DETECT_INVIS, CLASS_DRUID, 1);
+  spell_level(SPELL_DETECT_MAGIC, CLASS_DRUID, 1);
+  spell_level(SPELL_LOCATE_OBJECT, CLASS_DRUID, 1);
+  spell_level(SKILL_BANDAGE, CLASS_DRUID, 1);
+  spell_level(SKILL_TRACK, CLASS_DRUID, 1);
+  spell_level(SKILL_UNARMED, CLASS_DRUID, 1);
+  spell_level(SKILL_PIERCING_WEAPONS, CLASS_DRUID, 1);
+  spell_level(SKILL_SHIELD_USE, CLASS_DRUID, 1);
+  spell_level(SKILL_PERCEPTION, CLASS_DRUID, 1);
+  spell_level(SKILL_ACROBATICS, CLASS_DRUID, 1);
+  spell_level(SKILL_ARCANA, CLASS_DRUID, 1);
+  spell_level(SKILL_HISTORY, CLASS_DRUID, 1);
+  spell_level(SKILL_INSIGHT, CLASS_DRUID, 1);
+  spell_level(SKILL_INVESTIGATION, CLASS_DRUID, 1);
+  spell_level(SKILL_PERSUASION, CLASS_DRUID, 1);
+  spell_level(SKILL_RELIGION, CLASS_DRUID, 1);
+  spell_level(SKILL_SURVIVAL, CLASS_DRUID, 1);
 }
 
 /* This is the exp given to implementors -- it must always be greater than the
@@ -1657,41 +796,11 @@ int level_exp(int chclass, int level)
   /* Exp required for normal mortals is below */
   switch (chclass) {
 
-    case CLASS_MAGIC_USER:
+    case CLASS_SORCEROR:
     switch (level) {
       case  0: return 0;
       case  1: return 1;
-      case  2: return 2500;
-      case  3: return 5000;
-      case  4: return 10000;
-      case  5: return 20000;
-      case  6: return 40000;
-      case  7: return 60000;
-      case  8: return 90000;
-      case  9: return 135000;
-      case 10: return 250000;
-      case 11: return 375000;
-      case 12: return 750000;
-      case 13: return 1125000;
-      case 14: return 1500000;
-      case 15: return 1875000;
-      case 16: return 2250000;
-      case 17: return 2625000;
-      case 18: return 3000000;
-      case 19: return 3375000;
-      case 20: return 3750000;
-      case 21: return 4000000;
-      case 22: return 4300000;
-      case 23: return 4600000;
-      case 24: return 4900000;
-      case 25: return 5200000;
-      case 26: return 5500000;
-      case 27: return 5950000;
-      case 28: return 6400000;
-      case 29: return 6850000;
-      case 30: return 7400000;
-      /* add new levels here */
-      case LVL_IMMORT: return 8000000;
+      case LVL_IMMORT: return 9999999;
     }
     break;
 
@@ -1699,113 +808,55 @@ int level_exp(int chclass, int level)
     switch (level) {
       case  0: return 0;
       case  1: return 1;
-      case  2: return 1500;
-      case  3: return 3000;
-      case  4: return 6000;
-      case  5: return 13000;
-      case  6: return 27500;
-      case  7: return 55000;
-      case  8: return 110000;
-      case  9: return 225000;
-      case 10: return 450000;
-      case 11: return 675000;
-      case 12: return 900000;
-      case 13: return 1125000;
-      case 14: return 1350000;
-      case 15: return 1575000;
-      case 16: return 1800000;
-      case 17: return 2100000;
-      case 18: return 2400000;
-      case 19: return 2700000;
-      case 20: return 3000000;
-      case 21: return 3250000;
-      case 22: return 3500000;
-      case 23: return 3800000;
-      case 24: return 4100000;
-      case 25: return 4400000;
-      case 26: return 4800000;
-      case 27: return 5200000;
-      case 28: return 5600000;
-      case 29: return 6000000;
-      case 30: return 6400000;
-      /* add new levels here */
-      case LVL_IMMORT: return 7000000;
+      case LVL_IMMORT: return 9999999;
     }
     break;
 
-    case CLASS_THIEF:
+    case CLASS_ROGUE:
     switch (level) {
       case  0: return 0;
       case  1: return 1;
-      case  2: return 1250;
-      case  3: return 2500;
-      case  4: return 5000;
-      case  5: return 10000;
-      case  6: return 20000;
-      case  7: return 40000;
-      case  8: return 70000;
-      case  9: return 110000;
-      case 10: return 160000;
-      case 11: return 220000;
-      case 12: return 440000;
-      case 13: return 660000;
-      case 14: return 880000;
-      case 15: return 1100000;
-      case 16: return 1500000;
-      case 17: return 2000000;
-      case 18: return 2500000;
-      case 19: return 3000000;
-      case 20: return 3500000;
-      case 21: return 3650000;
-      case 22: return 3800000;
-      case 23: return 4100000;
-      case 24: return 4400000;
-      case 25: return 4700000;
-      case 26: return 5100000;
-      case 27: return 5500000;
-      case 28: return 5900000;
-      case 29: return 6300000;
-      case 30: return 6650000;
-      /* add new levels here */
-      case LVL_IMMORT: return 7000000;
+      case LVL_IMMORT: return 9999999;
     }
     break;
 
-    case CLASS_WARRIOR:
+    case CLASS_FIGHTER:
     switch (level) {
       case  0: return 0;
       case  1: return 1;
-      case  2: return 2000;
-      case  3: return 4000;
-      case  4: return 8000;
-      case  5: return 16000;
-      case  6: return 32000;
-      case  7: return 64000;
-      case  8: return 125000;
-      case  9: return 250000;
-      case 10: return 500000;
-      case 11: return 750000;
-      case 12: return 1000000;
-      case 13: return 1250000;
-      case 14: return 1500000;
-      case 15: return 1850000;
-      case 16: return 2200000;
-      case 17: return 2550000;
-      case 18: return 2900000;
-      case 19: return 3250000;
-      case 20: return 3600000;
-      case 21: return 3900000;
-      case 22: return 4200000;
-      case 23: return 4500000;
-      case 24: return 4800000;
-      case 25: return 5150000;
-      case 26: return 5500000;
-      case 27: return 5950000;
-      case 28: return 6400000;
-      case 29: return 6850000;
-      case 30: return 7400000;
-      /* add new levels here */
-      case LVL_IMMORT: return 8000000;
+      case LVL_IMMORT: return 9999999;
+    }
+    break;
+
+    case CLASS_BARBARIAN:
+    switch (level) {
+      case  0: return 0;
+      case  1: return 1;
+      case LVL_IMMORT: return 9999999;
+    }
+    break;
+
+    case CLASS_RANGER:
+    switch (level) {
+      case  0: return 0;
+      case  1: return 1;
+      case LVL_IMMORT: return 9999999;
+    }
+    break;
+
+    case CLASS_BARD:
+    switch (level) {
+      case  0: return 0;
+      case  1: return 1;
+      case LVL_IMMORT: return 9999999;
+    }
+    break;
+
+    case CLASS_DRUID:
+    switch (level) {
+      case  0: return 0;
+      case  1: return 1;
+      case LVL_IMMORT: return 9999999;
     }
     break;
   }
@@ -1816,284 +867,3 @@ int level_exp(int chclass, int level)
   log("SYSERR: XP tables not set up correctly in class.c!");
   return 123456;
 }
-
-/* Default titles of male characters. */
-const char *title_male(int chclass, int level)
-{
-  if (level <= 0 || level > LVL_IMPL)
-    return "the Man";
-  if (level == LVL_IMPL)
-    return "the Implementor";
-
-  switch (chclass) {
-
-    case CLASS_MAGIC_USER:
-    switch (level) {
-      case  1: return "the Apprentice of Magic";
-      case  2: return "the Spell Student";
-      case  3: return "the Scholar of Magic";
-      case  4: return "the Delver in Spells";
-      case  5: return "the Medium of Magic";
-      case  6: return "the Scribe of Magic";
-      case  7: return "the Seer";
-      case  8: return "the Sage";
-      case  9: return "the Illusionist";
-      case 10: return "the Abjurer";
-      case 11: return "the Invoker";
-      case 12: return "the Enchanter";
-      case 13: return "the Conjurer";
-      case 14: return "the Magician";
-      case 15: return "the Creator";
-      case 16: return "the Savant";
-      case 17: return "the Magus";
-      case 18: return "the Wizard";
-      case 19: return "the Warlock";
-      case 20: return "the Sorcerer";
-      case 21: return "the Necromancer";
-      case 22: return "the Thaumaturge";
-      case 23: return "the Student of the Occult";
-      case 24: return "the Disciple of the Uncanny";
-      case 25: return "the Minor Elemental";
-      case 26: return "the Greater Elemental";
-      case 27: return "the Crafter of Magics";
-      case 28: return "the Shaman";
-      case 29: return "the Keeper of Talismans";
-      case 30: return "the Archmage";
-      case LVL_IMMORT: return "the Immortal Warlock";
-      case LVL_GOD: return "the Avatar of Magic";
-      case LVL_GRGOD: return "the God of Magic";
-      default: return "the Mage";
-    }
-
-    case CLASS_CLERIC:
-    switch (level) {
-      case  1: return "the Believer";
-      case  2: return "the Attendant";
-      case  3: return "the Acolyte";
-      case  4: return "the Novice";
-      case  5: return "the Missionary";
-      case  6: return "the Adept";
-      case  7: return "the Deacon";
-      case  8: return "the Vicar";
-      case  9: return "the Priest";
-      case 10: return "the Minister";
-      case 11: return "the Canon";
-      case 12: return "the Levite";
-      case 13: return "the Curate";
-      case 14: return "the Monk";
-      case 15: return "the Healer";
-      case 16: return "the Chaplain";
-      case 17: return "the Expositor";
-      case 18: return "the Bishop";
-      case 19: return "the Arch Bishop";
-      case 20: return "the Patriarch";
-      /* no one ever thought up these titles 21-30 */
-      case LVL_IMMORT: return "the Immortal Cardinal";
-      case LVL_GOD: return "the Inquisitor";
-      case LVL_GRGOD: return "the God of Good and Evil";
-      default: return "the Cleric";
-    }
-
-    case CLASS_THIEF:
-    switch (level) {
-      case  1: return "the Pilferer";
-      case  2: return "the Footpad";
-      case  3: return "the Filcher";
-      case  4: return "the Pick-Pocket";
-      case  5: return "the Sneak";
-      case  6: return "the Pincher";
-      case  7: return "the Cut-Purse";
-      case  8: return "the Snatcher";
-      case  9: return "the Sharper";
-      case 10: return "the Rogue";
-      case 11: return "the Robber";
-      case 12: return "the Magsman";
-      case 13: return "the Highwayman";
-      case 14: return "the Burglar";
-      case 15: return "the Thief";
-      case 16: return "the Knifer";
-      case 17: return "the Quick-Blade";
-      case 18: return "the Killer";
-      case 19: return "the Brigand";
-      case 20: return "the Cut-Throat";
-      /* no one ever thought up these titles 21-30 */
-      case LVL_IMMORT: return "the Immortal Assassin";
-      case LVL_GOD: return "the Demi God of Thieves";
-      case LVL_GRGOD: return "the God of Thieves and Tradesmen";
-      default: return "the Thief";
-    }
-
-    case CLASS_WARRIOR:
-    switch(level) {
-      case  1: return "the Swordpupil";
-      case  2: return "the Recruit";
-      case  3: return "the Sentry";
-      case  4: return "the Fighter";
-      case  5: return "the Soldier";
-      case  6: return "the Warrior";
-      case  7: return "the Veteran";
-      case  8: return "the Swordsman";
-      case  9: return "the Fencer";
-      case 10: return "the Combatant";
-      case 11: return "the Hero";
-      case 12: return "the Myrmidon";
-      case 13: return "the Swashbuckler";
-      case 14: return "the Mercenary";
-      case 15: return "the Swordmaster";
-      case 16: return "the Lieutenant";
-      case 17: return "the Champion";
-      case 18: return "the Dragoon";
-      case 19: return "the Cavalier";
-      case 20: return "the Knight";
-      /* no one ever thought up these titles 21-30 */
-      case LVL_IMMORT: return "the Immortal Warlord";
-      case LVL_GOD: return "the Extirpator";
-      case LVL_GRGOD: return "the God of War";
-      default: return "the Warrior";
-    }
-  }
-
-  /* Default title for classes which do not have titles defined */
-  return "the Classless";
-}
-
-/* Default titles of female characters. */
-const char *title_female(int chclass, int level)
-{
-  if (level <= 0 || level > LVL_IMPL)
-    return "the Woman";
-  if (level == LVL_IMPL)
-    return "the Implementress";
-
-  switch (chclass) {
-
-    case CLASS_MAGIC_USER:
-    switch (level) {
-      case  1: return "the Apprentice of Magic";
-      case  2: return "the Spell Student";
-      case  3: return "the Scholar of Magic";
-      case  4: return "the Delveress in Spells";
-      case  5: return "the Medium of Magic";
-      case  6: return "the Scribess of Magic";
-      case  7: return "the Seeress";
-      case  8: return "the Sage";
-      case  9: return "the Illusionist";
-      case 10: return "the Abjuress";
-      case 11: return "the Invoker";
-      case 12: return "the Enchantress";
-      case 13: return "the Conjuress";
-      case 14: return "the Witch";
-      case 15: return "the Creator";
-      case 16: return "the Savant";
-      case 17: return "the Craftess";
-      case 18: return "the Wizard";
-      case 19: return "the War Witch";
-      case 20: return "the Sorceress";
-      case 21: return "the Necromancress";
-      case 22: return "the Thaumaturgess";
-      case 23: return "the Student of the Occult";
-      case 24: return "the Disciple of the Uncanny";
-      case 25: return "the Minor Elementress";
-      case 26: return "the Greater Elementress";
-      case 27: return "the Crafter of Magics";
-      case 28: return "Shaman";
-      case 29: return "the Keeper of Talismans";
-      case 30: return "Archwitch";
-      case LVL_IMMORT: return "the Immortal Enchantress";
-      case LVL_GOD: return "the Empress of Magic";
-      case LVL_GRGOD: return "the Goddess of Magic";
-      default: return "the Witch";
-    }
-
-    case CLASS_CLERIC:
-    switch (level) {
-      case  1: return "the Believer";
-      case  2: return "the Attendant";
-      case  3: return "the Acolyte";
-      case  4: return "the Novice";
-      case  5: return "the Missionary";
-      case  6: return "the Adept";
-      case  7: return "the Deaconess";
-      case  8: return "the Vicaress";
-      case  9: return "the Priestess";
-      case 10: return "the Lady Minister";
-      case 11: return "the Canon";
-      case 12: return "the Levitess";
-      case 13: return "the Curess";
-      case 14: return "the Nunne";
-      case 15: return "the Healess";
-      case 16: return "the Chaplain";
-      case 17: return "the Expositress";
-      case 18: return "the Bishop";
-      case 19: return "the Arch Lady of the Church";
-      case 20: return "the Matriarch";
-      /* no one ever thought up these titles 21-30 */
-      case LVL_IMMORT: return "the Immortal Priestess";
-      case LVL_GOD: return "the Inquisitress";
-      case LVL_GRGOD: return "the Goddess of Good and Evil";
-      default: return "the Cleric";
-    }
-
-    case CLASS_THIEF:
-    switch (level) {
-      case  1: return "the Pilferess";
-      case  2: return "the Footpad";
-      case  3: return "the Filcheress";
-      case  4: return "the Pick-Pocket";
-      case  5: return "the Sneak";
-      case  6: return "the Pincheress";
-      case  7: return "the Cut-Purse";
-      case  8: return "the Snatcheress";
-      case  9: return "the Sharpress";
-      case 10: return "the Rogue";
-      case 11: return "the Robber";
-      case 12: return "the Magswoman";
-      case 13: return "the Highwaywoman";
-      case 14: return "the Burglaress";
-      case 15: return "the Thief";
-      case 16: return "the Knifer";
-      case 17: return "the Quick-Blade";
-      case 18: return "the Murderess";
-      case 19: return "the Brigand";
-      case 20: return "the Cut-Throat";
-      /* no one ever thought up these titles 21-30 */
-      case LVL_IMMORT: return "the Immortal Assassin";
-      case LVL_GOD: return "the Demi Goddess of Thieves";
-      case LVL_GRGOD: return "the Goddess of Thieves and Tradesmen";
-      default: return "the Thief";
-    }
-
-    case CLASS_WARRIOR:
-    switch(level) {
-      case  1: return "the Swordpupil";
-      case  2: return "the Recruit";
-      case  3: return "the Sentress";
-      case  4: return "the Fighter";
-      case  5: return "the Soldier";
-      case  6: return "the Warrior";
-      case  7: return "the Veteran";
-      case  8: return "the Swordswoman";
-      case  9: return "the Fenceress";
-      case 10: return "the Combatess";
-      case 11: return "the Heroine";
-      case 12: return "the Myrmidon";
-      case 13: return "the Swashbuckleress";
-      case 14: return "the Mercenaress";
-      case 15: return "the Swordmistress";
-      case 16: return "the Lieutenant";
-      case 17: return "the Lady Champion";
-      case 18: return "the Lady Dragoon";
-      case 19: return "the Cavalier";
-      case 20: return "the Lady Knight";
-      /* no one ever thought up these titles 21-30 */
-      case LVL_IMMORT: return "the Immortal Lady of War";
-      case LVL_GOD: return "the Queen of Destruction";
-      case LVL_GRGOD: return "the Goddess of War";
-      default: return "the Warrior";
-    }
-  }
-
-  /* Default title for classes which do not have titles defined */
-  return "the Classless";
-}
-

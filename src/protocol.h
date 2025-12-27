@@ -9,7 +9,7 @@
  Set your MUD_NAME, and change descriptor_t if necessary.
  ******************************************************************************/
 
-#define MUD_NAME "tbaMUD"
+#define MUD_NAME "MiranthasMUD"
 
 typedef struct descriptor_data descriptor_t;
 
@@ -113,8 +113,6 @@ typedef enum
    eMSDP_MONEY, 
    eMSDP_MOVEMENT, 
    eMSDP_MOVEMENT_MAX, 
-   eMSDP_HITROLL, 
-   eMSDP_DAMROLL, 
    eMSDP_AC, 
    eMSDP_STR, 
    eMSDP_INT, 

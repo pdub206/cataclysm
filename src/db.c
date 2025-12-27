@@ -38,6 +38,7 @@
 #include "mud_event.h"
 #include "msgedit.h"
 #include "screen.h"
+#include "roomsave.h"
 #include <sys/stat.h>
 
 /*  declarations of most of the 'global' variables */
@@ -83,7 +84,7 @@ int top_shop = -1;              /* top of shop table             */
 
 int no_mail = 0;                /* mail disabled?		 */
 int mini_mud = 0;               /* mini-mud mode?		 */
-int no_rent_check = 0;          /* skip rent check on boot?	 */
+int no_rent_check = 0;          /* skip save-file check on boot? */
 time_t boot_time = 0;           /* time of mud boot		 */
 int circle_restrict = 0;        /* level of game restriction	 */
 room_rnum r_mortal_start_room;	/* rnum of mortal start room	 */
@@ -120,8 +121,6 @@ struct time_info_data time_info;  /* the infomation about the time    */
 struct weather_data weather_info;	/* the infomation about the weather */
 struct player_special_data dummy_mob;	/* dummy spec area for mobs	*/
 struct reset_q_type reset_q;	    /* queue of zones to be reset	 */
-
-struct happyhour happy_data = {0,0,0,0};
 
 /* declaration of local (file scope) variables */
 static int converting = FALSE;
@@ -574,8 +573,8 @@ void destroy_db(void)
       free(obj_proto[cnt].description);
     if (obj_proto[cnt].short_description)
       free(obj_proto[cnt].short_description);
-    if (obj_proto[cnt].action_description)
-      free(obj_proto[cnt].action_description);
+    if (obj_proto[cnt].main_description)
+      free(obj_proto[cnt].main_description);
     free_extra_descriptions(obj_proto[cnt].ex_description);
 
     /* free script proto list */
@@ -588,14 +587,14 @@ void destroy_db(void)
   for (cnt = 0; cnt <= top_of_mobt; cnt++) {
     if (mob_proto[cnt].player.name)
       free(mob_proto[cnt].player.name);
-    if (mob_proto[cnt].player.title)
-      free(mob_proto[cnt].player.title);
     if (mob_proto[cnt].player.short_descr)
       free(mob_proto[cnt].player.short_descr);
     if (mob_proto[cnt].player.long_descr)
       free(mob_proto[cnt].player.long_descr);
     if (mob_proto[cnt].player.description)
       free(mob_proto[cnt].player.description);
+    if (mob_proto[cnt].player.background)
+      free(mob_proto[cnt].player.background);
 
     /* free script proto list */
     free_proto_script(&mob_proto[cnt], MOB_TRIGGER);
@@ -773,7 +772,7 @@ void boot_db(void)
   load_ibt_file(SCMD_TYPO);
 
   if (!no_rent_check) {
-    log("Deleting timed-out crash and rent files:");
+    log("Deleting timed-out crash and idle-save files:");
     update_obj_file();
     log("   Done.");
   }
@@ -783,6 +782,11 @@ void boot_db(void)
     log("Booting houses.");
     House_boot();
   }
+
+  /* Restore persistent room contents last so they take precedence. */
+  log("Loading Room Contents.");
+  RoomSave_init_dirty();
+  RoomSave_boot();
 
   log("Cleaning up last log.");
   clean_llog_entries();
@@ -1348,6 +1352,7 @@ void parse_room(FILE *fl, int virtual_nr)
     world[room_nr].dir_option[i] = NULL;
 
   world[room_nr].ex_description = NULL;
+  world[room_nr].forage = NULL;
 
   snprintf(buf, sizeof(buf), "SYSERR: Format error in room #%d (expecting D/E/S)", virtual_nr);
 
@@ -1368,6 +1373,38 @@ void parse_room(FILE *fl, int virtual_nr)
 
       new_descr->next = world[room_nr].ex_description;
       world[room_nr].ex_description = new_descr;
+      break;
+    case 'F':
+      for (;;) {
+        obj_vnum ovnum;
+        int dc;
+
+        if (!get_line(fl, line)) {
+          log("SYSERR: Unexpected EOF while reading 'F' block in room #%d.", virtual_nr);
+          break;
+        }
+        if (sscanf(line, "%d %d", &ovnum, &dc) != 2) {
+          log("SYSERR: Bad 'F' line in room #%d: '%s' (need <obj_vnum> <dc>).", virtual_nr, line);
+          continue;
+        }
+        if (ovnum == 0 && dc == 0)
+          break;
+
+        struct forage_entry *e;
+        struct forage_entry *tail;
+        CREATE(e, struct forage_entry, 1);
+        e->obj_vnum = ovnum;
+        e->dc = dc;
+        e->next = NULL;
+        if (!world[room_nr].forage) {
+          world[room_nr].forage = e;
+        } else {
+          tail = world[room_nr].forage;
+          while (tail->next)
+            tail = tail->next;
+          tail->next = e;
+        }
+      }
       break;
     case 'S':			/* end of room */
       /* DG triggers -- script is defined after the end of the room */
@@ -1548,44 +1585,25 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
     exit(1);
   }
 
-  if (sscanf(line, " %d %d %d %dd%d+%d %dd%d+%d ",
-	  t, t + 1, t + 2, t + 3, t + 4, t + 5, t + 6, t + 7, t + 8) != 9) {
+  if (sscanf(line, " %d %dd%d+%d ",
+	  t, t + 1, t + 2, t + 3) != 4) {
     log("SYSERR: Format error in mob #%d, first line after S flag\n"
-	"...expecting line of form '# # # #d#+# #d#+#'", nr);
+	"...expecting line of form '# #d#+#'", nr);
     exit(1);
   }
 
-  GET_LEVEL(mob_proto + i) = t[0];
-  GET_HITROLL(mob_proto + i) = 20 - t[1];
-  GET_AC(mob_proto + i) = 10 * t[2];
+  if (t[0] != 1)
+    log("INFO: Forcing mob #%d level from %d to 1 per level lock.", nr, t[0]);
+  GET_LEVEL(mob_proto + i) = 1;
 
   /* max hit = 0 is a flag that H, M, V is xdy+z */
   GET_MAX_HIT(mob_proto + i) = 0;
-  GET_HIT(mob_proto + i) = t[3];
-  GET_MANA(mob_proto + i) = t[4];
-  GET_MOVE(mob_proto + i) = t[5];
+  GET_HIT(mob_proto + i) = t[1];
+  GET_MANA(mob_proto + i) = t[2];
+  GET_MOVE(mob_proto + i) = t[3];
 
   GET_MAX_MANA(mob_proto + i) = 10;
   GET_MAX_MOVE(mob_proto + i) = 50;
-
-  mob_proto[i].mob_specials.damnodice = t[6];
-  mob_proto[i].mob_specials.damsizedice = t[7];
-  GET_DAMROLL(mob_proto + i) = t[8];
-
-  if (!get_line(mob_f, line)) {
-      log("SYSERR: Format error in mob #%d, second line after S flag\n"
-	  "...expecting line of form '# #', but file ended!", nr);
-      exit(1);
-    }
-
-  if (sscanf(line, " %d %d ", t, t + 1) != 2) {
-    log("SYSERR: Format error in mob #%d, second line after S flag\n"
-	"...expecting line of form '# #'", nr);
-    exit(1);
-  }
-
-  GET_GOLD(mob_proto + i) = t[0];
-  GET_EXP(mob_proto + i) = t[1];
 
   if (!get_line(mob_f, line)) {
     log("SYSERR: Format error in last line of mob #%d\n"
@@ -1603,136 +1621,181 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
   GET_DEFAULT_POS(mob_proto + i) = t[1];
   GET_SEX(mob_proto + i) = t[2];
 
-  GET_CLASS(mob_proto + i) = 0;
+  GET_CLASS(mob_proto + i) = CLASS_UNDEFINED;
   GET_WEIGHT(mob_proto + i) = 200;
   GET_HEIGHT(mob_proto + i) = 198;
 
   /* These are now save applies; base save numbers for MOBs are now from the
-   * warrior save table. */
+   * fighter save table. */
   for (j = 0; j < NUM_OF_SAVING_THROWS; j++)
     GET_SAVE(mob_proto + i, j) = 0;
 }
-
-/* interpret_espec is the function that takes espec keywords and values and
- * assigns the correct value to the mob as appropriate.  Adding new e-specs is
- * absurdly easy -- just add a new CASE statement to this function! No other
- * changes need to be made anywhere in the code.
- * CASE		: Requires a parameter through 'value'. */
-#define CASE(test)	\
-	if (value && !matched && !str_cmp(keyword, test) && (matched = TRUE))
-#define RANGE(low, high)	\
-	(num_arg = MAX((low), MIN((high), (num_arg))))
-
-static void interpret_espec(const char *keyword, const char *value, int i, int nr)
-{
-  int num_arg = 0, matched = FALSE;
-
-  /* If there isn't a colon, there is no value.  While Boolean options are
-   * possible, we don't actually have any.  Feel free to make some. */
-  if (value)
-    num_arg = atoi(value);
-
-  CASE("BareHandAttack") {
-    RANGE(0, NUM_ATTACK_TYPES - 1);
-    mob_proto[i].mob_specials.attack_type = num_arg;
-  }
-
-  CASE("Str") {
-    RANGE(3, 25);
-    mob_proto[i].real_abils.str = num_arg;
-  }
-
-  CASE("StrAdd") {
-    RANGE(0, 100);
-    mob_proto[i].real_abils.str_add = num_arg;
-  }
-
-  CASE("Int") {
-    RANGE(3, 25);
-    mob_proto[i].real_abils.intel = num_arg;
-  }
-
-  CASE("Wis") {
-    RANGE(3, 25);
-    mob_proto[i].real_abils.wis = num_arg;
-  }
-
-  CASE("Dex") {
-    RANGE(3, 25);
-    mob_proto[i].real_abils.dex = num_arg;
-  }
-
-  CASE("Con") {
-    RANGE(3, 25);
-    mob_proto[i].real_abils.con = num_arg;
-  }
-
-  CASE("Cha") {
-    RANGE(3, 25);
-    mob_proto[i].real_abils.cha = num_arg;
-  }
-
-  CASE("SavingPara") {
-    RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_PARA] = num_arg;
-  }
-
-  CASE("SavingRod") {
-    RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_ROD] = num_arg;
-  }
-
-  CASE("SavingPetri") {
-    RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_PETRI] = num_arg;
-  }
-
-  CASE("SavingBreath") {
-    RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_BREATH] = num_arg;
-  }
-
-  CASE("SavingSpell") {
-    RANGE(0, 100);
-    mob_proto[i].char_specials.saved.apply_saving_throw[SAVING_SPELL] = num_arg;
-  }
-
-  if (!matched) {
-    log("SYSERR: Warning: unrecognized espec keyword %s in mob #%d",
-	    keyword, nr);
-  }
-}
-
-#undef CASE
-#undef BOOL_CASE
-#undef RANGE
 
 static void parse_espec(char *buf, int i, int nr)
 {
   char *ptr;
 
+  /* Split on ':' if present (e.g., "Str: 16") */
   if ((ptr = strchr(buf, ':')) != NULL) {
     *(ptr++) = '\0';
     while (isspace(*ptr))
       ptr++;
+  } else {
+    /* No colon: treat the remainder as value start (may be NULL) */
+    ptr = NULL;
   }
+
+  /* Trim leading spaces from keyword */
+  while (isspace(*buf))
+    buf++;
+
+  /* Always route to interpret_espec so we only write to real_abils there. */
   interpret_espec(buf, ptr, i, nr);
 }
+
+/* interpret_espec is the function that takes espec keywords and values and
+ * assigns the correct value to the mob as appropriate. Adding new e-specs is
+ * straightforward: just add a new CASE() block. */
+#define CASE(test) \
+  if (value && !matched && !str_cmp(keyword, test) && (matched = TRUE))
+#define RANGE(low, high) \
+  (num_arg = MAX((low), MIN((high), (num_arg))))
+
+static void interpret_espec(const char *keyword, const char *value, int i, int nr)
+{
+  int num_arg = 0;
+  bool matched = FALSE;
+  bool touched_ability = FALSE;
+
+  if (value)
+    num_arg = atoi(value);
+
+  /* --- Ability Scores (write REAL, then sync AFF) --- */
+  CASE("Str") {
+    RANGE(3, 25);
+    mob_proto[i].real_abils.str = num_arg;
+    touched_ability = TRUE;
+  }
+  CASE("Dex") {
+    RANGE(3, 25);
+    mob_proto[i].real_abils.dex = num_arg;
+    touched_ability = TRUE;
+  }
+  CASE("Con") {
+    RANGE(3, 25);
+    mob_proto[i].real_abils.con = num_arg;
+    touched_ability = TRUE;
+  }
+  CASE("Int") {
+    RANGE(3, 25);
+    mob_proto[i].real_abils.intel = num_arg;
+    touched_ability = TRUE;
+  }
+  CASE("Wis") {
+    RANGE(3, 25);
+    mob_proto[i].real_abils.wis = num_arg;
+    touched_ability = TRUE;
+  }
+  CASE("Cha") {
+    RANGE(3, 25);
+    mob_proto[i].real_abils.cha = num_arg;
+    touched_ability = TRUE;
+  }
+  CASE("Class") {
+    RANGE(CLASS_UNDEFINED, NUM_CLASSES - 1);
+    mob_proto[i].player.chclass = num_arg;
+  }
+
+  /* --- 5e-style Saving Throws --- */
+  CASE("SaveStr") {
+    RANGE(0, 100);
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_STR] = num_arg;
+  }
+  CASE("SaveDex") {
+    RANGE(0, 100);
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_DEX] = num_arg;
+  }
+  CASE("SaveCon") {
+    RANGE(0, 100);
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_CON] = num_arg;
+  }
+  CASE("SaveInt") {
+    RANGE(0, 100);
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_INT] = num_arg;
+  }
+  CASE("SaveWis") {
+    RANGE(0, 100);
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_WIS] = num_arg;
+  }
+  CASE("SaveCha") {
+    RANGE(0, 100);
+    mob_proto[i].char_specials.saved.saving_throws[ABIL_CHA] = num_arg;
+  }
+
+  /* If we changed a base ability, keep aff_abils in sync for the prototype. */
+  if (touched_ability)
+    mob_proto[i].aff_abils = mob_proto[i].real_abils;
+
+  /* --- Debug + Fallback --- */
+  if (!matched) {
+    log("DEBUG: Unmatched espec line '%s' value '%s' in mob #%d",
+        keyword, value ? value : "(null)", nr);
+    log("SYSERR: Warning: unrecognized espec keyword %s in mob #%d",
+        keyword, nr);
+  }
+}
+
+/* Prevent macro bleed */
+#undef CASE
+#undef RANGE
+
 
 static void parse_enhanced_mob(FILE *mob_f, int i, int nr)
 {
   char line[READ_SIZE];
 
+  /* Step 1: parse the standard numeric lines (level, dice, pos, sex, etc.) */
   parse_simple_mob(mob_f, i, nr);
 
+  /* Step 2: read extended attributes until 'E' line encountered */
   while (get_line(mob_f, line)) {
-    if (!strcmp(line, "E"))	/* end of the enhanced section */
+    if (!strcmp(line, "E"))  /* end of the enhanced section */
       return;
-    else if (*line == '#') {	/* we've hit the next mob, maybe? */
+    else if (*line == '#') { /* premature next mob start */
       log("SYSERR: Unterminated E section in mob #%d", nr);
       exit(1);
-    } else
-      parse_espec(line, i, nr);
+    }
+
+    else if (!strncmp(line, "Skill", 5)) {
+      int snum = 0, sval = 0;
+      if (sscanf(line, "Skill %d %d", &snum, &sval) == 2) {
+        if (snum >= 0 && snum < MAX_SKILLS)
+          SET_SKILL(&mob_proto[i], snum, (byte)MIN(MAX(0, sval), 100));
+        else
+          log("SYSERR: Invalid skill index %d in mob #%d", snum, nr);
+      } else
+        log("SYSERR: Malformed Skill line in mob #%d: '%s'", nr, line);
+      continue;
+    }
+
+    else if (!strncmp(line, "AtkT", 4)) {
+      int atkt = 0;
+
+      if (sscanf(line, "AtkT %d", &atkt) == 1) {
+
+        /* If stored as TYPE_* (e.g., 304), convert to index (e.g., 4). */
+        if (atkt >= TYPE_HIT && atkt < (TYPE_HIT + NUM_ATTACK_TYPES))
+          atkt -= TYPE_HIT;
+
+        /* Store only the index. */
+        if (atkt >= 0 && atkt < NUM_ATTACK_TYPES)
+          mob_proto[i].mob_specials.attack_type = atkt;
+      }
+      continue;
+    }
+
+    else
+      parse_espec(line, i, nr); /* interpret Str:, Dex:, Save*, etc. */
   }
 
   log("SYSERR: Unexpected end of file reached after mob #%d", nr);
@@ -1744,11 +1807,12 @@ void parse_mobile(FILE *mob_f, int nr)
   static int i = 0;
   int j, t[10], retval;
   char line[READ_SIZE], *tmpptr, letter;
-  char f1[128], f2[128], f3[128], f4[128], f5[128], f6[128], f7[128], f8[128], buf2[128];
+  char f1[128], f2[128], f3[128], f4[128], f5[128], f6[128], f7[128], f8[128], buf1[128], buf2[128];
 
   mob_index[i].vnum = nr;
   mob_index[i].number = 0;
   mob_index[i].func = NULL;
+  mob_index[i].skin_yields = NULL;
 
   clear_char(mob_proto + i);
 
@@ -1759,7 +1823,8 @@ void parse_mobile(FILE *mob_f, int nr)
   sprintf(buf2, "mob vnum %d", nr);	/* sprintf: OK (for 'buf2 >= 19') */
 
   /* String data */
-  mob_proto[i].player.name = fread_string(mob_f, buf2);
+  mob_proto[i].player.name = fread_string(mob_f, buf1);
+  mob_proto[i].player.keywords = fread_string(mob_f, buf2);
   tmpptr = mob_proto[i].player.short_descr = fread_string(mob_f, buf2);
   if (tmpptr && *tmpptr)
     if (!str_cmp(fname(tmpptr), "a") || !str_cmp(fname(tmpptr), "an") ||
@@ -1767,7 +1832,33 @@ void parse_mobile(FILE *mob_f, int nr)
       *tmpptr = LOWER(*tmpptr);
   mob_proto[i].player.long_descr = fread_string(mob_f, buf2);
   mob_proto[i].player.description = fread_string(mob_f, buf2);
-  GET_TITLE(mob_proto + i) = NULL;
+  mob_proto[i].player.background = NULL;
+
+  /* Optional background block signaled by a leading 'B' marker */
+  {
+    int letter;
+
+    do {
+      letter = fgetc(mob_f);
+      if (letter == EOF)
+        break;
+    } while (letter == '\n' || letter == '\r');
+
+    if (letter == 'B') {
+      mob_proto[i].player.background = fread_string(mob_f, buf2);
+
+      /* consume trailing newlines before numeric section */
+      do {
+        letter = fgetc(mob_f);
+        if (letter == EOF)
+          break;
+      } while (letter == '\n' || letter == '\r');
+
+      if (letter != EOF)
+        ungetc(letter, mob_f);
+    } else if (letter != EOF)
+      ungetc(letter, mob_f);
+  }
 
   /* Numeric data */
   if (!get_line(mob_f, line)) {
@@ -1864,14 +1955,118 @@ void parse_mobile(FILE *mob_f, int nr)
     exit(1);
   }
 
-  /* DG triggers -- script info follows mob S/E section */
   letter = fread_letter(mob_f);
+  while (letter == 'L') {
+    int wpos = -1, vnum = -1, qty = 1;
+    /* read rest of the line AFTER the leading 'L' */
+    if (!get_line(mob_f, line)) {
+      log("SYSERR: Unexpected EOF while reading 'L' line in mob #%d.", nr);
+      break;
+    }
+    /* parse "<wear_pos> <obj_vnum> [qty]" from the line buffer */
+    int nread = sscanf(line, "%d %d %d", &wpos, &vnum, &qty);
+    if (nread < 2) {
+      log("SYSERR: Bad 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
+    } else {
+      if (qty < 1) qty = 1;
+      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
+    }
+    /* look ahead to see if there is another 'L' */
+    letter = fread_letter(mob_f);
+  }
   ungetc(letter, mob_f);
-  while (letter=='T') {
+
+    /* ---- Skinning yields (Y block): allow before triggers ---- */
+  letter = fread_letter(mob_f);
+  while (letter == 'Y') {
+    obj_vnum ovnum;
+    int dc;
+
+    for (;;) {
+      if (!get_line(mob_f, line)) {
+        log("SYSERR: Unexpected EOF while reading 'Y' block in mob #%d.", nr);
+        break;
+      }
+      if (sscanf(line, "%d %d", &ovnum, &dc) != 2) {
+        log("SYSERR: Bad 'Y' line in mob #%d: '%s' (need <obj_vnum> <dc>).", nr, line);
+        continue;
+      }
+      if (ovnum == 0 && dc == 0)
+        break;
+
+      /* add entry to mob_index[i].skin_yields */
+      struct skin_yield_entry *e;
+      CREATE(e, struct skin_yield_entry, 1);
+      e->mob_vnum = mob_index[i].vnum;
+      e->obj_vnum = ovnum;
+      e->dc = dc;
+      e->next = mob_index[i].skin_yields;
+      mob_index[i].skin_yields = e;
+    }
+
+    /* look ahead for another Y block (rare but harmless to support) */
+    letter = fread_letter(mob_f);
+  }
+  ungetc(letter, mob_f);
+
+  /* ---- DG triggers: script info follows mob S/E section ---- */
+  letter = fread_letter(mob_f);
+  while (letter == 'T') {
     dg_read_trigger(mob_f, &mob_proto[i], MOB_TRIGGER);
     letter = fread_letter(mob_f);
-    ungetc(letter, mob_f);
   }
+  ungetc(letter, mob_f);
+
+  /* ---- Skinning yields (Y block): allow after triggers ---- */
+  letter = fread_letter(mob_f);
+  while (letter == 'Y') {
+    obj_vnum ovnum;
+    int dc;
+
+    for (;;) {
+      if (!get_line(mob_f, line)) {
+        log("SYSERR: Unexpected EOF while reading 'Y' block in mob #%d.", nr);
+        break;
+      }
+      if (sscanf(line, "%d %d", &ovnum, &dc) != 2) {
+        log("SYSERR: Bad 'Y' line in mob #%d: '%s' (need <obj_vnum> <dc>).", nr, line);
+        continue;
+      }
+      if (ovnum == 0 && dc == 0)
+        break;
+
+      struct skin_yield_entry *e;
+      CREATE(e, struct skin_yield_entry, 1);
+      e->mob_vnum = mob_index[i].vnum;
+      e->obj_vnum = ovnum;
+      e->dc = dc;
+      e->next = mob_index[i].skin_yields;
+      mob_index[i].skin_yields = e;
+    }
+
+    /* look ahead for another Y block (optional) */
+    letter = fread_letter(mob_f);
+  }
+  ungetc(letter, mob_f);
+
+  /* ---- And allow loadout lines AFTER triggers, too ---- */
+  letter = fread_letter(mob_f);
+  while (letter == 'L') {
+    int wpos = -1, vnum = -1, qty = 1;
+    if (!get_line(mob_f, line)) {
+      log("SYSERR: Unexpected EOF while reading post-trigger 'L' line in mob #%d.", nr);
+      break;
+    }
+    int nread = sscanf(line, "%d %d %d", &wpos, &vnum, &qty);
+    if (nread < 2) {
+      log("SYSERR: Bad post-trigger 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
+    } else {
+      if (qty < 1) qty = 1;
+      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
+    }
+    letter = fread_letter(mob_f);
+  }
+  ungetc(letter, mob_f);
 
   mob_proto[i].aff_abils = mob_proto[i].real_abils;
 
@@ -1918,7 +2113,7 @@ char *parse_object(FILE *obj_f, int nr)
   tmpptr = obj_proto[i].description = fread_string(obj_f, buf2);
   if (tmpptr && *tmpptr)
     CAP(tmpptr);
-  obj_proto[i].action_description = fread_string(obj_f, buf2);
+  obj_proto[i].main_description = fread_string(obj_f, buf2);
 
   /* numeric data */
   if (!get_line(obj_f, line)) {
@@ -2012,7 +2207,7 @@ char *parse_object(FILE *obj_f, int nr)
 
   GET_OBJ_WEIGHT(obj_proto + i) = t[0];
   GET_OBJ_COST(obj_proto + i) = t[1];
-  GET_OBJ_RENT(obj_proto + i) = t[2];
+  GET_OBJ_COST_PER_DAY(obj_proto + i) = 0;
   GET_OBJ_LEVEL(obj_proto + i) = t[3];
   GET_OBJ_TIMER(obj_proto + i) = t[4];
 
@@ -2120,7 +2315,7 @@ static void load_zones(FILE *fl, char *zonename)
 
   line_num += get_line(fl, buf);
 
-  if (sscanf(buf, "#%hd", &Z.number) != 1) {
+  if (sscanf(buf, "#%d", &Z.number) != 1) {
     log("SYSERR: Format error in %s, line %d", zname, line_num);
     exit(1);
   }
@@ -2143,15 +2338,15 @@ static void load_zones(FILE *fl, char *zonename)
 
   line_num += get_line(fl, buf);
   /* Look for 10 items first (new tbaMUD), if not found, try 4 (old tbaMUD) */
-  if  (sscanf(buf, " %hd %hd %d %d %s %s %s %s %d %d", &Z.bot, &Z.top, &Z.lifespan,
+  if  (sscanf(buf, " %d %d %d %d %s %s %s %s %d %d", &Z.bot, &Z.top, &Z.lifespan,
       &Z.reset_mode, zbuf1, zbuf2, zbuf3, zbuf4, &Z.min_level, &Z.max_level) != 10)
   {
-    if (sscanf(buf, " %hd %hd %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
+    if (sscanf(buf, " %d %d %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
       /* This may be due to the fact that the zone has no builder.  So, we just
        * attempt to fix this by copying the previous 2 last reads into this
        * variable and the last one. */
       log("SYSERR: Format error in numeric constant line of %s, attempting to fix.", zname);
-      if (sscanf(Z.name, " %hd %hd %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
+      if (sscanf(Z.name, " %d %d %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
         log("SYSERR: Could not fix previous error, aborting game.");
         exit(1);
       } else {
@@ -2421,6 +2616,92 @@ void new_mobile_data(struct char_data *ch)
   ch->group    = NULL;
 }
 
+/* ========== Mob Loadout Auto-Equip ========== */
+static int find_alt_slot_same_family(struct char_data *ch, int intended_pos);
+
+/* Equip items the prototype says to wear, in those exact slots when possible. */
+void equip_mob_from_loadout(struct char_data *mob)
+{
+  if (!mob || !IS_NPC(mob)) return;
+
+  /* If called too early (e.g., from some future path), just do nothing. */
+  if (IN_ROOM(mob) == NOWHERE)
+    return;
+
+  mob_rnum rnum = GET_MOB_RNUM(mob);
+  if (rnum < 0) return;
+
+  const struct mob_loadout *e = mob_proto[rnum].proto_loadout;
+  if (!e) return;
+
+  for (; e; e = e->next) {
+    int qty = (e->quantity > 0) ? e->quantity : 1;
+
+    for (int n = 0; n < qty; n++) {
+      struct obj_data *obj = read_object(e->vnum, VIRTUAL);
+      if (!obj) {
+        log("SYSERR: equip_mob_from_loadout: bad obj vnum %d on mob %d",
+            e->vnum, GET_MOB_VNUM(mob));
+        continue;
+      }
+
+      /* Inventory-only request */
+      if (e->wear_pos < 0) {
+        obj_to_char(obj, mob);
+        continue;
+      }
+
+      /* If the intended slot is free, place it there. We trust the saved slot. */
+      if (e->wear_pos >= 0 && e->wear_pos < NUM_WEARS && GET_EQ(mob, e->wear_pos) == NULL) {
+
+#ifdef STRICT_WEAR_CHECK
+        /* Optional strict flag check (may be mismatched in customized codebases). */
+        if (!invalid_align(mob, obj) /* example gate, add yours as needed */) {
+          equip_char(mob, obj, e->wear_pos);
+          continue;
+        }
+        /* If strict check fails, try alt or inventory below. */
+#else
+        equip_char(mob, obj, e->wear_pos);
+        continue;
+#endif
+      }
+
+      /* Try the mirrored slot for finger/neck/wrist pairs if intended is occupied. */
+      {
+        int alt = find_alt_slot_same_family(mob, e->wear_pos);
+        if (alt >= 0 && GET_EQ(mob, alt) == NULL) {
+#ifdef STRICT_WEAR_CHECK
+          if (!invalid_align(mob, obj)) {
+            equip_char(mob, obj, alt);
+            continue;
+          }
+#else
+          equip_char(mob, obj, alt);
+          continue;
+#endif
+        }
+      }
+
+      /* Couldn’t place it — keep in inventory. */
+      obj_to_char(obj, mob);
+    }
+  }
+}
+
+/* Minimal “same family” alternates for symmetrical pairs. Extend if you have more. */
+static int find_alt_slot_same_family(struct char_data *ch, int intended_pos)
+{
+  switch (intended_pos) {
+    case WEAR_FINGER_R: return WEAR_FINGER_L;
+    case WEAR_FINGER_L: return WEAR_FINGER_R;
+    case WEAR_NECK_1:   return WEAR_NECK_2;
+    case WEAR_NECK_2:   return WEAR_NECK_1;
+    case WEAR_WRIST_R:  return WEAR_WRIST_L;
+    case WEAR_WRIST_L:  return WEAR_WRIST_R;
+    default:            return -1;
+  }
+}
 
 /* create a new mobile from a prototype */
 struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
@@ -2440,6 +2721,7 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   clear_char(mob);
  
   *mob = mob_proto[i];
+  mob->proto_loadout = NULL; /* Instances should not directly point at prototype’s loadout list */
   mob->next = character_list;
   character_list = mob;
   
@@ -2625,13 +2907,15 @@ void reset_zone(zone_rnum zone)
 
     case 'M':			/* read a mobile */
       if (mob_index[ZCMD.arg1].number < ZCMD.arg2) {
-	mob = read_mobile(ZCMD.arg1, REAL);
-	char_to_room(mob, ZCMD.arg3);
+	      mob = read_mobile(ZCMD.arg1, REAL);
+	      char_to_room(mob, ZCMD.arg3);
+        /* NEW: equip from prototype loadout now that the mob is in a room */
+        equip_mob_from_loadout(mob);
         load_mtrigger(mob);
         tmob = mob;
-	last_cmd = 1;
+	      last_cmd = 1;
       } else
-	last_cmd = 0;
+	    last_cmd = 0;
       tobj = NULL;
       break;
 
@@ -3231,6 +3515,9 @@ void free_char(struct char_data *ch)
   int i;
   struct alias_data *a;
 
+  if (!IS_NPC(ch) && ch->player_specials && ch->player_specials != &dummy_mob)
+    clear_scan_results(ch);
+
   if (ch->player_specials != NULL && ch->player_specials != &dummy_mob) {
     while ((a = GET_ALIASES(ch)) != NULL) {
       GET_ALIASES(ch) = (GET_ALIASES(ch))->next;
@@ -3240,6 +3527,8 @@ void free_char(struct char_data *ch)
       free(ch->player_specials->poofin);
     if (ch->player_specials->poofout)
       free(ch->player_specials->poofout);
+    if (ch->player_specials->account_name)
+      free(ch->player_specials->account_name);
     if (ch->player_specials->saved.completed_quests)
       free(ch->player_specials->saved.completed_quests);
     if (GET_HOST(ch))
@@ -3251,14 +3540,14 @@ void free_char(struct char_data *ch)
     /* if this is a player, or a non-prototyped non-player, free all */
     if (GET_NAME(ch))
       free(GET_NAME(ch));
-    if (ch->player.title)
-      free(ch->player.title);
     if (ch->player.short_descr)
       free(ch->player.short_descr);
     if (ch->player.long_descr)
       free(ch->player.long_descr);
     if (ch->player.description)
       free(ch->player.description);
+    if (ch->player.background)
+      free(ch->player.background);
     for (i = 0; i < NUM_HIST; i++)
       if (GET_HISTORY(ch, i))
         free_history(ch, i);
@@ -3273,14 +3562,14 @@ void free_char(struct char_data *ch)
     /* otherwise, free strings only if the string is not pointing at proto */
     if (ch->player.name && ch->player.name != mob_proto[i].player.name)
       free(ch->player.name);
-    if (ch->player.title && ch->player.title != mob_proto[i].player.title)
-      free(ch->player.title);
     if (ch->player.short_descr && ch->player.short_descr != mob_proto[i].player.short_descr)
       free(ch->player.short_descr);
     if (ch->player.long_descr && ch->player.long_descr != mob_proto[i].player.long_descr)
       free(ch->player.long_descr);
     if (ch->player.description && ch->player.description != mob_proto[i].player.description)
       free(ch->player.description);
+    if (ch->player.background && ch->player.background != mob_proto[i].player.background)
+      free(ch->player.background);
     /* free script proto list if it's not the prototype */
     if (ch->proto_script && ch->proto_script != mob_proto[i].proto_script)
       free_proto_script(ch, MOB_TRIGGER);
@@ -3474,14 +3763,18 @@ void clear_char(struct char_data *ch)
   IN_ROOM(ch) = NOWHERE;
   GET_PFILEPOS(ch) = -1;
   GET_MOB_RNUM(ch) = NOBODY;
+  GET_CLASS(ch) = CLASS_UNDEFINED;
   GET_WAS_IN(ch) = NOWHERE;
   GET_POS(ch) = POS_STANDING;
   ch->mob_specials.default_pos = POS_STANDING;
   ch->events = NULL;
+  ch->points.prof_mod = 0;
   
   GET_AC(ch) = 100;		/* Basic Armor */
   if (ch->points.max_mana < 100)
     ch->points.max_mana = 100;
+  
+  SET_STEALTH_CHECK(ch, 0);
 }
 
 void clear_object(struct obj_data *obj)
@@ -3517,10 +3810,10 @@ void init_char(struct char_data *ch)
     GET_MOVE(ch) = GET_MAX_MOVE(ch);
   }
 
-  set_title(ch, NULL);
   ch->player.short_descr = NULL;
   ch->player.long_descr = NULL;
   ch->player.description = NULL;
+  ch->player.background = NULL;
 
   GET_NUM_QUESTS(ch) = 0;
   ch->player_specials->saved.completed_quests = NULL;
@@ -3566,9 +3859,10 @@ void init_char(struct char_data *ch)
   ch->real_abils.wis = 25;
   ch->real_abils.dex = 25;
   ch->real_abils.str = 25;
-  ch->real_abils.str_add = 100;
   ch->real_abils.con = 25;
   ch->real_abils.cha = 25;
+
+  SET_STEALTH_CHECK(ch, 0);
 
   for (i = 0; i < 3; i++)
     GET_COND(ch, i) = (GET_LEVEL(ch) == LVL_IMPL ? -1 : 24);
@@ -3700,10 +3994,6 @@ static int check_object(struct obj_data *obj)
   if (GET_OBJ_WEIGHT(obj) < 0 && (error = TRUE))
     log("SYSERR: Object #%d (%s) has negative weight (%d).",
 	GET_OBJ_VNUM(obj), obj->short_description, GET_OBJ_WEIGHT(obj));
-
-  if (GET_OBJ_RENT(obj) < 0 && (error = TRUE))
-    log("SYSERR: Object #%d (%s) has negative cost/day (%d).",
-	GET_OBJ_VNUM(obj), obj->short_description, GET_OBJ_RENT(obj));
 
   snprintf(objname, sizeof(objname), "Object #%d (%s)", GET_OBJ_VNUM(obj), obj->short_description);
   for(y = 0; y < TW_ARRAY_MAX; y++) {
@@ -3841,14 +4131,12 @@ static void load_default_config( void )
   CONFIG_PK_ALLOWED 	        = pk_allowed;
   CONFIG_PT_ALLOWED             = pt_allowed;
   CONFIG_LEVEL_CAN_SHOUT 	    = level_can_shout;
-  CONFIG_HOLLER_MOVE_COST 	    = holler_move_cost;
   CONFIG_TUNNEL_SIZE 	        = tunnel_size;
   CONFIG_MAX_EXP_GAIN	        = max_exp_gain;
   CONFIG_MAX_EXP_LOSS 	        = max_exp_loss;
   CONFIG_MAX_NPC_CORPSE_TIME    = max_npc_corpse_time;
   CONFIG_MAX_PC_CORPSE_TIME	    = max_pc_corpse_time;
   CONFIG_IDLE_VOID		        = idle_void;
-  CONFIG_IDLE_RENT_TIME	        = idle_rent_time;
   CONFIG_IDLE_MAX_LEVEL	        = idle_max_level;
   CONFIG_DTS_ARE_DUMPS	        = dts_are_dumps;
   CONFIG_LOAD_INVENTORY         = load_into_inventory;
@@ -3868,14 +4156,10 @@ static void load_default_config( void )
   CONFIG_SCRIPT_PLAYERS         = script_players;
   CONFIG_DEBUG_MODE             = debug_mode;
 
-  /* Rent / crashsave options. */
-  CONFIG_FREE_RENT              = free_rent;
-  CONFIG_MAX_OBJ_SAVE           = max_obj_save;
-  CONFIG_MIN_RENT_COST	        = min_rent_cost;
+  /* Crashsave options. */
   CONFIG_AUTO_SAVE		        = auto_save;
   CONFIG_AUTOSAVE_TIME	        = autosave_time;
   CONFIG_CRASH_TIMEOUT          = crash_file_timeout;
-  CONFIG_RENT_TIMEOUT	        = rent_file_timeout;
 
   /* Room numbers. */
   CONFIG_MORTAL_START           = mortal_start_room;
@@ -4001,16 +4285,12 @@ void load_config( void )
         break;
 
       case 'f':
-        if (!str_cmp(tag, "free_rent"))
-          CONFIG_FREE_RENT = num;
-        else if (!str_cmp(tag, "frozen_start_room"))
+        if (!str_cmp(tag, "frozen_start_room"))
           CONFIG_FROZEN_START = num;
         break;
 
       case 'h':
-        if (!str_cmp(tag, "holler_move_cost"))
-          CONFIG_HOLLER_MOVE_COST = num;
-        else if (!str_cmp(tag, "huh")) {
+        if (!str_cmp(tag, "huh")) {
           char tmp[READ_SIZE];
           if (CONFIG_HUH)
             free(CONFIG_HUH);
@@ -4022,8 +4302,6 @@ void load_config( void )
       case 'i':
         if (!str_cmp(tag, "idle_void"))
           CONFIG_IDLE_VOID = num;
-        else if (!str_cmp(tag, "idle_rent_time"))
-          CONFIG_IDLE_RENT_TIME = num;
         else if (!str_cmp(tag, "idle_max_level"))
           CONFIG_IDLE_MAX_LEVEL = num;
         else if (!str_cmp(tag, "immort_start_room"))
@@ -4058,8 +4336,6 @@ void load_config( void )
           CONFIG_MAX_FILESIZE = num;
         else if (!str_cmp(tag, "max_npc_corpse_time"))
           CONFIG_MAX_NPC_CORPSE_TIME = num;
-        else if (!str_cmp(tag, "max_obj_save"))
-          CONFIG_MAX_OBJ_SAVE = num;
         else if (!str_cmp(tag, "max_pc_corpse_time"))
           CONFIG_MAX_PC_CORPSE_TIME = num;
         else if (!str_cmp(tag, "max_playing"))
@@ -4070,8 +4346,7 @@ void load_config( void )
           strncpy(buf, "Reading menu in load_config()", sizeof(buf));
           CONFIG_MENU = fread_string(fl, buf);
           parse_at(CONFIG_MENU);
-        } else if (!str_cmp(tag, "min_rent_cost"))
-          CONFIG_MIN_RENT_COST = num;
+        }
         else if (!str_cmp(tag, "min_wizlist_lev"))
           CONFIG_MIN_WIZLIST_LEV = num;
         else if (!str_cmp(tag, "mortal_start_room"))
@@ -4122,8 +4397,6 @@ void load_config( void )
         break;
 
       case 'r':
-        if (!str_cmp(tag, "rent_file_timeout"))
-          CONFIG_RENT_TIMEOUT = num;
         break;
 
       case 's':
@@ -4171,4 +4444,54 @@ void load_config( void )
   }
 
   fclose(fl);
+}
+
+void free_skin_yields(struct skin_yield_entry *list)
+{
+  struct skin_yield_entry *e, *next;
+  for (e = list; e; e = next) {
+    next = e->next;
+    free(e);
+  }
+}
+
+struct skin_yield_entry *copy_skin_yields(struct skin_yield_entry *src)
+{
+  struct skin_yield_entry *head = NULL, *tail = NULL, *e;
+
+  for (; src; src = src->next) {
+    CREATE(e, struct skin_yield_entry, 1);
+    *e = *src;
+    e->next = NULL;
+
+    if (!head) head = e;
+    else tail->next = e;
+    tail = e;
+  }
+  return head;
+}
+
+void free_forage_list(struct forage_entry *list)
+{
+  struct forage_entry *e, *next;
+  for (e = list; e; e = next) {
+    next = e->next;
+    free(e);
+  }
+}
+
+struct forage_entry *copy_forage_list(struct forage_entry *src)
+{
+  struct forage_entry *head = NULL, *tail = NULL, *e;
+
+  for (; src; src = src->next) {
+    CREATE(e, struct forage_entry, 1);
+    *e = *src;
+    e->next = NULL;
+
+    if (!head) head = e;
+    else tail->next = e;
+    tail = e;
+  }
+  return head;
 }

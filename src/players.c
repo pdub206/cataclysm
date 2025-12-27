@@ -247,8 +247,12 @@ int load_char(const char *name, struct char_data *ch)
 
     /* Character initializations. Necessary to keep some things straight. */
     ch->affected = NULL;
+    ch->player.short_descr = NULL;   /* ensure a clean start */
     for (i = 1; i <= MAX_SKILLS; i++)
-      GET_SKILL(ch, i) = 0;
+      if (IS_NPC(ch))
+        ch->mob_specials.skills[i] = 0;
+      else
+        ch->player_specials->saved.skills[i] = 0;
     GET_SEX(ch) = PFDEF_SEX;
     GET_CLASS(ch) = PFDEF_CLASS;
     GET_LEVEL(ch) = PFDEF_LEVEL;
@@ -265,15 +269,11 @@ int load_char(const char *name, struct char_data *ch)
     GET_COND(ch, THIRST) = PFDEF_THIRST;
     GET_COND(ch, DRUNK) = PFDEF_DRUNK;
     GET_BAD_PWS(ch) = PFDEF_BADPWS;
-    GET_PRACTICES(ch) = PFDEF_PRACTICES;
-    GET_GOLD(ch) = PFDEF_GOLD;
-    GET_BANK_GOLD(ch) = PFDEF_BANK;
+    GET_COINS(ch) = PFDEF_COINS;
+    GET_BANK_COINS(ch) = PFDEF_BANK_COINS;
     GET_EXP(ch) = PFDEF_EXP;
-    GET_HITROLL(ch) = PFDEF_HITROLL;
-    GET_DAMROLL(ch) = PFDEF_DAMROLL;
     GET_AC(ch) = PFDEF_AC;
     ch->real_abils.str = PFDEF_STR;
-    ch->real_abils.str_add = PFDEF_STRADD;
     ch->real_abils.dex = PFDEF_DEX;
     ch->real_abils.intel = PFDEF_INT;
     ch->real_abils.wis = PFDEF_WIS;
@@ -297,6 +297,10 @@ int load_char(const char *name, struct char_data *ch)
     GET_NUM_QUESTS(ch) = PFDEF_COMPQUESTS;
     GET_LAST_MOTD(ch) = PFDEF_LASTMOTD;
     GET_LAST_NEWS(ch) = PFDEF_LASTNEWS;
+    if (GET_ACCOUNT(ch)) {
+      free(GET_ACCOUNT(ch));
+      GET_ACCOUNT(ch) = NULL;
+    }
 
     for (i = 0; i < AF_ARRAY_MAX; i++)
       AFF_FLAGS(ch)[i] = PFDEF_AFFFLAGS;
@@ -311,6 +315,11 @@ int load_char(const char *name, struct char_data *ch)
       switch (*tag) {
       case 'A':
         if (!strcmp(tag, "Ac  "))	GET_AC(ch)		= atoi(line);
+	else if (!strcmp(tag, "Acct")) {
+          if (GET_ACCOUNT(ch))
+            free(GET_ACCOUNT(ch));
+          GET_ACCOUNT(ch) = strdup(line);
+        }
 	else if (!strcmp(tag, "Act ")) {
          if (sscanf(line, "%s %s %s %s", f1, f2, f3, f4) == 4) {
           PLR_FLAGS(ch)[0] = asciiflag_conv(f1);
@@ -334,14 +343,16 @@ int load_char(const char *name, struct char_data *ch)
 	break;
 
       case 'B':
-	     if (!strcmp(tag, "Badp"))	GET_BAD_PWS(ch)		= atoi(line);
-	else if (!strcmp(tag, "Bank"))	GET_BANK_GOLD(ch)	= atoi(line);
+        if (!strcmp(tag, "Back"))     ch->player.background   = fread_string(fl, buf2);
+	else if (!strcmp(tag, "Badp"))	GET_BAD_PWS(ch)		= atoi(line);
+	else if (!strcmp(tag, "BankCoins"))	GET_BANK_COINS(ch)	= atoi(line);
 	else if (!strcmp(tag, "Brth"))	ch->player.time.birth	= atol(line);
 	break;
 
       case 'C':
 	     if (!strcmp(tag, "Cha "))	ch->real_abils.cha	= atoi(line);
 	else if (!strcmp(tag, "Clas"))	GET_CLASS(ch)		= atoi(line);
+	else if (!strcmp(tag, "Coin"))	GET_COINS(ch)		= atoi(line);
 	else if (!strcmp(tag, "Con "))	ch->real_abils.con	= atoi(line);
 	break;
 
@@ -349,7 +360,6 @@ int load_char(const char *name, struct char_data *ch)
 	     if (!strcmp(tag, "Desc"))	ch->player.description	= fread_string(fl, buf2);
 	else if (!strcmp(tag, "Dex "))	ch->real_abils.dex	= atoi(line);
 	else if (!strcmp(tag, "Drnk"))	GET_COND(ch, DRUNK)	= atoi(line);
-	else if (!strcmp(tag, "Drol"))	GET_DAMROLL(ch)		= atoi(line);
 	break;
 
       case 'E':
@@ -360,10 +370,6 @@ int load_char(const char *name, struct char_data *ch)
 	     if (!strcmp(tag, "Frez"))	GET_FREEZE_LEV(ch)	= atoi(line);
 	break;
 
-      case 'G':
-	     if (!strcmp(tag, "Gold"))	GET_GOLD(ch)		= atoi(line);
-	break;
-
       case 'H':
 	     if (!strcmp(tag, "Hit "))	load_HMVS(ch, line, LOAD_HIT);
 	else if (!strcmp(tag, "Hite"))	GET_HEIGHT(ch)		= atoi(line);
@@ -372,7 +378,6 @@ int load_char(const char *name, struct char_data *ch)
             free(GET_HOST(ch));
           GET_HOST(ch) = strdup(line);
         }
-        else if (!strcmp(tag, "Hrol"))	GET_HITROLL(ch)		= atoi(line);
 	else if (!strcmp(tag, "Hung"))	GET_COND(ch, HUNGER)	= atoi(line);
 	break;
 
@@ -384,7 +389,6 @@ int load_char(const char *name, struct char_data *ch)
 
       case 'L':
 	     if (!strcmp(tag, "Last"))	ch->player.time.logon	= atol(line);
-  else if (!strcmp(tag, "Lern"))	GET_PRACTICES(ch)	= atoi(line);
 	else if (!strcmp(tag, "Levl"))	GET_LEVEL(ch)		= atoi(line);
         else if (!strcmp(tag, "Lmot"))   GET_LAST_MOTD(ch)   = atoi(line);
         else if (!strcmp(tag, "Lnew"))   GET_LAST_NEWS(ch)   = atoi(line);
@@ -434,8 +438,35 @@ int load_char(const char *name, struct char_data *ch)
 
       case 'S':
 	     if (!strcmp(tag, "Sex "))	GET_SEX(ch)		= atoi(line);
+  else if (!strcmp(tag, "Sdsc")) {
+    /* Clear any existing sdesc to avoid leaks */
+    if (GET_SHORT_DESC(ch))
+      free(GET_SHORT_DESC(ch));
+    /* 'line' is the remainder of the line after "Sdsc" + space */
+    GET_SHORT_DESC(ch) = strdup(line);
+  }
   else if (!strcmp(tag, "ScrW"))  GET_SCREEN_WIDTH(ch) = atoi(line);
 	else if (!strcmp(tag, "Skil"))	load_skills(fl, ch);
+  else if (!strcmp(tag, "SkGt")) {  /* Skill Gain Timers */
+    char *p = line;
+    for (int i = 1; i <= MAX_SKILLS; i++) {
+      long t = 0;
+
+      while (*p && isspace((unsigned char)*p))
+        ++p;
+
+      if (*p) {
+        char *endptr = p;
+        t = strtol(p, &endptr, 10);
+        if (endptr == p)
+          t = 0;
+        else
+          p = endptr;
+      }
+
+      GET_SKILL_NEXT_GAIN(ch, i) = (time_t)t;
+    }
+  }
 	else if (!strcmp(tag, "Str "))	load_HMVS(ch, line, LOAD_STRENGTH);
 	break;
 
@@ -446,7 +477,6 @@ int load_char(const char *name, struct char_data *ch)
 	else if (!strcmp(tag, "Thr3"))	GET_SAVE(ch, 2)		= atoi(line);
 	else if (!strcmp(tag, "Thr4"))	GET_SAVE(ch, 3)		= atoi(line);
 	else if (!strcmp(tag, "Thr5"))	GET_SAVE(ch, 4)		= atoi(line);
-	else if (!strcmp(tag, "Titl"))	GET_TITLE(ch)		= strdup(line);
         else if (!strcmp(tag, "Trig") && CONFIG_SCRIPT_PLAYERS) {
           if ((t_rnum = real_trigger(atoi(line))) != NOTHING) {
             t = read_trigger(t_rnum);
@@ -478,7 +508,10 @@ int load_char(const char *name, struct char_data *ch)
   /* initialization for imms */
   if (GET_LEVEL(ch) >= LVL_IMMORT) {
     for (i = 1; i <= MAX_SKILLS; i++)
-      GET_SKILL(ch, i) = 100;
+      if (IS_NPC(ch))
+        ch->mob_specials.skills[i] = 100;
+      else
+        ch->player_specials->saved.skills[i] = 100;
     GET_COND(ch, HUNGER) = -1;
     GET_COND(ch, THIRST) = -1;
     GET_COND(ch, DRUNK) = -1;
@@ -564,12 +597,18 @@ void save_char(struct char_data * ch)
   /* end char_to_store code */
 
   if (GET_NAME(ch))				fprintf(fl, "Name: %s\n", GET_NAME(ch));
+  if (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch))       fprintf(fl, "Sdsc: %s\n", GET_SHORT_DESC(ch));
   if (GET_PASSWD(ch))				fprintf(fl, "Pass: %s\n", GET_PASSWD(ch));
-  if (GET_TITLE(ch))				fprintf(fl, "Titl: %s\n", GET_TITLE(ch));
+  if (GET_ACCOUNT(ch) && *GET_ACCOUNT(ch))	fprintf(fl, "Acct: %s\n", GET_ACCOUNT(ch));
   if (ch->player.description && *ch->player.description) {
     strcpy(buf, ch->player.description);
     strip_cr(buf);
     fprintf(fl, "Desc:\n%s~\n", buf);
+  }
+  if (ch->player.background && *ch->player.background) {
+    strcpy(buf, ch->player.background);
+    strip_cr(buf);
+    fprintf(fl, "Back:\n%s~\n", buf);
   }
   if (POOFIN(ch))				fprintf(fl, "PfIn: %s\n", POOFIN(ch));
   if (POOFOUT(ch))				fprintf(fl, "PfOt: %s\n", POOFOUT(ch));
@@ -623,7 +662,6 @@ void save_char(struct char_data * ch)
   if (GET_LOADROOM(ch)	   != PFDEF_LOADROOM)	fprintf(fl, "Room: %d\n", GET_LOADROOM(ch));
 
   if (GET_BAD_PWS(ch)	   != PFDEF_BADPWS)	fprintf(fl, "Badp: %d\n", GET_BAD_PWS(ch));
-  if (GET_PRACTICES(ch)	   != PFDEF_PRACTICES)	fprintf(fl, "Lern: %d\n", GET_PRACTICES(ch));
 
   if (GET_COND(ch, HUNGER)   != PFDEF_HUNGER && GET_LEVEL(ch) < LVL_IMMORT) fprintf(fl, "Hung: %d\n", GET_COND(ch, HUNGER));
   if (GET_COND(ch, THIRST) != PFDEF_THIRST && GET_LEVEL(ch) < LVL_IMMORT) fprintf(fl, "Thir: %d\n", GET_COND(ch, THIRST));
@@ -633,9 +671,7 @@ void save_char(struct char_data * ch)
   if (GET_MANA(ch)	   != PFDEF_MANA || GET_MAX_MANA(ch) != PFDEF_MAXMANA) fprintf(fl, "Mana: %d/%d\n", GET_MANA(ch), GET_MAX_MANA(ch));
   if (GET_MOVE(ch)	   != PFDEF_MOVE || GET_MAX_MOVE(ch) != PFDEF_MAXMOVE) fprintf(fl, "Move: %d/%d\n", GET_MOVE(ch), GET_MAX_MOVE(ch));
 
-  if (GET_STR(ch)	   != PFDEF_STR  || GET_ADD(ch)      != PFDEF_STRADD)  fprintf(fl, "Str : %d/%d\n", GET_STR(ch),  GET_ADD(ch));
-
-
+  if (GET_STR(ch)	   != PFDEF_STR)  fprintf(fl, "Str : %d\n", GET_STR(ch));
   if (GET_INT(ch)	   != PFDEF_INT)	fprintf(fl, "Int : %d\n", GET_INT(ch));
   if (GET_WIS(ch)	   != PFDEF_WIS)	fprintf(fl, "Wis : %d\n", GET_WIS(ch));
   if (GET_DEX(ch)	   != PFDEF_DEX)	fprintf(fl, "Dex : %d\n", GET_DEX(ch));
@@ -643,11 +679,9 @@ void save_char(struct char_data * ch)
   if (GET_CHA(ch)	   != PFDEF_CHA)	fprintf(fl, "Cha : %d\n", GET_CHA(ch));
 
   if (GET_AC(ch)	   != PFDEF_AC)		fprintf(fl, "Ac  : %d\n", GET_AC(ch));
-  if (GET_GOLD(ch)	   != PFDEF_GOLD)	fprintf(fl, "Gold: %d\n", GET_GOLD(ch));
-  if (GET_BANK_GOLD(ch)	   != PFDEF_BANK)	fprintf(fl, "Bank: %d\n", GET_BANK_GOLD(ch));
+  if (GET_COINS(ch)	   != PFDEF_COINS)	fprintf(fl, "Coin: %d\n", GET_COINS(ch));
+  if (GET_BANK_COINS(ch)	   != PFDEF_BANK_COINS)	fprintf(fl, "BankCoins: %d\n", GET_BANK_COINS(ch));
   if (GET_EXP(ch)	   != PFDEF_EXP)	fprintf(fl, "Exp : %d\n", GET_EXP(ch));
-  if (GET_HITROLL(ch)	   != PFDEF_HITROLL)	fprintf(fl, "Hrol: %d\n", GET_HITROLL(ch));
-  if (GET_DAMROLL(ch)	   != PFDEF_DAMROLL)	fprintf(fl, "Drol: %d\n", GET_DAMROLL(ch));
   if (GET_OLC_ZONE(ch)     != PFDEF_OLC)        fprintf(fl, "Olc : %d\n", GET_OLC_ZONE(ch));
   if (GET_PAGE_LENGTH(ch)  != PFDEF_PAGELENGTH) fprintf(fl, "Page: %d\n", GET_PAGE_LENGTH(ch));
   if (GET_SCREEN_WIDTH(ch) != PFDEF_SCREENWIDTH) fprintf(fl, "ScrW: %d\n", GET_SCREEN_WIDTH(ch));
@@ -675,6 +709,12 @@ void save_char(struct char_data * ch)
     }
     fprintf(fl, "0 0\n");
   }
+
+  /* Write per-skill next gain times as epoch seconds. */
+  fprintf(fl, "SkGt:");  /* Skill Gain Timer */
+  for (int i = 1; i <= MAX_SKILLS; i++)
+    fprintf(fl, " %ld", (long)GET_SKILL_NEXT_GAIN(ch, i));
+  fputc('\n', fl);
 
   /* Save affects */
   if (tmp_aff[0].spell > 0) {
@@ -866,8 +906,13 @@ static void load_skills(FILE *fl, struct char_data *ch)
   do {
     get_line(fl, line);
     sscanf(line, "%d %d", &num, &num2);
-      if (num != 0)
-	GET_SKILL(ch, num) = num2;
+
+    if (num != 0) {
+      if (IS_NPC(ch))
+        ch->mob_specials.skills[num] = num2;
+      else
+        ch->player_specials->saved.skills[num] = num2;
+    }
   } while (num != 0);
 }
 
@@ -908,7 +953,6 @@ static void load_HMVS(struct char_data *ch, const char *line, int mode)
 
   case LOAD_STRENGTH:
     ch->real_abils.str = num;
-    ch->real_abils.str_add = num2;
     break;
   }
 }

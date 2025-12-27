@@ -22,7 +22,18 @@
 #include "handler.h"
 #include "interpreter.h"
 #include "class.h"
+#include "constants.h"
 
+/* Log immortal commands */
+void godcmd_log(const char *fmt, ...)
+{
+  FILE *fp = fopen(GODCMDS_FILE, "a");
+  if (!fp) { perror("godcmds"); return; }
+  va_list ap; va_start(ap, fmt);
+  vfprintf(fp, fmt, ap); fputc('\n', fp);
+  va_end(ap);
+  fclose(fp);
+}
 
 /** Aportable random number function.
  * @param from The lower bounds of the random number.
@@ -416,6 +427,88 @@ void sprintbitarray(int bitvector[], const char *names[], int maxar, char *resul
     strcpy(result, "NOBITS ");
 }
 
+/* Shared object value labels (used anywhere we need human readable value slots) */
+static const char *const light_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "unused0", "unused1", "hours_left", "unused3",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const scroll_potion_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "spell_level", "spell1", "spell2", "spell3",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const wand_staff_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "level", "max_charges", "remaining_charges", "spell",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const weapon_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "dice_num", "dice_size", "weapon_type", "message_type",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const armor_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "piece_ac", "bulk", "magic_bonus", "stealth_disadv",
+  "durability", "str_requirement", "Value[6]", "Value[7]"
+};
+
+static const char *const container_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "capacity", "flags", "key_vnum", "corpse",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const drink_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "capacity", "contains", "liquid_type", "poisoned",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const food_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "bites_capacity", "bites_left", "hours_full_per_bite", "poisoned",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const money_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "coins", "unused1", "unused2", "unused3",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const furniture_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "max_seats", "current_occupants", "allowed_pos", "Value[3]",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const worn_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "closable", "hooded", "is_closed", "capacity",
+  "hood_raised", "Value[5]", "Value[6]", "Value[7]"
+};
+
+static const char *const generic_val_labels[NUM_OBJ_VAL_POSITIONS] = {
+  "Value[0]", "Value[1]", "Value[2]", "Value[3]",
+  "Value[4]", "Value[5]", "Value[6]", "Value[7]"
+};
+
+const char *const *obj_value_labels(int item_type)
+{
+  switch (item_type) {
+    case ITEM_LIGHT:     return light_val_labels;
+    case ITEM_SCROLL:
+    case ITEM_POTION:    return scroll_potion_val_labels;
+    case ITEM_WAND:
+    case ITEM_STAFF:     return wand_staff_val_labels;
+    case ITEM_WEAPON:    return weapon_val_labels;
+    case ITEM_ARMOR:     return armor_val_labels;
+    case ITEM_CONTAINER: return container_val_labels;
+    case ITEM_WORN:      return worn_val_labels;
+    case ITEM_DRINKCON:
+    case ITEM_FOUNTAIN:  return drink_val_labels;
+    case ITEM_FOOD:      return food_val_labels;
+    case ITEM_MONEY:     return money_val_labels;
+    case ITEM_FURNITURE: return furniture_val_labels;
+    default:             return generic_val_labels;
+  }
+}
+
 /** Calculate the REAL time passed between two time invervals.
  * @todo Recommend making this function foresightedly useful by calculating
  * real months and years, too.
@@ -694,6 +787,10 @@ int get_filename(char *filename, size_t fbufsize, int mode, const char *orig_nam
     prefix = LIB_PLRFILES;
     suffix = SUF_PLR;
     break;
+  case ACCT_FILE:
+    prefix = LIB_ACCTFILES;
+    suffix = SUF_ACCT;
+    break;
   default:
     return (0);
   }
@@ -849,6 +946,9 @@ int room_is_dark(room_rnum room)
 
   if (SECT(room) == SECT_INSIDE || SECT(room) == SECT_CITY)
     return (FALSE);
+
+  if (SECT(room) == SECT_UNDERGROUND)
+    return (TRUE);
 
   if (weather_info.sunlight == SUN_SET || weather_info.sunlight == SUN_DARK)
     return (TRUE);
@@ -1552,5 +1652,467 @@ void remove_from_string(char *string, const char *to_remove)
             i--;
         }
     }
-    
+}
+
+static struct obj_data *find_raised_hood_item(const struct char_data *ch)
+{
+  int j;
+
+  if (!ch)
+    return NULL;
+
+  for (j = 0; j < NUM_WEARS; j++) {
+    struct obj_data *obj = GET_EQ((struct char_data *)ch, j); /* GET_EQ not const-safe */
+    if (!obj)
+      continue;
+
+    if (GET_OBJ_TYPE(obj) == ITEM_WORN &&
+        GET_OBJ_VAL(obj, WORN_CAN_HOOD) == 1 &&
+        GET_OBJ_VAL(obj, WORN_HOOD_UP_STATE) == 1) {
+      return obj;
+    }
+  }
+
+  return NULL;
+}
+
+const char *get_char_sdesc(const struct char_data *ch)
+{
+  static char buf[MAX_STRING_LENGTH];
+  struct obj_data *hood;
+
+  if (!ch)
+    return "someone";
+
+  /* Hood override: temporary display only (does not mutate stored sdesc). */
+  hood = find_raised_hood_item(ch);
+  if (hood && hood->short_description && *hood->short_description) {
+    snprintf(buf, sizeof(buf), "the figure in %s", hood->short_description);
+    return buf;
+  }
+
+  if (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch))
+    return GET_SHORT_DESC(ch);
+
+  if (GET_NAME(ch))
+    return GET_NAME(ch);
+
+  return "someone";
+}
+
+/* 5e system helpers */
+
+extern const struct armor_slot armor_slots[];      /* in constants.c */
+extern const int NUM_ARMOR_SLOTS;                  /* in constants.c */
+extern const int ARMOR_WEAR_POSITIONS[];           /* in constants.c */
+
+/* --- Advantage/Disadvantage rollers --- */
+int roll_d20(void)            { return rand_number(1, 20); }
+int roll_d20_adv(void)        { int a=roll_d20(), b=roll_d20(); return (a>b)?a:b; }
+int roll_d20_disadv(void)     { int a=roll_d20(), b=roll_d20(); return (a<b)?a:b; }
+
+/* Map skills to their 5e ability score (ABIL_*). Default is WIS if unknown. */
+static int skill_to_ability(int skillnum)
+{
+  switch (skillnum) {
+    /* 5e skills (including ones you already had) */
+    case SKILL_ACROBATICS:       return ABIL_DEX;
+    case SKILL_SLEIGHT_OF_HAND:  return ABIL_DEX;
+    case SKILL_STEALTH:          return ABIL_DEX;
+
+    case SKILL_ATHLETICS:        return ABIL_STR;
+
+    case SKILL_ARCANA:           return ABIL_INT;
+    case SKILL_HISTORY:          return ABIL_INT;
+    case SKILL_INVESTIGATION:    return ABIL_INT;
+    case SKILL_NATURE:           return ABIL_INT;
+    case SKILL_RELIGION:         return ABIL_INT;
+
+    case SKILL_ANIMAL_HANDLING:  return ABIL_WIS;
+    case SKILL_INSIGHT:          return ABIL_WIS;
+    case SKILL_MEDICINE:         return ABIL_WIS;
+    case SKILL_PERCEPTION:       return ABIL_WIS;
+    case SKILL_SURVIVAL:         return ABIL_WIS;
+
+    case SKILL_DECEPTION:        return ABIL_CHA;
+    case SKILL_INTIMIDATION:     return ABIL_CHA;
+    case SKILL_PERFORMANCE:      return ABIL_CHA;
+    case SKILL_PERSUASION:       return ABIL_CHA;
+
+    /* Legacy overlaps you likely want treated as WIS in the interim */
+    case SKILL_TRACK:            return ABIL_WIS;
+
+    default:
+      return ABIL_WIS;
+  }
+}
+
+int roll_skill_check(struct char_data *ch, int skillnum, int mode, int *out_d20)
+{
+  int d20, total;
+  int ability;
+  int pct;
+
+  if (!ch) {
+    if (out_d20) *out_d20 = 0;
+    return 0;
+  }
+
+  if (mode > 0)
+    d20 = roll_d20_adv();
+  else if (mode < 0)
+    d20 = roll_d20_disadv();
+  else
+    d20 = roll_d20();
+
+  if (out_d20)
+    *out_d20 = d20;
+
+  /* Base: d20 + relevant ability modifier (5e rules). */
+  ability = skill_to_ability(skillnum);
+  switch (ability) {
+    case ABIL_STR: total = d20 + GET_ABILITY_MOD(GET_STR(ch)); break;
+    case ABIL_DEX: total = d20 + GET_ABILITY_MOD(GET_DEX(ch)); break;
+    case ABIL_CON: total = d20 + GET_ABILITY_MOD(GET_CON(ch)); break;
+    case ABIL_INT: total = d20 + GET_ABILITY_MOD(GET_INT(ch)); break;
+    case ABIL_WIS: total = d20 + GET_ABILITY_MOD(GET_WIS(ch)); break;
+    case ABIL_CHA: total = d20 + GET_ABILITY_MOD(GET_CHA(ch)); break;
+    default:       total = d20; break;
+  }
+
+  /*
+   * Determine whether the character "has" the skill.
+   * We treat skill % <= 0 as "not trained / not present".
+   */
+  if (skillnum <= 0 || skillnum > TOP_SPELL_DEFINE)
+    return total;
+
+  pct = GET_SKILL(ch, skillnum);
+  if (pct <= 0) {
+    /* Requirement #4: no skill => regular ability check only. */
+    return total;
+  }
+
+  /*
+   * Requirement #6/#7:
+   * If they have the skill, check proficiency using existing helpers.
+   * We treat GET_PROFICIENCY(pct) > 0 as proficient for this purpose.
+   */
+  if (GET_PROFICIENCY(pct) > 0)
+    total += get_total_proficiency_bonus(ch);
+
+  return total;
+}
+
+/* Percent style (for legacy percent-based skill checks) */
+bool percent_success(int chance_pct) {
+  if (chance_pct <= 0) return FALSE;
+  if (chance_pct >= 100) return TRUE;
+  return rand_number(1, 100) <= chance_pct;
+}
+bool percent_success_adv(int chance_pct) {
+  /* better of two tries */
+  int r1 = rand_number(1, 100), r2 = rand_number(1, 100);
+  int best = (r1 < r2) ? r1 : r2;
+  return best <= chance_pct;
+}
+bool percent_success_disadv(int chance_pct) {
+  /* worse of two tries */
+  int r1 = rand_number(1, 100), r2 = rand_number(1, 100);
+  int worst = (r1 > r2) ? r1 : r2;
+  return worst <= chance_pct;
+}
+
+/* Helper: derive Dex cap from total bulk */
+static int dex_cap_from_bulk(int total_bulk) {
+  if (total_bulk <= 5)  /* Light */
+    return 5;
+  else if (total_bulk <= 9) /* Medium */
+    return 2;
+  else /* Heavy */
+    return 0;
+}
+
+/* --- Stealth disadvantage detector ---
+ * Returns TRUE if:
+ *  - Any worn armor piece has VAL_ARMOR_STEALTH_DISADV set to 1
+ */
+bool has_stealth_disadv(struct char_data *ch)
+{
+  int i;
+  struct obj_data *obj;
+
+  if (!ch) return FALSE;
+
+  for (i = 0; i < NUM_WEARS; i++) {
+    obj = GET_EQ(ch, i);
+    if (!obj) continue;
+    if (GET_OBJ_TYPE(obj) != ITEM_ARMOR) continue;
+
+    /* new semantics: slot 3 is a 0/1 toggle */
+    if (GET_OBJ_VAL(obj, VAL_ARMOR_STEALTH_DISADV))
+      return TRUE;
+  }
+  return FALSE;
+}
+
+/* Returns the 5e-style ability modifier for a given ability score. */
+int GET_ABILITY_MOD(int score) {
+  int mod = (score - 10) / 2;
+  if ((score - 10) < 0 && ((score - 10) % 2 != 0))
+    mod -= 1;  /* adjust for C truncation toward zero */
+  return mod;
+}
+
+/* Helper: derive a class-level proficiency bonus (no situational modifiers). */
+int get_level_proficiency_bonus(struct char_data *ch)
+{
+  int level;
+  int bonus;
+
+  if (!ch)
+    return 0;
+
+  level = MAX(1, GET_LEVEL(ch));
+  bonus = 2 + ((level - 1) / 4);
+  if (bonus > 6)
+    bonus = 6;
+  return bonus;
+}
+
+int get_total_proficiency_bonus(struct char_data *ch)
+{
+  if (!ch)
+    return 0;
+  return get_level_proficiency_bonus(ch) + GET_PROF_MOD(ch);
+}
+
+static int get_ability_mod_from_index(struct char_data *ch, int ability)
+{
+  if (!ch)
+    return 0;
+
+  switch (ability) {
+    case ABIL_STR: return GET_ABILITY_MOD(GET_STR(ch));
+    case ABIL_DEX: return GET_ABILITY_MOD(GET_DEX(ch));
+    case ABIL_CON: return GET_ABILITY_MOD(GET_CON(ch));
+    case ABIL_INT: return GET_ABILITY_MOD(GET_INT(ch));
+    case ABIL_WIS: return GET_ABILITY_MOD(GET_WIS(ch));
+    case ABIL_CHA: return GET_ABILITY_MOD(GET_CHA(ch));
+    default:       return 0;
+  }
+}
+
+int get_save_mod(struct char_data *ch, int ability)
+{
+  int mod;
+
+  if (!ch)
+    return 0;
+
+  mod = GET_SAVE(ch, ability);
+  mod += get_ability_mod_from_index(ch, ability);
+
+  if (has_save_proficiency(GET_CLASS(ch), ability))
+    mod += get_total_proficiency_bonus(ch);
+
+  return mod;
+}
+
+int compute_save_dc(struct char_data *caster, int level, int spellnum)
+{
+  if (caster)
+    return GET_SPELL_SAVE_DC(caster, spellnum, 0);
+
+  /* Non-caster fallback for scrolls/wands/etc. */
+  return MAX(1, 8 + (level / 2));
+}
+
+/* Converts a skill percentage (0-100) into a 5e-like proficiency bonus. */
+int GET_PROFICIENCY(int pct) {
+  if (pct <= 14) return 0;
+  if (pct <= 29) return 1;
+  if (pct <= 44) return 2;
+  if (pct <= 59) return 3;
+  if (pct <= 74) return 4;
+  if (pct <= 90) return 5;
+  return 6; /* 91–100 (inclusive) */
+}
+
+/* Forward declaration */
+int GET_SITUATIONAL_AC(struct char_data *ch);
+
+void compute_ac_breakdown(struct char_data *ch, struct ac_breakdown *out)
+{
+  int total_magic = 0;
+
+  if (!out) return;
+  memset(out, 0, sizeof(*out));
+  out->base = 10;
+
+  /* Armor pieces: head/body/legs/arms/hands/feet */
+  for (int i = 0; i < NUM_ARMOR_SLOTS; i++) {
+    int wear_pos = ARMOR_WEAR_POSITIONS[i];
+    struct obj_data *obj = GET_EQ(ch, wear_pos);
+    if (!obj || GET_OBJ_TYPE(obj) != ITEM_ARMOR)
+      continue;
+
+    /* piece AC */
+    int piece_ac = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
+    if (piece_ac < 0) piece_ac = 0;
+    if (piece_ac > armor_slots[i].max_piece_ac)
+      piece_ac = armor_slots[i].max_piece_ac;
+    out->armor_piece_sum += piece_ac;
+
+    /* piece magic (slot-capped; total cap applied after loop) */
+    int piece_magic = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
+    if (piece_magic < 0) piece_magic = 0;
+    if (piece_magic > armor_slots[i].max_magic)
+      piece_magic = armor_slots[i].max_magic;
+    total_magic += piece_magic;
+
+    /* bulk contribution */
+    int piece_bulk = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
+    if (piece_bulk < 0) piece_bulk = 0;
+    out->total_bulk += piece_bulk;
+  }
+
+  /* global armor magic cap (armor only) */
+  if (total_magic > MAX_TOTAL_ARMOR_MAGIC)
+    total_magic = MAX_TOTAL_ARMOR_MAGIC;
+  out->armor_magic_sum = total_magic;
+
+  /* Dex cap from bulk and applied dex mod */
+  {
+    int dexmod = GET_ABILITY_MOD(GET_DEX(ch));
+    out->dex_cap = dex_cap_from_bulk(out->total_bulk); /* Light<=5:5 / <=10:2 / else:0 */
+    out->dex_mod_applied = (dexmod > out->dex_cap) ? out->dex_cap : dexmod;
+  }
+
+  /* Situational */
+  out->situational = GET_SITUATIONAL_AC(ch);
+
+  /* Total */
+  out->total = out->base
+             + out->armor_piece_sum
+             + out->armor_magic_sum
+             + out->dex_mod_applied
+             + out->situational;
+}
+
+/* Compute ascending AC using 5e-like rules */
+int compute_ascending_ac(struct char_data *ch)
+{
+  struct ac_breakdown b;
+  compute_ac_breakdown(ch, &b);
+  return b.total;
+}
+
+/* Stub: situational AC mods */
+/* Placeholder for future skill/spell enhancements such as Haste */
+int GET_SITUATIONAL_AC(struct char_data *ch)
+{
+  int mod = 0;
+
+  /* --- Shield spell (5e-style +5 AC while active) --- */
+#if defined(AFF_SHIELD_SPELL)
+  if (AFF_FLAGGED(ch, AFF_SHIELD_SPELL)) mod += 5;
+#elif defined(SPELL_SHIELD)
+  if (affected_by_spell(ch, SPELL_SHIELD)) mod += 5;
+#endif
+
+  /* --- Haste (small defensive bump; tune as desired) --- */
+#if defined(AFF_HASTE)
+  if (AFF_FLAGGED(ch, AFF_HASTE)) mod += 2;
+#elif defined(SPELL_HASTE)
+  if (affected_by_spell(ch, SPELL_HASTE)) mod += 2;
+#endif
+
+  /* --- Cover (if your codebase models it as affects) --- */
+#if defined(AFF_HALF_COVER)
+  if (AFF_FLAGGED(ch, AFF_HALF_COVER)) mod += 2;
+#endif
+#if defined(AFF_THREEQ_COVER)
+  if (AFF_FLAGGED(ch, AFF_THREEQ_COVER)) mod += 5;
+#endif
+
+  /* Add more here as you formalize effects:
+     - Blur/Protection, Barkskin, Stoneskin, etc.
+     Example pattern:
+     #if defined(AFF_BLUR)
+       if (AFF_FLAGGED(ch, AFF_BLUR)) mod += 2;
+     #elif defined(SPELL_BLUR)
+       if (affected_by_spell(ch, SPELL_BLUR)) mod += 2;
+     #endif
+  */
+
+  return mod;
+}
+
+/* Shim: ascending AC wrapper for migration */
+int compute_armor_class_asc(struct char_data *ch) {
+  return compute_ascending_ac(ch);
+}
+
+/* NPC loadout helpers */
+void loadout_free_list(struct mob_loadout **head) {
+  struct mob_loadout *n, *p = *head;
+  while (p) { n = p->next; free(p); p = n; }
+  *head = NULL;
+}
+
+void loadout_add_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty) {
+  struct mob_loadout *e = NULL;
+  if (qty < 1) qty = 1;
+  CREATE(e, struct mob_loadout, 1);
+  e->vnum = vnum;
+  e->wear_pos = wear_pos;
+  e->quantity = qty;
+  e->next = NULL;
+  /* push-front for O(1); order doesn’t matter yet */
+  e->next = *head;
+  *head = e;
+}
+
+struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src) {
+  struct mob_loadout *head = NULL, *tail = NULL;
+  for (const struct mob_loadout *p = src; p; p = p->next) {
+    struct mob_loadout *n;
+    CREATE(n, struct mob_loadout, 1);
+    n->vnum = p->vnum;
+    n->wear_pos = p->wear_pos;
+    n->quantity = p->quantity;
+    n->next = NULL;
+    if (!head) head = tail = n;
+    else { tail->next = n; tail = n; }
+  }
+  return head;
+}
+
+/* Worn item helpers */
+int obj_is_storage(const struct obj_data *obj)
+{
+  if (!obj) return 0;
+
+  if (GET_OBJ_TYPE(obj) == ITEM_CONTAINER)
+    return 1;
+
+  if (GET_OBJ_TYPE(obj) == ITEM_WORN && GET_OBJ_VAL(obj, WORN_CAPACITY) > 0)
+    return 1;
+
+  return 0;
+}
+
+int obj_storage_is_closed(const struct obj_data *obj)
+{
+  if (!obj) return 0;
+
+  if (GET_OBJ_TYPE(obj) == ITEM_CONTAINER)
+    return IS_SET(GET_OBJ_VAL(obj, 1), CONT_CLOSED);
+
+  if (GET_OBJ_TYPE(obj) == ITEM_WORN &&
+      GET_OBJ_VAL(obj, WORN_CAN_OPEN_CLOSE) == 1)
+    return (GET_OBJ_VAL(obj, WORN_IS_CLOSED) == 1);
+
+  return 0;
 }

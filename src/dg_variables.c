@@ -432,16 +432,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
         snprintf(str, slen, "%d",((num = atoi(field)) > 0) ? trgvar_in_room(num) : 0);
         return;
       }
-      else if (!str_cmp(var, "happyhour")) {
-        if (!str_cmp(field, "qp") && IS_HAPPYHOUR)
-          snprintf(str, slen, "%d", HAPPY_QP);
-        else if (!str_cmp(field, "exp") && IS_HAPPYHOUR)
-          snprintf(str, slen, "%d", HAPPY_EXP);
-        else if (!str_cmp(field, "gold") && IS_HAPPYHOUR)
-          snprintf(str, slen, "%d", HAPPY_GOLD);
-        else snprintf(str, slen, "%d", HAPPY_TIME);
-        return;
-      }
       else if (!str_cmp(var, "time")) {
         if (!str_cmp(field, "hour"))
           snprintf(str, slen, "%d", time_info.hours);
@@ -461,8 +451,8 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
  * For example you want to check how many PC's are in room with vnum 1204. PC's
  * have the vnum -1 so: %echo% players in room 1204: %findmob.1204(-1)%
  * Or say you had a bank, and you want a script to check the number of bags of
- * gold (vnum: 1234). In the vault (vnum: 453). Use: %findobj.453(1234)% and it
- * will return the number of bags of gold.
+ * coins (vnum: 1234). In the vault (vnum: 453). Use: %findobj.453(1234)% and it
+ * will return the number of bags of coins.
  * Addition inspired by Jamie Nelson */
       else if (!str_cmp(var, "findmob")) {
         if (!field || !*field || !subfield || !*subfield) {
@@ -664,13 +654,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           }
           break;
         case 'd':
-          if (!str_cmp(field, "damroll")) {
-            if (subfield && *subfield) {
-              int addition = atoi(subfield);
-              GET_DAMROLL(c) = MAX(1, GET_DAMROLL(c) + addition);
-            }
-            snprintf(str, slen, "%d", GET_DAMROLL(c));
-            } else if (!str_cmp(field, "dex")) {
+          if (!str_cmp(field, "dex")) {
               if (subfield && *subfield) {
                 int addition = atoi(subfield);
                 int max = (IS_NPC(c) || GET_LEVEL(c) >= LVL_GRGOD) ? 25 : 18;
@@ -733,12 +717,12 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           }
           break;
         case 'g':
-          if (!str_cmp(field, "gold")) {
+          if (!str_cmp(field, "coins")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              increase_gold(c, addition);
+              increase_coins(c, addition);
             }
-            snprintf(str, slen, "%d", GET_GOLD(c));
+            snprintf(str, slen, "%d", GET_COINS(c));
           }
           break;
         case 'h':
@@ -769,13 +753,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
               update_pos(c);
             }
             snprintf(str, slen, "%d", GET_HIT(c));
-          }
-          else if (!str_cmp(field, "hitroll")) {
-            if (subfield && *subfield) {
-              int addition = atoi(subfield);
-              GET_HITROLL(c) = MAX(1, GET_HITROLL(c) + addition);
-            }
-            snprintf(str, slen, "%d", GET_HITROLL(c));
           }
           else if (!str_cmp(field, "hunger")) {
             if (subfield && *subfield) {
@@ -853,7 +830,11 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           if (!str_cmp(field, "level")) {
             if (subfield && *subfield) {
               int lev = atoi(subfield);
-              GET_LEVEL(c) = MIN(MAX(lev, 0), LVL_IMMORT-1);
+              if (IS_NPC(c)) {
+                if (GET_LEVEL(c) != 1)
+                  GET_LEVEL(c) = 1;
+              } else
+                GET_LEVEL(c) = MIN(MAX(lev, 1), LVL_IMPL);
             } else
               snprintf(str, slen, "%d", GET_LEVEL(c));
           }
@@ -940,13 +921,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             }
             snprintf(str, slen, "%s", position_types[GET_POS(c)]);
           }
-          else if (!str_cmp(field, "prac")) {
-            if (subfield && *subfield) {
-              int addition = atoi(subfield);
-              GET_PRACTICES(c) = MAX(0, GET_PRACTICES(c) + addition);
-            }
-            snprintf(str, slen, "%d", GET_PRACTICES(c));
-          }
           else if (!str_cmp(field, "pref")) {
             if (subfield && *subfield) {
               int pref = get_flag_by_name(preference_bits, subfield);
@@ -1000,60 +974,57 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
           }
           break;
         case 's':
-          if (!str_cmp(field, "saving_breath")) {
+          if (!str_cmp(field, "save_str")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_BREATH) += addition;
+              GET_SAVE(c, ABIL_STR) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_BREATH));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_STR));
           }
-          else if (!str_cmp(field, "saving_para")) {
+
+          else if (!str_cmp(field, "save_dex")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_PARA) += addition;
+              GET_SAVE(c, ABIL_DEX) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_PARA));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_DEX));
           }
-          else if (!str_cmp(field, "saving_petri")) {
+
+          else if (!str_cmp(field, "save_con")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_PETRI) += addition;
+              GET_SAVE(c, ABIL_CON) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_PETRI));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_CON));
           }
-          else if (!str_cmp(field, "saving_rod")) {
+
+          else if (!str_cmp(field, "save_int")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_ROD) += addition;
+              GET_SAVE(c, ABIL_INT) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_ROD));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_INT));
           }
-          else if (!str_cmp(field, "saving_spell")) {
+
+          else if (!str_cmp(field, "save_wis")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_SAVE(c, SAVING_SPELL) += addition;
+              GET_SAVE(c, ABIL_WIS) += addition;
             }
-            snprintf(str, slen, "%d", GET_SAVE(c, SAVING_SPELL));
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_WIS));
+          }
+
+          else if (!str_cmp(field, "save_cha")) {
+            if (subfield && *subfield) {
+              int addition = atoi(subfield);
+              GET_SAVE(c, ABIL_CHA) += addition;
+            }
+            snprintf(str, slen, "%d", GET_SAVE(c, ABIL_CHA));
           }
           else if (!str_cmp(field, "sex"))
             snprintf(str, slen, "%s", genders[(int)GET_SEX(c)]);
           else if (!str_cmp(field, "skill"))
             snprintf(str, slen, "%s", skill_percent(c, subfield));
-          else if (!str_cmp(field, "skillset")) {
-            if (!IS_NPC(c) && subfield && *subfield) {
-              char skillname[MAX_INPUT_LENGTH], *amount;
-              amount = one_word(subfield, skillname);
-              skip_spaces(&amount);
-              if (amount && *amount && is_number(amount)) {
-                int skillnum = find_skill_num(skillname);
-                if (skillnum > 0) {
-                  int new_value = MAX(0, MIN(100, atoi(amount)));
-                  SET_SKILL(c, skillnum, new_value);
-                }
-              }
-            }
-            *str = '\0'; /* so the parser know we recognize 'skillset' as a field */
-          }
           else if (!str_cmp(field, "str")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
@@ -1065,18 +1036,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             }
             snprintf(str, slen, "%d", GET_STR(c));
           }
-          else if (!str_cmp(field, "stradd")) {
-            if (GET_STR(c) >= 18) {
-              if (subfield && *subfield) {
-                int addition = atoi(subfield);
-                c->real_abils.str_add += addition;
-                if (c->real_abils.str_add > 100) c->real_abils.str_add = 100;
-                if (c->real_abils.str_add < 0) c->real_abils.str_add = 0;
-                affect_total(c);
-              }
-              snprintf(str, slen, "%d", GET_ADD(c));
-            }
-          }
           break;
         case 't':
           if (!str_cmp(field, "thirst")) {
@@ -1085,13 +1044,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
               GET_COND(c, THIRST) = MAX(-1, MIN(addition, 24));
             }
             snprintf(str, slen, "%d", GET_COND(c, THIRST));
-          }
-          else if (!str_cmp(field, "title")) {
-            if (!IS_NPC(c) && subfield && *subfield && valid_dg_target(c, DG_ALLOW_GODS)) {
-              if (GET_TITLE(c)) free(GET_TITLE(c));
-                GET_TITLE(c) = strdup(subfield);
-            }
-            snprintf(str, slen, "%s", IS_NPC(c) ? "" : GET_TITLE(c));
           }
           break;
 	case 'v':
@@ -1194,14 +1146,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
               GET_OBJ_COST(o) = MAX(1, addition + GET_OBJ_COST(o));
             }
             snprintf(str, slen, "%d", GET_OBJ_COST(o));
-          }
-
-          else if (!str_cmp(field, "cost_per_day")) {
-            if (subfield && *subfield) {
-              int addition = atoi(subfield);
-              GET_OBJ_RENT(o) = MAX(1, addition + GET_OBJ_RENT(o));
-            }
-            snprintf(str, slen, "%d", GET_OBJ_RENT(o));
           }
 
           else if (!str_cmp(field, "carried_by")) {
@@ -1621,7 +1565,7 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
  * if the field returns a name or a script UID or the like it can recurse. If
  * you supply a value like, %actor.int.str% it wont blow up on you either. Now
  * also lets subfields have variables parsed inside of them so that: %echo%
- * %actor.gold(%actor.gold%)% will double the actors gold every time its called.
+ * %actor.coins(%actor.coins%)% will double the actors coins every time its called.
  * - Jamie Nelson */
 
 /* substitutes any variables into line and returns it as buf */

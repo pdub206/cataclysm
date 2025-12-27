@@ -420,7 +420,7 @@ unworthy to connect to the MUD. Invalid name rejection loads a list of substring
 that must not appear in any character’s name that is being created. The invalid name
 list can be found at lib/misc/xnames.
 
-After deleting any expired rent files, the house code loads up any abodes defined. 
+After deleting any expired legacy save files, the house code loads up any abodes defined. 
 It must make sure the rooms still exist and the owner is still in the game before 
 setting up the house, atrium, and guest list. Houses are not loaded in mini-MUD 
 mode since most of the rooms will likely not exist. 

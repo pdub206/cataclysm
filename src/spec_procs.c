@@ -86,6 +86,7 @@ static const char *prac_types[] = {
   "skill"
 };
 
+/* TO-DO: Dig deeper and figure out if the min/max practice defines can be removed */
 #define LEARNED_LEVEL	0	/* % known which is considered "learned" */
 #define MAX_PER_PRAC	1	/* max percent gain in skill per practice */
 #define MIN_PER_PRAC	2	/* min percent gain in skill per practice */
@@ -103,75 +104,45 @@ void list_skills(struct char_data *ch)
   size_t len = 0;
   char buf2[MAX_STRING_LENGTH];
 
-  len = snprintf(buf2, sizeof(buf2), "You have %d practice session%s remaining.\r\n"
-	"You know of the following %ss:\r\n", GET_PRACTICES(ch),
-	GET_PRACTICES(ch) == 1 ? "" : "s", SPLSKL(ch));
+  len = snprintf(buf2, sizeof(buf2), "You know of the following %ss:\r\n", SPLSKL(ch));
 
-  for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
-    i = spell_sort_info[sortpos];
-    if (GET_LEVEL(ch) >= spell_info[i].min_level[(int) GET_CLASS(ch)]) {
-    ret = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s\r\n", spell_info[i].name, how_good(GET_SKILL(ch, i)));
-      if (ret < 0 || len + ret >= sizeof(buf2))
-        break;
-      len += ret;
+  if (IS_NPC(ch)) {
+    /* NPCs: show only the skills actually assigned to them */
+    for (i = 1; i <= MAX_SKILLS; i++) {
+      if (GET_SKILL(ch, i) > 0) {
+        ret = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s\r\n",
+                       spell_info[i].name, how_good(GET_SKILL(ch, i)));
+        if (ret < 0 || len + ret >= sizeof(buf2))
+          break;
+        len += ret;
+      }
+    }
+  } else {
+    /* PCs: show skills available to their class and level */
+    for (sortpos = 1; sortpos <= MAX_SKILLS; sortpos++) {
+      i = spell_sort_info[sortpos];
+      if (GET_LEVEL(ch) >= spell_info[i].min_level[(int) GET_CLASS(ch)]) {
+        ret = snprintf(buf2 + len, sizeof(buf2) - len, "%-20s %s\r\n",
+                       spell_info[i].name, how_good(GET_SKILL(ch, i)));
+        if (ret < 0 || len + ret >= sizeof(buf2))
+          break;
+        len += ret;
+      }
     }
   }
+
   if (len >= sizeof(buf2))
     strcpy(buf2 + sizeof(buf2) - strlen(overflow) - 1, overflow); /* strcpy: OK */
 
   page_string(ch->desc, buf2, TRUE);
 }
 
-SPECIAL(guild)
-{
-  int skill_num, percent;
-
-  if (IS_NPC(ch) || !CMD_IS("practice"))
-    return (FALSE);
-
-  skip_spaces(&argument);
-
-  if (!*argument) {
-    list_skills(ch);
-    return (TRUE);
-  }
-  if (GET_PRACTICES(ch) <= 0) {
-    send_to_char(ch, "You do not seem to be able to practice now.\r\n");
-    return (TRUE);
-  }
-
-  skill_num = find_skill_num(argument);
-
-  if (skill_num < 1 ||
-      GET_LEVEL(ch) < spell_info[skill_num].min_level[(int) GET_CLASS(ch)]) {
-    send_to_char(ch, "You do not know of that %s.\r\n", SPLSKL(ch));
-    return (TRUE);
-  }
-  if (GET_SKILL(ch, skill_num) >= LEARNED(ch)) {
-    send_to_char(ch, "You are already learned in that area.\r\n");
-    return (TRUE);
-  }
-  send_to_char(ch, "You practice for a while...\r\n");
-  GET_PRACTICES(ch)--;
-
-  percent = GET_SKILL(ch, skill_num);
-  percent += MIN(MAXGAIN(ch), MAX(MINGAIN(ch), int_app[GET_INT(ch)].learn));
-
-  SET_SKILL(ch, skill_num, MIN(LEARNED(ch), percent));
-
-  if (GET_SKILL(ch, skill_num) >= LEARNED(ch))
-    send_to_char(ch, "You are now learned in that area.\r\n");
-
-  return (TRUE);
-}
-
 SPECIAL(dump)
 {
   struct obj_data *k;
-  int value = 0;
 
   for (k = world[IN_ROOM(ch)].contents; k; k = world[IN_ROOM(ch)].contents) {
-    act("$p vanishes in a puff of smoke!", FALSE, 0, k, 0, TO_ROOM);
+    act("$p is covered in a pile of ever-growing debris.", FALSE, 0, k, 0, TO_ROOM);
     extract_obj(k);
   }
 
@@ -181,20 +152,10 @@ SPECIAL(dump)
   do_drop(ch, argument, cmd, SCMD_DROP);
 
   for (k = world[IN_ROOM(ch)].contents; k; k = world[IN_ROOM(ch)].contents) {
-    act("$p vanishes in a puff of smoke!", FALSE, 0, k, 0, TO_ROOM);
-    value += MAX(1, MIN(50, GET_OBJ_COST(k) / 10));
+    act("$p vis covered in a pile of ever-growing debris.", FALSE, 0, k, 0, TO_ROOM);
     extract_obj(k);
   }
 
-  if (value) {
-    send_to_char(ch, "You are awarded for outstanding performance.\r\n");
-    act("$n has been awarded for being a good citizen.", TRUE, ch, 0, 0, TO_ROOM);
-
-    if (GET_LEVEL(ch) < 3)
-      gain_exp(ch, value);
-    else
-      increase_gold(ch, value);
-  }
   return (TRUE);
 }
 
@@ -202,9 +163,9 @@ SPECIAL(mayor)
 {
   char actbuf[MAX_INPUT_LENGTH];
 
-  const char open_path[] =
+  static const char open_path[] =
 	"W3a3003b33000c111d0d111Oe333333Oe22c222112212111a1S.";
-  const char close_path[] =
+  static const char close_path[] =
 	"W3a3003b33000c111d0d111CE333333CE22c222112212111a1S.";
 
   static const char *path = NULL;
@@ -295,7 +256,7 @@ SPECIAL(mayor)
 
 static void npc_steal(struct char_data *ch, struct char_data *victim)
 {
-  int gold;
+  int coins;
 
   if (IS_NPC(victim))
     return;
@@ -306,13 +267,13 @@ static void npc_steal(struct char_data *ch, struct char_data *victim)
 
   if (AWAKE(victim) && (rand_number(0, GET_LEVEL(ch)) == 0)) {
     act("You discover that $n has $s hands in your wallet.", FALSE, ch, 0, victim, TO_VICT);
-    act("$n tries to steal gold from $N.", TRUE, ch, 0, victim, TO_NOTVICT);
+    act("$n tries to steal coins from $N.", TRUE, ch, 0, victim, TO_NOTVICT);
   } else {
-    /* Steal some gold coins */
-    gold = (GET_GOLD(victim) * rand_number(1, 10)) / 100;
-    if (gold > 0) {
-      increase_gold(ch, gold);
-	  decrease_gold(victim, gold);
+    /* Steal some coins */
+    coins = (GET_COINS(victim) * rand_number(1, 10)) / 100;
+    if (coins > 0) {
+      increase_coins(ch, coins);
+	  decrease_coins(victim, coins);
     }
   }
 }
@@ -348,7 +309,7 @@ SPECIAL(thief)
   return (FALSE);
 }
 
-SPECIAL(magic_user)
+SPECIAL(sorceror)
 {
   struct char_data *vict;
 
@@ -617,11 +578,11 @@ SPECIAL(pet_shops)
       send_to_char(ch, "There is no such pet!\r\n");
       return (TRUE);
     }
-    if (GET_GOLD(ch) < PET_PRICE(pet)) {
-      send_to_char(ch, "You don't have enough gold!\r\n");
+    if (GET_COINS(ch) < PET_PRICE(pet)) {
+      send_to_char(ch, "You don't have enough coins!\r\n");
       return (TRUE);
     }
-    decrease_gold(ch, PET_PRICE(pet));
+    decrease_coins(ch, PET_PRICE(pet));
 
     pet = read_mobile(GET_MOB_RNUM(pet), REAL);
     GET_EXP(pet) = 0;
@@ -660,8 +621,8 @@ SPECIAL(bank)
   int amount;
 
   if (CMD_IS("balance")) {
-    if (GET_BANK_GOLD(ch) > 0)
-      send_to_char(ch, "Your current balance is %d coins.\r\n", GET_BANK_GOLD(ch));
+    if (GET_BANK_COINS(ch) > 0)
+      send_to_char(ch, "Your current balance is %d coins.\r\n", GET_BANK_COINS(ch));
     else
       send_to_char(ch, "You currently have no money deposited.\r\n");
     return (TRUE);
@@ -670,12 +631,12 @@ SPECIAL(bank)
       send_to_char(ch, "How much do you want to deposit?\r\n");
       return (TRUE);
     }
-    if (GET_GOLD(ch) < amount) {
+    if (GET_COINS(ch) < amount) {
       send_to_char(ch, "You don't have that many coins!\r\n");
       return (TRUE);
     }
-    decrease_gold(ch, amount);
-	increase_bank(ch, amount);
+    decrease_coins(ch, amount);
+	increase_bank_coins(ch, amount);
     send_to_char(ch, "You deposit %d coins.\r\n", amount);
     act("$n makes a bank transaction.", TRUE, ch, 0, FALSE, TO_ROOM);
     return (TRUE);
@@ -684,16 +645,15 @@ SPECIAL(bank)
       send_to_char(ch, "How much do you want to withdraw?\r\n");
       return (TRUE);
     }
-    if (GET_BANK_GOLD(ch) < amount) {
+    if (GET_BANK_COINS(ch) < amount) {
       send_to_char(ch, "You don't have that many coins deposited!\r\n");
       return (TRUE);
     }
-    increase_gold(ch, amount);
-	decrease_bank(ch, amount);
+    increase_coins(ch, amount);
+	decrease_bank_coins(ch, amount);
     send_to_char(ch, "You withdraw %d coins.\r\n", amount);
     act("$n makes a bank transaction.", TRUE, ch, 0, FALSE, TO_ROOM);
     return (TRUE);
   } else
     return (FALSE);
 }
-

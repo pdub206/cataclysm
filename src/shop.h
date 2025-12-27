@@ -48,7 +48,7 @@ struct shop_data {
    room_vnum *in_room;		/* Where is the shop?			*/
    int	 open1, open2;		/* When does the shop open?		*/
    int	 close1, close2;	/* When does the shop close?		*/
-   int	 bankAccount;		/* Store all gold over 15000 (disabled)	*/
+   int	 bankAccount;		/* Store all coins over 15000 (disabled)	*/
    int	 lastsort;		/* How many items are sorted in inven?	*/
    SPECIAL (*func);		/* Secondary spec_proc for shopkeeper	*/
 };
@@ -74,15 +74,19 @@ struct shop_data {
 #define LIST_ROOM		2
 
 /* Whom will we not trade with (bitvector for SHOP_TRADE_WITH()) */
-#define TRADE_NOGOOD       (1 << 0)
-#define TRADE_NOEVIL       (1 << 1)
-#define TRADE_NONEUTRAL    (1 << 2)
-#define TRADE_NOMAGIC_USER (1 << 3)
-#define TRADE_NOCLERIC     (1 << 4)
-#define TRADE_NOTHIEF      (1 << 5)
-#define TRADE_NOWARRIOR    (1 << 6)
+#define TRADE_NOGOOD         (1 << 0)
+#define TRADE_NOEVIL         (1 << 1)
+#define TRADE_NONEUTRAL      (1 << 2)
+#define TRADE_NOSORCEROR     (1 << 3)
+#define TRADE_NOCLERIC       (1 << 4)
+#define TRADE_NOROGUE        (1 << 5)
+#define TRADE_NOFIGHTER      (1 << 6)
+#define TRADE_NOBARBARIAN    (1 << 7)
+#define TRADE_NORANGER       (1 << 8)
+#define TRADE_NOBARD         (1 << 9)
+#define TRADE_NODRUID        (1 << 10)
 /** Total number of trade types */
-#define NUM_TRADERS     7
+#define NUM_TRADERS     11
 
 struct stack_data {
    int data[100];
@@ -119,13 +123,17 @@ struct stack_data {
 #define SHOP_SELLPROFIT(i)	(shop_index[(i)].profit_sell)
 #define SHOP_FUNC(i)		(shop_index[(i)].func)
 
-#define NOTRADE_GOOD(i)		(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOGOOD))
-#define NOTRADE_EVIL(i)		(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOEVIL))
-#define NOTRADE_NEUTRAL(i)	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NONEUTRAL))
-#define NOTRADE_MAGIC_USER(i)	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOMAGIC_USER))
-#define NOTRADE_CLERIC(i)	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOCLERIC))
-#define NOTRADE_THIEF(i)	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOTHIEF))
-#define NOTRADE_WARRIOR(i)	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOWARRIOR))
+#define NOTRADE_GOOD(i)		   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOGOOD))
+#define NOTRADE_EVIL(i)		   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOEVIL))
+#define NOTRADE_NEUTRAL(i)	   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NONEUTRAL))
+#define NOTRADE_SORCEROR(i)	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOSORCEROR))
+#define NOTRADE_CLERIC(i)	   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOCLERIC))
+#define NOTRADE_ROGUE(i)	   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOROGUE))
+#define NOTRADE_FIGHTER(i)  	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOFIGHTER))
+#define NOTRADE_BARBARIAN(i)	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOBARBARIAN))
+#define NOTRADE_RANGER(i)  	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NORANGER))
+#define NOTRADE_BARD(i)    	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOBARD))
+#define NOTRADE_DRUID(i)   	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NODRUID))
 
 /* Shop flags */
 #define WILL_START_FIGHT    (1 << 0)

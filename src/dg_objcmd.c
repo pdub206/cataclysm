@@ -668,7 +668,7 @@ static OCMD(do_odoor)
             strcat(newexit->general_description, "\r\n"); /* strcat : OK */
             break;
         case 2:  /* flags       */
-            newexit->exit_info = (sh_int)asciiflag_conv(value);
+            newexit->exit_info = (int)asciiflag_conv(value);
             break;
         case 3:  /* key         */
             newexit->key = atoi(value);

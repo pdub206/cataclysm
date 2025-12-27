@@ -594,38 +594,44 @@ static int export_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
 
   char ldesc[MAX_STRING_LENGTH];
   char ddesc[MAX_STRING_LENGTH];
+  char bdesc[MAX_STRING_LENGTH];
 
   ldesc[MAX_STRING_LENGTH - 1] = '\0';
   ddesc[MAX_STRING_LENGTH - 1] = '\0';
+  bdesc[MAX_STRING_LENGTH - 1] = '\0';
   strip_cr(strncpy(ldesc, GET_LDESC(mob), MAX_STRING_LENGTH - 1));
   strip_cr(strncpy(ddesc, GET_DDESC(mob), MAX_STRING_LENGTH - 1));
+  if (GET_BDESC(mob))
+    strip_cr(strncpy(bdesc, GET_BDESC(mob), MAX_STRING_LENGTH - 1));
+  else
+    bdesc[0] = '\0';
 
   fprintf(fd,	"#QQ%02d\n"
 		"%s%c\n"
 		"%s%c\n"
 		"%s%c\n"
+		"%s%c\n"
+    "B\n"
 		"%s%c\n",
 	mvnum%100,
-	GET_ALIAS(mob), STRING_TERMINATOR,
+	GET_KEYWORDS(mob), STRING_TERMINATOR,
 	GET_SDESC(mob), STRING_TERMINATOR,
 	ldesc, STRING_TERMINATOR,
-	ddesc, STRING_TERMINATOR
+	ddesc, STRING_TERMINATOR,
+	bdesc, STRING_TERMINATOR
   );
 
   fprintf(fd, "%d %d %d %d %d %d %d %d %d E\n"
-      "%d %d %d %dd%d+%d %dd%d+%d\n",
+      "%d %dd%d+%d\n",
       MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
       MOB_FLAGS(mob)[2], MOB_FLAGS(mob)[3],
       AFF_FLAGS(mob)[0], AFF_FLAGS(mob)[1],
       AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3],
       GET_ALIGNMENT(mob),
-      GET_LEVEL(mob), 20 - GET_HITROLL(mob), GET_AC(mob) / 10, GET_HIT(mob),
-      GET_MANA(mob), GET_MOVE(mob), GET_NDD(mob), GET_SDD(mob),
-      GET_DAMROLL(mob));
+      GET_LEVEL(mob), GET_HIT(mob),
+      GET_MANA(mob), GET_MOVE(mob));
 
-  fprintf(fd, 	"%d %d\n"
-		"%d %d %d\n",
-		GET_GOLD(mob), GET_EXP(mob),
+  fprintf(fd, 	"%d %d %d\n",
 		GET_POS(mob), GET_DEFAULT_POS(mob), GET_SEX(mob)
   );
 
@@ -784,8 +790,8 @@ static int export_save_objects(zone_rnum zrnum)
   /* Start running through all objects in this zone. */
   for (ovnum = genolc_zone_bottom(zrnum); ovnum <= zone_table[zrnum].top; ovnum++) {
     if ((ornum = real_object(ovnum)) != NOTHING) {
-      if ((obj = &obj_proto[ornum])->action_description) {
-	strncpy(buf, obj->action_description, sizeof(buf) - 1);
+      if ((obj = &obj_proto[ornum])->main_description) {
+	strncpy(buf, obj->main_description, sizeof(buf) - 1);
 	strip_cr(buf);
       } else
 	*buf = '\0';
@@ -838,7 +844,7 @@ static int export_save_objects(zone_rnum zrnum)
 
       fprintf(obj_file,
 	      "%d %d %d %d\n",
-	      GET_OBJ_WEIGHT(obj), GET_OBJ_COST(obj), GET_OBJ_RENT(obj), GET_OBJ_LEVEL(obj));
+	      GET_OBJ_WEIGHT(obj), GET_OBJ_COST(obj), GET_OBJ_COST_PER_DAY(obj), GET_OBJ_LEVEL(obj));
 
       /* Do we have script(s) attached? */
       export_script_save_to_disk(obj_file, obj, OBJ_TRIGGER);

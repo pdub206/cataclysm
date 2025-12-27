@@ -220,7 +220,6 @@ void write_output(void)
       perror("opening output file");
       exit(1);
     }
-    fprintf(fl, "<title> %s </title>\n", world[i].name);
     fprintf(fl, "<h1> %s </h1>\n", world[i].name);
     fprintf(fl, "<pre>\n");
     fputs(world[i].description, fl);

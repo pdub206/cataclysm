@@ -24,6 +24,7 @@
 #include "fight.h"
 #include "quest.h"
 #include "mud_event.h"
+#include "roomsave.h"
 
 /* local file scope variables */
 static int extractions_pending = 0;
@@ -32,6 +33,10 @@ static int extractions_pending = 0;
 static int apply_ac(struct char_data *ch, int eq_pos);
 static void update_object(struct obj_data *obj, int use);
 static void affect_modify_ar(struct char_data * ch, byte loc, sbyte mod, int bitv[], bool add);
+static bool is_shadow_keyword(const char *name);
+static int obj_coin_count(struct obj_data *obj);
+static struct char_data *obj_owner(struct obj_data *obj);
+static void adjust_char_coins(struct char_data *ch, int amount);
 
 char *fname(const char *namelist)
 {
@@ -89,20 +94,31 @@ int isname(const char *str, const char *namelist)
   if (!str || !*str || !namelist || !*namelist)
     return 0;
 
-  if (!strcmp(str, namelist)) /* the easy way */
+  /* exact full-string match check */
+  if (!strcasecmp(str, namelist))
     return 1;
 
-  newlist = strdup(namelist); /* make a copy since strtok 'modifies' strings */
-  for(curtok = strtok(newlist, WHITESPACE); curtok; curtok = strtok(NULL, WHITESPACE))
-    if(curtok && is_abbrev(str, curtok)) {
-      /* Don't allow abbreviated numbers. - Sryth */
-      if (isdigit(*str) && (atoi(str) != atoi(curtok)))
-        return 0;
+  newlist = strdup(namelist); /* make a copy since strtok modifies the string */
+  if (!newlist)
+    return 0;
+
+  for (curtok = strtok(newlist, WHITESPACE); curtok; curtok = strtok(NULL, WHITESPACE)) {
+    /* Compare each token as a full word, case-insensitive */
+    if (!strcasecmp(str, curtok)) {
       free(newlist);
       return 1;
     }
+  }
+
   free(newlist);
   return 0;
+}
+
+static bool is_shadow_keyword(const char *name)
+{
+  if (!name || !*name)
+    return FALSE;
+  return isname(name, "shadow shadowy figure");
 }
 
 static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *msg)
@@ -111,28 +127,16 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
   case APPLY_NONE:
     break;
 
-  case APPLY_STR:
-    GET_STR(ch) += mod;
-    break;
-  case APPLY_DEX:
-    GET_DEX(ch) += mod;
-    break;
-  case APPLY_INT:
-    GET_INT(ch) += mod;
-    break;
-  case APPLY_WIS:
-    GET_WIS(ch) += mod;
-    break;
-  case APPLY_CON:
-    GET_CON(ch) += mod;
-    break;
-  case APPLY_CHA:
-    GET_CHA(ch) += mod;
-    break;
+  /* --- ability scores --- */
+  case APPLY_STR:  GET_STR(ch) += mod; break;
+  case APPLY_DEX:  GET_DEX(ch) += mod; break;
+  case APPLY_INT:  GET_INT(ch) += mod; break;
+  case APPLY_WIS:  GET_WIS(ch) += mod; break;
+  case APPLY_CON:  GET_CON(ch) += mod; break;
+  case APPLY_CHA:  GET_CHA(ch) += mod; break;
 
   /* Do Not Use. */
   case APPLY_CLASS:
-    break;
   case APPLY_LEVEL:
     break;
 
@@ -140,68 +144,28 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
     ch->player.time.birth -= (mod * SECS_PER_MUD_YEAR);
     break;
 
-  case APPLY_CHAR_WEIGHT:
-    GET_WEIGHT(ch) += mod;
-    break;
+  case APPLY_CHAR_WEIGHT:  GET_WEIGHT(ch) += mod; break;
+  case APPLY_CHAR_HEIGHT:  GET_HEIGHT(ch) += mod; break;
+  case APPLY_MANA:         GET_MAX_MANA(ch) += mod; break;
+  case APPLY_HIT:          GET_MAX_HIT(ch) += mod; break;
+  case APPLY_MOVE:         GET_MAX_MOVE(ch) += mod; break;
+  case APPLY_COINS:         break;
+  case APPLY_EXP:          break;
 
-  case APPLY_CHAR_HEIGHT:
-    GET_HEIGHT(ch) += mod;
-    break;
+  case APPLY_AC:           GET_AC(ch) += mod; break;
+  case APPLY_PROFICIENCY:  GET_PROF_MOD(ch) += mod; break;
 
-  case APPLY_MANA:
-    GET_MAX_MANA(ch) += mod;
-    break;
-
-  case APPLY_HIT:
-    GET_MAX_HIT(ch) += mod;
-    break;
-
-  case APPLY_MOVE:
-    GET_MAX_MOVE(ch) += mod;
-    break;
-
-  case APPLY_GOLD:
-    break;
-
-  case APPLY_EXP:
-    break;
-
-  case APPLY_AC:
-    GET_AC(ch) += mod;
-    break;
-
-  case APPLY_HITROLL:
-    GET_HITROLL(ch) += mod;
-    break;
-
-  case APPLY_DAMROLL:
-    GET_DAMROLL(ch) += mod;
-    break;
-
-  case APPLY_SAVING_PARA:
-    GET_SAVE(ch, SAVING_PARA) += mod;
-    break;
-
-  case APPLY_SAVING_ROD:
-    GET_SAVE(ch, SAVING_ROD) += mod;
-    break;
-
-  case APPLY_SAVING_PETRI:
-    GET_SAVE(ch, SAVING_PETRI) += mod;
-    break;
-
-  case APPLY_SAVING_BREATH:
-    GET_SAVE(ch, SAVING_BREATH) += mod;
-    break;
-
-  case APPLY_SAVING_SPELL:
-    GET_SAVE(ch, SAVING_SPELL) += mod;
-    break;
+  /* --- new 5e-style saving throws --- */
+  case APPLY_SAVE_STR: SAVE_STR(ch) += mod; break;
+  case APPLY_SAVE_DEX: SAVE_DEX(ch) += mod; break;
+  case APPLY_SAVE_CON: SAVE_CON(ch) += mod; break;
+  case APPLY_SAVE_INT: SAVE_INT(ch) += mod; break;
+  case APPLY_SAVE_WIS: SAVE_WIS(ch) += mod; break;
+  case APPLY_SAVE_CHA: SAVE_CHA(ch) += mod; break;
 
   default:
     log("SYSERR: Unknown apply adjust %d attempt (%s, affect_modify).", loc, __FILE__);
     break;
-
   } /* switch */
 }
 
@@ -232,27 +196,37 @@ void affect_total(struct char_data *ch)
   struct affected_type *af;
   int i, j;
 
+  /* First, remove all object-based modifiers. */
   for (i = 0; i < NUM_WEARS; i++) {
     if (GET_EQ(ch, i))
       for (j = 0; j < MAX_OBJ_AFFECT; j++)
-	affect_modify_ar(ch, GET_EQ(ch, i)->affected[j].location,
-		      GET_EQ(ch, i)->affected[j].modifier,
-		      GET_OBJ_AFFECT(GET_EQ(ch, i)), FALSE);
+        affect_modify_ar(ch,
+                         GET_EQ(ch, i)->affected[j].location,
+                         GET_EQ(ch, i)->affected[j].modifier,
+                         GET_OBJ_AFFECT(GET_EQ(ch, i)), FALSE);
   }
 
+  /* Then remove all spell/affect modifiers. */
   for (af = ch->affected; af; af = af->next)
     affect_modify_ar(ch, af->location, af->modifier, af->bitvector, FALSE);
 
+  /* Reset derived abilities to real abilities. */
   ch->aff_abils = ch->real_abils;
 
+  /* Reset transient modifiers that are re-applied below. */
+  GET_PROF_MOD(ch) = 0;  /* Proficiency delta (from APPLY_PROFICIENCY) */
+
+  /* Re-apply object-based modifiers. */
   for (i = 0; i < NUM_WEARS; i++) {
     if (GET_EQ(ch, i))
       for (j = 0; j < MAX_OBJ_AFFECT; j++)
-	affect_modify_ar(ch, GET_EQ(ch, i)->affected[j].location,
-		      GET_EQ(ch, i)->affected[j].modifier,
-		      GET_OBJ_AFFECT(GET_EQ(ch, i)), TRUE);
+        affect_modify_ar(ch,
+                         GET_EQ(ch, i)->affected[j].location,
+                         GET_EQ(ch, i)->affected[j].modifier,
+                         GET_OBJ_AFFECT(GET_EQ(ch, i)), TRUE);
   }
 
+  /* Re-apply spell/affect modifiers. */
   for (af = ch->affected; af; af = af->next)
     affect_modify_ar(ch, af->location, af->modifier, af->bitvector, TRUE);
 
@@ -268,13 +242,7 @@ void affect_total(struct char_data *ch)
 
   if (IS_NPC(ch) || GET_LEVEL(ch) >= LVL_GRGOD) {
     GET_STR(ch) = MIN(GET_STR(ch), i);
-  } else {
-    if (GET_STR(ch) > 18) {
-      i = GET_ADD(ch) + ((GET_STR(ch) - 18) * 10);
-      GET_ADD(ch) = MIN(i, 100);
-      GET_STR(ch) = 18;
-    }
-  }
+  } 
 }
 
 /* Insert an affect_type in a char_data structure. Automatically sets
@@ -307,6 +275,8 @@ void affect_remove(struct char_data *ch, struct affected_type *af)
 
   affect_modify_ar(ch, af->location, af->modifier, af->bitvector, FALSE);
   REMOVE_FROM_LIST(af, ch->affected, next);
+  if (af->spell == SKILL_PERCEPTION)
+    clear_scan_results(ch);
   free(af);
   affect_total(ch);
 }
@@ -416,14 +386,64 @@ void char_to_room(struct char_data *ch, room_rnum room)
   }
 }
 
+static int obj_coin_count(struct obj_data *obj)
+{
+  int total = 0;
+  struct obj_data *child;
+
+  if (!obj)
+    return 0;
+
+  if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+    total += MAX(0, GET_OBJ_VAL(obj, 0));
+
+  for (child = obj->contains; child; child = child->next_content)
+    total += obj_coin_count(child);
+
+  return total;
+}
+
+static struct char_data *obj_owner(struct obj_data *obj)
+{
+  struct obj_data *top = obj;
+
+  while (top) {
+    if (top->carried_by)
+      return top->carried_by;
+    if (top->worn_by)
+      return top->worn_by;
+    top = top->in_obj;
+  }
+
+  return NULL;
+}
+
+static void adjust_char_coins(struct char_data *ch, int amount)
+{
+  if (!ch || amount == 0)
+    return;
+
+  if (amount > 0)
+    GET_COINS(ch) = MIN(MAX_COINS, GET_COINS(ch) + amount);
+  else
+    GET_COINS(ch) = MAX(0, GET_COINS(ch) + amount);
+}
+
 /* Give an object to a char. */
 void obj_to_char(struct obj_data *object, struct char_data *ch)
 {
+  room_rnum __rs_room = RoomSave_room_of_obj(object);  /* where the item currently lives */
+
   if (object && ch) {
+    struct char_data *old_owner = obj_owner(object);
+    int coin_count = obj_coin_count(object);
+
     object->next_content = ch->carrying;
     ch->carrying = object;
     object->carried_by = ch;
     IN_ROOM(object) = NOWHERE;
+    if (__rs_room != NOWHERE)
+      RoomSave_mark_dirty_room(__rs_room);
     IS_CARRYING_W(ch) += GET_OBJ_WEIGHT(object);
     IS_CARRYING_N(ch)++;
 
@@ -432,6 +452,11 @@ void obj_to_char(struct obj_data *object, struct char_data *ch)
     /* set flag for crash-save system, but not on mobs! */
     if (!IS_NPC(ch))
       SET_BIT_AR(PLR_FLAGS(ch), PLR_CRASH);
+
+    if (coin_count > 0 && old_owner != ch) {
+      adjust_char_coins(old_owner, -coin_count);
+      adjust_char_coins(ch, coin_count);
+    }
   } else
     log("SYSERR: NULL obj (%p) or char (%p) passed to obj_to_char.", (void *)object, (void *)ch);
 }
@@ -440,10 +465,19 @@ void obj_to_char(struct obj_data *object, struct char_data *ch)
 void obj_from_char(struct obj_data *object)
 {
   struct obj_data *temp;
+  room_rnum __rs_room = IN_ROOM(object->carried_by);
 
   if (object == NULL) {
     log("SYSERR: NULL object passed to obj_from_char.");
     return;
+  }
+  {
+    struct char_data *old_owner = obj_owner(object);
+    int coin_count = obj_coin_count(object);
+
+    if (coin_count > 0 && old_owner) {
+      adjust_char_coins(old_owner, -coin_count);
+    }
   }
   REMOVE_FROM_LIST(object, object->carried_by->carrying, next_content);
 
@@ -455,6 +489,8 @@ void obj_from_char(struct obj_data *object)
   IS_CARRYING_N(object->carried_by)--;
   object->carried_by = NULL;
   object->next_content = NULL;
+  if (__rs_room != NOWHERE)
+    RoomSave_mark_dirty_room(__rs_room);
 }
 
 /* Return the effect of a piece of armor in position eq_pos */
@@ -689,6 +725,8 @@ void obj_to_room(struct obj_data *object, room_rnum room)
     object->carried_by = NULL;
     if (ROOM_FLAGGED(room, ROOM_HOUSE))
       SET_BIT_AR(ROOM_FLAGS(room), ROOM_HOUSE_CRASH);
+    /* RoomSave: this room’s contents changed */
+    RoomSave_mark_dirty_room(room);
   }
 }
 
@@ -697,6 +735,7 @@ void obj_from_room(struct obj_data *object)
 {
   struct obj_data *temp;
   struct char_data *t, *tempch;
+  room_rnum __rs_was_room = IN_ROOM(object);
 
   if (!object || IN_ROOM(object) == NOWHERE) {
     log("SYSERR: NULL object (%p) or obj not in a room (%d) passed to obj_from_room",
@@ -719,6 +758,8 @@ void obj_from_room(struct obj_data *object)
     SET_BIT_AR(ROOM_FLAGS(IN_ROOM(object)), ROOM_HOUSE_CRASH);
   IN_ROOM(object) = NOWHERE;
   object->next_content = NULL;
+  /* RoomSave: room lost an object */
+  RoomSave_mark_dirty_room(__rs_was_room);
 }
 
 /* put an object in an object (quaint)  */
@@ -731,10 +772,22 @@ void obj_to_obj(struct obj_data *obj, struct obj_data *obj_to)
 	(void *)obj, (void *)obj, (void *)obj_to);
     return;
   }
+  {
+    struct char_data *old_owner = obj_owner(obj);
+    struct char_data *new_owner = obj_owner(obj_to);
+    int coin_count = obj_coin_count(obj);
+
+    if (coin_count > 0 && old_owner != new_owner) {
+      adjust_char_coins(old_owner, -coin_count);
+      adjust_char_coins(new_owner, coin_count);
+    }
+  }
 
   obj->next_content = obj_to->contains;
   obj_to->contains = obj;
   obj->in_obj = obj_to;
+  /* RoomSave: container changed; mark the room the container ultimately lives in */
+  RoomSave_mark_dirty_room(RoomSave_room_of_obj(obj_to));
 
   /* Add weight to container, unless unlimited. */
   if (GET_OBJ_VAL(obj->in_obj, 0) > 0) {
@@ -752,10 +805,19 @@ void obj_to_obj(struct obj_data *obj, struct obj_data *obj_to)
 void obj_from_obj(struct obj_data *obj)
 {
   struct obj_data *temp, *obj_from;
+  struct obj_data *__rs_container = obj->in_obj;  /* capture before unlink */
 
   if (obj->in_obj == NULL) {
     log("SYSERR: (%s): trying to illegally extract obj from obj.", __FILE__);
     return;
+  }
+  {
+    struct char_data *old_owner = obj_owner(obj);
+    int coin_count = obj_coin_count(obj);
+
+    if (coin_count > 0 && old_owner) {
+      adjust_char_coins(old_owner, -coin_count);
+    }
   }
   obj_from = obj->in_obj;
   REMOVE_FROM_LIST(obj, obj_from->contains, next_content);
@@ -772,6 +834,8 @@ void obj_from_obj(struct obj_data *obj)
   }
   obj->in_obj = NULL;
   obj->next_content = NULL;
+  /* RoomSave: container changed; mark the room the container ultimately lives in */
+  RoomSave_mark_dirty_room(RoomSave_room_of_obj(__rs_container));
 }
 
 /* Set all carried_by to point to new owner */
@@ -789,6 +853,7 @@ void extract_obj(struct obj_data *obj)
 {
   struct char_data *ch, *next = NULL;
   struct obj_data *temp;
+  room_rnum __rs_room = RoomSave_room_of_obj(obj);
 
   if (obj->worn_by != NULL)
     if (unequip_char(obj->worn_by, obj->worn_on) != obj)
@@ -837,6 +902,9 @@ void extract_obj(struct obj_data *obj)
   if (GET_OBJ_RNUM(obj) == NOTHING || obj->proto_script != obj_proto[GET_OBJ_RNUM(obj)].proto_script)
     free_proto_script(obj, OBJ_TRIGGER);
 
+  if (__rs_room != NOWHERE)
+    RoomSave_mark_dirty_room(__rs_room);
+    
   free_obj(obj);
 }
 
@@ -921,8 +989,15 @@ void extract_char_final(struct char_data *ch)
         if (d->character && GET_IDNUM(ch) == GET_IDNUM(d->character))
           STATE(d) = CON_CLOSE;
       }
-      STATE(ch->desc) = CON_MENU;
-      write_to_output(ch->desc, "%s", CONFIG_MENU);
+      if (GET_POS(ch) == POS_DEAD) {
+        STATE(ch->desc) = CON_ACCOUNT_MENU;
+        send_account_menu(ch->desc);
+        ch->desc->character = NULL;
+        ch->desc = NULL;
+      } else {
+        STATE(ch->desc) = CON_ACCOUNT_MENU;
+        send_account_menu(ch->desc);
+      }
     }
   }
 
@@ -934,17 +1009,20 @@ void extract_char_final(struct char_data *ch)
   if (GROUP(ch))
     leave_group(ch);
 
-  /* transfer objects to room, if any */
-  while (ch->carrying) {
-    obj = ch->carrying;
-    obj_from_char(obj);
-    obj_to_room(obj, IN_ROOM(ch));
-  }
+  /* Only drop items for NPCs or players not quitting cleanly. */
+  if (IS_NPC(ch) || !PLR_FLAGGED(ch, PLR_QUITING)) {
+    /* transfer objects to room, if any */
+    while (ch->carrying) {
+      obj = ch->carrying;
+      obj_from_char(obj);
+      obj_to_room(obj, IN_ROOM(ch));
+    }
 
-  /* transfer equipment to room, if any */
-  for (i = 0; i < NUM_WEARS; i++)
-    if (GET_EQ(ch, i))
-      obj_to_room(unequip_char(ch, i), IN_ROOM(ch));
+    /* transfer equipment to room, if any */
+    for (i = 0; i < NUM_WEARS; i++)
+      if (GET_EQ(ch, i))
+        obj_to_room(unequip_char(ch, i), IN_ROOM(ch));
+  }
 
   if (FIGHTING(ch))
     stop_fighting(ch);
@@ -982,8 +1060,30 @@ void extract_char_final(struct char_data *ch)
     if (SCRIPT_MEM(ch))
       extract_script_mem(SCRIPT_MEM(ch));
   } else {
-    save_char(ch);
-    Crash_delete_crashfile(ch);
+    if (GET_POS(ch) == POS_DEAD) {
+      int pfilepos = GET_PFILEPOS(ch);
+
+      if (pfilepos < 0)
+        pfilepos = get_ptable_by_name(GET_NAME(ch));
+
+      if (pfilepos >= 0) {
+        remove_player(pfilepos);
+      } else {
+        char filename[PATH_MAX];
+        int i;
+
+        log("SYSERR: Could not locate player index entry for %s on death cleanup.",
+            GET_NAME(ch));
+        for (i = 0; i < MAX_FILES; i++) {
+          if (get_filename(filename, sizeof(filename), i, GET_NAME(ch)))
+            unlink(filename);
+        }
+      }
+    } else {
+      save_char(ch);
+      Crash_delete_crashfile(ch);
+      REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_QUITING);
+    }
   }
 
   /* If there's a descriptor, they're in the menu now. */
@@ -1096,19 +1196,96 @@ struct char_data *get_char_room_vis(struct char_data *ch, char *name, int *numbe
 
   /* JE */
   if (!str_cmp(name, "self") || !str_cmp(name, "me"))
-    return (ch);
+    return ch;
 
   /* 0.<name> means PC with name */
   if (*number == 0)
-    return (get_player_vis(ch, name, NULL, FIND_CHAR_ROOM));
+    return get_player_vis(ch, name, NULL, FIND_CHAR_ROOM);
 
-  for (i = world[IN_ROOM(ch)].people; i && *number; i = i->next_in_room)
-    if (isname(name, i->player.name))
-      if (CAN_SEE(ch, i))
-	if (--(*number) == 0)
-	  return (i);
+  for (i = world[IN_ROOM(ch)].people; i && *number; i = i->next_in_room) {
+    bool match = FALSE;
 
-  return (NULL);
+    if (IS_NPC(i)) {
+      /* NPCs: match either keywords or their name (unchanged) */
+      const char *keywords = GET_KEYWORDS(i);
+      const char *proper   = GET_NAME(i);
+
+      if ((keywords && isname(name, keywords)) ||
+          (proper   && isname(name, proper)))
+        match = TRUE;
+
+    } else {
+      /* PCs: match against name + sanitized short description */
+      const char *proper = GET_NAME(i);
+      const char *sdesc  = GET_SHORT_DESC(i);
+
+      if (sdesc && *sdesc) {
+        char clean_sdesc[MAX_INPUT_LENGTH];
+        char tmp[MAX_INPUT_LENGTH * 2];
+        int w = 0;
+
+        /* Turn punctuation etc. into spaces so "tall," -> "tall" */
+        for (int r = 0; sdesc[r] && w < (int)sizeof(clean_sdesc) - 1; r++) {
+          unsigned char c = (unsigned char)sdesc[r];
+
+          if (isalnum(c) || c == '\'' || c == '-') {
+            clean_sdesc[w++] = c;
+          } else {
+            /* normalize anything else (spaces, commas, etc.) to a single space */
+            clean_sdesc[w++] = ' ';
+          }
+        }
+        clean_sdesc[w] = '\0';
+
+        if (proper && *proper)
+          snprintf(tmp, sizeof(tmp), "%s %s", proper, clean_sdesc);
+        else
+          snprintf(tmp, sizeof(tmp), "%s", clean_sdesc);
+
+        if (isname(name, tmp))
+          match = TRUE;
+      } else if (proper && isname(name, proper)) {
+        /* Fallback: no sdesc yet, use name only */
+        match = TRUE;
+      }
+    }
+
+    if (match) {
+      bool can_target = CAN_SEE(ch, i);
+
+      if (!can_target && GET_LEVEL(ch) >= LVL_IMMORT)
+        can_target = TRUE;
+
+      if (!can_target &&
+          AFF_FLAGGED(ch, AFF_SCAN) &&
+          AFF_FLAGGED(i, AFF_HIDE) &&
+          scan_can_target(ch, i)) {
+        can_target = scan_confirm_target(ch, i);
+      }
+
+      if (can_target && --(*number) == 0)
+        return i;
+    }
+  }
+
+  if ((AFF_FLAGGED(ch, AFF_SCAN) || GET_LEVEL(ch) >= LVL_IMMORT) && is_shadow_keyword(name)) {
+    for (i = world[IN_ROOM(ch)].people; i && *number; i = i->next_in_room) {
+      if (i == ch)
+        continue;
+      if (!AFF_FLAGGED(i, AFF_HIDE))
+        continue;
+      if (GET_LEVEL(ch) < LVL_IMMORT && !scan_can_target(ch, i))
+        continue;
+
+      if (--(*number) == 0) {
+        if (GET_LEVEL(ch) >= LVL_IMMORT || scan_confirm_target(ch, i))
+          return i;
+        return NULL;
+      }
+    }
+  }
+
+  return NULL;
 }
 
 struct char_data *get_char_world_vis(struct char_data *ch, char *name, int *number)
@@ -1121,24 +1298,55 @@ struct char_data *get_char_world_vis(struct char_data *ch, char *name, int *numb
     num = get_number(&name);
   }
 
+  /* First, try to find character in the same room */
   if ((i = get_char_room_vis(ch, name, number)) != NULL)
     return (i);
 
+  /* 0.<name> means PC with name */
   if (*number == 0)
     return get_player_vis(ch, name, NULL, 0);
 
   for (i = character_list; i && *number; i = i->next) {
     if (IN_ROOM(ch) == IN_ROOM(i))
       continue;
-    if (!isname(name, i->player.name))
+
+    bool match = FALSE;
+
+    if (IS_NPC(i)) {
+      const char *keywords = GET_KEYWORDS(i);
+      const char *proper   = GET_NAME(i);
+      if ((keywords && isname(name, keywords)) || (proper && isname(name, proper)))
+        match = TRUE;
+    } else {
+      const char *namelist = GET_NAME(i);
+      if (namelist && isname(name, namelist))
+        match = TRUE;
+    }
+
+    if (!match)
       continue;
-    if (!CAN_SEE(ch, i))
+
+    bool can_target = CAN_SEE(ch, i);
+
+    if (!can_target && GET_LEVEL(ch) >= LVL_IMMORT)
+      can_target = TRUE;
+
+    if (!can_target &&
+        AFF_FLAGGED(ch, AFF_SCAN) &&
+        AFF_FLAGGED(i, AFF_HIDE) &&
+        scan_can_target(ch, i)) {
+      can_target = scan_confirm_target(ch, i);
+    }
+
+    if (!can_target)
       continue;
+
     if (--(*number) != 0)
       continue;
 
     return (i);
   }
+
   return (NULL);
 }
 
@@ -1246,95 +1454,245 @@ int get_obj_pos_in_equip_vis(struct char_data *ch, char *arg, int *number, struc
   return (-1);
 }
 
+static int money_weight(int amount)
+{
+  const int coins_per_weight = 10;
+
+  if (amount <= 0)
+    return 0;
+
+  return MAX(1, (amount + coins_per_weight - 1) / coins_per_weight);
+}
+
 const char *money_desc(int amount)
 {
-  int cnt;
-  struct {
-    int limit;
-    const char *description;
-  } money_table[] = {
-    {          1, "a gold coin"				},
-    {         10, "a tiny pile of gold coins"		},
-    {         20, "a handful of gold coins"		},
-    {         75, "a little pile of gold coins"		},
-    {        200, "a small pile of gold coins"		},
-    {       1000, "a pile of gold coins"		},
-    {       5000, "a big pile of gold coins"		},
-    {      10000, "a large heap of gold coins"		},
-    {      20000, "a huge mound of gold coins"		},
-    {      75000, "an enormous mound of gold coins"	},
-    {     150000, "a small mountain of gold coins"	},
-    {     250000, "a mountain of gold coins"		},
-    {     500000, "a huge mountain of gold coins"	},
-    {    1000000, "an enormous mountain of gold coins"	},
-    {          0, NULL					},
-  };
-
   if (amount <= 0) {
-    log("SYSERR: Try to create negative or 0 money (%d).", amount);
+    log("SYSERR: Try to describe negative or 0 coins (%d).", amount);
     return (NULL);
   }
 
-  for (cnt = 0; money_table[cnt].limit; cnt++)
-    if (amount <= money_table[cnt].limit)
-      return (money_table[cnt].description);
+  if (amount == 1)
+    return "a single ceramic coin";
+  if (amount == 2)
+    return "a couple ceramic coins";
+  if (amount < 10)
+    return "a few ceramic coins";
+  return "a pile of ceramic coins";
+}
 
-  return ("an absolutely colossal mountain of gold coins");
+const char *money_pile_desc(int piles)
+{
+  if (piles <= 0)
+    return NULL;
+  if (piles == 1)
+    return "a pile of ceramic coins";
+  if (piles == 2)
+    return "a couple piles of ceramic coins";
+  if (piles <= 5)
+    return "a few piles of ceramic coins";
+  if (piles <= 9)
+    return "several piles of ceramic coins";
+  return "many piles of ceramic coins";
+}
+
+void update_money_obj(struct obj_data *obj)
+{
+  struct extra_descr_data *new_descr;
+  const char *desc;
+  char buf[200];
+  int amount;
+  int new_weight;
+  int delta_weight;
+
+  if (!obj || GET_OBJ_TYPE(obj) != ITEM_MONEY)
+    return;
+
+  amount = MAX(0, GET_OBJ_VAL(obj, 0));
+  desc = money_desc(amount);
+
+  if (obj->name && (obj->item_number == NOTHING ||
+      obj->name != obj_proto[obj->item_number].name)) {
+    free(obj->name);
+  }
+  obj->name = strdup("coin coins ceramic");
+
+  if (obj->short_description && (obj->item_number == NOTHING ||
+      obj->short_description != obj_proto[obj->item_number].short_description)) {
+    free(obj->short_description);
+  }
+  obj->short_description = desc ? strdup(desc) : strdup("ceramic coins");
+
+  if (obj->description && (obj->item_number == NOTHING ||
+      obj->description != obj_proto[obj->item_number].description)) {
+    free(obj->description);
+  }
+
+  if (amount == 1)
+    snprintf(buf, sizeof(buf), "A single ceramic coin is lying here.");
+  else if (amount == 2)
+    snprintf(buf, sizeof(buf), "A couple ceramic coins are lying here.");
+  else if (amount < 10)
+    snprintf(buf, sizeof(buf), "A few ceramic coins are lying here.");
+  else
+    snprintf(buf, sizeof(buf), "A pile of ceramic coins is lying here.");
+  obj->description = strdup(buf);
+
+  if (!obj->ex_description) {
+    CREATE(new_descr, struct extra_descr_data, 1);
+    new_descr->next = NULL;
+    obj->ex_description = new_descr;
+  }
+  new_descr = obj->ex_description;
+
+  if (new_descr->keyword)
+    free(new_descr->keyword);
+  new_descr->keyword = strdup("coin coins ceramic");
+
+  if (new_descr->description)
+    free(new_descr->description);
+
+  if (amount < 10)
+    snprintf(buf, sizeof(buf), "There are %d ceramic coins.", amount);
+  else if (amount < 100)
+    snprintf(buf, sizeof(buf), "There are about %d ceramic coins.", 10 * (amount / 10));
+  else if (amount < 1000)
+    snprintf(buf, sizeof(buf), "It looks to be about %d ceramic coins.", 100 * (amount / 100));
+  else if (amount < 100000)
+    snprintf(buf, sizeof(buf), "You guess there are, maybe, %d ceramic coins.",
+	     1000 * ((amount / 1000) + rand_number(0, (amount / 1000))));
+  else
+    strcpy(buf, "There are a LOT of ceramic coins.");	/* strcpy: OK (is < 200) */
+  new_descr->description = strdup(buf);
+
+  SET_BIT_AR(GET_OBJ_WEAR(obj), ITEM_WEAR_TAKE);
+  GET_OBJ_COST(obj) = amount;
+
+  new_weight = money_weight(amount);
+  delta_weight = new_weight - GET_OBJ_WEIGHT(obj);
+  if (delta_weight != 0) {
+    if (IN_ROOM(obj) != NOWHERE || obj->carried_by || obj->in_obj)
+      weight_change_object(obj, delta_weight);
+    else
+      GET_OBJ_WEIGHT(obj) = new_weight;
+  }
 }
 
 struct obj_data *create_money(int amount)
 {
   struct obj_data *obj;
-  struct extra_descr_data *new_descr;
-  char buf[200];
   int y;
 
   if (amount <= 0) {
-    log("SYSERR: Try to create negative or 0 money. (%d)", amount);
+    log("SYSERR: Try to create negative or 0 coins. (%d)", amount);
     return (NULL);
   }
   obj = create_obj();
-  CREATE(new_descr, struct extra_descr_data, 1);
-
-  if (amount == 1) {
-    obj->name = strdup("coin gold");
-    obj->short_description = strdup("a gold coin");
-    obj->description = strdup("One miserable gold coin is lying here.");
-    new_descr->keyword = strdup("coin gold");
-    new_descr->description = strdup("It's just one miserable little gold coin.");
-  } else {
-    obj->name = strdup("coins gold");
-    obj->short_description = strdup(money_desc(amount));
-    snprintf(buf, sizeof(buf), "%s is lying here.", money_desc(amount));
-    obj->description = strdup(CAP(buf));
-
-    new_descr->keyword = strdup("coins gold");
-    if (amount < 10)
-      snprintf(buf, sizeof(buf), "There are %d coins.", amount);
-    else if (amount < 100)
-      snprintf(buf, sizeof(buf), "There are about %d coins.", 10 * (amount / 10));
-    else if (amount < 1000)
-      snprintf(buf, sizeof(buf), "It looks to be about %d coins.", 100 * (amount / 100));
-    else if (amount < 100000)
-      snprintf(buf, sizeof(buf), "You guess there are, maybe, %d coins.",
-	      1000 * ((amount / 1000) + rand_number(0, (amount / 1000))));
-    else
-      strcpy(buf, "There are a LOT of coins.");	/* strcpy: OK (is < 200) */
-    new_descr->description = strdup(buf);
-  }
-
-  new_descr->next = NULL;
-  obj->ex_description = new_descr;
 
   GET_OBJ_TYPE(obj) = ITEM_MONEY;
   for(y = 0; y < TW_ARRAY_MAX; y++)
     obj->obj_flags.wear_flags[y] = 0;
   SET_BIT_AR(GET_OBJ_WEAR(obj), ITEM_WEAR_TAKE);
   GET_OBJ_VAL(obj, 0) = amount;
-  GET_OBJ_COST(obj) = amount;
   obj->item_number = NOTHING;
+  update_money_obj(obj);
 
   return (obj);
+}
+
+static void count_coins_in_list(struct obj_data *list, int *total)
+{
+  struct obj_data *obj;
+
+  for (obj = list; obj; obj = obj->next_content) {
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      *total += MAX(0, GET_OBJ_VAL(obj, 0));
+    if (obj->contains)
+      count_coins_in_list(obj->contains, total);
+  }
+}
+
+int count_char_coins(struct char_data *ch)
+{
+  int total = 0;
+  int i;
+  struct obj_data *obj;
+
+  if (!ch)
+    return 0;
+
+  count_coins_in_list(ch->carrying, &total);
+  for (i = 0; i < NUM_WEARS; i++) {
+    obj = GET_EQ(ch, i);
+    if (obj)
+      count_coins_in_list(obj, &total);
+  }
+
+  return total;
+}
+
+static void take_coins_from_list(struct obj_data *list, int *remaining, struct char_data *owner)
+{
+  struct obj_data *obj;
+  struct obj_data *next_obj;
+
+  for (obj = list; obj && *remaining > 0; obj = next_obj) {
+    next_obj = obj->next_content;
+
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY) {
+      int pile = GET_OBJ_VAL(obj, 0);
+      int take = MIN(pile, *remaining);
+
+      if (take > 0) {
+        if (take == pile) {
+          *remaining -= take;
+          extract_obj(obj);
+          continue;
+        }
+
+        GET_OBJ_VAL(obj, 0) = pile - take;
+        *remaining -= take;
+        update_money_obj(obj);
+        adjust_char_coins(owner, -take);
+      }
+    }
+
+    if (obj->contains && *remaining > 0)
+      take_coins_from_list(obj->contains, remaining, owner);
+  }
+}
+
+int remove_coins_from_char(struct char_data *ch, int amount)
+{
+  int remaining;
+  int i;
+  struct obj_data *obj;
+
+  if (!ch || amount <= 0)
+    return 0;
+
+  remaining = amount;
+  take_coins_from_list(ch->carrying, &remaining, ch);
+  for (i = 0; i < NUM_WEARS && remaining > 0; i++) {
+    obj = GET_EQ(ch, i);
+    if (obj)
+      take_coins_from_list(obj, &remaining, ch);
+  }
+
+  return amount - remaining;
+}
+
+void add_coins_to_char(struct char_data *ch, int amount)
+{
+  struct obj_data *money;
+
+  if (!ch || amount <= 0)
+    return;
+
+  money = create_money(amount);
+  if (!money)
+    return;
+
+  obj_to_char(money, ch);
 }
 
 /* Generic Find, designed to find any object orcharacter.

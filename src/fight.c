@@ -62,8 +62,76 @@ static void group_gain(struct char_data *ch, struct char_data *victim);
 static void solo_gain(struct char_data *ch, struct char_data *victim);
 /** @todo refactor this function name */
 static char *replace_string(const char *str, const char *weapon_singular, const char *weapon_plural);
-static int compute_thaco(struct char_data *ch, struct char_data *vict);
+static int roll_damage(struct char_data *ch, struct char_data *victim,
+                       struct obj_data *wielded, int w_type);
 
+/* Base damage roller; STR-based while there are no ranged types. */
+static int roll_damage(struct char_data *ch, struct char_data *victim,
+                       struct obj_data *wielded, int w_type)
+{
+  int dam = 0;
+
+  if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {
+    int ndice = GET_OBJ_VAL(wielded, 1); /* #dice */
+    int sdice = GET_OBJ_VAL(wielded, 2); /* sides */
+    dam = dice(ndice, sdice);
+    dam += GET_ABILITY_MOD(GET_STR(ch));     /* STR adds to weapon damage */
+  } else {
+    /* unarmed */
+    dam = dice(1, 2);
+    dam += GET_ABILITY_MOD(GET_STR(ch));
+  }
+
+  if (dam < 0) dam = 0;
+  return dam;
+}
+
+/* Map the current attack (unarmed/weapon damage type) to SKILL_* constant. */
+static int weapon_family_skill_num(struct char_data *ch, struct obj_data *wielded, int w_type) {
+  /* Unarmed? */
+  if (!wielded || GET_OBJ_TYPE(wielded) != ITEM_WEAPON)
+    return SKILL_UNARMED;
+
+  /* NOTE: w_type here is TYPE_HIT + GET_OBJ_VAL(wielded, 3) or mob attack type + TYPE_HIT.
+     Adjust the cases below to match your game's TYPE_* values. */
+  switch (w_type) {
+    /* --- Piercing family --- */
+    case TYPE_STAB:
+    case TYPE_PIERCE:
+    case TYPE_WHIP:
+    case TYPE_STING:
+      return SKILL_PIERCING_WEAPONS;
+
+    /* --- Slashing family --- */
+    case TYPE_SLASH:
+    case TYPE_MAUL:
+    case TYPE_CLAW:
+      return SKILL_SLASHING_WEAPONS;
+
+    /* --- Bludgeoning family --- */
+    case TYPE_BLUDGEON:
+    case TYPE_CRUSH:
+    case TYPE_THRASH:
+    case TYPE_POUND:
+      return SKILL_BLUDGEONING_WEAPONS;
+
+    /* Fallback */
+    default:
+      return SKILL_UNARMED;
+  }
+}
+
+/* Map SKILL_* constants to the strings your gain_skill(name, failure) expects. */
+static const char *skill_name_for_gain(int skillnum) {
+  switch (skillnum) {
+    case SKILL_UNARMED:              return "unarmed";
+    case SKILL_PIERCING_WEAPONS:     return "piercing weapons";
+    case SKILL_SLASHING_WEAPONS:     return "slashing weapons";
+    case SKILL_BLUDGEONING_WEAPONS:  return "bludgeoning weapons";
+    case SKILL_SHIELD_USE:           return "shield use";
+    default:                         return "unarmed";
+  }
+}
 
 #define IS_WEAPON(type) (((type) >= TYPE_HIT) && ((type) < TYPE_SUFFERING))
 /* The Fight related routines */
@@ -87,7 +155,7 @@ int compute_armor_class(struct char_data *ch)
   int armorclass = GET_AC(ch);
 
   if (AWAKE(ch))
-    armorclass += dex_app[GET_DEX(ch)].defensive * 10;
+    armorclass += GET_ABILITY_MOD(GET_DEX(ch)) * 10;
 
   return (MAX(-100, armorclass));      /* -100 is lowest */
 }
@@ -165,23 +233,32 @@ static void make_corpse(struct char_data *ch)
 {
   char buf2[MAX_NAME_LENGTH + 64];
   struct obj_data *corpse, *o;
-  struct obj_data *money;
   int i, x, y;
 
   corpse = create_obj();
+
+  corpse->corpse_mob_vnum = IS_NPC(ch) ? GET_MOB_VNUM(ch) : 0;
 
   corpse->item_number = NOTHING;
   IN_ROOM(corpse) = NOWHERE;
   corpse->name = strdup("corpse");
 
-  snprintf(buf2, sizeof(buf2), "The corpse of %s is lying here.", GET_NAME(ch));
+  /* Use short description if available, otherwise fall back to name */
+  const char *who = NULL;
+
+  if (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch))
+    who = GET_SHORT_DESC(ch);
+  else
+    who = GET_NAME(ch);
+
+  snprintf(buf2, sizeof(buf2), "The corpse of %s is lying here.", who);
   corpse->description = strdup(buf2);
 
-  snprintf(buf2, sizeof(buf2), "the corpse of %s", GET_NAME(ch));
+  snprintf(buf2, sizeof(buf2), "the corpse of %s", who);
   corpse->short_description = strdup(buf2);
 
   GET_OBJ_TYPE(corpse) = ITEM_CONTAINER;
-  for(x = y = 0; x < EF_ARRAY_MAX || y < TW_ARRAY_MAX; x++, y++) {
+  for (x = y = 0; x < EF_ARRAY_MAX || y < TW_ARRAY_MAX; x++, y++) {
     if (x < EF_ARRAY_MAX)
       GET_OBJ_EXTRA_AR(corpse, x) = 0;
     if (y < TW_ARRAY_MAX)
@@ -189,10 +266,9 @@ static void make_corpse(struct char_data *ch)
   }
   SET_BIT_AR(GET_OBJ_WEAR(corpse), ITEM_WEAR_TAKE);
   SET_BIT_AR(GET_OBJ_EXTRA(corpse), ITEM_NODONATE);
-  GET_OBJ_VAL(corpse, 0) = 0;	/* You can't store stuff in a corpse */
-  GET_OBJ_VAL(corpse, 3) = 1;	/* corpse identifier */
+  GET_OBJ_VAL(corpse, 0) = 0;    /* You can't store stuff in a corpse */
+  GET_OBJ_VAL(corpse, 3) = 1;    /* corpse identifier */
   GET_OBJ_WEIGHT(corpse) = GET_WEIGHT(ch) + IS_CARRYING_W(ch);
-  GET_OBJ_RENT(corpse) = 100000;
   if (IS_NPC(ch))
     GET_OBJ_TIMER(corpse) = CONFIG_MAX_NPC_CORPSE_TIME;
   else
@@ -211,19 +287,9 @@ static void make_corpse(struct char_data *ch)
       obj_to_obj(unequip_char(ch, i), corpse);
     }
 
-  /* transfer gold */
-  if (GET_GOLD(ch) > 0) {
-    /* following 'if' clause added to fix gold duplication loophole. The above
-     * line apparently refers to the old "partially log in, kill the game
-     * character, then finish login sequence" duping bug. The duplication has
-     * been fixed (knock on wood) but the test below shall live on, for a
-     * while. -gg 3/3/2002 */
-    if (IS_NPC(ch) || ch->desc) {
-      money = create_money(GET_GOLD(ch));
-      obj_to_obj(money, corpse);
-    }
-    GET_GOLD(ch) = 0;
-  }
+  /* transfer coins */
+  if (GET_COINS(ch) > 0)
+    GET_COINS(ch) = 0;
   ch->carrying = NULL;
   IS_CARRYING_N(ch) = 0;
   IS_CARRYING_W(ch) = 0;
@@ -283,6 +349,7 @@ struct char_data *i;
     send_to_group(ch, GROUP(ch), "%s has died.\r\n", GET_NAME(ch));
 
   update_pos(ch);
+  GET_POS(ch) = POS_DEAD;
 
   make_corpse(ch);
   extract_char(ch);
@@ -295,7 +362,6 @@ struct char_data *i;
 
 void die(struct char_data * ch, struct char_data * killer)
 {
-  gain_exp(ch, -(GET_EXP(ch) / 2));
   if (!IS_NPC(ch)) {
     REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_KILLER);
     REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_THIEF);
@@ -306,22 +372,10 @@ void die(struct char_data * ch, struct char_data * killer)
 static void perform_group_gain(struct char_data *ch, int base,
 			     struct char_data *victim)
 {
-  int share, hap_share;
+  int share;
 
   share = MIN(CONFIG_MAX_EXP_GAIN, MAX(1, base));
 
-  if ((IS_HAPPYHOUR) && (IS_HAPPYEXP))
-  {
-    /* This only reports the correct amount - the calc is done in gain_exp */
-    hap_share = share + (int)((float)share * ((float)HAPPY_EXP / (float)(100)));
-    share = MIN(CONFIG_MAX_EXP_GAIN, MAX(1, hap_share));
-  }
-  if (share > 1)
-    send_to_char(ch, "You receive your share of experience -- %d points.\r\n", share);
-  else
-    send_to_char(ch, "You receive your share of experience -- one measly little point!\r\n");
-
-  gain_exp(ch, share);
   change_alignment(ch, victim);
 }
 
@@ -353,7 +407,7 @@ static void group_gain(struct char_data *ch, struct char_data *victim)
 
 static void solo_gain(struct char_data *ch, struct char_data *victim)
 {
-  int exp, happy_exp;
+  int exp;
 
   exp = MIN(CONFIG_MAX_EXP_GAIN, GET_EXP(victim) / 3);
 
@@ -365,17 +419,6 @@ static void solo_gain(struct char_data *ch, struct char_data *victim)
 
   exp = MAX(exp, 1);
 
-  if (IS_HAPPYHOUR && IS_HAPPYEXP) {
-    happy_exp = exp + (int)((float)exp * ((float)HAPPY_EXP / (float)(100)));
-    exp = MAX(happy_exp, 1);
-  }
-
-  if (exp > 1)
-    send_to_char(ch, "You receive %d experience points.\r\n", exp);
-  else
-    send_to_char(ch, "You receive one lousy experience point.\r\n");
-
-  gain_exp(ch, exp);
   change_alignment(ch, victim);
 }
 
@@ -587,7 +630,7 @@ int skill_message(int dam, struct char_data *ch, struct char_data *vict,
  *	> 0	How much damage done. */
 int damage(struct char_data *ch, struct char_data *victim, int dam, int attacktype)
 {
-  long local_gold = 0, happy_gold = 0;
+  long local_coins = 0;
   char local_buf[256];
   struct char_data *tmp_char;
   struct obj_data *corpse_obj;
@@ -660,10 +703,6 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   /* Set the maximum damage per round and subtract the hit points */
   dam = MAX(MIN(dam, 100), 0);
   GET_HIT(victim) -= dam;
-
-  /* Gain exp for the hit */
-  if (ch != victim)
-    gain_exp(ch, GET_LEVEL(victim) * dam);
 
   update_pos(victim);
 
@@ -749,83 +788,52 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
     }
 
     if (!IS_NPC(victim)) {
-      mudlog(BRF, MAX(LVL_IMMORT, MAX(GET_INVIS_LEV(ch), GET_INVIS_LEV(victim))), 
-        TRUE, "%s killed by %s at %s", GET_NAME(victim), GET_NAME(ch), world[IN_ROOM(victim)].name);
+      /* NPC-safe invis check for killer (ch) */
+      int ch_invis = IS_NPC(ch) ? 0 : GET_INVIS_LEV(ch);  /* <-- added */
+      mudlog(BRF, MAX(LVL_IMMORT, MAX(ch_invis, GET_INVIS_LEV(victim))),
+        TRUE, "%s killed by %s at %s",
+        GET_NAME(victim), GET_NAME(ch), world[IN_ROOM(victim)].name);
       if (MOB_FLAGGED(ch, MOB_MEMORY))
 	forget(ch, victim);
     }
-    /* Cant determine GET_GOLD on corpse, so do now and store */
+    /* Can't determine GET_COINS on corpse, so do now and store */
     if (IS_NPC(victim)) {
-      if ((IS_HAPPYHOUR) && (IS_HAPPYGOLD))
-      {
-        happy_gold = (long)(GET_GOLD(victim) * (((float)(HAPPY_GOLD))/(float)100));
-        happy_gold = MAX(0, happy_gold);
-        increase_gold(victim, happy_gold);
-      }
-      local_gold = GET_GOLD(victim);
-      sprintf(local_buf,"%ld", (long)local_gold);
+      local_coins = GET_COINS(victim);
+      sprintf(local_buf,"%ld", (long)local_coins);
     }
 
     die(victim, ch);
-    if (GROUP(ch) && (local_gold > 0) && PRF_FLAGGED(ch, PRF_AUTOSPLIT) ) {
+    if (GROUP(ch) && (local_coins > 0) && PRF_FLAGGED(ch, PRF_AUTOSPLIT) ) {
       generic_find("corpse", FIND_OBJ_ROOM, ch, &tmp_char, &corpse_obj);
       if (corpse_obj) {
         do_get(ch, "all.coin corpse", 0, 0);
         do_split(ch, local_buf, 0, 0);
       }
-      /* need to remove the gold from the corpse */
-    } else if (!IS_NPC(ch) && (ch != victim) && PRF_FLAGGED(ch, PRF_AUTOGOLD)) {
-      do_get(ch, "all.coin corpse", 0, 0);
     }
     if (!IS_NPC(ch) && (ch != victim) && PRF_FLAGGED(ch, PRF_AUTOLOOT)) {
       do_get(ch, "all corpse", 0, 0);
-    }
-    if (IS_NPC(victim) && !IS_NPC(ch) && PRF_FLAGGED(ch, PRF_AUTOSAC)) {
-      do_sac(ch,"corpse",0,0);
     }
     return (-1);
   }
   return (dam);
 }
 
-/* Calculate the THAC0 of the attacker. 'victim' currently isn't used but you
- * could use it for special cases like weapons that hit evil creatures easier
- * or a weapon that always misses attacking an animal. */
-static int compute_thaco(struct char_data *ch, struct char_data *victim)
-{
-  int calc_thaco;
-
-  if (!IS_NPC(ch))
-    calc_thaco = thaco(GET_CLASS(ch), GET_LEVEL(ch));
-  else		/* THAC0 for monsters is set in the HitRoll */
-    calc_thaco = 20;
-  calc_thaco -= str_app[STRENGTH_APPLY_INDEX(ch)].tohit;
-  calc_thaco -= GET_HITROLL(ch);
-  calc_thaco -= (int) ((GET_INT(ch) - 13) / 1.5);	/* Intelligence helps! */
-  calc_thaco -= (int) ((GET_WIS(ch) - 13) / 1.5);	/* So does wisdom */
-
-  return calc_thaco;
-}
-
+/*
+ * hit() -- one character attempts to hit another with a weapon or attack.
+ * Ascending AC (5e-like), nat 1/20, bounded bonuses, and skill gains.
+ * Since there are no ranged types yet, we always use STR for attack & damage mods.
+ */
 void hit(struct char_data *ch, struct char_data *victim, int type)
 {
   struct obj_data *wielded = GET_EQ(ch, WEAR_WIELD);
-  int w_type, victim_ac, calc_thaco, dam, diceroll;
+  struct obj_data *shield  = GET_EQ(victim, WEAR_SHIELD);
+  int w_type, d20, attack_mod = 0, target_ac, dam = 0;
+  bool hit_success = FALSE;
 
-  /* Check that the attacker and victim exist */
+  /* Basic sanity */
   if (!ch || !victim) return;
 
-  /* check if the character has a fight trigger */
-  fight_mtrigger(ch);
-
-  /* Do some sanity checking, in case someone flees, etc. */
-  if (IN_ROOM(ch) != IN_ROOM(victim)) {
-    if (FIGHTING(ch) && FIGHTING(ch) == victim)
-      stop_fighting(ch);
-    return;
-  }
-
-  /* Find the weapon type (for display purposes only) */
+  /* Determine attack message type exactly like stock code */
   if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON)
     w_type = GET_OBJ_VAL(wielded, 3) + TYPE_HIT;
   else {
@@ -833,78 +841,146 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
       w_type = ch->mob_specials.attack_type + TYPE_HIT;
     else
       w_type = TYPE_HIT;
-  }
+  } /* matches stock message mapping */
 
-  /* Calculate chance of hit. Lower THAC0 is better for attacker. */
-  calc_thaco = compute_thaco(ch, victim);
+  /* Roll d20 */
+  d20 = rand_number(1, 20);
 
-  /* Calculate the raw armor including magic armor.  Lower AC is better for defender. */
-  victim_ac = compute_armor_class(victim) / 10;
+  /* Ability modifier: STR only (no ranged types yet) */
+  attack_mod += GET_ABILITY_MOD(GET_STR(ch));
 
-  /* roll the die and take your chances... */
-  diceroll = rand_number(1, 20);
+  /* Skill family & proficiency */
+  {
+    int  skillnum  = weapon_family_skill_num(ch, wielded, w_type);
+    const char *skillname = skill_name_for_gain(skillnum);
 
-  /* report for debugging if necessary */
-  if (CONFIG_DEBUG_MODE >= NRM)
-    send_to_char(ch, "\t1Debug:\r\n   \t2Thaco: \t3%d\r\n   \t2AC: \t3%d\r\n   \t2Diceroll: \t3%d\tn\r\n", 
-      calc_thaco, victim_ac, diceroll);
+    /* proficiency from current % */
+    if (!IS_NPC(ch))
+      attack_mod += GET_PROFICIENCY(GET_SKILL(ch, skillnum));
 
-  /* Decide whether this is a hit or a miss.
-   *  Victim asleep = hit, otherwise:
-   *     1   = Automatic miss.
-   *   2..19 = Checked vs. AC.
-   *    20   = Automatic hit. */
-  if (diceroll == 20 || !AWAKE(victim))
-    dam = TRUE;
-  else if (diceroll == 1)
-    dam = FALSE;
-  else
-    dam = (calc_thaco - diceroll <= victim_ac);
+    /* --- UNARMED ATTACK HANDLING --- */
+    if (!wielded) {
+      int prof_bonus = (!IS_NPC(ch)) ? GET_PROFICIENCY(GET_SKILL(ch, SKILL_UNARMED)) : 0;
+      int str_mod = GET_ABILITY_MOD(GET_STR(ch));
+      int die_size;
 
-  if (!dam)
-    /* the attacker missed the victim */
-    damage(ch, victim, 0, type == SKILL_BACKSTAB ? SKILL_BACKSTAB : w_type);
-  else {
-    /* okay, we know the guy has been hit.  now calculate damage.
-     * Start with the damage bonuses: the damroll and strength apply */
-    dam = str_app[STRENGTH_APPLY_INDEX(ch)].todam;
-    dam += GET_DAMROLL(ch);
+      /* Simple scaling by proficiency tier */
+      switch (prof_bonus) {
+        case 0:  die_size = 4; break;  /* untrained */
+        case 1:  die_size = 6; break;  /* trained */
+        case 2:  die_size = 8; break;  /* expert */
+        default: die_size = 10; break; /* master or above */
+      }
 
-    /* Maybe holding arrow? */
-    if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {
-      /* Add weapon-based damage if a weapon is being wielded */
-      dam += dice(GET_OBJ_VAL(wielded, 1), GET_OBJ_VAL(wielded, 2));
-    } else {
-      /* If no weapon, add bare hand damage instead */
-        if (IS_NPC(ch))
-          dam += dice(ch->mob_specials.damnodice, ch->mob_specials.damsizedice);
-        else
-          dam += rand_number(0, 2);	/* Max 2 bare hand damage for players */
+      /* NPC fallback scaling */
+      if (IS_NPC(ch) && prof_bonus <= 0) {
+        prof_bonus = MIN(6, (GET_LEVEL(ch) / 4)); /* level scaling */
+      }
+
+      /* base damage roll for unarmed attacks */
+      dam = dice(1, die_size) + str_mod + prof_bonus;
+
+      /* mark attack type for damage() messaging */
+      w_type = SKILL_UNARMED + TYPE_HIT;
     }
 
-    /* Include a damage multiplier if victim isn't ready to fight:
-     * Position sitting  1.33 x normal
-     * Position resting  1.66 x normal
-     * Position sleeping 2.00 x normal
-     * Position stunned  2.33 x normal
-     * Position incap    2.66 x normal
-     * Position mortally 3.00 x normal
-     * Note, this is a hack because it depends on the particular
-     * values of the POSITION_XXX constants. */
-    if (GET_POS(victim) < POS_FIGHTING)
-      dam *= 1 + (POS_FIGHTING - GET_POS(victim)) / 3;
+    /* Weapon magic (cap +3) */
+    if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {
+      int wmag = GET_OBJ_VAL(wielded, VAL_ARMOR_MAGIC_BONUS);
+      if (wmag > MAX_WEAPON_MAGIC) wmag = MAX_WEAPON_MAGIC;
+      attack_mod += wmag;
+    }
 
-    /* at least 1 hp damage min per hit */
-    dam = MAX(1, dam);
+    /* Situational attack modifiers hook (spells, conditions) */
+    attack_mod += 0;
 
-    if (type == SKILL_BACKSTAB)
-      damage(ch, victim, dam * backstab_mult(GET_LEVEL(ch)), SKILL_BACKSTAB);
-    else
+    /* Cap total attack bonus to +10 */
+    if (attack_mod > MAX_TOTAL_ATTACK_BONUS)
+      attack_mod = MAX_TOTAL_ATTACK_BONUS;
+
+    /* Ascending AC target */
+    target_ac = compute_armor_class_asc(victim);
+
+    /* Nat 1/20, then normal resolution */
+    if (d20 == 1)       hit_success = FALSE;
+    else if (d20 == 20) hit_success = TRUE;
+    else                hit_success = ((d20 + attack_mod) >= target_ac);
+
+    /* Apply result */
+    if (hit_success) {
+      /* Roll damage up front (needed for shield durability)
+       * If we are unarmed, dam was already rolled above.
+       * If wielding a weapon, roll normally.
+       */
+      if (wielded)
+        dam = roll_damage(ch, victim, wielded, w_type);
+
+      /* --- SHIELD BLOCK CHECK ---
+       * Only happens if an attack actually lands.
+       */
+      if (shield) {
+        int def_prof = (!IS_NPC(victim)) ? GET_PROFICIENCY(GET_SKILL(victim, SKILL_SHIELD_USE)) : 0;
+        int block_chance = def_prof * 10;   /* 0–60% total chance to block an attack */
+
+        if (block_chance > 0 && rand_number(1, 100) <= block_chance) {
+          /* Block succeeded! */
+          act("You block $N's attack with $p!", FALSE, victim, shield, ch, TO_CHAR);
+          act("$n blocks your attack with $s $p!", FALSE, victim, shield, ch, TO_VICT);
+          act("$n blocks $N's attack with $s $p!", TRUE, victim, shield, ch, TO_NOTVICT);
+
+          /* Durability reduction based on damage prevented */
+          int *dur = &GET_OBJ_VAL(shield, 3);
+          int loss = MAX(1, dam / 10);  /* at least 1% per block */
+          *dur -= loss;
+
+          if (*dur <= 0) {
+            act("Your $p shatters into pieces!", FALSE, victim, shield, 0, TO_CHAR);
+            act("$n's $p shatters into pieces!", TRUE, victim, shield, 0, TO_ROOM);
+            extract_obj(shield);
+          }
+
+          /* Train shield use skill on success */
+          if (!IS_NPC(victim)) {
+            gain_skill(victim, "shield use", TRUE);
+          }
+
+          return; /* Attack nullified entirely */
+        }
+      }
+
+      /* No block: apply normal damage */
       damage(ch, victim, dam, w_type);
+    } else {
+      damage(ch, victim, 0, w_type); /* miss messaging */
+    }
+
+    /* --- Skill gains --- */
+    if (!IS_NPC(ch) && skillname) {
+      gain_skill(ch, (char *)skillname, hit_success);
+    }
+
+    /* Defender shield use: every swing trains it if they’re wearing a shield.
+       Treat a MISS as a "success" for the shield user (they successfully defended). */
+    if (!IS_NPC(victim) && GET_EQ(victim, WEAR_SHIELD)) {
+      gain_skill(victim, "shield use", !hit_success);
+    }
   }
 
-  /* check if the victim has a hitprcnt trigger */
-  hitprcnt_mtrigger(victim);
+  /* Optional combat numbers for debugging / builders */
+  if (CONFIG_DEBUG_MODE >= NRM) {
+    const char *crit = (d20 == 20) ? " (CRIT)" : ((d20 == 1) ? " (NAT 1)" : "");
+    send_to_char(ch,
+      "\t1Attack:\tn d20=%d%s, mod=%+d \t1⇒\tn total=%d vs AC %d — %s\r\n",
+      d20, crit, attack_mod, d20 + attack_mod, target_ac,
+      hit_success ? "\t2HIT\tn" : "\t1MISS\tn");
+    if (!IS_NPC(victim)) {
+      send_to_char(victim,
+        "\t1Defense:\tn %s rolled total=%d vs your AC %d — %s%s\r\n",
+        GET_NAME(ch), d20 + attack_mod, target_ac,
+        hit_success ? "\t1HIT\tn" : "\t2MISS\tn",
+        (d20 == 20) ? " (CRIT)" : ((d20 == 1) ? " (NAT 1)" : ""));
+    }
+  }
 }
 
 /* control the fights going on.  Called every 2 seconds from comm.c. */

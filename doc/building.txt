@@ -145,7 +145,7 @@ An area’s balance should be an integral part of the design process, not
 something to be tacked on as an afterthought. Too often, an area will be 
 designed with outrageously good weapons and armor which throws off the balance 
 of the game. Naturally, after such zone is added, players complain bitterly if 
-it is ever removed or toned down. Also, because the rent system saves hitrolls,
+it is ever removed or toned down. Also, because the save system stores hitrolls,
 damrolls, and ac-apply’s, veteran players will be able to hold on to their old, 
 spectacular equipment unless it is explicitly taken from them, even after the
 area has been changed. This does nothing but generate bad feelings on all 
@@ -750,7 +750,7 @@ For type S mobs, the type-specific information should be in the following format
 
 <mob flags> <affect flags> <alignment> S
 <level> <thaco> <armor class> <hitpoints> <damage>
-<gold> <experience points> 
+<coins> <experience points> 
 <load position> <default position> <sex> 
 
 Level The level of the monster, from 1 to 34. 
@@ -803,7 +803,7 @@ will do between 11 and 14 hitpoints each round without a weapon. If the monster
 picks up and wields a tiny stick which gives 1d2 damage, then the monster will 
 do 1d2 + 10 points of damage per round with the stick. 
 
-Gold The number of gold coins the mobile is initially loaded with. 
+Coins The number of coins the mobile is initially loaded with. 
 
 Experience The number of experience points the mobile is initially loaded with. 
 
@@ -848,7 +848,7 @@ hanging around his teeth.
 This is mobile vnum 3062. The Fido has mob and affect flags set and has an 
 initial alignment of -200. After the S flag we see that the Fido is level 1, 
 has a THAC0 of 20, an Armor Class of 9, 0d0+10 hit points (10 hitpoints), and
-will do 1d2 hit points of bare hand damage per round. The Fido has 10 gold 
+will do 1d2 hit points of bare hand damage per round. The Fido has 10 coins 
 and 100 experience points, has a load position and default position of 
 STANDING, and is male. 
 
@@ -867,7 +867,7 @@ The format of an E mobile is as follows:
 
 <mob flags> <affect flags> <alignment> E
 <level> <hitroll> <armor class> <hitpoints> <damage>
-<gold> <experience points> 
+<coins> <experience points> 
 <load position> <default position> <sex> 
 {E-spec list} 
 E 
@@ -944,7 +944,7 @@ StrAdd The mobile’s strength addition, which can range from 1 to 99.
 <action description>~ 
 <type flag> <extra (affects) bitvector> <wear bitvector> 
 <value 0> <value 1> <value 2> <value 3> 
-<weight> <cost> <rent per day> 
+<weight> <cost> <unused> 
 {Zero or more Extra Descriptions and/or Affect Fields} 
 
 There can be an unlimited number of Extra Descriptions and up to 3 Affect 
@@ -1002,7 +1002,7 @@ the following numbers:
 5    WEAPON         Must be piercing to backstab.
 6    FURNITURE      Item may be sat on.
 7    FREE           Do not set.
-8    TREASURE       Item is treasure other than gold coins (i.e. gems)
+8    TREASURE       Item is treasure other than coins (i.e. gems)
 9    ARMOR          Item is armor.
 10   POTION         Item is a magical potion.
 11   WORN           Item is worn, but not armor.
@@ -1026,7 +1026,7 @@ but has no substantive effect otherwise. The flags have the following values:
 
 1)   GLOW            Item is glowing (cosmetic).
 2)   HUM             Item is humming (cosmetic).
-3)   NORENT          Item cannot be rented.
+3)   UNUSED          Reserved (unused).
 4)   NODONATE        Item cannot be donated.
 5)   NOINVIS         Item cannot be made invisible.
 6)   INVISIBLE       Item is invisible.
@@ -1073,9 +1073,9 @@ Weight The weight of the object. The weight controls how many strength points a
 character must have to take the object, and is used to calculate when bags and 
 other containers become full. 
 
-Cost The value of the object in gold coins; used by shopkeepers. 
+Cost The value of the object in coins; used by shopkeepers. 
 
-Rent Per Day The cost per day to rent the object in the Reception. 
+Cost Per Day A legacy value that the game ignores. 
 
 5.2 Object Value Definitions 
 The meaning of an object’s four values (value 0 through value 3) vary depending
@@ -1184,7 +1184,7 @@ value 1-2: unused
 value 3: Non-zero if the food is poisoned, 0 otherwise. 
 
 MONEY: (Type Flag 20) 
-value 0: The number of gold coins in the pile. 
+value 0: The number of coins in the pile. 
 value 1-3: unused 
 
 PEN: (Type Flag 21) 
@@ -1239,7 +1239,7 @@ the following numbers:
 12   MAXMANA            Apply to MAX mana points. 
 13   MAXHIT             Apply to MAX hit points.
 14   MAXMOVE            Apply to MAX movement points.
-15   GOLD               Unimplemented.  Do not use.
+15   COINS               Unimplemented.  Do not use.
 16   EXP                Unimplemented.  Do not use.
 17   ARMOR              Apply to armor class (AC). negative is better.
 18   HITROLL            Apply to hitroll. 
@@ -1281,7 +1281,7 @@ A
 This object is virtual number 901, is a Type 9 object (armor), cannot be 
 donated, has a magical aura, and cannot be dropped. It can be picked up and 
 worn as a shield. It has an AC-apply of 12, weighs 15 pounds, is valued at 
-5000 coins and costs 1350 coins per day to rent. Its Affect fields indicate 
+5000 coins and includes a legacy cost-per-day value of 1350 (ignored). Its Affect fields indicate 
 that this object affects breath weapon saving throws by -4 and increases Wisdom
 by 2. 
 
@@ -1811,7 +1811,7 @@ See also: TRIG-COMMANDS, VARIABLES, EXPRESSIONS     =========================
 Numeric arguments purpose varies depending on the trigger type. For most 
 triggers it is the percentage chance of firing. But, it can also be the 
 percentage of hitpoints remaining, location of an object, to match a string 
-or single word in the argument, or the amount of gold for a bribe. To find 
+or single word in the argument, or the amount of coins for a bribe. To find 
 out what numeric arg does for each trig look up that triggers help file.
 
 Trig arg This describes the text argument, if any, which can be used to filter

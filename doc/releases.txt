@@ -109,15 +109,15 @@ to new immortals constantly asking you when they will be added
 to the immlist! 
 --"config.c" file allows you to change aspects of the game such 
 as playerkilling/playerthieving legality, max number of objects 
-rentable, and nameserver usage --WITHOUT recompiling the 
+saveable, and nameserver usage --WITHOUT recompiling the 
 entire MUD! 
 --All text (help, mortal/immort MOTDs, etc.) is rebootable at 
 run-time with the "reboot" command 
 --All players are given a unique serial number --no more messy, 
 time consuming str_cmp()s when you are trying to identify people! 
---Fully integrated and robust rent/crash system --allows normal 
-renting, cryo-renting, crash protection, and forced rent 
-(at an increased price) after an hour of idling 
+--Fully integrated and robust save/crash system --allows normal 
+saving, cryo-saving, crash protection, and forced saves 
+after an hour of idling 
 --All the standard wizard stuff you are used to: level-sensitive 
 invisibility, settable poofin/poofouts, wizline 
 --Advanced "set" command which allows you to set dozens of aspects 

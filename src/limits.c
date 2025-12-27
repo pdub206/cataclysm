@@ -12,6 +12,7 @@
 #include "sysdep.h"
 #include "structs.h"
 #include "utils.h"
+#include "constants.h"
 #include "spells.h"
 #include "comm.h"
 #include "db.h"
@@ -22,6 +23,8 @@
 #include "fight.h"
 #include "screen.h"
 #include "mud_event.h"
+#include "roomsave.h"
+#include <time.h>
 
 /* local file scope function prototypes */
 static int graf(int grafage, int p0, int p1, int p2, int p3, int p4, int p5, int p6);
@@ -85,7 +88,7 @@ int mana_gain(struct char_data *ch)
       break;
     }
 
-    if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
+    if (IS_SORCEROR(ch) || IS_CLERIC(ch))
       gain *= 2;
 
     if ((GET_COND(ch, HUNGER) == 0) || (GET_COND(ch, THIRST) == 0))
@@ -126,7 +129,7 @@ int hit_gain(struct char_data *ch)
       break;
     }
 
-    if (IS_MAGIC_USER(ch) || IS_CLERIC(ch))
+    if (IS_SORCEROR(ch) || IS_CLERIC(ch))
       gain /= 2;	/* Ouch. */
 
     if ((GET_COND(ch, HUNGER) == 0) || (GET_COND(ch, THIRST) == 0))
@@ -175,23 +178,6 @@ int move_gain(struct char_data *ch)
   return (gain);
 }
 
-void set_title(struct char_data *ch, char *title)
-{
-  if (GET_TITLE(ch) != NULL)
-    free(GET_TITLE(ch));
-
-  if (title == NULL) {
-    GET_TITLE(ch) = strdup(GET_SEX(ch) == SEX_FEMALE ?
-      title_female(GET_CLASS(ch), GET_LEVEL(ch)) :
-      title_male(GET_CLASS(ch), GET_LEVEL(ch)));
-  } else {
-    if (strlen(title) > MAX_TITLE_LENGTH)
-      title[MAX_TITLE_LENGTH] = '\0';
-
-    GET_TITLE(ch) = strdup(title);
-  }
-}
-
 void run_autowiz(void)
 {
 #if defined(CIRCLE_UNIX) || defined(CIRCLE_WINDOWS)
@@ -220,11 +206,71 @@ void run_autowiz(void)
 #endif /* CIRCLE_UNIX || CIRCLE_WINDOWS */
 }
 
+/* Requires: find_skill_num(), GET_WIS(), wis_app[], GET_SKILL(), SET_SKILL(), rand_number()
+ * Cooldown: 1 hour - 5 * WIS bonus minutes (floored at 0)
+ * Rolls: failure -> 1..20, success -> 1..100
+ * Cap: 90% (change MIN(90, ...) if you want a different cap)
+ */
+void gain_skill(struct char_data *ch, char *skill, bool success)
+{
+  int skill_num, base, roll, increase;
+  int wisb, cd_seconds;
+  time_t now;
+
+  if (IS_NPC(ch))
+    return;
+
+  /* Resolve index and validate against table size */
+  skill_num = find_skill_num(skill);
+  if (skill_num <= 0 || skill_num > MAX_SKILLS)
+    return;
+
+  /* Respect per-skill cooldown: do nothing if still cooling down */
+  now = time(0);
+  if (GET_SKILL_NEXT_GAIN(ch, skill_num) != 0 &&
+      now < GET_SKILL_NEXT_GAIN(ch, skill_num)) {
+    return;
+  }
+
+  base = GET_SKILL(ch, skill_num);
+  /* If already capped, bail early (and don’t start cooldown) */
+  if (base >= 90)
+    return;
+
+  /* Wisdom bonus from wis_app[] (constants.c). Higher = better learning & shorter cooldown. */
+  wisb = GET_ABILITY_MOD(GET_WIS(ch));
+
+  if (success) {
+    /* Learning from success is harder: 1..100, threshold scales with WIS */
+    roll = rand_number(1, 100);
+    /* Old 1..400 with (400 - wisb*4) ⇒ scaled: (100 - wisb) */
+    if (roll >= (100 - wisb)) {
+      increase = base + 1;
+      SET_SKILL(ch, skill_num, MIN(90, increase));
+
+      /* Cooldown only when an increase actually happens */
+      cd_seconds = 3600 - (wisb * 5 * 60);  /* 1 hour - 5 * WIS minutes */
+      if (cd_seconds < 0) cd_seconds = 0;
+      GET_SKILL_NEXT_GAIN(ch, skill_num) = now + cd_seconds;
+    }
+  } else {
+    /* Learning from failure is easier: 1..20, threshold scales with WIS */
+    roll = rand_number(1, 20);
+    /* Old 1..100 with (100 - wisb) ⇒ scaled: (20 - wisb) */
+    if (roll >= (20 - wisb)) {
+      increase = base + 1;
+      SET_SKILL(ch, skill_num, MIN(90, increase));
+
+      /* Cooldown only when an increase actually happens */
+      cd_seconds = 3600 - (wisb * 5 * 60);  /* 1 hour - 5 * WIS minutes */
+      if (cd_seconds < 0) cd_seconds = 0;
+      GET_SKILL_NEXT_GAIN(ch, skill_num) = now + cd_seconds;
+    }
+  }
+}
+
 void gain_exp(struct char_data *ch, int gain)
 {
-  int is_altered = FALSE;
-  int num_levels = 0;
-
   if (!IS_NPC(ch) && ((GET_LEVEL(ch) < 1 || GET_LEVEL(ch) >= LVL_IMMORT)))
     return;
 
@@ -232,48 +278,25 @@ void gain_exp(struct char_data *ch, int gain)
     GET_EXP(ch) += gain;
     return;
   }
+
   if (gain > 0) {
-    if ((IS_HAPPYHOUR) && (IS_HAPPYEXP))
-      gain += (int)((float)gain * ((float)HAPPY_EXP / (float)(100)));
-
-    gain = MIN(CONFIG_MAX_EXP_GAIN, gain);	/* put a cap on the max gain per kill */
+    gain = MIN(CONFIG_MAX_EXP_GAIN, gain);	/* cap max gain per kill */
     GET_EXP(ch) += gain;
-    while (GET_LEVEL(ch) < LVL_IMMORT - CONFIG_NO_MORT_TO_IMMORT &&
-	GET_EXP(ch) >= level_exp(GET_CLASS(ch), GET_LEVEL(ch) + 1)) {
-      GET_LEVEL(ch) += 1;
-      num_levels++;
-      advance_level(ch);
-      is_altered = TRUE;
-    }
-
-    if (is_altered) {
-      mudlog(BRF, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE, "%s advanced %d level%s to level %d.",
-		GET_NAME(ch), num_levels, num_levels == 1 ? "" : "s", GET_LEVEL(ch));
-      if (num_levels == 1)
-        send_to_char(ch, "You rise a level!\r\n");
-      else
-	send_to_char(ch, "You rise %d levels!\r\n", num_levels);
-      set_title(ch, NULL);
-      if (GET_LEVEL(ch) >= LVL_IMMORT && !PLR_FLAGGED(ch, PLR_NOWIZLIST))
-        run_autowiz();
-    }
   } else if (gain < 0) {
-    gain = MAX(-CONFIG_MAX_EXP_LOSS, gain);	/* Cap max exp lost per death */
+    gain = MAX(-CONFIG_MAX_EXP_LOSS, gain);	/* cap max loss per death */
     GET_EXP(ch) += gain;
     if (GET_EXP(ch) < 0)
       GET_EXP(ch) = 0;
   }
+
   if (GET_LEVEL(ch) >= LVL_IMMORT && !PLR_FLAGGED(ch, PLR_NOWIZLIST))
     run_autowiz();
-  }
+}
 
 void gain_exp_regardless(struct char_data *ch, int gain)
 {
   int is_altered = FALSE;
   int num_levels = 0;
-
-  if ((IS_HAPPYHOUR) && (IS_HAPPYEXP))
-    gain += (int)((float)gain * ((float)HAPPY_EXP / (float)(100)));
 
   GET_EXP(ch) += gain;
   if (GET_EXP(ch) < 0)
@@ -295,7 +318,6 @@ void gain_exp_regardless(struct char_data *ch, int gain)
         send_to_char(ch, "You rise a level!\r\n");
       else
 	send_to_char(ch, "You rise %d levels!\r\n", num_levels);
-      set_title(ch, NULL);
     }
   }
   if (GET_LEVEL(ch) >= LVL_IMMORT && !PLR_FLAGGED(ch, PLR_NOWIZLIST))
@@ -351,7 +373,7 @@ static void check_idling(struct char_data *ch)
       Crash_crashsave(ch);
       char_from_room(ch);
       char_to_room(ch, 1);
-    } else if (ch->char_specials.timer > CONFIG_IDLE_RENT_TIME) {
+    } else if (ch->char_specials.timer > (CONFIG_IDLE_VOID * 2)) {
       if (IN_ROOM(ch) != NOWHERE)
 	char_from_room(ch);
       char_to_room(ch, 3);
@@ -364,11 +386,8 @@ static void check_idling(struct char_data *ch)
 	ch->desc->character = NULL;
 	ch->desc = NULL;
       }
-      if (CONFIG_FREE_RENT)
-	Crash_rentsave(ch, 0);
-      else
-	Crash_idlesave(ch);
-      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "%s force-rented and extracted (idle).", GET_NAME(ch));
+      Crash_idlesave(ch);
+      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "%s idle-saved and extracted (idle).", GET_NAME(ch));
       add_llog_entry(ch, LAST_IDLEOUT);
       extract_char(ch);
     }
@@ -380,6 +399,8 @@ void point_update(void)
 {
   struct char_data *i, *next_char;
   struct obj_data *j, *next_thing, *jj, *next_thing2;
+  /* Room-save autosave pulse counter (static so it persists across calls) */
+  static int roomsave_pulse = 0;
 
   /* characters */
   for (i = character_list; i; i = next_char) {
@@ -394,59 +415,59 @@ void point_update(void)
       GET_MANA(i) = MIN(GET_MANA(i) + mana_gain(i), GET_MAX_MANA(i));
       GET_MOVE(i) = MIN(GET_MOVE(i) + move_gain(i), GET_MAX_MOVE(i));
       if (AFF_FLAGGED(i, AFF_POISON))
-	if (damage(i, i, 2, SPELL_POISON) == -1)
-	  continue;	/* Oops, they died. -gg 6/24/98 */
+        if (damage(i, i, 2, SPELL_POISON) == -1)
+          continue; /* Oops, they died. -gg 6/24/98 */
       if (GET_POS(i) <= POS_STUNNED)
-	update_pos(i);
+        update_pos(i);
     } else if (GET_POS(i) == POS_INCAP) {
       if (damage(i, i, 1, TYPE_SUFFERING) == -1)
-	continue;
+        continue;
     } else if (GET_POS(i) == POS_MORTALLYW) {
       if (damage(i, i, 2, TYPE_SUFFERING) == -1)
-	continue;
+        continue;
     }
     if (!IS_NPC(i)) {
       update_char_objects(i);
       (i->char_specials.timer)++;
       if (GET_LEVEL(i) < CONFIG_IDLE_MAX_LEVEL)
-	check_idling(i);
+        check_idling(i);
     }
   }
 
   /* objects */
   for (j = object_list; j; j = next_thing) {
-    next_thing = j->next;	/* Next in object list */
+    next_thing = j->next; /* Next in object list */
 
     /* If this is a corpse */
     if (IS_CORPSE(j)) {
       /* timer count down */
       if (GET_OBJ_TIMER(j) > 0)
-	GET_OBJ_TIMER(j)--;
+        GET_OBJ_TIMER(j)--;
 
       if (!GET_OBJ_TIMER(j)) {
 
-	if (j->carried_by)
-	  act("$p decays in your hands.", FALSE, j->carried_by, j, 0, TO_CHAR);
-	else if ((IN_ROOM(j) != NOWHERE) && (world[IN_ROOM(j)].people)) {
-	  act("A quivering horde of maggots consumes $p.",
-	      TRUE, world[IN_ROOM(j)].people, j, 0, TO_ROOM);
-	  act("A quivering horde of maggots consumes $p.",
-	      TRUE, world[IN_ROOM(j)].people, j, 0, TO_CHAR);
-	}
-	for (jj = j->contains; jj; jj = next_thing2) {
-	  next_thing2 = jj->next_content;	/* Next in inventory */
-	  obj_from_obj(jj);
+        if (j->carried_by)
+          act("$p decays in your hands.", FALSE, j->carried_by, j, 0, TO_CHAR);
+        else if ((IN_ROOM(j) != NOWHERE) && (world[IN_ROOM(j)].people)) {
+          act("A quivering horde of maggots consumes $p.",
+              TRUE, world[IN_ROOM(j)].people, j, 0, TO_ROOM);
+          act("A quivering horde of maggots consumes $p.",
+              TRUE, world[IN_ROOM(j)].people, j, 0, TO_CHAR);
+        }
+        for (jj = j->contains; jj; jj = next_thing2) {
+          next_thing2 = jj->next_content; /* Next in inventory */
+          obj_from_obj(jj);
 
-	  if (j->in_obj)
-	    obj_to_obj(jj, j->in_obj);
-	  else if (j->carried_by)
-	    obj_to_room(jj, IN_ROOM(j->carried_by));
-	  else if (IN_ROOM(j) != NOWHERE)
-	    obj_to_room(jj, IN_ROOM(j));
-	  else
-	    core_dump();
-	}
-	extract_obj(j);
+          if (j->in_obj)
+            obj_to_obj(jj, j->in_obj);
+          else if (j->carried_by)
+            obj_to_room(jj, IN_ROOM(j->carried_by));
+          else if (IN_ROOM(j) != NOWHERE)
+            obj_to_room(jj, IN_ROOM(j));
+          else
+            core_dump();
+        }
+        extract_obj(j);
       }
     }
     /* If the timer is set, count it down and at 0, try the trigger
@@ -458,74 +479,79 @@ void point_update(void)
     }
   }
 
-  /* Take 1 from the happy-hour tick counter, and end happy-hour if zero */
-       if (HAPPY_TIME > 1)  HAPPY_TIME--;
-  else if (HAPPY_TIME == 1)   /* Last tick - set everything back to zero */
-  {
-    HAPPY_QP = 0;
-    HAPPY_EXP = 0;
-    HAPPY_GOLD = 0;
-    HAPPY_TIME = 0;
-   game_info("Happy hour has ended!");
+  /* ---- Room SAVE autosave (every 10 minutes; adjust the 600 as desired) ----
+   * Requires: #include "roomsave.h" at the top of this file.
+   * Saves all rooms flagged ROOM_SAVE via roomsave.c.
+   */
+  if (++roomsave_pulse >= (PASSES_PER_SEC * 600)) {
+    roomsave_pulse = 0;
+    RoomSave_autosave_tick();
   }
 }
 
 /* Note: amt may be negative */
-int increase_gold(struct char_data *ch, int amt)
+int increase_coins(struct char_data *ch, int amt)
 {
-  int curr_gold;
+  int curr_coins;
+  int add;
 
-  curr_gold = GET_GOLD(ch);
+  if (!ch)
+    return 0;
 
-  if (amt < 0) {
-    GET_GOLD(ch) = MAX(0, curr_gold+amt);
-    /* Validate to prevent overflow */
-    if (GET_GOLD(ch) > curr_gold) GET_GOLD(ch) = 0;
-  } else {
-    GET_GOLD(ch) = MIN(MAX_GOLD, curr_gold+amt);
-    /* Validate to prevent overflow */
-    if (GET_GOLD(ch) < curr_gold) GET_GOLD(ch) = MAX_GOLD;
-  }
-  if (GET_GOLD(ch) == MAX_GOLD)
-    send_to_char(ch, "%sYou have reached the maximum gold!\r\n%sYou must spend it or bank it before you can gain any more.\r\n", QBRED, QNRM);
+  curr_coins = GET_COINS(ch);
 
-  return (GET_GOLD(ch));
+  if (amt < 0)
+    return decrease_coins(ch, -amt);
+  if (amt == 0)
+    return curr_coins;
+
+  add = MIN(amt, MAX_COINS - curr_coins);
+  if (add <= 0)
+    return curr_coins;
+
+  add_coins_to_char(ch, add);
+
+  if (GET_COINS(ch) == MAX_COINS)
+    send_to_char(ch, "%sYou have reached the maximum coins!\r\n%sYou must spend them or bank them before you can gain any more.\r\n", QBRED, QNRM);
+
+  return GET_COINS(ch);
 }
 
-int decrease_gold(struct char_data *ch, int deduction)
+int decrease_coins(struct char_data *ch, int deduction)
 {
-  int amt;
-  amt = (deduction * -1);
-  increase_gold(ch, amt);
-  return (GET_GOLD(ch));
+  if (!ch || deduction <= 0)
+    return GET_COINS(ch);
+
+  remove_coins_from_char(ch, deduction);
+  return GET_COINS(ch);
 }
 
-int increase_bank(struct char_data *ch, int amt)
+int increase_bank_coins(struct char_data *ch, int amt)
 {
   int curr_bank;
 
   if (IS_NPC(ch)) return 0;
 
-  curr_bank = GET_BANK_GOLD(ch);
+  curr_bank = GET_BANK_COINS(ch);
 
   if (amt < 0) {
-    GET_BANK_GOLD(ch) = MAX(0, curr_bank+amt);
+    GET_BANK_COINS(ch) = MAX(0, curr_bank+amt);
     /* Validate to prevent overflow */
-    if (GET_BANK_GOLD(ch) > curr_bank) GET_BANK_GOLD(ch) = 0;
+    if (GET_BANK_COINS(ch) > curr_bank) GET_BANK_COINS(ch) = 0;
   } else {
-    GET_BANK_GOLD(ch) = MIN(MAX_BANK, curr_bank+amt);
+    GET_BANK_COINS(ch) = MIN(MAX_BANK_COINS, curr_bank+amt);
     /* Validate to prevent overflow */
-    if (GET_BANK_GOLD(ch) < curr_bank) GET_BANK_GOLD(ch) = MAX_BANK;
+    if (GET_BANK_COINS(ch) < curr_bank) GET_BANK_COINS(ch) = MAX_BANK_COINS;
   }
-  if (GET_BANK_GOLD(ch) == MAX_BANK)
+  if (GET_BANK_COINS(ch) == MAX_BANK_COINS)
     send_to_char(ch, "%sYou have reached the maximum bank balance!\r\n%sYou cannot put more into your account unless you withdraw some first.\r\n", QBRED, QNRM);
-  return (GET_BANK_GOLD(ch));
+  return (GET_BANK_COINS(ch));
 }
 
-int decrease_bank(struct char_data *ch, int deduction)
+int decrease_bank_coins(struct char_data *ch, int deduction)
 {
   int amt;
   amt = (deduction * -1);
-  increase_bank(ch, amt);
-  return (GET_BANK_GOLD(ch));
+  increase_bank_coins(ch, amt);
+  return (GET_BANK_COINS(ch));
 }

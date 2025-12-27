@@ -29,7 +29,7 @@ misc/     - Miscellaneous database files such as fight messages, invalid names,
             and socials.
 plrfiles/ - ASCII files which combined the player, alias, and variable files.
 plrobjs/  - The hierarchy containing player object files (i.e. crash files,
-            rent files, cryo-rent files, etc.) and utility scripts.
+            legacy save files, cryo files, etc.) and utility scripts.
 text/     - Files meant to be directly read by players such as MOTD (message of
             the day), help files, and the immortal handbook.  You can change
             these files while the game is running, and then have the mud reload
@@ -121,7 +121,6 @@ help - All help queries that are not found.
 levels - Records of all levels gained by all players.
 newplayers - Records of the creation of new players.
 olc - OLC log messages.
-rentgone - Players who have lost their items in rent.
 restarts - List of times at which the MUD rebooted.
 rip - Player deaths.
 trigger - Trigedit log messages.

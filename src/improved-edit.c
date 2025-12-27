@@ -17,10 +17,24 @@
 
 void send_editor_help(struct descriptor_data *d)
 {
-  if (using_improved_editor)
-    write_to_output(d, "Instructions: /s to save, /h for more options.\r\n");
-  else
-    write_to_output(d, "Instructions: Type @ on a line by itself to end.\r\n");
+  if (using_improved_editor) {
+    write_to_output(d,
+      "\r\n"
+      "+---------------------------------------------------------------+\r\n"
+      "|                        ENTERING EDITOR                        |\r\n"
+      "|  Enter /s on a newline to save, or /h for formatting help     |\r\n"
+      "+---------------------------------------------------------------+\r\n"
+      "\r\n");
+  } else {
+    write_to_output(d,
+      "\r\n"
+      "+---------------------------------------------------------------+\r\n"
+      "|                        ENTERING EDITOR                        |\r\n"
+      "|  Type your text below. Each new line will be added.           |\r\n"
+      "|  End with '@' on a line by itself to finish.                  |\r\n"
+      "+---------------------------------------------------------------+\r\n"
+      "\r\n");
+  }
 }
 
 #if CONFIG_IMPROVED_EDITOR
@@ -367,8 +381,8 @@ void parse_edit_action(int command, char *string, struct descriptor_data *d)
         s++;
         temp = *s;
         *s = '\0';
-        char buf3[9];
-        sprintf(buf3, "%4d: ", (i - 1));
+        char buf3[16];
+        snprintf(buf3, sizeof buf3, "%4d: ", (i - 1));
         strncat(buf, buf3, sizeof(buf) - strlen(buf) - 1);
         strncat(buf, t, sizeof(buf) - strlen(buf) - 1);
         *s = temp;

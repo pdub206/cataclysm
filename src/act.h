@@ -20,33 +20,50 @@
 
 #include "utils.h" /* for the ACMD macro */
 
+#ifndef MAX_EMOTE_TOKENS
+#define MAX_EMOTE_TOKENS 16
+#endif
+
+struct emote_token {
+  char op;
+  char name[MAX_NAME_LENGTH];
+  struct char_data *tch;
+  struct obj_data *tobj;
+};
+
+struct targeted_phrase {
+  char template[MAX_STRING_LENGTH];
+  int token_count;
+  struct emote_token tokens[MAX_EMOTE_TOKENS];
+};
+
 /*****************************************************************************
  * Begin Functions and defines for act.comm.c
  ****************************************************************************/
 /* functions with subcommands */
 /* do_gen_comm */
 ACMD(do_gen_comm);
-#define SCMD_HOLLER   0
-#define SCMD_SHOUT    1
-#define SCMD_GOSSIP   2
-#define SCMD_AUCTION  3
-#define SCMD_GRATZ    4
-#define SCMD_GEMOTE   5
+#define SCMD_SHOUT    0
+#define SCMD_GEMOTE   1
 /* do_qcomm */
 ACMD(do_qcomm);
-#define SCMD_QSAY     0
-#define SCMD_QECHO    1
+#define SCMD_QECHO    0
 /* do_spec_com */
 ACMD(do_spec_comm);
 #define SCMD_WHISPER  0
 #define SCMD_ASK      1
 /* functions without subcommands */
 ACMD(do_say);
-ACMD(do_gsay);
+ACMD(do_ooc);
+ACMD(do_feel);
+ACMD(do_think);
 ACMD(do_page);
 ACMD(do_reply);
 ACMD(do_tell);
 ACMD(do_write);
+ACMD(do_talk);
+bool build_targeted_phrase(struct char_data *ch, const char *input, bool allow_actor_at, struct targeted_phrase *phrase);
+void render_targeted_phrase(struct char_data *actor, const struct targeted_phrase *phrase, bool actor_possessive_for_at, struct char_data *viewer, char *out, size_t outsz);
 /*****************************************************************************
  * Begin Functions and defines for act.informative.c
  ****************************************************************************/
@@ -89,11 +106,10 @@ ACMD(do_diagnose);
 ACMD(do_equipment);
 ACMD(do_examine);
 ACMD(do_exits);
-ACMD(do_gold);
+ACMD(do_coins);
 ACMD(do_help);
 ACMD(do_history);
 ACMD(do_inventory);
-ACMD(do_levels);
 ACMD(do_scan);
 ACMD(do_score);
 ACMD(do_time);
@@ -118,7 +134,6 @@ void weight_change_object(struct obj_data *obj, int weight);
 ACMD(do_drop);
 #define SCMD_DROP   0
 #define SCMD_JUNK   1
-#define SCMD_DONATE 2
 /* do_eat */
 ACMD(do_eat);
 #define SCMD_EAT    0
@@ -129,6 +144,11 @@ ACMD(do_eat);
 ACMD(do_pour);
 #define SCMD_POUR  0
 #define SCMD_FILL  1
+/* do_raise_lower_hood */
+ACMD(do_raise_lower_hood);
+#define SCMD_RAISE_HOOD  0
+#define SCMD_LOWER_HOOD  1
+
 /* functions without subcommands */
 ACMD(do_drink);
 ACMD(do_get);
@@ -136,10 +156,10 @@ ACMD(do_give);
 ACMD(do_grab);
 ACMD(do_put);
 ACMD(do_remove);
-ACMD(do_sac);
 ACMD(do_wear);
 ACMD(do_wield);
-
+ACMD(do_skin);
+ACMD(do_forage);
 
 /*****************************************************************************
  * Begin Functions and defines for act.movement.c
@@ -197,35 +217,30 @@ ACMD(do_gen_tog);
 #define SCMD_BRIEF       2
 #define SCMD_COMPACT     3
 #define SCMD_NOTELL      4
-#define SCMD_NOAUCTION   5
-#define SCMD_NOSHOUT     6
-#define SCMD_NOGOSSIP    7
-#define SCMD_NOGRATZ     8
-#define SCMD_NOWIZ       9
-#define SCMD_QUEST       10
-#define SCMD_SHOWVNUMS   11
-#define SCMD_NOREPEAT    12
-#define SCMD_HOLYLIGHT   13
-#define SCMD_SLOWNS      14
-#define SCMD_AUTOEXIT    15
-#define SCMD_TRACK       16
-#define SCMD_CLS         17
-#define SCMD_BUILDWALK   18
-#define SCMD_AFK         19
-#define SCMD_AUTOLOOT    20
-#define SCMD_AUTOGOLD    21
-#define SCMD_AUTOSPLIT   22
-#define SCMD_AUTOSAC     23
-#define SCMD_AUTOASSIST  24
-#define SCMD_AUTOMAP     25
-#define SCMD_AUTOKEY     26
-#define SCMD_AUTODOOR    27
-#define SCMD_ZONERESETS  28
-#define SCMD_SYSLOG      29
-#define SCMD_WIMPY       30
-#define SCMD_PAGELENGTH  31
-#define SCMD_SCREENWIDTH 32
-#define SCMD_COLOR       33
+#define SCMD_NOSHOUT     5
+#define SCMD_NOWIZ       6
+#define SCMD_QUEST       7
+#define SCMD_SHOWVNUMS   8
+#define SCMD_NOREPEAT    9
+#define SCMD_HOLYLIGHT   10
+#define SCMD_SLOWNS      11
+#define SCMD_AUTOEXIT    12
+#define SCMD_TRACK       13
+#define SCMD_CLS         14
+#define SCMD_BUILDWALK   15
+#define SCMD_AFK         16
+#define SCMD_AUTOLOOT    17
+#define SCMD_AUTOSPLIT   18
+#define SCMD_AUTOASSIST  19
+#define SCMD_AUTOMAP     20
+#define SCMD_AUTOKEY     21
+#define SCMD_AUTODOOR    22
+#define SCMD_ZONERESETS  23
+#define SCMD_SYSLOG      24
+#define SCMD_WIMPY       25
+#define SCMD_PAGELENGTH  26
+#define SCMD_SCREENWIDTH 27
+#define SCMD_COLOR       28
 
 /* do_quit */
 ACMD(do_quit);
@@ -239,17 +254,28 @@ ACMD(do_use);
 /* Functions without subcommands */
 ACMD(do_display);
 ACMD(do_group);
-ACMD(do_happyhour);
 ACMD(do_hide);
+ACMD(do_listen);
 ACMD(do_not_here);
-ACMD(do_practice);
 ACMD(do_report);
 ACMD(do_save);
+ACMD(do_skills);
+ACMD(do_palm);
+ACMD(do_slip);
 ACMD(do_sneak);
 ACMD(do_split);
 ACMD(do_steal);
-ACMD(do_title);
 ACMD(do_visible);
+bool perform_scan_sweep(struct char_data *ch);
+void clear_scan_results(struct char_data *ch);
+bool scan_can_target(struct char_data *ch, struct char_data *tch);
+bool scan_confirm_target(struct char_data *ch, struct char_data *tch);
+void stealth_process_room_movement(struct char_data *ch, room_rnum room, int dir, bool leaving);
+int get_stealth_skill_value(struct char_data *ch);
+int roll_stealth_check(struct char_data *ch);
+int roll_sleight_check(struct char_data *ch);
+bool can_scan_for_sneak(struct char_data *ch);
+int roll_scan_perception(struct char_data *ch);
 
 
 /*****************************************************************************
@@ -282,6 +308,7 @@ void perform_immort_vis(struct char_data *ch);
 void snoop_check(struct char_data *ch);
 bool change_player_name(struct char_data *ch, struct char_data *vict, char *new_name);
 bool AddRecentPlayer(char *chname, char *chhost, bool newplr, bool cpyplr);
+void perform_emote(struct char_data *ch, char *argument, bool possessive, bool hidden);
 /* Functions with subcommands */
 /* do_date */
 ACMD(do_date);
@@ -290,7 +317,15 @@ ACMD(do_date);
 /* do_echo */
 ACMD(do_echo);
 #define SCMD_ECHO   0
-#define SCMD_EMOTE  1
+/* do emote */
+ACMD(do_emote);
+ACMD(do_pemote);
+ACMD(do_hemote);
+ACMD(do_phemote);
+#define SCMD_EMOTE   0
+#define SCMD_PEMOTE  1
+#define SCMD_HEMOTE  2
+#define SCMD_PHEMOTE 3
 /* do_last */
 ACMD(do_last);
 #define SCMD_LIST_ALL 1
@@ -302,12 +337,12 @@ ACMD(do_shutdown);
 ACMD(do_wizutil);
 #define SCMD_REROLL   0
 #define SCMD_PARDON   1
-#define SCMD_NOTITLE  2
-#define SCMD_MUTE     3
-#define SCMD_FREEZE   4
-#define SCMD_THAW     5
-#define SCMD_UNAFFECT 6
+#define SCMD_MUTE     2
+#define SCMD_FREEZE   3
+#define SCMD_THAW     4
+#define SCMD_UNAFFECT 5
 /* Functions without subcommands */
+ACMD(do_acaudit);
 ACMD(do_advance);
 ACMD(do_at);
 ACMD(do_checkloadstatus);
@@ -321,6 +356,7 @@ ACMD(do_goto);
 ACMD(do_invis);
 ACMD(do_links);
 ACMD(do_load);
+ACMD(do_msave);
 ACMD(do_oset);
 ACMD(do_peace);
 ACMD(do_plist);
@@ -329,6 +365,7 @@ ACMD(do_recent);
 ACMD(do_restore);
 void return_to_char(struct char_data * ch);
 ACMD(do_return);
+ACMD(do_rsave);
 ACMD(do_saveall);
 ACMD(do_send);
 ACMD(do_set);

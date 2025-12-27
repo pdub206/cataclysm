@@ -49,11 +49,8 @@ int pk_allowed = NO;
 /* Is playerthieving allowed? */
 int pt_allowed = NO;
 
-/* Minimum level a player must be to shout/holler/gossip/auction. */
+/* Minimum level a player must be to shout */
 int level_can_shout = 1;
-
-/* Number of movement points it costs to holler. */
-int holler_move_cost = 20;
 
 /* How many people can get into a tunnel?  The default is two, but there is
  * also an alternate message in the case of one person being allowed. */
@@ -67,9 +64,8 @@ int max_exp_loss = 500000;	/* max losable per death */
 int max_npc_corpse_time = 5;
 int max_pc_corpse_time = 10;
 
-/* How many ticks before a player is sent to the void or idle-rented. */
+/* How many ticks before a player is sent to the void. */
 int idle_void = 8;
-int idle_rent_time = 48;
 
 /* This level and up is immune to idling, LVL_IMPL+1 will disable it. */
 int idle_max_level = LVL_IMMORT;
@@ -104,17 +100,7 @@ int no_mort_to_immort = YES;
 * If set to NO, then only the 6 directions n,e,s,w,u,d are allowed */
 int diagonal_dirs = NO;
 
-/* RENT/CRASHSAVE OPTIONS */
-/* Should the MUD allow you to 'rent' for free?  (i.e. if you just quit, your
- * objects are saved at no cost). */
-int free_rent = YES;
-
-/* Maximum number of items players are allowed to rent. */
-int max_obj_save = 30;
-
-/* Receptionist's surcharge on top of item costs. */
-int min_rent_cost = 100;
-
+/* CRASHSAVE OPTIONS */
 /* Should the game automatically save people?  (i.e., save player data every 4
  * kills (on average), and Crash-save as defined below. If auto_save is YES,
  * then the 'save' command will be disabled to prevent item duplication via
@@ -126,11 +112,9 @@ int auto_save = YES;
  * save players' houses. */
 int autosave_time = 5;
 
-/* Lifetime of crashfiles and forced-rent (idlesave) files in days. */
+/* Lifetime of crashfiles and idle-save files in days. */
 int crash_file_timeout = 10;
 
-/* Lifetime of normal rent files in days. */
-int rent_file_timeout = 30;
 
 /* Do you want to automatically wipe players who've been gone too long? */
 int auto_pwipe = NO;
@@ -170,19 +154,19 @@ int selfdelete_fastwipe = YES;
 
 /* ROOM NUMBERS */
 /* Virtual number of room that mortals should enter at. */
-room_vnum mortal_start_room = 3001;
+room_vnum mortal_start_room = 131;
 
 /* Virtual number of room that immorts should enter at by default. */
-room_vnum immort_start_room = 1204;
+room_vnum immort_start_room = 1;
 
 /* Virtual number of room that frozen players should enter at. */
-room_vnum frozen_start_room = 1202;
+room_vnum frozen_start_room = 1;
 
 /* Virtual numbers of donation rooms.  note: you must change code in do_drop of
  * act.item.c if you change the number of non-NOWHERE donation rooms. */
-room_vnum donation_room_1 = 3063;
-room_vnum donation_room_2 = 5510;
-room_vnum donation_room_3 = 235;
+room_vnum donation_room_1 = 1;
+room_vnum donation_room_2 = 1;
+room_vnum donation_room_3 = 1;
 
 /* GAME OPERATION OPTIONS */
 
@@ -265,22 +249,21 @@ const char *MENU =
 "Welcome to tbaMUD!\r\n"
 "\t(0\t)) Exit from tbaMUD.\r\n"
 "\t(1\t)) Enter the game.\r\n"
-"\t(2\t)) Enter description.\r\n"
-"\t(3\t)) Read the background story.\r\n"
-"\t(4\t)) Change password.\r\n"
-"\t(5\t)) Delete this character.\r\n"
+"\t(2\t)) Read the background story.\r\n"
+"\t(3\t)) Change password.\r\n"
+"\t(4\t)) Delete this character.\r\n"
 "\r\n"
 "   Make your choice: ";
 
 const char *WELC_MESSG =
 "\r\n"
-"Welcome to tbaMUD!  May your visit here be... Enlightening"
+"Welcome to Miranthas! May you live long and prosper here!\r\n"
 "\r\n\r\n";
 
 const char *START_MESSG =
-"Welcome.  This is your new tbaMUD character!  You can now earn gold,\r\n"
-"gain experience, find weapons and equipment, and much more -- while\r\n"
-"meeting people from around the world!\r\n";
+"Welcome.  This is your new Miranthas character! The world is harsh and\r\n"
+"unforgiving to those that are unprepared. Take your time to explore before\r\n"
+"leaving the city gates!\r\n";
 
 /* AUTOWIZ OPTIONS */
 /* Should the game automatically create a new wizlist/immlist every time someone

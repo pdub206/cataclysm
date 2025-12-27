@@ -69,7 +69,7 @@ end
 if %actor.level% < 3
   nop %actor.exp(%value%)%
 else
-  nop %actor.gold(%value%)%
+  nop %actor.coins(%value%)%
 end
 %purge% %object%
 ~
@@ -79,12 +79,12 @@ Stock Thief~
 ~
 set actor %random.char%
 if %actor%
-  if %actor.is_pc% && %actor.gold%
+  if %actor.is_pc% && %actor.coins%
     %send% %actor% You discover that %self.name% has %self.hisher% hands in your wallet.
-    %echoaround% %actor% %self.name% tries to steal gold from %actor.name%.
-    eval coins %actor.gold% * %random.10% / 100
-    nop %actor.gold(-%coins%)%
-    nop %self.gold(%coins%)%
+    %echoaround% %actor% %self.name% tries to steal coins from %actor.name%.
+    eval coins %actor.coins% * %random.10% / 100
+    nop %actor.coins(-%coins%)%
+    nop %self.coins(%coins%)%
   end
 end
 ~
@@ -280,7 +280,7 @@ set zodiac 5701
 set grave 7401
 set zamba 7500
 set gidean 7801
-set glumgold 8301
+set glumcoins 8301
 set duke 8660
 set oasis 9000
 set domiae 9603

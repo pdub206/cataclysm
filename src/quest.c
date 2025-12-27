@@ -149,7 +149,7 @@ void parse_quest(FILE *quest_f, int nr)
   aquest_table[i].next_quest = NOTHING;
   aquest_table[i].func = NULL;
 
-  aquest_table[i].gold_reward = 0;
+  aquest_table[i].coins_reward = 0;
   aquest_table[i].exp_reward  = 0;
   aquest_table[i].obj_reward  = NOTHING;
 
@@ -191,7 +191,7 @@ void parse_quest(FILE *quest_f, int nr)
     exit(1);
   }
 
-  aquest_table[i].gold_reward = t[0];
+  aquest_table[i].coins_reward = t[0];
   aquest_table[i].exp_reward  = t[1];
   aquest_table[i].obj_reward  = (t[2] == -1) ? NOTHING : t[2];
 
@@ -291,51 +291,19 @@ void generic_complete_quest(struct char_data *ch)
   qst_rnum rnum;
   qst_vnum vnum = GET_QUEST(ch);
   struct obj_data *new_obj;
-  int happy_qp, happy_gold, happy_exp;
 
   if (--GET_QUEST_COUNTER(ch) <= 0) {
     rnum = real_quest(vnum);
-    if (IS_HAPPYHOUR && IS_HAPPYQP) {
-      happy_qp = (int)(QST_POINTS(rnum) * (((float)(100+HAPPY_QP))/(float)100));
-      happy_qp = MAX(happy_qp, 0);
-      GET_QUESTPOINTS(ch) += happy_qp;
-      send_to_char(ch,
-          "%s\r\nYou have been awarded %d quest points for your service.\r\n",
-          QST_DONE(rnum), happy_qp);
-	} else {
-      GET_QUESTPOINTS(ch) += QST_POINTS(rnum);
-      send_to_char(ch,
-          "%s\r\nYou have been awarded %d quest points for your service.\r\n",
-          QST_DONE(rnum), QST_POINTS(rnum));
-    }
-    if (QST_GOLD(rnum)) {
-      if ((IS_HAPPYHOUR) && (IS_HAPPYGOLD)) {
-        happy_gold = (int)(QST_GOLD(rnum) * (((float)(100+HAPPY_GOLD))/(float)100));
-        happy_gold = MAX(happy_gold, 0);
-        increase_gold(ch, happy_gold);
-        send_to_char(ch,
-              "You have been awarded %d gold coins for your service.\r\n",
-              happy_gold);
-	  } else {
-        increase_gold(ch, QST_GOLD(rnum));
-        send_to_char(ch,
-              "You have been awarded %d gold coins for your service.\r\n",
-              QST_GOLD(rnum));
-      }
-    }
-    if (QST_EXP(rnum)) {
-      gain_exp(ch, QST_EXP(rnum));
-      if ((IS_HAPPYHOUR) && (IS_HAPPYEXP)) {
-        happy_exp = (int)(QST_EXP(rnum) * (((float)(100+HAPPY_EXP))/(float)100));
-        happy_exp = MAX(happy_exp, 0);
-        send_to_char(ch,
-              "You have been awarded %d experience for your service.\r\n",
-              happy_exp);
-      } else {
-        send_to_char(ch,
-              "You have been awarded %d experience points for your service.\r\n",
-              QST_EXP(rnum));
-      }
+    GET_QUESTPOINTS(ch) += QST_POINTS(rnum);
+    send_to_char(ch,
+        "%s\r\nYou have been awarded %d quest points for your service.\r\n",
+        QST_DONE(rnum), QST_POINTS(rnum));
+
+    if (QST_COINS(rnum)) {
+      increase_coins(ch, QST_COINS(rnum));
+          send_to_char(ch,
+            "You have been awarded %d coins for your service.\r\n",
+            QST_COINS(rnum));
     }
     if (QST_OBJ(rnum) && QST_OBJ(rnum) != NOTHING) {
       if (real_object(QST_OBJ(rnum)) != NOTHING) {
@@ -648,7 +616,7 @@ static void quest_show(struct char_data *ch, mob_vnum qm)
     send_to_char(ch, "There are no quests available here at the moment.\r\n");
 }
 
-static void quest_stat(struct char_data *ch, char argument[MAX_STRING_LENGTH])
+static void quest_stat(struct char_data *ch, const char *argument)
 {
   qst_rnum rnum;
   mob_rnum qmrnum;

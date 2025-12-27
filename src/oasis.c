@@ -213,6 +213,12 @@ void cleanup_olc(struct descriptor_data *d, byte cleanup_type)
     STATE(d) = CON_PLAYING;
   }
 
+  /* Free Skinning Yield working list (medit). */
+  if (d->olc->skin_yields) {
+    free_skin_yields(d->olc->skin_yields);
+    d->olc->skin_yields = NULL;
+  }
+
   free(d->olc);
   d->olc = NULL;
 }

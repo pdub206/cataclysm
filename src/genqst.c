@@ -36,7 +36,7 @@ int copy_quest(struct aq_data *to, struct aq_data *from, int free_old_strings)
   for (i = 0; i < 7; i++){
     to->value[i] = from->value[i];
   }
-  to->gold_reward = from->gold_reward;
+  to->coins_reward = from->coins_reward;
   to->exp_reward  = from->exp_reward;
   to->obj_reward  = from->obj_reward;
   to->func        = from->func;
@@ -247,7 +247,7 @@ int save_quests(zone_rnum zone_num)
         QST_POINTS(rnum), QST_PENALTY(rnum), QST_MINLEVEL(rnum),
         QST_MAXLEVEL(rnum), QST_TIME(rnum),
         QST_RETURNMOB(rnum) == NOBODY ? -1 : QST_RETURNMOB(rnum),
-        QST_QUANTITY(rnum), QST_GOLD(rnum), QST_EXP(rnum), QST_OBJ(rnum)
+        QST_QUANTITY(rnum), QST_COINS(rnum), QST_EXP(rnum), QST_OBJ(rnum)
       );
       
       if(n < MAX_STRING_LENGTH) {
@@ -278,4 +278,3 @@ int save_quests(zone_rnum zone_num)
     remove_from_save_list(zone_table[zone_num].number, SL_QST);
   return TRUE;
 }
-

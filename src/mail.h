@@ -18,7 +18,7 @@
 /* minimum level a player must be to send mail	*/
 #define MIN_MAIL_LEVEL 1
 
-/* # of gold coins required to send mail	*/
+/* # of coins required to send mail	*/
 #define STAMP_PRICE 150
 
 /* Maximum size of mail in bytes (arbitrary)	*/

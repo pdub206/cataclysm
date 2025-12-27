@@ -32,6 +32,7 @@ static char *next_page(char *str, struct char_data *ch);
 static int count_pages(char *str, struct char_data *ch);
 static void playing_string_cleanup(struct descriptor_data *d, int action);
 static void exdesc_string_cleanup(struct descriptor_data *d, int action);
+static void background_string_cleanup(struct descriptor_data *d, int action);
 
 /* Local (file scope) global variables */
 /* @deprecated string_fields appears to be no longer be used.
@@ -42,7 +43,6 @@ static const char *string_fields[] =
   "short",
   "long",
   "description",
-  "title",
   "delete-description",
   "\n"
 };
@@ -125,6 +125,7 @@ void string_write(struct descriptor_data *d, char **writeto, size_t len, long ma
 void string_add(struct descriptor_data *d, char *str)
 {
   int action;
+  char **orig_str = d->str;
 
   /* Determine if this is the terminal string, and truncate if so. Changed to
    * only accept '\t' at the beginning of line. - JE */
@@ -207,6 +208,7 @@ void string_add(struct descriptor_data *d, char *str)
   /* Ok, now final cleanup. */
   if (action == STRINGADD_SAVE || action == STRINGADD_ABORT) {
     int i;
+    int chain_write;
     struct {
       int mode;
       void (*func)(struct descriptor_data *d, int action);
@@ -218,6 +220,7 @@ void string_add(struct descriptor_data *d, char *str)
       { CON_TEDIT  , tedit_string_cleanup },
       { CON_TRIGEDIT, trigedit_string_cleanup },
       { CON_PLR_DESC , exdesc_string_cleanup },
+      { CON_PLR_BACKGROUND , background_string_cleanup },
       { CON_PLAYING, playing_string_cleanup },
       { CON_HEDIT, hedit_string_cleanup },
       { CON_QEDIT  , qedit_string_cleanup },
@@ -227,18 +230,24 @@ void string_add(struct descriptor_data *d, char *str)
 
     for (i = 0; cleanup_modes[i].func; i++)
       if (STATE(d) == cleanup_modes[i].mode)
-        (*cleanup_modes[i].func)(d, action);
+        {
+          (*cleanup_modes[i].func)(d, action);
+          break;
+        }
 
     /* Common post cleanup code. */
-    d->str = NULL;
-    d->mail_to = 0;
-    d->max_str = 0;
-    if (d->character && !IS_NPC(d->character)) {
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_BUG);
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_IDEA);
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_TYPO);
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_MAILING);
-      REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_WRITING);
+    chain_write = (d->str && d->str != orig_str);
+    if (!chain_write) {
+      d->str = NULL;
+      d->mail_to = 0;
+      d->max_str = 0;
+      if (d->character && !IS_NPC(d->character)) {
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_BUG);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_IDEA);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_TYPO);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_MAILING);
+        REMOVE_BIT_AR(PLR_FLAGS(d->character), PLR_WRITING);
+      }
     }
   } else if (action != STRINGADD_ACTION && strlen(*d->str) + 3 <= d->max_str) /* 3 = \r\n\0 */
      strcat(*d->str, "\r\n");
@@ -299,100 +308,69 @@ static void exdesc_string_cleanup(struct descriptor_data *d, int action)
   if (action == STRINGADD_ABORT)
     write_to_output(d, "Description aborted.\r\n");
 
-  write_to_output(d, "%s", CONFIG_MENU);
-  STATE(d) = CON_MENU;
+  if (d->character && (!GET_BACKGROUND(d->character) || !*GET_BACKGROUND(d->character))) {
+    write_to_output(d,
+      "\r\nBefore stepping into Miranthas, share a bit of your character's background.\r\n"
+      "Guideline: aim for at least four lines that hint at where they came from,\r\n"
+      "who shaped them, and why they now walk the Caleran region. Touch on things like:\r\n"
+      "  - The city-state, tribe, or caravan that claimed them.\r\n"
+      "  - Mentors, slavers, or patrons who left a mark.\r\n"
+      "  - A defining hardship, triumph, oath, or secret.\r\n"
+      "  - The goal, vengeance, or hope that drives them back into the wastes.\r\n"
+      "\r\nExample 1:\r\n"
+      "   Raised beneath the ziggurat of Caleran, I learned to barter gossip between\r\n"
+      "   templars and gladiators just to stay alive. Freedom came when Kalak fell,\r\n"
+      "   but the slave-scar on my shoulder still aches. I now search the desert\r\n"
+      "   for the relic my clutch mates died protecting, hoping to buy their kin peace.\r\n"
+      "\r\nExample 2:\r\n"
+      "   I rode caravan outrider routes from Balic until giants shattered our train.\r\n"
+      "   Two nights buried in silt taught me to whisper with the wind and trust only\r\n"
+      "   my erdlu. I hunt the warlord who sold us out, yet coin and company on the\r\n"
+      "   road must come first.\r\n"
+      "\r\nExample 3:\r\n"
+      "   Born outside Raam, I was tempered by obsidian shards and psionic murmurs.\r\n"
+      "   A defiler ruined our oasis, so I swore to hound such spell-scars wherever\r\n"
+      "   they bloom. Rumor of a hidden well near Caleran is the lone hope that guides me.\r\n"
+      "\r\nType your background now. Use '/s' on a blank line when you finish.\r\n"
+      "If you'd rather keep it secret, just save immediately and we'll note the mystery.\r\n\r\n");
+    d->backstr = NULL;
+    if (GET_BACKGROUND(d->character) && *GET_BACKGROUND(d->character))
+      d->backstr = strdup(GET_BACKGROUND(d->character));
+    d->str = &d->character->player.background;
+    d->max_str = PLR_DESC_LENGTH;
+    STATE(d) = CON_PLR_BACKGROUND;
+    send_editor_help(d);
+    return;
+  }
+
+  send_account_menu(d);
+  STATE(d) = CON_ACCOUNT_MENU;
 }
 
-/* Modification of character skills. */
-ACMD(do_skillset)
+static void background_string_cleanup(struct descriptor_data *d, int action)
 {
-  struct char_data *vict;
-  char name[MAX_INPUT_LENGTH];
-  char buf[MAX_INPUT_LENGTH], helpbuf[MAX_STRING_LENGTH];
-  int skill, value, i, qend, pc, pl;
+  if (d->character) {
+    if (!GET_BACKGROUND(d->character) || !*GET_BACKGROUND(d->character)) {
+      if (GET_BACKGROUND(d->character))
+        free(GET_BACKGROUND(d->character));
+      GET_BACKGROUND(d->character) = strdup("This character prefers to keep their past unspoken.\r\n");
+      if (action == STRINGADD_ABORT)
+        write_to_output(d, "Background entry canceled. We'll note that your past remains a mystery.\r\n");
+      else
+        write_to_output(d, "No background submitted. We'll note that your past remains a mystery.\r\n");
+    } else if (action == STRINGADD_ABORT)
+      write_to_output(d, "Background entry canceled.\r\n");
+    else
+      write_to_output(d, "Background saved.\r\n");
 
-  argument = one_argument(argument, name);
-
-  if (!*name) {			/* no arguments. print an informative text */
-    send_to_char(ch, "Syntax: skillset <name> '<skill>' <value>\r\n"
-		"Skill being one of the following:\r\n");
-    for (qend = 0, i = 0; i <= TOP_SPELL_DEFINE; i++) {
-      if (spell_info[i].name == unused_spellname)	/* This is valid. */
-	continue;
-      send_to_char(ch, "%18s", spell_info[i].name);
-      if (qend++ % 4 == 3)
-	send_to_char(ch, "\r\n");
-    }
-    if (qend % 4 != 0)
-      send_to_char(ch, "\r\n");
+    save_char(d->character);
+    write_to_output(d, "%s\r\n*** PRESS RETURN: ", motd);
+    STATE(d) = CON_RMOTD;
     return;
   }
 
-  if (!(vict = get_char_vis(ch, name, NULL, FIND_CHAR_WORLD))) {
-    send_to_char(ch, "%s", CONFIG_NOPERSON);
-    return;
-  }
-  skip_spaces(&argument);
-  pc = GET_CLASS(vict);
-  pl = GET_LEVEL(vict);
-
-  /* If there is no chars in argument */
-  if (!*argument) {
-    send_to_char(ch, "Skill name expected.\r\n");
-    return;
-  }
-  if (*argument != '\'') {
-    send_to_char(ch, "Skill must be enclosed in: ''\r\n");
-    return;
-  }
-  /* Locate the last quote and lowercase the magic words (if any) */
-
-  for (qend = 1; argument[qend] && argument[qend] != '\''; qend++)
-    argument[qend] = LOWER(argument[qend]);
-
-  if (argument[qend] != '\'') {
-    send_to_char(ch, "Skill must be enclosed in: ''\r\n");
-    return;
-  }
-  strcpy(helpbuf, (argument + 1));	/* strcpy: OK (MAX_INPUT_LENGTH <= MAX_STRING_LENGTH) */
-  helpbuf[qend - 1] = '\0';
-  if ((skill = find_skill_num(helpbuf)) <= 0) {
-    send_to_char(ch, "Unrecognized skill.\r\n");
-    return;
-  }
-  argument += qend + 1;		/* skip to next parameter */
-  argument = one_argument(argument, buf);
-
-  if (!*buf) {
-    send_to_char(ch, "Learned value expected.\r\n");
-    return;
-  }
-  value = atoi(buf);
-  if (value < 0) {
-    send_to_char(ch, "Minimum value for learned is 0.\r\n");
-    return;
-  }
-  if (value > 100) {
-    send_to_char(ch, "Max value for learned is 100.\r\n");
-    return;
-  }
-  if (IS_NPC(vict)) {
-    send_to_char(ch, "You can't set NPC skills.\r\n");
-    return;
-  }
-  if ((spell_info[skill].min_level[(pc)] >= LVL_IMMORT) && (pl < LVL_IMMORT)) {
-    send_to_char(ch, "%s cannot be learned by mortals.\r\n", spell_info[skill].name);
-    return;
-  } else if (spell_info[skill].min_level[(pc)] > pl) {
-    send_to_char(ch, "%s is a level %d %s.\r\n", GET_NAME(vict), pl, pc_class_types[pc]);
-    send_to_char(ch, "The minimum level for %s is %d for %ss.\r\n", spell_info[skill].name, spell_info[skill].min_level[(pc)], pc_class_types[pc]);
-  }
-
-  /* find_skill_num() guarantees a valid spell_info[] index, or -1, and we
-   * checked for the -1 above so we are safe here. */
-  SET_SKILL(vict, skill, value);
-  mudlog(BRF, LVL_IMMORT, TRUE, "%s changed %s's %s to %d.", GET_NAME(ch), GET_NAME(vict), spell_info[skill].name, value);
-  send_to_char(ch, "You change %s's %s to %d.\r\n", GET_NAME(vict), spell_info[skill].name, value);
+  send_account_menu(d);
+  STATE(d) = CON_ACCOUNT_MENU;
 }
 
 /* By Michael Buselli. Traverse down the string until the begining of the next

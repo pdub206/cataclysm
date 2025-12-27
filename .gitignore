@@ -1,6 +1,7 @@
 bin/*
 src/*.o
 src/util/*.o
+src/tests/*.o
 config.cache
 config.log
 config.status
@@ -11,6 +12,25 @@ src/.accepted
 src/depend
 src/util/depend
 build/*
+log/*
+syslog*
+
+# Do not commit files from accounts
+lib/acctfiles/A-E/*
+lib/acctfiles/F-J/*
+lib/acctfiles/K-O/*
+lib/acctfiles/P-T/*
+lib/acctfiles/U-Z/*
+lib/acctfiles/ZZZ/*
+lib/acctfiles/index
+
+# but do commit the placeholders
+!lib/acctfiles/A-E/00
+!lib/acctfiles/F-J/00
+!lib/acctfiles/K-O/00
+!lib/acctfiles/P-T/00
+!lib/acctfiles/U-Z/00
+!lib/acctfiles/ZZZ/00
 
 # Do not commit files from players
 lib/plrfiles/A-E/*

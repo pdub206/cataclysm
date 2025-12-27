@@ -106,8 +106,12 @@ ASPELL(spell_teleport)
 #define SUMMON_FAIL "You failed.\r\n"
 ASPELL(spell_summon)
 {
+  int save_dc;
+
   if (ch == NULL || victim == NULL)
     return;
+
+  save_dc = compute_save_dc(ch, level, SPELL_SUMMON);
 
   if (GET_LEVEL(victim) > MIN(LVL_IMMORT - 1, level + 3)) {
     send_to_char(ch, "%s", SUMMON_FAIL);
@@ -143,7 +147,7 @@ ASPELL(spell_summon)
   }
 
   if (MOB_FLAGGED(victim, MOB_NOSUMMON) ||
-      (IS_NPC(victim) && mag_savingthrow(victim, SAVING_SPELL, 0))) {
+      (IS_NPC(victim) && mag_savingthrow(victim, SAVING_CHA, save_dc))) {
     send_to_char(ch, "%s", SUMMON_FAIL);
     return;
   }
@@ -248,9 +252,12 @@ ASPELL(spell_locate_object)
 ASPELL(spell_charm)
 {
   struct affected_type af;
+  int save_dc;
 
   if (victim == NULL || ch == NULL)
     return;
+
+  save_dc = compute_save_dc(ch, level, SPELL_CHARM);
 
   if (victim == ch)
     send_to_char(ch, "You like yourself even better!\r\n");
@@ -269,7 +276,7 @@ ASPELL(spell_charm)
     send_to_char(ch, "You fail - shouldn't be doing it anyway.\r\n");
   else if (circle_follow(victim, ch))
     send_to_char(ch, "Sorry, following in circles is not allowed.\r\n");
-  else if (mag_savingthrow(victim, SAVING_PARA, 0))
+  else if (mag_savingthrow(victim, SAVING_WIS, save_dc))
     send_to_char(ch, "Your victim resists!\r\n");
   else {
     if (victim->master)
@@ -312,8 +319,8 @@ ASPELL(spell_identify)
     sprintbitarray(GET_OBJ_EXTRA(obj), extra_bits, EF_ARRAY_MAX, bitbuf);
     send_to_char(ch, "Item is: %s\r\n", bitbuf);
 
-    send_to_char(ch, "Weight: %d, Value: %d, Rent: %d, Min. level: %d\r\n",
-                     GET_OBJ_WEIGHT(obj), GET_OBJ_COST(obj), GET_OBJ_RENT(obj), GET_OBJ_LEVEL(obj));
+    send_to_char(ch, "Weight: %d, Value: %d, Min. level: %d\r\n",
+                     GET_OBJ_WEIGHT(obj), GET_OBJ_COST(obj), GET_OBJ_LEVEL(obj));
 
     switch (GET_OBJ_TYPE(obj)) {
     case ITEM_SCROLL:
@@ -372,10 +379,10 @@ ASPELL(spell_identify)
 	      age(victim)->day, age(victim)->hours);
     send_to_char(ch, "Height %d cm, Weight %d pounds\r\n", GET_HEIGHT(victim), GET_WEIGHT(victim));
     send_to_char(ch, "Level: %d, Hits: %d, Mana: %d\r\n", GET_LEVEL(victim), GET_HIT(victim), GET_MANA(victim));
-    send_to_char(ch, "AC: %d, Hitroll: %d, Damroll: %d\r\n", compute_armor_class(victim), GET_HITROLL(victim), GET_DAMROLL(victim));
-    send_to_char(ch, "Str: %d/%d, Int: %d, Wis: %d, Dex: %d, Con: %d, Cha: %d\r\n",
-	GET_STR(victim), GET_ADD(victim), GET_INT(victim),
-	GET_WIS(victim), GET_DEX(victim), GET_CON(victim), GET_CHA(victim));
+    send_to_char(ch, "AC: %d\r\n", compute_armor_class(victim));
+    send_to_char(ch, "Str: %d, Int: %d, Wis: %d, Dex: %d, Con: %d, Cha: %d\r\n",
+	GET_STR(victim), GET_INT(victim), GET_WIS(victim),
+	GET_DEX(victim), GET_CON(victim), GET_CHA(victim));
   }
 }
 
@@ -399,10 +406,10 @@ ASPELL(spell_enchant_weapon)
 
   SET_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_MAGIC);
 
-  obj->affected[0].location = APPLY_HITROLL;
+  obj->affected[0].location = APPLY_PROFICIENCY;
   obj->affected[0].modifier = 1 + (level >= 18);
 
-  obj->affected[1].location = APPLY_DAMROLL;
+  obj->affected[1].location = APPLY_PROFICIENCY;
   obj->affected[1].modifier = 1 + (level >= 20);
 
   if (IS_GOOD(ch)) {

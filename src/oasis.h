@@ -13,6 +13,7 @@
 #define _OASIS_H_
 
 #include "utils.h" /* for ACMD macro */
+#include "structs.h"
 
 #define _OASISOLC	0x206   /* 2.0.6 */
 
@@ -52,10 +53,9 @@
 
 #define MAX_OBJ_WEIGHT      1000000
 #define MAX_OBJ_COST        2000000
-#define MAX_OBJ_RENT        2000000
 #define MAX_CONTAINER_SIZE    10000
 
-#define MAX_MOB_GOLD         100000
+#define MAX_MOB_COINS         100000
 #define MAX_MOB_EXP          150000
 
 /* this is one mud year.. */
@@ -88,6 +88,8 @@ struct oasis_olc_data {
   zone_rnum zone_num;            /* current zone             */
   room_vnum number;              /* vnum of subject          */
   int value;                     /* mostly 'has changed' flag*/
+  int dirty;                     /* 0/1 – set to 1 when current subject has unsaved changes */
+  int val_slot;                  /* oedit: selected value[] index (0..NUM_OBJ_VAL_POSITIONS-1) */
   char *storage;                 /* used for 'tedit'         */
   struct char_data *mob;         /* used for 'medit'         */
   struct room_data *room;        /* used for 'redit'         */
@@ -108,42 +110,45 @@ struct oasis_olc_data {
   int item_type;
   struct trig_proto_list *script; /* for assigning triggers in [r|o|m]edit*/
   struct help_index_element*help;   /* Hedit uses this */
+  struct skin_yield_entry *skin_yields;
 };
 
 /* Exported globals. */
 extern const char *nrm, *grn, *cyn, *yel;
 
 /* Descriptor access macros. */
-#define OLC(d)         ((d)->olc)
-#define OLC_MODE(d)    (OLC(d)->mode)     /**< Parse input mode.	*/
-#define OLC_NUM(d)     (OLC(d)->number)   /**< Room/Obj VNUM.	*/
-#define OLC_VAL(d)     (OLC(d)->value)    /**< Scratch variable.	*/
-#define OLC_ZNUM(d)    (OLC(d)->zone_num) /**< Real zone number.	*/
+#define OLC(d)           ((d)->olc)
+#define OLC_MODE(d)      (OLC(d)->mode)     /**< Parse input mode.	*/
+#define OLC_NUM(d)       (OLC(d)->number)   /**< Room/Obj VNUM.	*/
+#define OLC_VAL(d)       (OLC(d)->value)    /**< Scratch variable.	*/
+#define OLC_DIRTY(d)     (OLC(d)->dirty)      /**< True if changes made.     */
+#define OLC_VAL_SLOT(d)  (OLC(d)->val_slot)   /**< oedit: selected value[] i */
+#define OLC_ZNUM(d)      (OLC(d)->zone_num) /**< Real zone number.	*/
 
-#define OLC_STORAGE(d) (OLC(d)->storage)  /**< char pointer.	*/
-#define OLC_ROOM(d)    (OLC(d)->room)     /**< Room structure.	*/
-#define OLC_OBJ(d)     (OLC(d)->obj)      /**< Object structure.	*/
-#define OLC_ZONE(d)    (OLC(d)->zone)     /**< Zone structure.	*/
-#define OLC_MOB(d)     (OLC(d)->mob)      /**< Mob structure.	*/
-#define OLC_SHOP(d)    (OLC(d)->shop)     /**< Shop structure.	*/
-#define OLC_DESC(d)    (OLC(d)->desc)     /**< Extra description.	*/
-#define OLC_CONFIG(d)  (OLC(d)->config)   /**< Config structure.	*/
-#define OLC_TRIG(d)    (OLC(d)->trig)     /**< Trigger structure.   */
-#define OLC_QUEST(d)   (OLC(d)->quest)    /**< Quest structure      */
-#define OLC_MSG_LIST(d) (OLC(d)->msg)      /**< Message structure    */
+#define OLC_STORAGE(d)   (OLC(d)->storage)  /**< char pointer.	*/
+#define OLC_ROOM(d)      (OLC(d)->room)     /**< Room structure.	*/
+#define OLC_OBJ(d)       (OLC(d)->obj)      /**< Object structure.	*/
+#define OLC_ZONE(d)      (OLC(d)->zone)     /**< Zone structure.	*/
+#define OLC_MOB(d)       (OLC(d)->mob)      /**< Mob structure.	*/
+#define OLC_SHOP(d)      (OLC(d)->shop)     /**< Shop structure.	*/
+#define OLC_DESC(d)      (OLC(d)->desc)     /**< Extra description.	*/
+#define OLC_CONFIG(d)    (OLC(d)->config)   /**< Config structure.	*/
+#define OLC_TRIG(d)      (OLC(d)->trig)     /**< Trigger structure.   */
+#define OLC_QUEST(d)     (OLC(d)->quest)    /**< Quest structure      */
+#define OLC_MSG_LIST(d)  (OLC(d)->msg)      /**< Message structure    */
 
-#define OLC_ACTION(d)  (OLC(d)->action)   /**< Action structure     */
-#define OLC_HELP(d)    (OLC(d)->help)     /**< Hedit structure      */
-#define OLC_PREFS(d)   (OLC(d)->prefs)    /**< Preferences structure */
-#define OLC_IBT(d)     (OLC(d)->ibt)      /**< IBT (idea/bug/typo) structure */
+#define OLC_ACTION(d)    (OLC(d)->action)   /**< Action structure     */
+#define OLC_HELP(d)      (OLC(d)->help)     /**< Hedit structure      */
+#define OLC_PREFS(d)     (OLC(d)->prefs)    /**< Preferences structure */
+#define OLC_IBT(d)       (OLC(d)->ibt)      /**< IBT (idea/bug/typo) structure */
 /* Other macros. */
-#define OLC_EXIT(d)    (OLC_ROOM(d)->dir_option[OLC_VAL(d)])
-#define OLC_MSG(d)     (OLC(d)->m_type)
+#define OLC_EXIT(d)      (OLC_ROOM(d)->dir_option[OLC_VAL(d)])
+#define OLC_MSG(d)       (OLC(d)->m_type)
 
 /* Cleanup types. */
-#define CLEANUP_ALL		1	/* Free the whole lot.			*/
+#define CLEANUP_ALL		   1	/* Free the whole lot.			*/
 #define CLEANUP_STRUCTS 	2	/* Don't free strings.			*/
-#define CLEANUP_CONFIG          3       /* Used just to send proper message. 	*/
+#define CLEANUP_CONFIG     3  /* Used just to send proper message. 	*/
 
 /* Submodes of AEDIT connectedness     */
 #define AEDIT_CONFIRM_SAVESTRING       0
@@ -172,16 +177,15 @@ extern const char *nrm, *grn, *cyn, *yel;
 
 /* Submodes of OEDIT connectedness. */
 #define OEDIT_MAIN_MENU              	1
-#define OEDIT_KEYWORD            	2
+#define OEDIT_KEYWORD            	   2
 #define OEDIT_SHORTDESC              	3
 #define OEDIT_LONGDESC               	4
-#define OEDIT_ACTDESC                	5
+#define OEDIT_MAINDESC                	5
 #define OEDIT_TYPE                   	6
 #define OEDIT_EXTRAS                 	7
 #define OEDIT_WEAR                  	8
 #define OEDIT_WEIGHT                	9
 #define OEDIT_COST                  	10
-#define OEDIT_COSTPERDAY            	11
 #define OEDIT_TIMER                 	12
 #define OEDIT_VALUE_1               	13
 #define OEDIT_VALUE_2               	14
@@ -196,190 +200,197 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define OEDIT_EXTRADESC_DESCRIPTION 	23
 #define OEDIT_EXTRADESC_MENU        	24
 #define OEDIT_LEVEL                 	25
-#define OEDIT_PERM			26
-#define OEDIT_DELETE                    27
-#define OEDIT_COPY                      28
+#define OEDIT_PERM			            26
+#define OEDIT_DELETE                   27
+#define OEDIT_COPY                     28
+#define OEDIT_VALUES_MENU              29
+#define OEDIT_VALUE_X                  30
 
 /* Submodes of REDIT connectedness. */
-#define REDIT_MAIN_MENU 		1
-#define REDIT_NAME 			2
-#define REDIT_DESC 			3
-#define REDIT_FLAGS 			4
-#define REDIT_SECTOR 			5
-#define REDIT_EXIT_MENU 		6
-#define REDIT_CONFIRM_SAVEDB 		7
-#define REDIT_CONFIRM_SAVESTRING 	8
-#define REDIT_EXIT_NUMBER 		9
-#define REDIT_EXIT_DESCRIPTION 		10
-#define REDIT_EXIT_KEYWORD 		11
-#define REDIT_EXIT_KEY 			12
-#define REDIT_EXIT_DOORFLAGS 		13
-#define REDIT_EXTRADESC_MENU 		14
-#define REDIT_EXTRADESC_KEY 		15
-#define REDIT_EXTRADESC_DESCRIPTION 	16
-#define REDIT_DELETE			17
-#define REDIT_COPY			18
+#define REDIT_MAIN_MENU 		        1
+#define REDIT_NAME 			           2
+#define REDIT_DESC 			           3
+#define REDIT_FLAGS 			           4
+#define REDIT_SECTOR 		           5
+#define REDIT_EXIT_MENU 		        6
+#define REDIT_CONFIRM_SAVEDB 		     7
+#define REDIT_CONFIRM_SAVESTRING      8
+#define REDIT_EXIT_NUMBER 		        9
+#define REDIT_EXIT_DESCRIPTION 	     10
+#define REDIT_EXIT_KEYWORD 		     11
+#define REDIT_EXIT_KEY 			        12
+#define REDIT_EXIT_DOORFLAGS 		     13
+#define REDIT_EXTRADESC_MENU 		     14
+#define REDIT_EXTRADESC_KEY 		     15
+#define REDIT_EXTRADESC_DESCRIPTION   16
+#define REDIT_DELETE			           17
+#define REDIT_COPY			           18
+#define REDIT_FORAGE_MENU             19
+#define REDIT_FORAGE_ADD              20
+#define REDIT_FORAGE_DELETE           21
 
 /* Submodes of ZEDIT connectedness. */
-#define ZEDIT_MAIN_MENU              	0
-#define ZEDIT_DELETE_ENTRY		1
-#define ZEDIT_NEW_ENTRY			2
-#define ZEDIT_CHANGE_ENTRY		3
-#define ZEDIT_COMMAND_TYPE		4
-#define ZEDIT_IF_FLAG			5
-#define ZEDIT_ARG1			6
-#define ZEDIT_ARG2			7
-#define ZEDIT_ARG3			8
-#define ZEDIT_ZONE_NAME			9
-#define ZEDIT_ZONE_LIFE			10
-#define ZEDIT_ZONE_BOT			11
-#define ZEDIT_ZONE_TOP			12
-#define ZEDIT_ZONE_RESET		13
-#define ZEDIT_CONFIRM_SAVESTRING	14
-#define ZEDIT_ZONE_BUILDERS		15
-#define ZEDIT_SARG1             20
-#define ZEDIT_SARG2             21
-#define ZEDIT_ZONE_FLAGS        22
-#define ZEDIT_LEVELS            23
-#define ZEDIT_LEV_MIN           24
-#define ZEDIT_LEV_MAX           25
-#define ZEDIT_ZONE_CLAIM        26
+#define ZEDIT_MAIN_MENU               0
+#define ZEDIT_DELETE_ENTRY		        1
+#define ZEDIT_NEW_ENTRY			        2
+#define ZEDIT_CHANGE_ENTRY		        3
+#define ZEDIT_COMMAND_TYPE		        4
+#define ZEDIT_IF_FLAG			        5
+#define ZEDIT_ARG1			           6
+#define ZEDIT_ARG2			           7
+#define ZEDIT_ARG3			           8
+#define ZEDIT_ZONE_NAME			        9
+#define ZEDIT_ZONE_LIFE			        10
+#define ZEDIT_ZONE_BOT			        11
+#define ZEDIT_ZONE_TOP			        12
+#define ZEDIT_ZONE_RESET		        13
+#define ZEDIT_CONFIRM_SAVESTRING	     14
+#define ZEDIT_ZONE_BUILDERS		     15
+#define ZEDIT_SARG1                   20
+#define ZEDIT_SARG2                   21
+#define ZEDIT_ZONE_FLAGS              22
+#define ZEDIT_LEVELS                  23
+#define ZEDIT_LEV_MIN                 24
+#define ZEDIT_LEV_MAX                 25
+#define ZEDIT_ZONE_CLAIM              26
 
 /* Submodes of MEDIT connectedness. */
-#define MEDIT_MAIN_MENU            	0
-#define MEDIT_KEYWORD               1
-#define MEDIT_S_DESC                2
-#define MEDIT_L_DESC                3
-#define MEDIT_D_DESC                4
-#define MEDIT_NPC_FLAGS             5
-#define MEDIT_AFF_FLAGS             6
-#define MEDIT_CONFIRM_SAVESTRING    7
-#define MEDIT_STATS_MENU            8
+#define MEDIT_MAIN_MENU            	    0
+#define MEDIT_NAME                      1
+#define MEDIT_KEYWORD                   2
+#define MEDIT_S_DESC                    3
+#define MEDIT_L_DESC                    4
+#define MEDIT_D_DESC                    5
+#define MEDIT_BACKGROUND                6
+#define MEDIT_NPC_FLAGS                 7
+#define MEDIT_AFF_FLAGS                 8
+#define MEDIT_CONFIRM_SAVESTRING        9
+#define MEDIT_STATS_MENU                10
+#define MEDIT_SKILL_MENU                11
+#define MEDIT_SKILL_EDIT                12
+#define MEDIT_CLASS_MENU                13
 
 /* Numerical responses. */
-#define MEDIT_NUMERICAL_RESPONSE	10
-#define MEDIT_SEX			11
-#define MEDIT_HITROLL			12
-#define MEDIT_DAMROLL			13
-#define MEDIT_NDD			14
-#define MEDIT_SDD			15
-#define MEDIT_NUM_HP_DICE		16
-#define MEDIT_SIZE_HP_DICE		17
-#define MEDIT_ADD_HP			18
-#define MEDIT_AC			19
-#define MEDIT_EXP			20
-#define MEDIT_GOLD			21
-#define MEDIT_POS			22
-#define MEDIT_DEFAULT_POS		23
-#define MEDIT_ATTACK			24
-#define MEDIT_LEVEL			25
-#define MEDIT_ALIGNMENT			26
-#define MEDIT_DELETE                    27
-#define MEDIT_COPY                      28
-#define MEDIT_STR                       29
-#define MEDIT_INT                       30
-#define MEDIT_WIS                       31
-#define MEDIT_DEX                       32
-#define MEDIT_CON                       33
-#define MEDIT_CHA                       34
-#define MEDIT_PARA                      35
-#define MEDIT_ROD                       36
-#define MEDIT_PETRI                     37
-#define MEDIT_BREATH                    38
-#define MEDIT_SPELL                     39
+#define MEDIT_NUMERICAL_RESPONSE	       14
+#define MEDIT_SEX			                15
+#define MEDIT_NUM_HP_DICE		          16
+#define MEDIT_SIZE_HP_DICE		          17
+#define MEDIT_ADD_HP			             18
+#define MEDIT_POS			                19
+#define MEDIT_DEFAULT_POS		          20
+#define MEDIT_ATTACK			             21
+#define MEDIT_LEVEL			             22
+#define MEDIT_ALIGNMENT			          23
+#define MEDIT_DELETE                    24
+#define MEDIT_COPY                      25
+#define MEDIT_STR                       26
+#define MEDIT_INT                       27
+#define MEDIT_WIS                       28
+#define MEDIT_DEX                       29
+#define MEDIT_CON                       30
+#define MEDIT_CHA                       31
+#define MEDIT_SAVE_STR                  32
+#define MEDIT_SAVE_DEX                  33
+#define MEDIT_SAVE_CON                  34
+#define MEDIT_SAVE_INT                  35
+#define MEDIT_SAVE_WIS                  36
+#define MEDIT_SAVE_CHA                  37
+#define MEDIT_SKILL_VALUE               38
+
+/* Skinning yield editor */
+#define MEDIT_SKIN_MENU                 39
+#define MEDIT_SKIN_ADD_VNUM             40
+#define MEDIT_SKIN_ADD_DC               41
+#define MEDIT_SKIN_DELETE               42
 
 /* Submodes of SEDIT connectedness. */
 #define SEDIT_MAIN_MENU              	0
-#define SEDIT_CONFIRM_SAVESTRING	1
-#define SEDIT_NOITEM1			2
-#define SEDIT_NOITEM2			3
-#define SEDIT_NOCASH1			4
-#define SEDIT_NOCASH2			5
-#define SEDIT_NOBUY			6
-#define SEDIT_BUY			7
-#define SEDIT_SELL			8
-#define SEDIT_PRODUCTS_MENU		11
-#define SEDIT_ROOMS_MENU		12
-#define SEDIT_NAMELIST_MENU		13
-#define SEDIT_NAMELIST			14
-#define SEDIT_COPY                      15
+#define SEDIT_CONFIRM_SAVESTRING	      1
+#define SEDIT_NOITEM1			         2
+#define SEDIT_NOITEM2			         3
+#define SEDIT_NOCASH1			         4
+#define SEDIT_NOCASH2			         5
+#define SEDIT_NOBUY			            6
+#define SEDIT_BUY			               7
+#define SEDIT_SELL			            8
+#define SEDIT_PRODUCTS_MENU		      11
+#define SEDIT_ROOMS_MENU		         12
+#define SEDIT_NAMELIST_MENU		      13
+#define SEDIT_NAMELIST			         14
+#define SEDIT_COPY                     15
 
-#define SEDIT_NUMERICAL_RESPONSE	20
-#define SEDIT_OPEN1			21
-#define SEDIT_OPEN2			22
-#define SEDIT_CLOSE1			23
-#define SEDIT_CLOSE2			24
-#define SEDIT_KEEPER			25
-#define SEDIT_BUY_PROFIT		26
-#define SEDIT_SELL_PROFIT		27
-#define SEDIT_TYPE_MENU			29
-#define SEDIT_DELETE_TYPE		30
-#define SEDIT_DELETE_PRODUCT		31
-#define SEDIT_NEW_PRODUCT		32
-#define SEDIT_DELETE_ROOM		33
-#define SEDIT_NEW_ROOM			34
-#define SEDIT_SHOP_FLAGS		35
-#define SEDIT_NOTRADE			36
+#define SEDIT_NUMERICAL_RESPONSE	      20
+#define SEDIT_OPEN1			            21
+#define SEDIT_OPEN2			            22
+#define SEDIT_CLOSE1			            23
+#define SEDIT_CLOSE2			            24
+#define SEDIT_KEEPER			            25
+#define SEDIT_BUY_PROFIT		         26
+#define SEDIT_SELL_PROFIT		         27
+#define SEDIT_TYPE_MENU			         29
+#define SEDIT_DELETE_TYPE		         30
+#define SEDIT_DELETE_PRODUCT		      31
+#define SEDIT_NEW_PRODUCT		         32
+#define SEDIT_DELETE_ROOM		         33
+#define SEDIT_NEW_ROOM			         34
+#define SEDIT_SHOP_FLAGS		         35
+#define SEDIT_NOTRADE			         36
 
 /* Submodes of CEDIT connectedness. */
-#define CEDIT_MAIN_MENU			0
-#define CEDIT_CONFIRM_SAVESTRING	1
-#define CEDIT_GAME_OPTIONS_MENU		2
+#define CEDIT_MAIN_MENU			         0
+#define CEDIT_CONFIRM_SAVESTRING	      1
+#define CEDIT_GAME_OPTIONS_MENU		   2
 #define CEDIT_CRASHSAVE_OPTIONS_MENU	3
 #define CEDIT_OPERATION_OPTIONS_MENU	4
-#define CEDIT_DISP_EXPERIENCE_MENU	5
-#define CEDIT_ROOM_NUMBERS_MENU		6
-#define CEDIT_AUTOWIZ_OPTIONS_MENU	7
-#define CEDIT_OK			8
-#define CEDIT_HUH			9
-#define CEDIT_NOPERSON			10
-#define CEDIT_NOEFFECT			11
-#define CEDIT_DFLT_IP			12
-#define CEDIT_DFLT_DIR			13
-#define CEDIT_LOGNAME			14
-#define CEDIT_MENU			15
-#define CEDIT_WELC_MESSG		16
-#define CEDIT_START_MESSG		17
+#define CEDIT_DISP_EXPERIENCE_MENU	   5
+#define CEDIT_ROOM_NUMBERS_MENU		   6
+#define CEDIT_AUTOWIZ_OPTIONS_MENU	   7
+#define CEDIT_OK			               8
+#define CEDIT_HUH			               9
+#define CEDIT_NOPERSON			         10
+#define CEDIT_NOEFFECT			         11
+#define CEDIT_DFLT_IP			         12
+#define CEDIT_DFLT_DIR			         13
+#define CEDIT_LOGNAME			         14
+#define CEDIT_MENU			            15
+#define CEDIT_WELC_MESSG		         16
+#define CEDIT_START_MESSG		         17
 
 /* Numerical responses. */
-#define CEDIT_NUMERICAL_RESPONSE	20
-#define CEDIT_LEVEL_CAN_SHOUT		21
-#define CEDIT_HOLLER_MOVE_COST		22
-#define CEDIT_TUNNEL_SIZE		23
-#define CEDIT_MAX_EXP_GAIN		24
-#define CEDIT_MAX_EXP_LOSS		25
-#define CEDIT_MAX_NPC_CORPSE_TIME	26
-#define CEDIT_MAX_PC_CORPSE_TIME	27
-#define CEDIT_IDLE_VOID			28
-#define CEDIT_IDLE_RENT_TIME		29
-#define CEDIT_IDLE_MAX_LEVEL		30
-#define CEDIT_DTS_ARE_DUMPS		31
-#define CEDIT_LOAD_INTO_INVENTORY	32
-#define CEDIT_TRACK_THROUGH_DOORS	33
-#define CEDIT_NO_MORT_TO_IMMORT		34
-#define CEDIT_MAX_OBJ_SAVE		35
-#define CEDIT_MIN_RENT_COST		36
-#define CEDIT_AUTOSAVE_TIME		37
-#define CEDIT_CRASH_FILE_TIMEOUT	38
-#define CEDIT_RENT_FILE_TIMEOUT		39
-#define CEDIT_MORTAL_START_ROOM		40
-#define CEDIT_IMMORT_START_ROOM		41
-#define CEDIT_FROZEN_START_ROOM		42
-#define CEDIT_DONATION_ROOM_1		43
-#define CEDIT_DONATION_ROOM_2		44
-#define CEDIT_DONATION_ROOM_3		45
-#define CEDIT_DFLT_PORT			46
-#define CEDIT_MAX_PLAYING		47
-#define CEDIT_MAX_FILESIZE		48
-#define CEDIT_MAX_BAD_PWS		49
-#define CEDIT_SITEOK_EVERYONE		50
-#define CEDIT_NAMESERVER_IS_SLOW	51
-#define CEDIT_USE_AUTOWIZ		52
-#define CEDIT_MIN_WIZLIST_LEV		53
-#define CEDIT_MAP_OPTION   54
-#define CEDIT_MAP_SIZE     55
-#define CEDIT_MINIMAP_SIZE   56
-#define CEDIT_DEBUG_MODE     57
+#define CEDIT_NUMERICAL_RESPONSE	      20
+#define CEDIT_LEVEL_CAN_SHOUT		      21
+#define CEDIT_HOLLER_MOVE_COST		   22
+#define CEDIT_TUNNEL_SIZE		         23
+#define CEDIT_MAX_EXP_GAIN		         24
+#define CEDIT_MAX_EXP_LOSS		         25
+#define CEDIT_MAX_NPC_CORPSE_TIME	   26
+#define CEDIT_MAX_PC_CORPSE_TIME	      27
+#define CEDIT_IDLE_VOID			         28
+#define CEDIT_IDLE_MAX_LEVEL		      29
+#define CEDIT_DTS_ARE_DUMPS		      30
+#define CEDIT_LOAD_INTO_INVENTORY	   31
+#define CEDIT_TRACK_THROUGH_DOORS	   32
+#define CEDIT_NO_MORT_TO_IMMORT		   33
+#define CEDIT_AUTOSAVE_TIME		      34
+#define CEDIT_CRASH_FILE_TIMEOUT	      35
+#define CEDIT_MORTAL_START_ROOM		   36
+#define CEDIT_IMMORT_START_ROOM		   37
+#define CEDIT_FROZEN_START_ROOM		   38
+#define CEDIT_DONATION_ROOM_1		      39
+#define CEDIT_DONATION_ROOM_2		      40
+#define CEDIT_DONATION_ROOM_3		      41
+#define CEDIT_DFLT_PORT			         42
+#define CEDIT_MAX_PLAYING		         43
+#define CEDIT_MAX_FILESIZE		         44
+#define CEDIT_MAX_BAD_PWS		         45
+#define CEDIT_SITEOK_EVERYONE		      46
+#define CEDIT_NAMESERVER_IS_SLOW	      47
+#define CEDIT_USE_AUTOWIZ		         48
+#define CEDIT_MIN_WIZLIST_LEV		      49
+#define CEDIT_MAP_OPTION               50
+#define CEDIT_MAP_SIZE                 51
+#define CEDIT_MINIMAP_SIZE             52
+#define CEDIT_DEBUG_MODE               53
 
 /* Hedit Submodes of connectedness. */
 #define HEDIT_CONFIRM_SAVESTRING        0
