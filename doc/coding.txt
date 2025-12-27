@@ -1559,7 +1559,7 @@ foreground colors.
 Basic special procedures have largely been replaced by trigedit. Thus shifting the 
 workload from the coder to the builder to add life and creativity into their zones. 
 While it is easier, and less time consuming, to make triggers than special 
-procedures they are still used for such functions as banks and guildmasters.
+procedures they are still used for such functions as banks.
 
 Using special procedures, your virtual world is not just a bunch of monsters, 
 objects and rooms, reduced to a number of statistics. Just like good descriptions 
@@ -1570,7 +1570,7 @@ Several special procedures are provided with stock tbaMUD which you can use to
 create your own and get used to the mechanics of special procedures. These special 
 procedures can be found in castle.c and spec_procs.c. They range from very simple 
 procedures, like puff (pulsed special procedure) or bank (command-driven special 
-procedure), to very complex procedures like the guild master. 
+procedure), to very complex procedures. 
 
 In this chapter, FALSE refers to the value 0 and TRUE to any non-zero value. 
 

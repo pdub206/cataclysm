@@ -70,7 +70,7 @@ struct char_special_data_saved_plrtoascii {
 
 struct player_special_data_saved_plrtoascii {
    byte skills[MAX_SKILLS+1];	/* array of skills plus skill 0		*/
-   byte PADDING0;		/* used to be spells_to_learn		*/
+   byte legacy0;		/* legacy unused byte			*/
    bool talks[MAX_TONGUE];	/* PC s Tongues 0 for NPC		*/
    int	wimp_level;		/* Below this # of hit points, flee!	*/
    byte freeze_level;		/* Level of god who froze char, if any	*/
@@ -89,7 +89,7 @@ struct player_special_data_saved_plrtoascii {
    ubyte spare3;
    ubyte spare4;
    ubyte page_length;
-   int spells_to_learn;		/* How many can you learn yet this level*/
+   int spare5;
    int olc_zone;
    int spare8;
    int spare9;
@@ -263,8 +263,6 @@ void convert(char *filename)
     if (psds->conditions[2] && player.level < LVL_IMMORT &&
 	psds->conditions[DRUNK] != PFDEF_DRUNK)
       fprintf(outfile, "Drnk: %d\n", (int)psds->conditions[2]);
-    if (psds->spells_to_learn != PFDEF_PRACTICES)
-      fprintf(outfile, "Lern: %d\n", (int)psds->spells_to_learn);
 
 /* char_ability_data */
     cad = &(player.abilities);

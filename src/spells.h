@@ -136,7 +136,7 @@
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 
-/* NON-PLAYER AND OBJECT SPELLS AND SKILLS: The practice levels for the spells
+/* NON-PLAYER AND OBJECT SPELLS AND SKILLS: The skill levels for the spells
  * and skills below are _not_ recorded in the players file; therefore, the
  * intended use is for spells and skills associated with objects (such as
  * SPELL_IDENTIFY used with scrolls of identify) or non-players (such as NPC

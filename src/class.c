@@ -95,52 +95,18 @@ bitvector_t find_class_bitvector(const char *arg)
   return (ret);
 }
 
-/* These are definitions which control the guildmasters for each class.
- * The  first field (top line) controls the highest percentage skill level a
- * character of the class is allowed to attain in any skill.  (After this
- * level, attempts to practice will say "You are already learned in this area."
- *
- * The second line controls the maximum percent gain in learnedness a character
- * is allowed per practice -- in other words, if the random die throw comes out
- * higher than this number, the gain will only be this number instead.
- *
- * The third line controls the minimu percent gain in learnedness a character
- * is allowed per practice -- in other words, if the random die throw comes
- * out below this number, the gain will be set up to this number.
- *
- * The fourth line simply sets whether the character knows 'spells' or 'skills'.
- * This does not affect anything except the message given to the character when
- * trying to practice (i.e. "You know of the following spells" vs. "You know of
- * the following skills" */
-
-#define SPELL	0
-#define SKILL	1
-
-/* #define LEARNED_LEVEL	0  % known which is considered "learned" */
-/* #define MAX_PER_PRAC		1  max percent gain in skill per practice */
-/* #define MIN_PER_PRAC		2  min percent gain in skill per practice */
-/* #define PRAC_TYPE		3  should it say 'spell' or 'skill'?	*/
-
-int prac_params[4][NUM_CLASSES] = {
-  /* SOR	CLE	THE	FIG BAR RAN BARD DRU */
-  { 95,		95,	85,	80, 75, 85, 85, 95	},	/* learned level */
-  { 100,	100,	12,	12, 11, 12, 13, 90	},	/* max per practice */
-  { 25,		25,	0,	0, 0, 0, 25, 25	},	/* min per practice */
-  { SPELL,	SPELL,	SKILL,	SKILL, SKILL, SKILL, SKILL, SKILL	},	/* prac name */
-};
-
-/* The appropriate rooms for each guildmaster/guildguard; controls which types
- * of people the various guildguards let through.  i.e., the first line shows
+/* The appropriate rooms for each class gatekeeper; controls which types
+ * of people the various guards let through.  i.e., the first line shows
  * that from room 3017, only SORCERORS are allowed to go south. Don't forget
- * to visit spec_assign.c if you create any new mobiles that should be a guild
+ * to visit spec_assign.c if you create any new mobiles that should be a
  * master or guard so they can act appropriately. If you "recycle" the
- * existing mobs that are used in other guilds for your new guild, then you
- * don't have to change that file, only here. Guildguards are now implemented
+ * existing mobs that are used in other areas for your new one, then you
+ * don't have to change that file, only here. Guards are now implemented
  * via triggers. This code remains as an example. */
 /* TO-DO: Is this necessary anymore now that there are no official guild rooms? */
 struct guild_info_type guild_info[] = {
 
-/* Midgaard */
+/* Main City */
  { CLASS_SORCEROR,      3017,    SOUTH   },
  { CLASS_CLERIC,        3004,    NORTH   },
  { CLASS_ROGUE,         3027,    EAST   },

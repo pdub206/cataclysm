@@ -145,7 +145,6 @@ static variable_name_t VariableNameTable[eMSDP_MAX+1] =
    { eMSDP_MANA,             "MANA",             NUMBER_READ_ONLY }, 
    { eMSDP_MANA_MAX,         "MANA_MAX",         NUMBER_READ_ONLY }, 
    { eMSDP_WIMPY,            "WIMPY",            NUMBER_READ_ONLY }, 
-   { eMSDP_PRACTICE,         "PRACTICE",         NUMBER_READ_ONLY }, 
    { eMSDP_MONEY,            "MONEY",            NUMBER_READ_ONLY }, 
    { eMSDP_MOVEMENT,         "MOVEMENT",         NUMBER_READ_ONLY }, 
    { eMSDP_MOVEMENT_MAX,     "MOVEMENT_MAX",     NUMBER_READ_ONLY }, 

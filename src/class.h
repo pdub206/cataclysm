@@ -29,7 +29,6 @@ void grant_class_skills(struct char_data *ch, bool reset);
 extern const char *class_abbrevs[];
 extern const char *pc_class_types[];
 extern const char *class_menu;
-extern int prac_params[][NUM_CLASSES];
 extern struct guild_info_type guild_info[];
 
 #endif /* _CLASS_H_*/

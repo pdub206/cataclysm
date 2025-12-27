@@ -81,22 +81,6 @@ static const char *how_good(int percent)
   return " (superb)";
 }
 
-static const char *prac_types[] = {
-  "spell",
-  "skill"
-};
-
-/* TO-DO: Dig deeper and figure out if the min/max practice defines can be removed */
-#define LEARNED_LEVEL	0	/* % known which is considered "learned" */
-#define MAX_PER_PRAC	1	/* max percent gain in skill per practice */
-#define MIN_PER_PRAC	2	/* min percent gain in skill per practice */
-#define PRAC_TYPE	3	/* should it say 'spell' or 'skill'?	 */
-
-#define LEARNED(ch) (prac_params[LEARNED_LEVEL][(int)GET_CLASS(ch)])
-#define MINGAIN(ch) (prac_params[MIN_PER_PRAC][(int)GET_CLASS(ch)])
-#define MAXGAIN(ch) (prac_params[MAX_PER_PRAC][(int)GET_CLASS(ch)])
-#define SPLSKL(ch) (prac_types[prac_params[PRAC_TYPE][(int)GET_CLASS(ch)]])
-
 void list_skills(struct char_data *ch)
 {
   const char *overflow = "\r\n**OVERFLOW**\r\n";
@@ -104,7 +88,7 @@ void list_skills(struct char_data *ch)
   size_t len = 0;
   char buf2[MAX_STRING_LENGTH];
 
-  len = snprintf(buf2, sizeof(buf2), "You know of the following %ss:\r\n", SPLSKL(ch));
+  len = snprintf(buf2, sizeof(buf2), "You know of the following skills:\r\n");
 
   if (IS_NPC(ch)) {
     /* NPCs: show only the skills actually assigned to them */
@@ -229,7 +213,7 @@ SPECIAL(mayor)
     break;
 
   case 'E':
-    act("$n says 'I hereby declare Midgaard closed!'", FALSE, ch, 0, 0, TO_ROOM);
+      act("$n says 'I hereby declare the city closed!'", FALSE, ch, 0, 0, TO_ROOM);
     break;
 
   case 'O':

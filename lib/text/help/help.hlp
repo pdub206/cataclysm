@@ -930,9 +930,8 @@ Backstab is a way to sneak up on a person and attempt to place your dagger
 in his back, at exactly the point where it does most damage.  A successful
 backstab gives a damage multiplier, depending on your level:
 
-The chance of successfully backstabbing a person depends on how well you
-have practiced backstab at your guild.  You can always backstab sleeping
-people.
+The chance of successfully backstabbing a person depends on your backstab
+skill. You can always backstab sleeping people.
 
 #0
 BALANCE BALANCING
@@ -1007,7 +1006,7 @@ BASH
 
 Fighters only.
 
-The success of a bash depends upon how many times you have practiced. To bash
+The success of a bash depends on your bash skill. To bash
 someone is to attempt to 'knock' that person over.  If you succeed, you will
 inflict minor damage, and cause the victim to fall on its rear.  The victim
 will be unable to issue any commands for 2 rounds of violence.  If you miss
@@ -1684,7 +1683,6 @@ next_in_room    - The next mob/player in the room as a variable (id) nice to
                   use for loops, or an empty return @RTSTAT 23@n
 pos()           - %actor.pos% returns position. Subfield modifies. Sleeping,
                   resting, sitting, fighting, standing. @RTSTAT 1399, 20997@n     
-prac()          - The actor's number of practices. Subfield adjusts.
 pref()          - Checks if actor has PRF flag enabled. @RTSTAT 1210@n
 quest           - Returns the current quest (or 0 if there's no current quest).
 questdone(#)    - Returns TRUE (1) if the quest vnum (#) has been completed. 
@@ -1697,8 +1695,6 @@ saving_breath() - The actors saving throw for breath weapons. Subfield adjusts.
 saving_spell()  - The actors saving throw for spells. Subfield adjusts.
 sex             - The actor's sex, as a string: MALE, FEMALE, or NEUTRAL.
 skill()         - The percentage of learnedness in the skill subfield.
-skillset("" #)  - Set the actors practiced level any skill or spell (1-100).
-                  %actor.skillset("magic missile" 95)%.
 thirst()        - The actor's thirst. Subfield sets, -1 is off.
 title()         - The actor's title. Subfield sets. Not used for mobs.
 varexists()     - Returns 1 if global variable in subfield exists, 0 if not.
@@ -1749,7 +1745,7 @@ Checking load info for the beastly fido...
   [ 3012] Main Street (15 Max.)
 
 > checkload t 100
-Checking load info for the object trigger 'Portal to Midgaard - 100':
+Checking load info for the object trigger 'Portal to the Capital - 100':
 (obj) [  100] the portal
 
 See also:  LINKS, RLIST, OLIST, MLIST, SLIST
@@ -1845,11 +1841,11 @@ Clerics have an ancient belief in not carrying sharp weapons.  Hence, they can
 only wield bludgeoning weapons.  This class gives you the wisdom of peace,
 blessing and healing, though it is possible to learn more violent spells.
 
-You can improve your spells by using the practice command.
+You can improve your spells by using them.
 
 See @RHELP SPELLS@n for a list of spells available.
 
-See also: PRACTICE, SPELLS
+See also: SPELLS
 #0
 CLSOLC
 
@@ -4033,7 +4029,7 @@ INFORMATION
    The following commands deal with information - for more info, @RHELP KEYWORD@n 
 
 RULES POLICY                         - The rules of the game.
-SCORE AFFECTS COINS TOGGLE PRACTICE  - Info about yourself and your settings.
+SCORE AFFECTS COINS TOGGLE           - Info about yourself and your settings.
 HELP INFO NEWS MOTD IMOTD            - Info about the game, recent changes.
 WHO WHERE CONSIDER FLAGS TITLE       - Info on other players.
 TIME DATE                            - Info on time.
@@ -4773,11 +4769,11 @@ MAGIC-USER WIZARD MAGE
 This is the class of powerful and violent magic, but the magic user do not
 control the nature, and can therefore not bless and such.
 
-You can improve your spells by using the practice command.
+You can improve your spells by using them.
 
 See @RHELP SPELLS@n for a list of spells available.
 
-See also: PRACTICE, SPELLS
+See also: SPELLS
 #0
 MAKEUID UID UNIQUE
 
@@ -5451,7 +5447,7 @@ Usage: murder [target]
 
 Kill command to hit another player.  To avoid accidental flagging (i.e.
 trying to type kiss Nia but accidentally typing kill Nia).
-See also: FLAGS
+See also: SKILLS
 
 #0
 MUTE SQUELCH
@@ -5461,7 +5457,7 @@ Usage: mute <player>
    MUTE is used to prevent a player from using global communication channels.
 It is a toggle that can be turned on and off by the same command. 
 
-See also: FLAGS
+See also: SKILLS
 #2
 MV MOVEPOINTS MOVE-POINTS MOVEMENTPOINTS MOVEMENT-POINTS
 
@@ -6728,22 +6724,6 @@ game and will have to be redone. This is typical of people who are power
 hungry and are building for themselves and not for others. That is not a
 sign of a good builder (see @RHELP BUILDER@n).
 
-#2
-PRACTICE PRACTISE TRAINING GUILDS GUILDMASTERS PRACTICING EXPERIENCES 
-
-Usage: practice [skill or spell name]
-
-Practice is the way you improve your spells and skills.  You can only do
-so in a guild, where a guildmaster can help you train.  You learn new skills
-as you gain levels. A guildmaster can be found throughout the realms and will
-charge you for your training. 
-
-If you type practice anywhere other than with a guildmaster, you will get a 
-list of all of the spells and skills you know and your level of proficiency at
-each.
-
-See also: SPELLS, SKILLS, LEVELS
-#0
 PRAISE REVIEWS RATINGS
 
 Review Submitted By: Detta 
@@ -7186,7 +7166,7 @@ large dragon steak.  These are normally acquired from the large green dragons
 up on Wyrm Mountain.  My normal source got eaten last week, and I have a large 
 order to fill.  I need these within 24 hours
 
-Thanks, Bob the Butcher, Midgaard
+Thanks, Bob the Butcher, the capital
 The questmaster sighs.
 The questmaster says "A tricky quest, but it'll cost you 5qp to back out now"
 #2
@@ -7929,7 +7909,7 @@ ever seen. I have never seen anyone put so much work into a zone. Kudos to Justo
 I am saving this because I would like everyone to use Justo's work as an 
 outstanding example of how a builder should develop and plan a full zone.
  
- * * * * Midgaard Mail System * * * *
+ * * * * City Mail System * * * *
 Date: Sun Oct 13 10:33:59 2002
   To: rumble
 From: justo
@@ -8531,7 +8511,6 @@ olc                 GrGod  PC    MISC
 password            GrGod  PC    MISC  
 poofin              Imm    PC    MISC  
 poofout             Imm    PC    MISC  
-practices           God    PC    NUMBER
 quest               God    PC    BINARY
 questhistory        God    PC    NUMBER
 questpoints         God    PC    NUMBER
@@ -8952,7 +8931,7 @@ SPECIALS SPEC-PROC SPECIAL-PROCEDURES SPECPROC SPEC_PROC
 mobs, and objects. They are written by coders and are normally not created
 by builders. If you have something you wish to assign a special procedure to
 talk it over with a coder. The most common special procedures include:
-Postmasters, banks, guildmasters, pet shops, and boards. If your zone requires 
+Postmasters, banks, pet shops, and boards. If your zone requires 
 any of the above mudmail your coder after your zone is complete.
    Most of the things possible through special procedures can now be done
 through trigedit. 
@@ -8960,12 +8939,6 @@ through trigedit.
 To create a postmaster make a mob, set one of the keywords as "postmaster," set
 the NPC flag SPEC, and load it to the room via zedit. Then have your coder add
 to spec_assign.c:110:  ASSIGNMOB(#, postmaster); NOTE: # = the mob/obj vnum.
-
-To create a guildmaster make a mob, set one of the keywords as "guildmaster," 
-set the NPC flag SPEC, and load it to the room via zedit. Then have your coder 
-add to spec_assign.c:69:  ASSIGNMOB(#, guild); A player can practice at any
-guildmaster, it is the guildguards that usually limit who can access what
-guildmaster. @RTSTAT 133@n
 
 To create a bank make an object, set it to type OTHER, add keyword "bank" and
 load it to the room via zedit. Then have your coder add to spec_assign.c:
@@ -8981,7 +8954,7 @@ In all cases special procedures need to be added in by a coder. Once your zone
 is complete mudmail your coder for the additions you want including type and
 mob or object vnum. 
 
-See also: POSTMASTER, PETSHOPS, BANKS, GUILDMASTER, BOARDS
+See also: POSTMASTER, PETSHOPS, BANKS, BOARDS
 #2
 SPELLS
 
@@ -9224,9 +9197,8 @@ Thief Only.
 
 Usage: steal <item> [target]
 
-Use steal to steal coins or items from people.  The chance of not getting
-caught depends on how well you have practiced steal, and if the person
-is asleep.
+Use steal to steal coins or items from people. The chance of not getting
+caught depends on your steal skill and whether the person is asleep.
 
 Examples:
 
@@ -9281,11 +9253,11 @@ This is a listing of stock areas.
 186 Newbie Zone                 -- Maynard of StrangeMUD
 25  The High Tower of Magic     -- Skylar of SillyMUD*
 26  The High Tower Of Magic     -- Skylar of SillyMUD*
-30  Northern Midgaard Main City -- DikuMUD 
-31  Southern Part of Midgaard   -- DikuMUD
+30  Northern Main City          -- DikuMUD 
+31  Southern Main City          -- DikuMUD
 33  The Three Of Swords         -- C.A.W.
 35  Miden'Nir                   -- Copper II, modified by VampLestat of MercMUD*
-36  The Chessboard of Midgaard  -- Exxon of SillyMUD
+36  The Chessboard of the City  -- Exxon of SillyMUD
 40  Mines of Moria              -- Redferne of DikuMUD* 
 41  Mines of Moria              -- Redferne of DikuMUD*
 50  The Great Eastern Desert    -- Rorschach
@@ -10059,7 +10031,7 @@ The teleporter is used to transfer players between zones.  Accessible zones
 are listed under HELP ZONES by being CAPITALIZED.  For example to teleport to:
   74 Newbie GRAVEyard                   -- Jojen                       3- 5
 type: teleport grave
-   The teleporter may also be used to recall back to Midgaard at any time.
+   The teleporter may also be used to recall back to the capital at any time.
 
 Uncapitalized zones are linked through a capitalized zone.
 
@@ -10254,13 +10226,13 @@ Thieves are known to have very special qualities, that no other class offers.
 Their specialty tends to be in the darker, sneakier art.  Many of these
 qualities can come in handy in many situations, such as picking locks.
 
-You can improve you skills by using the practice command.
+You can improve your skills by using them.
 
 Skills available to thieves: sneak, hide, steal, backstab, pick lock, track
 
 See the help on each skill for more information.
 
-See also: PRACTICE, FLAGS
+See also: FLAGS
 #0
 TILDES ~
 
@@ -12444,11 +12416,11 @@ them better at hand-to-hand-combat, as they possess skills of violence and
 fighting unequaled by the members of any other class.  However, they lack the
 ability to use magic of any sort.
 
-You can improve your skills by using the practice command.
+You can improve your skills by using them.
 
 Skills available to warriors: kick, rescue, track, bash
 
-See also: PRACTICE
+See also: FLAGS
 #0
 WATERWALK WATWALK 
 
@@ -13314,12 +13286,12 @@ rumble@*tbamud.com
   26 High Tower Of Magic II             -- Skylar                      1-30
   27 MEMLIN Caves                       -- Detta                      17-25
   28 MUDSCHOOL                          -- Welcor                      1- 3
-  30 Northern MIDGAARD                  -- DikuMUD                     1-33
-  31 Southern MIDGAARD                  -- DikuMUD                     1-33
-  32 MIDGAARD                           -- DikuMUD                     1-33
+  30 Northern MAIN CITY                 -- DikuMUD                     1-33
+  31 Southern MAIN CITY                 -- DikuMUD                     1-33
+  32 MAIN CITY                          -- DikuMUD                     1-33
   33 Three Of Swords                    -- C.A.W.                      5-30
   35 Miden'Nir                          -- Copper II                   4-10
-  36 Chessboard of Midgaard             -- Exxon                       6-30
+  36 Chessboard of the City             -- Exxon                       6-30
   37 CAPITAL Sewer System               -- Welcor                      3- 7
   38 CAPITAL Sewer System II            -- Welcor                      7-14
   39 HAVEN                              -- Nivan                       3-14
@@ -13388,7 +13360,7 @@ rumble@*tbamud.com
  239 South PASS                         -- Crysanthia                 16-21
  240 Dun MAURA                          -- Rumble                      7-10
  241 Starship ENTERPRISE                -- Crazyman                   26-30
- 242 NEW Midgaard                       -- Crazyman                    3- 7
+ 242 NEW Main City                      -- Crazyman                    3- 7
  243 Snowy VALLEY                       -- Crazyman                    7-10
  244 Cooland PRISON                     -- Crazyman                      30
  245 The NETHER                         -- Kaan                          20

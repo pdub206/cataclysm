@@ -109,7 +109,6 @@ typedef enum
    eMSDP_MANA, 
    eMSDP_MANA_MAX, 
    eMSDP_WIMPY, 
-   eMSDP_PRACTICE, 
    eMSDP_MONEY, 
    eMSDP_MOVEMENT, 
    eMSDP_MOVEMENT_MAX, 
