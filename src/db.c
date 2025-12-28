@@ -30,6 +30,7 @@
 #include "genolc.h"
 #include "genobj.h" /* for free_object_strings */
 #include "config.h" /* for the default config values. */
+#include "class.h"
 #include "fight.h"
 #include "modify.h"
 #include "shop.h"
@@ -748,6 +749,7 @@ void boot_db(void)
 
   log("Assigning spell and skill levels.");
   init_spell_levels();
+  init_class_skill_caps();
 
   log("Sorting command list and spells.");
   sort_commands();
@@ -4128,7 +4130,6 @@ static void load_default_config( void )
   /* This function is called only once, at boot-time. We assume config_info is
    * empty. -Welcor */
   /* Game play options. */
-  CONFIG_PK_ALLOWED 	        = pk_allowed;
   CONFIG_PT_ALLOWED             = pt_allowed;
   CONFIG_LEVEL_CAN_SHOUT 	    = level_can_shout;
   CONFIG_TUNNEL_SIZE 	        = tunnel_size;
@@ -4388,9 +4389,7 @@ void load_config( void )
         break;
 
       case 'p':
-        if (!str_cmp(tag, "pk_allowed"))
-          CONFIG_PK_ALLOWED = num;
-        else if (!str_cmp(tag, "protocol_negotiation"))
+        if (!str_cmp(tag, "protocol_negotiation"))
           CONFIG_PROTOCOL_NEGOTIATION = num;
         else if (!str_cmp(tag, "pt_allowed"))
           CONFIG_PT_ALLOWED = num;

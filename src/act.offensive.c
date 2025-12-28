@@ -54,8 +54,6 @@ ACMD(do_assist)
     else if (!CAN_SEE(ch, opponent))
       act("You can't see who is fighting $M!", FALSE, ch, 0, helpee, TO_CHAR);
          /* prevent accidental pkill */
-    else if (!CONFIG_PK_ALLOWED && !IS_NPC(opponent))
-      send_to_char(ch, "You cannot kill other players.\r\n");
     else {
       send_to_char(ch, "You join the fight!\r\n");
       act("$N assists you!", 0, helpee, 0, ch, TO_CHAR);
@@ -82,9 +80,6 @@ ACMD(do_hit)
   } else if (AFF_FLAGGED(ch, AFF_CHARM) && (ch->master == vict))
     act("$N is just such a good friend, you simply can't hit $M.", FALSE, ch, 0, vict, TO_CHAR);
   else {
-    if (!CONFIG_PK_ALLOWED && !IS_NPC(vict) && !IS_NPC(ch)) 
-      check_killer(ch, vict);
-
     if ((GET_POS(ch) == POS_STANDING) && (vict != FIGHTING(ch))) { 
       if (GET_DEX(ch) > GET_DEX(vict) || (GET_DEX(ch) == GET_DEX(vict) && rand_number(1, 2) == 1))  /* if faster */
         hit(ch, vict, TYPE_UNDEFINED);  /* first */
@@ -150,7 +145,7 @@ ACMD(do_backstab)
     return;
   }
   /* Only piercing weapons allowed */
-  if (GET_OBJ_VAL(weap, 3) != TYPE_PIERCE - TYPE_HIT) {
+  if (GET_OBJ_VAL(weap, 2) != TYPE_PIERCE - TYPE_HIT) {
     send_to_char(ch, "Only piercing weapons can be used for backstabbing.\r\n");
     return;
   }
@@ -187,14 +182,14 @@ ACMD(do_backstab)
     /* Keeping this logic really simple so it can be adjusted later if need be */
     if (crit_success) {
       /* Simple crit = 2x damage */
-      int base = dice(GET_OBJ_VAL(weap, 1), GET_OBJ_VAL(weap, 2));
+      int base = dice(GET_OBJ_VAL(weap, 0), GET_OBJ_VAL(weap, 1));
       int dmg = base + GET_ABILITY_MOD(GET_DEX(ch));
       if (dmg < 1) dmg = 1;
       dmg *= 2;
       damage(ch, vict, dmg, SKILL_BACKSTAB);
     } else {
       /* Hit but not crit = 1.5x damage */
-      int base = dice(GET_OBJ_VAL(weap, 1), GET_OBJ_VAL(weap, 2));
+      int base = dice(GET_OBJ_VAL(weap, 0), GET_OBJ_VAL(weap, 1));
       int dmg = base + GET_ABILITY_MOD(GET_DEX(ch));
       if (dmg < 1) dmg = 1;
       dmg *= 1.5;

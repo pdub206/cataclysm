@@ -189,8 +189,8 @@ const char *position_types[] = {
  * @pre Must be in the same order as the defines.
  * Must end array with a single newline. */
 const char *player_bits[] = {
-  "KILLER",
-  "THIEF",
+  "UNUSED0",
+  "UNUSED1",
   "FROZEN",
   "DONTSET",
   "WRITING",

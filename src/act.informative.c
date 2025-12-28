@@ -1589,8 +1589,6 @@ ACMD(do_who)
         continue;
       if (!CAN_SEE(ch, tch) || GET_LEVEL(tch) < low || GET_LEVEL(tch) > high)
         continue;
-      if (outlaws && !PLR_FLAGGED(tch, PLR_KILLER) && !PLR_FLAGGED(tch, PLR_THIEF))
-        continue;
       if (questwho && !PRF_FLAGGED(tch, PRF_QUEST))
         continue;
       if (localwho && world[IN_ROOM(ch)].zone != world[IN_ROOM(tch)].zone)
@@ -1634,8 +1632,6 @@ ACMD(do_who)
       if (*name_search && str_cmp(GET_NAME(tch), name_search))
         continue;
       if (!CAN_SEE(ch, tch) || GET_LEVEL(tch) < low || GET_LEVEL(tch) > high)
-        continue;
-      if (outlaws && !PLR_FLAGGED(tch, PLR_KILLER) && !PLR_FLAGGED(tch, PLR_THIEF))
         continue;
       if (questwho && !PRF_FLAGGED(tch, PRF_QUEST))
         continue;
@@ -1709,10 +1705,6 @@ ACMD(do_who)
           send_to_char(ch, " (noshout)");
         if (PRF_FLAGGED(tch, PRF_QUEST))
           send_to_char(ch, " (quest)");
-        if (PLR_FLAGGED(tch, PLR_THIEF))
-          send_to_char(ch, " (THIEF)");
-        if (PLR_FLAGGED(tch, PLR_KILLER))
-          send_to_char(ch, " (KILLER)");
         send_to_char(ch, "\r\n");
       }
     }
@@ -1819,9 +1811,6 @@ ACMD(do_users)
       if (*name_search && str_cmp(GET_NAME(tch), name_search))
         continue;
       if (!CAN_SEE(ch, tch) || GET_LEVEL(tch) < low || GET_LEVEL(tch) > high)
-        continue;
-      if (outlaws && !PLR_FLAGGED(tch, PLR_KILLER) &&
-      !PLR_FLAGGED(tch, PLR_THIEF))
         continue;
       if (showclass && !(showclass & (1 << GET_CLASS(tch))))
         continue;

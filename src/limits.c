@@ -209,12 +209,13 @@ void run_autowiz(void)
 /* Requires: find_skill_num(), GET_WIS(), wis_app[], GET_SKILL(), SET_SKILL(), rand_number()
  * Cooldown: 1 hour - 5 * WIS bonus minutes (floored at 0)
  * Rolls: failure -> 1..20, success -> 1..100
- * Cap: 90% (change MIN(90, ...) if you want a different cap)
+ * Cap: per-class max (see class.c)
  */
 void gain_skill(struct char_data *ch, char *skill, bool success)
 {
   int skill_num, base, roll, increase;
   int wisb, cd_seconds;
+  int cap;
   time_t now;
 
   if (IS_NPC(ch))
@@ -233,8 +234,11 @@ void gain_skill(struct char_data *ch, char *skill, bool success)
   }
 
   base = GET_SKILL(ch, skill_num);
+  cap = class_skill_max(GET_CLASS(ch), skill_num);
+  if (cap <= 0)
+    return;
   /* If already capped, bail early (and don’t start cooldown) */
-  if (base >= 90)
+  if (base >= cap)
     return;
 
   /* Wisdom bonus from wis_app[] (constants.c). Higher = better learning & shorter cooldown. */
@@ -246,7 +250,7 @@ void gain_skill(struct char_data *ch, char *skill, bool success)
     /* Old 1..400 with (400 - wisb*4) ⇒ scaled: (100 - wisb) */
     if (roll >= (100 - wisb)) {
       increase = base + 1;
-      SET_SKILL(ch, skill_num, MIN(90, increase));
+      SET_SKILL(ch, skill_num, MIN(cap, increase));
 
       /* Cooldown only when an increase actually happens */
       cd_seconds = 3600 - (wisb * 5 * 60);  /* 1 hour - 5 * WIS minutes */
@@ -259,7 +263,7 @@ void gain_skill(struct char_data *ch, char *skill, bool success)
     /* Old 1..100 with (100 - wisb) ⇒ scaled: (20 - wisb) */
     if (roll >= (20 - wisb)) {
       increase = base + 1;
-      SET_SKILL(ch, skill_num, MIN(90, increase));
+      SET_SKILL(ch, skill_num, MIN(cap, increase));
 
       /* Cooldown only when an increase actually happens */
       cd_seconds = 3600 - (wisb * 5 * 60);  /* 1 hour - 5 * WIS minutes */

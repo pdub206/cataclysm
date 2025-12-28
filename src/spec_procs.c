@@ -488,18 +488,6 @@ SPECIAL(cityguard)
   for (tch = world[IN_ROOM(ch)].people; tch; tch = tch->next_in_room) {
     if (!CAN_SEE(ch, tch))
       continue;
-    if (!IS_NPC(tch) && PLR_FLAGGED(tch, PLR_KILLER)) {
-      act("$n screams 'HEY!!!  You're one of those PLAYER KILLERS!!!!!!'", FALSE, ch, 0, 0, TO_ROOM);
-      hit(ch, tch, TYPE_UNDEFINED);
-      return (TRUE);
-    }
-
-    if (!IS_NPC(tch) && PLR_FLAGGED(tch, PLR_THIEF)) {
-      act("$n screams 'HEY!!!  You're one of those PLAYER THIEVES!!!!!!'", FALSE, ch, 0, 0, TO_ROOM);
-      hit(ch, tch, TYPE_UNDEFINED);
-      return (TRUE);
-    }
-
     if (FIGHTING(tch) && GET_ALIGNMENT(tch) < max_evil && (IS_NPC(tch) || IS_NPC(FIGHTING(tch)))) {
       max_evil = GET_ALIGNMENT(tch);
       evil = tch;

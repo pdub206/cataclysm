@@ -801,30 +801,6 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
               }
             }
           }
-          else if (!str_cmp(field, "is_killer")) {
-            if (subfield && *subfield) {
-              if (!str_cmp("on", subfield))
-                SET_BIT_AR(PLR_FLAGS(c), PLR_KILLER);
-              else if (!str_cmp("off", subfield))
-                REMOVE_BIT_AR(PLR_FLAGS(c), PLR_KILLER);
-            }
-            if (PLR_FLAGGED(c, PLR_KILLER))
-              strcpy(str, "1");
-            else
-              strcpy(str, "0");
-          }
-          else if (!str_cmp(field, "is_thief")) {
-            if (subfield && *subfield) {
-              if (!str_cmp("on", subfield))
-                SET_BIT_AR(PLR_FLAGS(c), PLR_THIEF);
-              else if (!str_cmp("off", subfield))
-                REMOVE_BIT_AR(PLR_FLAGS(c), PLR_THIEF);
-            }
-            if (PLR_FLAGGED(c, PLR_THIEF))
-              strcpy(str, "1");
-            else
-              strcpy(str, "0");
-          }
           break;
         case 'l':
           if (!str_cmp(field, "level")) {

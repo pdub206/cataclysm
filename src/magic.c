@@ -189,6 +189,7 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
 		     int spellnum, int savetype)
 {
   int dam = 0;
+  int save_dc;
 
   if (victim == NULL || ch == NULL)
     return (0);
@@ -279,8 +280,12 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
   } /* switch(spellnum) */
 
 
+  save_dc = compute_save_dc(ch, level, spellnum);
+  if (!IS_NPC(ch) && GET_REAL_LEVEL(ch) >= LVL_IMMORT)
+    save_dc = 1000;
+
   /* divide damage by two if victim makes his saving throw */
-  if (mag_savingthrow(victim, savetype, compute_save_dc(ch, level, spellnum)))
+  if (mag_savingthrow(victim, savetype, save_dc))
     dam /= 2;
 
   /* and finally, inflict the damage */
@@ -307,6 +312,8 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     return;
 
   save_dc = compute_save_dc(ch, level, spellnum);
+  if (!IS_NPC(ch) && GET_REAL_LEVEL(ch) >= LVL_IMMORT)
+    save_dc = 1000;
 
   for (i = 0; i < MAX_SPELL_AFFECTS; i++) {
     new_affect(&(af[i]));
@@ -470,8 +477,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_SLEEP:
-    if (!CONFIG_PK_ALLOWED && !IS_NPC(ch) && !IS_NPC(victim))
-      return;
     if (MOB_FLAGGED(victim, MOB_NOSLEEP))
       return;
     if (mag_savingthrow(victim, ABIL_WIS, save_dc))
@@ -644,8 +649,6 @@ void mag_areas(int level, struct char_data *ch, int spellnum, int savetype)
     if (tch == ch)
       continue;
     if (!IS_NPC(tch) && GET_LEVEL(tch) >= LVL_IMMORT)
-      continue;
-    if (!CONFIG_PK_ALLOWED && !IS_NPC(ch) && !IS_NPC(tch))
       continue;
     if (!IS_NPC(ch) && IS_NPC(tch) && AFF_FLAGGED(tch, AFF_CHARM))
       continue;

@@ -79,7 +79,6 @@ static void cedit_setup(struct descriptor_data *d)
 
   /* Copy the current configuration from the config_info to this one and copy
    * the game play options from the configuration info struct. */
-  OLC_CONFIG(d)->play.pk_allowed          = CONFIG_PK_ALLOWED;
   OLC_CONFIG(d)->play.pt_allowed          = CONFIG_PT_ALLOWED;
   OLC_CONFIG(d)->play.level_can_shout     = CONFIG_LEVEL_CAN_SHOUT;
   OLC_CONFIG(d)->play.tunnel_size         = CONFIG_TUNNEL_SIZE;
@@ -177,7 +176,6 @@ static void cedit_save_internally(struct descriptor_data *d)
   /* see if we need to reassign spec procs on rooms */
   int reassign = (CONFIG_DTS_ARE_DUMPS != OLC_CONFIG(d)->play.dts_are_dumps);
   /* Copy the data back from the descriptor to the config_info structure. */
-  CONFIG_PK_ALLOWED          = OLC_CONFIG(d)->play.pk_allowed;
   CONFIG_PT_ALLOWED          = OLC_CONFIG(d)->play.pt_allowed;
   CONFIG_LEVEL_CAN_SHOUT     = OLC_CONFIG(d)->play.level_can_shout;
   CONFIG_TUNNEL_SIZE         = OLC_CONFIG(d)->play.tunnel_size;
@@ -326,8 +324,6 @@ int save_config( IDXTYPE nowhere )
     "* [ Game Play Options ]\n"
   );
 
-  fprintf(fl, "* Is player killing allowed on the mud?\n"
-              "pk_allowed = %d\n\n", CONFIG_PK_ALLOWED);
   fprintf(fl, "* Is player thieving allowed on the mud?\n"
   	      "pt_allowed = %d\n\n", CONFIG_PT_ALLOWED);
   fprintf(fl, "* What is the minimum level a player can shout/gossip/etc?\n"
@@ -591,7 +587,6 @@ static void cedit_disp_game_play_options(struct descriptor_data *d)
 
 
   write_to_output(d, "\r\n\r\n"
-        "%sA%s) Player Killing Allowed  : %s%s\r\n"
         "%sB%s) Player Thieving Allowed : %s%s\r\n"
         "%sC%s) Minimum Level To Shout  : %s%d\r\n"
         "%sE%s) Tunnel Size             : %s%d\r\n"
@@ -617,7 +612,6 @@ static void cedit_disp_game_play_options(struct descriptor_data *d)
         "%s8%s) Scripts on PC's         : %s%s\r\n"
         "%sQ%s) Exit To The Main Menu\r\n"
         "Enter your choice : ",
-        grn, nrm, cyn, CHECK_VAR(OLC_CONFIG(d)->play.pk_allowed),
         grn, nrm, cyn, CHECK_VAR(OLC_CONFIG(d)->play.pt_allowed),
         grn, nrm, cyn, OLC_CONFIG(d)->play.level_can_shout,
         grn, nrm, cyn, OLC_CONFIG(d)->play.tunnel_size,
@@ -844,11 +838,6 @@ void cedit_parse(struct descriptor_data *d, char *arg)
 
     case CEDIT_GAME_OPTIONS_MENU:
       switch (*arg) {
-        case 'a':
-        case 'A':
-          TOGGLE_VAR(OLC_CONFIG(d)->play.pk_allowed);
-          break;
-
         case 'b':
         case 'B':
           TOGGLE_VAR(OLC_CONFIG(d)->play.pt_allowed);

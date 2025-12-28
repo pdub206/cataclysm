@@ -3302,16 +3302,8 @@ ACMD(do_wizutil)
 	      GET_DEX(vict), GET_CON(vict), GET_CHA(vict));
       break;
     case SCMD_PARDON:
-      if (!PLR_FLAGGED(vict, PLR_THIEF) && !PLR_FLAGGED(vict, PLR_KILLER)) {
-	send_to_char(ch, "Your victim is not flagged.\r\n");
-	return;
-      }
-      REMOVE_BIT_AR(PLR_FLAGS(vict), PLR_THIEF);
-      REMOVE_BIT_AR(PLR_FLAGS(vict), PLR_KILLER);
-      send_to_char(ch, "Pardoned.\r\n");
-      send_to_char(vict, "You have been pardoned by the Gods!\r\n");
-      mudlog(BRF, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s pardoned by %s", GET_NAME(vict), GET_NAME(ch));
-      break;
+      send_to_char(ch, "Criminal flags are currently disabled.\r\n");
+      return;
     case SCMD_MUTE:
       result = PLR_TOG_CHK(vict, PLR_NOSHOUT);
       mudlog(BRF, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) Mute %s for %s by %s.",
@@ -3783,7 +3775,7 @@ static struct set_struct {
    { "int", 		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "invis",		LVL_GOD, 	PC, 	NUMBER },
    { "invstart",        LVL_BUILDER,	PC, 	BINARY },
-   { "killer",		LVL_GOD, 	PC, 	BINARY },
+   { "unused0",		LVL_GOD, 	PC, 	BINARY },
    { "level",		LVL_GRGOD, 	BOTH, 	NUMBER },  /* 25 */
    { "loadroom",	LVL_BUILDER, 	PC, 	MISC },
    { "mana",		LVL_BUILDER, 	BOTH, 	NUMBER },
@@ -3808,7 +3800,7 @@ static struct set_struct {
    { "siteok",   LVL_GOD,  PC,   BINARY },
    { "skill",   LVL_GOD,  BOTH,   NUMBER },
    { "str",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "thief",		LVL_GOD, 	PC, 	BINARY }, 
+   { "unused1",		LVL_GOD, 	PC, 	BINARY }, 
    { "thirst",		LVL_BUILDER, 	BOTH, 	MISC }, /* 50 */
    { "variable",        LVL_GRGOD,	PC,	MISC },
    { "weight",		LVL_BUILDER,	BOTH,	NUMBER },
@@ -4024,9 +4016,9 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
     case 21: /* invistart */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_INVSTART);
       break;
-    case 22: /* killer */
-      SET_OR_REMOVE(PLR_FLAGS(vict), PLR_KILLER);
-      break;
+    case 22: /* unused0 (removed killer flag) */
+      send_to_char(ch, "That flag is no longer in use.\r\n");
+      return (0);
     case 23: /* level */
       if ((!IS_NPC(vict) && value > GET_LEVEL(ch)) || value > LVL_IMPL) {
         send_to_char(ch, "You can't do that.\r\n");
@@ -4273,9 +4265,9 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.str = value;
       affect_total(vict);
       break;
-    case 47: /* thief */
-      SET_OR_REMOVE(PLR_FLAGS(vict), PLR_THIEF);
-      break;
+    case 47: /* unused1 (removed thief flag) */
+      send_to_char(ch, "That flag is no longer in use.\r\n");
+      return (0);
     case 48: /* thirst */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, THIRST) = -1;

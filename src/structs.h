@@ -193,8 +193,8 @@
 #define NUM_POSITIONS   9
 
 /* Player flags: used by char_data.char_specials.act */
-#define PLR_KILLER        0   /**< Player is a player-killer */
-#define PLR_THIEF         1   /**< Player is a player-thief */
+#define PLR_UNUSED0       0   /**< Reserved (unused) */
+#define PLR_UNUSED1       1   /**< Reserved (unused) */
 #define PLR_FROZEN        2   /**< Player is frozen */
 #define PLR_DONTSET       3   /**< Don't EVER set (ISNPC bit, set by mud) */
 #define PLR_WRITING       4   /**< Player writing (board/mail/olc) */
@@ -1387,7 +1387,6 @@ struct forage_entry {
  * variables. */
 struct game_data
 {
-  int pk_allowed; /**< Is player killing allowed?    */
   int pt_allowed; /**< Is player thieving allowed?   */
   int level_can_shout; /**< Level player must be to shout.   */
   int tunnel_size; /**< Number of people allowed in a tunnel.*/

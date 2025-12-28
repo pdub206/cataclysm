@@ -1021,7 +1021,6 @@ do                                                              \
 #define CONFIG_CONFFILE         config_info.CONFFILE
 
 /** Player killing allowed or not? */
-#define CONFIG_PK_ALLOWED       config_info.play.pk_allowed
 /** Player thieving allowed or not? */
 #define CONFIG_PT_ALLOWED       config_info.play.pt_allowed
 /** What level to use the shout command? */

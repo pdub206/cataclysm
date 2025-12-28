@@ -124,28 +124,6 @@ ASPELL(spell_summon)
     return;
   }
 
-  if (!CONFIG_PK_ALLOWED) {
-    if (MOB_FLAGGED(victim, MOB_AGGRESSIVE)) {
-      act("As the words escape your lips and $N travels\r\n"
-	  "through time and space towards you, you realize that $E is\r\n"
-	  "aggressive and might harm you, so you wisely send $M back.",
-	  FALSE, ch, 0, victim, TO_CHAR);
-      return;
-    }
-    if (!IS_NPC(victim) && !PRF_FLAGGED(victim, PRF_SUMMONABLE) &&
-	!PLR_FLAGGED(victim, PLR_KILLER)) {
-      send_to_char(victim, "%s just tried to summon you to: %s.\r\n"
-	      "This failed because you have summon protection on.\r\n"
-	      "Type NOSUMMON to allow other players to summon you.\r\n",
-	      GET_NAME(ch), world[IN_ROOM(ch)].name);
-
-      send_to_char(ch, "You failed because %s has summon protection on.\r\n", GET_NAME(victim));
-      mudlog(BRF, MAX(LVL_IMMORT, MAX(GET_INVIS_LEV(ch), GET_INVIS_LEV(victim))), TRUE, 
-        "%s failed summoning %s to %s.", GET_NAME(ch), GET_NAME(victim), world[IN_ROOM(ch)].name);
-      return;
-    }
-  }
-
   if (MOB_FLAGGED(victim, MOB_NOSUMMON) ||
       (IS_NPC(victim) && mag_savingthrow(victim, SAVING_CHA, save_dc))) {
     send_to_char(ch, "%s", SUMMON_FAIL);
@@ -272,8 +250,6 @@ ASPELL(spell_charm)
   else if (AFF_FLAGGED(victim, AFF_CHARM) || level < GET_LEVEL(victim))
     send_to_char(ch, "You fail.\r\n");
   /* player charming another player - no legal reason for this */
-  else if (!CONFIG_PK_ALLOWED && !IS_NPC(victim))
-    send_to_char(ch, "You fail - shouldn't be doing it anyway.\r\n");
   else if (circle_follow(victim, ch))
     send_to_char(ch, "Sorry, following in circles is not allowed.\r\n");
   else if (mag_savingthrow(victim, SAVING_WIS, save_dc))

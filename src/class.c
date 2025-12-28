@@ -234,6 +234,231 @@ void roll_real_abils(struct char_data *ch)
   ch->aff_abils = ch->real_abils;
 }
 
+/* Per-class skill caps */
+#define DEFAULT_CLASS_SKILL_MAX 90
+
+static int class_skill_maxes[NUM_CLASSES][MAX_SKILLS + 1];
+static bool class_skill_caps_ready = FALSE;
+
+static int clamp_skill_max(int max)
+{
+  if (max < 0)
+    return 0;
+  if (max > 100)
+    return 100;
+  return max;
+}
+
+static void apply_class_skill(int chclass, struct char_data *ch, int skill, int start, int max)
+{
+  if (ch)
+    SET_SKILL(ch, skill, start);
+  if (chclass >= 0 && chclass < NUM_CLASSES && skill >= 0 && skill <= MAX_SKILLS)
+    class_skill_maxes[chclass][skill] = clamp_skill_max(max);
+}
+
+static void apply_class_skills(int chclass, struct char_data *ch)
+{
+  switch (chclass) {
+
+  case CLASS_SORCEROR:
+    apply_class_skill(chclass, ch, SPELL_MAGIC_MISSILE, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DETECT_INVIS, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DETECT_MAGIC, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CHILL_TOUCH, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_INFRAVISION, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_INVISIBLE, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_ARMOR, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_BURNING_HANDS, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_LOCATE_OBJECT, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_STRENGTH, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_SHOCKING_GRASP, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_SLEEP, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_LIGHTNING_BOLT, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_BLINDNESS, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DETECT_POISON, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_COLOR_SPRAY, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_ENERGY_DRAIN, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CURSE, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_POISON, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_FIREBALL, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CHARM, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_IDENTIFY, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_FLY, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_ENCHANT_WEAPON, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CLONE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_UNARMED, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ARCANA, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_HISTORY, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_INSIGHT, 5, 90);
+    break;
+
+  case CLASS_CLERIC:
+    apply_class_skill(chclass, ch, SPELL_CURE_LIGHT, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_ARMOR, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CREATE_FOOD, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CREATE_WATER, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DETECT_POISON, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DETECT_ALIGN, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CURE_BLIND, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_BLESS, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DETECT_INVIS, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_BLINDNESS, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_INFRAVISION, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_PROT_FROM_EVIL, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_POISON, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_GROUP_ARMOR, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CURE_CRITIC, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_SUMMON, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_REMOVE_POISON, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_IDENTIFY, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_WORD_OF_RECALL, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DARKNESS, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_EARTHQUAKE, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DISPEL_EVIL, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DISPEL_GOOD, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_SANCTUARY, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CALL_LIGHTNING, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_HEAL, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_CONTROL_WEATHER, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_SENSE_LIFE, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_HARM, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_GROUP_HEAL, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_REMOVE_CURSE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SHIELD_USE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ACROBATICS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ARCANA, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_RELIGION, 5, 90);
+    break;
+
+  case CLASS_ROGUE:
+    apply_class_skill(chclass, ch, SKILL_STEALTH, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_TRACK, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_BACKSTAB, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PICK_LOCK, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SLEIGHT_OF_HAND, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_UNARMED, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SHIELD_USE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PIERCING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PERCEPTION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ACROBATICS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_DECEPTION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_INVESTIGATION, 5, 90);
+    break;
+
+  case CLASS_FIGHTER:
+    apply_class_skill(chclass, ch, SKILL_KICK, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_RESCUE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_BANDAGE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_BASH, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_UNARMED, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SLASHING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PIERCING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_BLUDGEONING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SHIELD_USE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PERCEPTION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ATHLETICS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_INTIMIDATION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SURVIVAL, 5, 90);
+    break;
+
+  case CLASS_BARBARIAN:
+    apply_class_skill(chclass, ch, SKILL_KICK, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_RESCUE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_BANDAGE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_WHIRLWIND, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_UNARMED, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PIERCING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_BLUDGEONING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PERCEPTION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ATHLETICS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_INTIMIDATION, 5, 90);
+    break;
+
+  case CLASS_RANGER:
+    apply_class_skill(chclass, ch, SKILL_BANDAGE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_TRACK, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_BASH, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SLEIGHT_OF_HAND, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_UNARMED, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SLASHING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PIERCING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SHIELD_USE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PERCEPTION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_NATURE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ANIMAL_HANDLING, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SURVIVAL, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ATHLETICS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PERSUASION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_STEALTH, 5, 90);
+    break;
+
+  case CLASS_BARD:
+    apply_class_skill(chclass, ch, SPELL_ARMOR, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_IDENTIFY, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_BANDAGE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_TRACK, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PICK_LOCK, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SLEIGHT_OF_HAND, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_UNARMED, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PIERCING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SHIELD_USE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PERCEPTION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ACROBATICS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_HISTORY, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_INVESTIGATION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SURVIVAL, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_STEALTH, 5, 90);
+    break;
+
+  case CLASS_DRUID:
+    apply_class_skill(chclass, ch, SPELL_DETECT_INVIS, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_DETECT_MAGIC, 5, 90);
+    apply_class_skill(chclass, ch, SPELL_LOCATE_OBJECT, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_BANDAGE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_TRACK, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_UNARMED, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PIERCING_WEAPONS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SHIELD_USE, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PERCEPTION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ACROBATICS, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_ARCANA, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_HISTORY, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_INSIGHT, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_INVESTIGATION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_PERSUASION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_RELIGION, 5, 90);
+    apply_class_skill(chclass, ch, SKILL_SURVIVAL, 5, 90);
+    break;
+  }
+}
+
+void init_class_skill_caps(void)
+{
+  int chclass, skill;
+
+  for (chclass = 0; chclass < NUM_CLASSES; chclass++) {
+    for (skill = 0; skill <= MAX_SKILLS; skill++)
+      class_skill_maxes[chclass][skill] = DEFAULT_CLASS_SKILL_MAX;
+  }
+
+  for (chclass = 0; chclass < NUM_CLASSES; chclass++)
+    apply_class_skills(chclass, NULL);
+
+  class_skill_caps_ready = TRUE;
+}
+
+int class_skill_max(int chclass, int skillnum)
+{
+  if (!class_skill_caps_ready)
+    return DEFAULT_CLASS_SKILL_MAX;
+  if (chclass < 0 || chclass >= NUM_CLASSES)
+    return DEFAULT_CLASS_SKILL_MAX;
+  if (skillnum < 0 || skillnum > MAX_SKILLS)
+    return DEFAULT_CLASS_SKILL_MAX;
+  return class_skill_maxes[chclass][skillnum];
+}
+
 void grant_class_skills(struct char_data *ch, bool reset)
 {
   int i;
@@ -248,179 +473,7 @@ void grant_class_skills(struct char_data *ch, bool reset)
   if (GET_CLASS(ch) < CLASS_SORCEROR || GET_CLASS(ch) >= NUM_CLASSES)
     return;
 
-  switch (GET_CLASS(ch)) {
-
-  case CLASS_SORCEROR:
-    SET_SKILL(ch, SPELL_MAGIC_MISSILE, 5);
-    SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
-    SET_SKILL(ch, SPELL_DETECT_MAGIC, 5);
-    SET_SKILL(ch, SPELL_CHILL_TOUCH, 5);
-    SET_SKILL(ch, SPELL_INFRAVISION, 5);
-    SET_SKILL(ch, SPELL_INVISIBLE, 5);
-    SET_SKILL(ch, SPELL_ARMOR, 5);
-    SET_SKILL(ch, SPELL_BURNING_HANDS, 5);
-    SET_SKILL(ch, SPELL_LOCATE_OBJECT, 5);
-    SET_SKILL(ch, SPELL_STRENGTH, 5);
-    SET_SKILL(ch, SPELL_SHOCKING_GRASP, 5);
-    SET_SKILL(ch, SPELL_SLEEP, 5);
-    SET_SKILL(ch, SPELL_LIGHTNING_BOLT, 5);
-    SET_SKILL(ch, SPELL_BLINDNESS, 5);
-    SET_SKILL(ch, SPELL_DETECT_POISON, 5);
-    SET_SKILL(ch, SPELL_COLOR_SPRAY, 5);
-    SET_SKILL(ch, SPELL_ENERGY_DRAIN, 5);
-    SET_SKILL(ch, SPELL_CURSE, 5);
-    SET_SKILL(ch, SPELL_POISON, 5);
-    SET_SKILL(ch, SPELL_FIREBALL, 5);
-    SET_SKILL(ch, SPELL_CHARM, 5);
-    SET_SKILL(ch, SPELL_IDENTIFY, 5);
-    SET_SKILL(ch, SPELL_FLY, 5);
-    SET_SKILL(ch, SPELL_ENCHANT_WEAPON, 5);
-    SET_SKILL(ch, SPELL_CLONE, 5);
-    SET_SKILL(ch, SKILL_UNARMED, 5);
-    SET_SKILL(ch, SKILL_ARCANA, 5);
-    SET_SKILL(ch, SKILL_HISTORY, 5);
-    SET_SKILL(ch, SKILL_INSIGHT, 5);
-    break;
-
-  case CLASS_CLERIC:
-    SET_SKILL(ch, SPELL_CURE_LIGHT, 5);
-    SET_SKILL(ch, SPELL_ARMOR, 5);
-    SET_SKILL(ch, SPELL_CREATE_FOOD, 5);
-    SET_SKILL(ch, SPELL_CREATE_WATER, 5);
-    SET_SKILL(ch, SPELL_DETECT_POISON, 5);
-    SET_SKILL(ch, SPELL_DETECT_ALIGN, 5);
-    SET_SKILL(ch, SPELL_CURE_BLIND, 5);
-    SET_SKILL(ch, SPELL_BLESS, 5);
-    SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
-    SET_SKILL(ch, SPELL_BLINDNESS, 5);
-    SET_SKILL(ch, SPELL_INFRAVISION, 5);
-    SET_SKILL(ch, SPELL_PROT_FROM_EVIL, 5);
-    SET_SKILL(ch, SPELL_POISON, 5);
-    SET_SKILL(ch, SPELL_GROUP_ARMOR, 5);
-    SET_SKILL(ch, SPELL_CURE_CRITIC, 5);
-    SET_SKILL(ch, SPELL_SUMMON, 5);
-    SET_SKILL(ch, SPELL_REMOVE_POISON, 5);
-    SET_SKILL(ch, SPELL_IDENTIFY, 5);
-    SET_SKILL(ch, SPELL_WORD_OF_RECALL, 5);
-    SET_SKILL(ch, SPELL_DARKNESS, 5);
-    SET_SKILL(ch, SPELL_EARTHQUAKE, 5);
-    SET_SKILL(ch, SPELL_DISPEL_EVIL, 5);
-    SET_SKILL(ch, SPELL_DISPEL_GOOD, 5);
-    SET_SKILL(ch, SPELL_SANCTUARY, 5);
-    SET_SKILL(ch, SPELL_CALL_LIGHTNING, 5);
-    SET_SKILL(ch, SPELL_HEAL, 5);
-    SET_SKILL(ch, SPELL_CONTROL_WEATHER, 5);
-    SET_SKILL(ch, SPELL_SENSE_LIFE, 5);
-    SET_SKILL(ch, SPELL_HARM, 5);
-    SET_SKILL(ch, SPELL_GROUP_HEAL, 5);
-    SET_SKILL(ch, SPELL_REMOVE_CURSE, 5);
-    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
-    SET_SKILL(ch, SKILL_ACROBATICS, 5);
-    SET_SKILL(ch, SKILL_ARCANA, 5);
-    SET_SKILL(ch, SKILL_RELIGION, 5);
-    break;
-
-  case CLASS_ROGUE:
-    SET_SKILL(ch, SKILL_STEALTH, 5);
-    SET_SKILL(ch, SKILL_TRACK, 5);
-    SET_SKILL(ch, SKILL_BACKSTAB, 5);
-    SET_SKILL(ch, SKILL_PICK_LOCK, 5);
-    SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
-    SET_SKILL(ch, SKILL_UNARMED, 5);
-    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
-    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_PERCEPTION, 5);
-    SET_SKILL(ch, SKILL_ACROBATICS, 5);
-    SET_SKILL(ch, SKILL_DECEPTION, 5);
-    SET_SKILL(ch, SKILL_INVESTIGATION, 5);
-    break;
-
-  case CLASS_FIGHTER:
-    SET_SKILL(ch, SKILL_KICK, 5);
-    SET_SKILL(ch, SKILL_RESCUE, 5);
-    SET_SKILL(ch, SKILL_BANDAGE, 5);
-    SET_SKILL(ch, SKILL_BASH, 5);
-    SET_SKILL(ch, SKILL_UNARMED, 5);
-    SET_SKILL(ch, SKILL_SLASHING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_BLUDGEONING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
-    SET_SKILL(ch, SKILL_PERCEPTION, 5);
-    SET_SKILL(ch, SKILL_ATHLETICS, 5);
-    SET_SKILL(ch, SKILL_INTIMIDATION, 5);
-    SET_SKILL(ch, SKILL_SURVIVAL, 5);
-    break;
-
-  case CLASS_BARBARIAN:
-    SET_SKILL(ch, SKILL_KICK, 5);
-    SET_SKILL(ch, SKILL_RESCUE, 5);
-    SET_SKILL(ch, SKILL_BANDAGE, 5);
-    SET_SKILL(ch, SKILL_WHIRLWIND, 5);
-    SET_SKILL(ch, SKILL_UNARMED, 5);
-    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_BLUDGEONING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_PERCEPTION, 5);
-    SET_SKILL(ch, SKILL_ATHLETICS, 5);
-    SET_SKILL(ch, SKILL_INTIMIDATION, 5);
-    break;
-
-  case CLASS_RANGER:
-    SET_SKILL(ch, SKILL_BANDAGE, 5);
-    SET_SKILL(ch, SKILL_TRACK, 5);
-    SET_SKILL(ch, SKILL_BASH, 5);
-    SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
-    SET_SKILL(ch, SKILL_UNARMED, 5);
-    SET_SKILL(ch, SKILL_SLASHING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
-    SET_SKILL(ch, SKILL_PERCEPTION, 5);
-    SET_SKILL(ch, SKILL_NATURE, 5);
-    SET_SKILL(ch, SKILL_ANIMAL_HANDLING, 5);
-    SET_SKILL(ch, SKILL_SURVIVAL, 5);
-    SET_SKILL(ch, SKILL_ATHLETICS, 5);
-    SET_SKILL(ch, SKILL_PERSUASION, 5);
-    SET_SKILL(ch, SKILL_STEALTH, 5);
-    break;
-
-  case CLASS_BARD:
-    SET_SKILL(ch, SPELL_ARMOR, 5);
-    SET_SKILL(ch, SPELL_IDENTIFY, 5);
-    SET_SKILL(ch, SKILL_BANDAGE, 5);
-    SET_SKILL(ch, SKILL_TRACK, 5);
-    SET_SKILL(ch, SKILL_PICK_LOCK, 5);
-    SET_SKILL(ch, SKILL_SLEIGHT_OF_HAND, 5);
-    SET_SKILL(ch, SKILL_UNARMED, 5);
-    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
-    SET_SKILL(ch, SKILL_PERCEPTION, 5);
-    SET_SKILL(ch, SKILL_ACROBATICS, 5);
-    SET_SKILL(ch, SKILL_HISTORY, 5);
-    SET_SKILL(ch, SKILL_INVESTIGATION, 5);
-    SET_SKILL(ch, SKILL_SURVIVAL, 5);
-    SET_SKILL(ch, SKILL_STEALTH, 5);
-    break;
-
-  case CLASS_DRUID:
-    SET_SKILL(ch, SPELL_DETECT_INVIS, 5);
-    SET_SKILL(ch, SPELL_DETECT_MAGIC, 5);
-    SET_SKILL(ch, SPELL_LOCATE_OBJECT, 5);
-    SET_SKILL(ch, SKILL_BANDAGE, 5);
-    SET_SKILL(ch, SKILL_TRACK, 5);
-    SET_SKILL(ch, SKILL_UNARMED, 5);
-    SET_SKILL(ch, SKILL_PIERCING_WEAPONS, 5);
-    SET_SKILL(ch, SKILL_SHIELD_USE, 5);
-    SET_SKILL(ch, SKILL_PERCEPTION, 5);
-    SET_SKILL(ch, SKILL_ACROBATICS, 5);
-    SET_SKILL(ch, SKILL_ARCANA, 5);
-    SET_SKILL(ch, SKILL_HISTORY, 5);
-    SET_SKILL(ch, SKILL_INSIGHT, 5);
-    SET_SKILL(ch, SKILL_INVESTIGATION, 5);
-    SET_SKILL(ch, SKILL_PERSUASION, 5);
-    SET_SKILL(ch, SKILL_RELIGION, 5);
-    SET_SKILL(ch, SKILL_SURVIVAL, 5);
-    break;
-  }
-
+  apply_class_skills(GET_CLASS(ch), ch);
 }
 
 /* Some initializations for characters, including initial skills */

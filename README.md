@@ -46,16 +46,31 @@ Features in Miranthas MUD Alpha release:
 
 Features to be implemented in the next few releases:
 
-* Race/species selection
-* Subclass selection
+* Race/species selection and stat ranges (elves have higher dex, dwarves have higher str, etc)
+* Subclass selection to personalize character further
+* Prioritized stats during character generation
+* Combat is slowed down so it isn't over in < 15 seconds (unless you're far outmatched)
+* Mounts added to help with long trips
+* Wagons added to help with caravans
+* Plantlife introduced
+* Updated lockpicking skill
+* Trap as a skill - one focused on city and one focused on desert
+* Poisons and antidotes
+* New alcohol and drugs/stimulants
+* Skimmers/ships to traverse difficult terrain
+* New elemental classes
+* Introduction of gathering mana/magic for sorceror class
+* Highly modified magic system
+* Components for some magical spells
+* Reading/writing limited to specific castes of society
+* Haggling and bartering system
 * New calendar and moon cycles
 * Heat based on time of day increases/decreases, changing hunger/thirst levels
-* Sandstorms
-* Shaded rooms
+* Sandstorms limiting visibility
+* Shaded rooms providing bonuses to regeneration
 * Criminal system for cities and jails
 * Basic Psionics
 * Basic crafting system
-* Continued skill and spell improvements
 * Apartment rentals for storing your loot
 * Enhanced quest system
 * Dialogue trees with NPC's
