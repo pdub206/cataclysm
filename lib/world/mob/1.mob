@@ -17,6 +17,8 @@ B
 
 
 
+
+
 ~
 6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
@@ -59,6 +61,8 @@ dark hair has been pulled back behind her head, intensifying the sharpness of
 her nose.
 ~
 B
+
+
 
 
 
@@ -117,6 +121,8 @@ B
 
 
 
+
+
 ~
 10 0 0 0 0 0 0 0 0 E
 1 3d12+60
@@ -138,6 +144,8 @@ descending to just above her shoulders.  Her eyes are a light blue color and
 appear slightly bloodshot.
 ~
 B
+
+
 
 
 
@@ -176,17 +184,19 @@ B
 
 
 
+
+
 It's a rat.
 ~
 8 0 0 0 0 0 0 0 0 E
 1 0d0+10
 8 8 2
-Str: 6
-Dex: 10
-Int: 4
-Wis: 4
-Con: 6
-Cha: 3
+Str: 2
+Dex: 7
+Int: 1
+Wis: 8
+Con: 8
+Cha: 1
 Species: 25
 AtkT 4
 E

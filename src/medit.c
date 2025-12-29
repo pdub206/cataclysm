@@ -43,6 +43,8 @@ static void medit_disp_aff_flags(struct descriptor_data *d);
 static void medit_disp_menu(struct descriptor_data *d);
 static void medit_disp_class_menu(struct descriptor_data *d);
 static void medit_disp_species_menu(struct descriptor_data *d);
+static int roll_stat_for_cap(int cap);
+static int autoroll_species_stat(struct char_data *mob, int ability);
 
 /*  utility functions */
 ACMD(do_oasis_medit)
@@ -584,26 +586,22 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
   /* Top section - standard stats */
   write_to_output(d,
   "-- Mob Number:  %s[%s%d%s]%s\r\n"
-  "(%s1%s) Level:       %s[%s%4d%s]%s\r\n"
-  "(%s2%s) %sAuto Set Stats (based on level)%s\r\n\r\n"
+  "(%s1%s) %sAuto Set Stats (species range)%s\r\n\r\n"
   "Hit Points  (xdy+z):\r\n"
-  "(%s3%s) HP NumDice:  %s[%s%5d%s]%s\r\n"
-  "(%s4%s) HP SizeDice: %s[%s%5d%s]%s\r\n"
-  "(%s5%s) HP Addition: %s[%s%5d%s]%s\r\n"
-  "(%s8%s) Alignment:   %s[%s%5d%s]%s\r\n\r\n",
+  "(%s2%s) HP NumDice:  %s[%s%5d%s]%s\r\n"
+  "(%s3%s) HP SizeDice: %s[%s%5d%s]%s\r\n"
+  "(%s4%s) HP Addition: %s[%s%5d%s]%s\r\n\r\n",
       cyn, yel, OLC_NUM(d), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_LEVEL(mob), cyn, nrm,
       cyn, nrm, cyn, nrm,
       cyn, nrm, cyn, yel, GET_HIT(mob), cyn, nrm,
       cyn, nrm, cyn, yel, GET_MANA(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_MOVE(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_ALIGNMENT(mob), cyn, nrm
+      cyn, nrm, cyn, yel, GET_MOVE(mob), cyn, nrm
       );
 
   if (CONFIG_MEDIT_ADVANCED) {
     /* Bottom section - non-standard stats, togglable in cedit */
     write_to_output(d,
-    "%sAttributes                 Saving Throws\r\n"
+    "%sAttributes                 Saving Throw bonus\r\n"
     "(%sF%s) Str: %s[%s%3d%s]%s             (%sR%s) Save STR  %s[%s%3d%s]%s\r\n"
     "(%sG%s) Dex: %s[%s%3d%s]%s             (%sS%s) Save DEX  %s[%s%3d%s]%s\r\n"
     "(%sH%s) Con: %s[%s%3d%s]%s             (%sT%s) Save CON  %s[%s%3d%s]%s\r\n"
@@ -962,29 +960,21 @@ void medit_parse(struct descriptor_data *d, char *arg)
     case 'Q':
       medit_disp_menu(d);
       return;
-    case '1':  /* Edit level */
-      OLC_MODE(d) = MEDIT_LEVEL;
-      i++;
-      break;
-    case '2':  /* Autoroll stats */
+    case '1':  /* Autoroll stats */
       medit_autoroll_stats(d);
       medit_disp_stats_menu(d);
       OLC_VAL(d) = TRUE;
       return;
-    case '3':
+    case '2':
       OLC_MODE(d) = MEDIT_NUM_HP_DICE;
       i++;
       break;
-    case '4':
+    case '3':
       OLC_MODE(d) = MEDIT_SIZE_HP_DICE;
       i++;
       break;
-    case '5':
+    case '4':
       OLC_MODE(d) = MEDIT_ADD_HP;
-      i++;
-      break;
-    case '8':
-      OLC_MODE(d) = MEDIT_ALIGNMENT;
       i++;
       break;
     case 'f':
@@ -1485,12 +1475,70 @@ void medit_string_cleanup(struct descriptor_data *d, int terminator)
   }
 }
 
+static int roll_stat_for_cap(int cap)
+{
+  int total = 0;
+  int dice_d4 = 0;
+  int remainder = 0;
+
+  if (cap <= 0)
+    return 0;
+
+  dice_d4 = cap / 4;
+  remainder = cap % 4;
+
+  if (dice_d4 > 0)
+    total += dice(dice_d4, 4);
+  if (remainder > 0)
+    total += dice(1, remainder);
+
+  return total;
+}
+
+static int autoroll_species_stat(struct char_data *mob, int ability)
+{
+  int min = 0;
+  int cap = 0;
+  int mod = 0;
+  int roll_cap;
+  int total;
+
+  if (HAS_VALID_SPECIES(mob)) {
+    int species = GET_SPECIES(mob);
+    int species_min = species_ability_min(species, ability);
+    int species_cap = species_ability_cap(species, ability);
+
+    if (species_min > 0)
+      min = species_min;
+    if (species_cap > 0)
+      cap = species_cap;
+
+    mod = species_ability_mod(species, ability);
+  }
+
+  if (cap > 0 && min > cap)
+    min = cap;
+
+  roll_cap = (cap > 0) ? (cap - mod) : (18 - mod);
+  if (roll_cap < 1)
+    roll_cap = 1;
+
+  total = roll_stat_for_cap(roll_cap) + mod;
+
+  if (cap > 0 && total > cap)
+    total = cap;
+  if (min > 0 && total < min)
+    total = min;
+
+  return total;
+}
+
 void medit_autoroll_stats(struct descriptor_data *d)
 {
-  int mob_lev;
+  int mob_lev = GET_LEVEL(OLC_MOB(d));
 
-  mob_lev = 1;
-  GET_LEVEL(OLC_MOB(d)) = 1;
+  if (mob_lev < 1)
+    mob_lev = 1;
 
   GET_MOVE(OLC_MOB(d))    = mob_lev * 10;        /* hit point bonus (mobs don't use movement points) */
   GET_HIT(OLC_MOB(d))     = mob_lev / 5;         /* number of hitpoint dice */
@@ -1498,12 +1546,12 @@ void medit_autoroll_stats(struct descriptor_data *d)
 
   /* 'Advanced' stats are only rolled if advanced options are enabled */
   if (CONFIG_MEDIT_ADVANCED) {
-    GET_STR(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18); /* 2/3 level in range 11 to 18 */
-    GET_INT(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
-    GET_WIS(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
-    GET_DEX(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
-    GET_CON(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
-    GET_CHA(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
+    GET_STR(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_STR);
+    GET_INT(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_INT);
+    GET_WIS(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_WIS);
+    GET_DEX(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_DEX);
+    GET_CON(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_CON);
+    GET_CHA(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_CHA);
 
     /* New ability-based saving throws: all default to 1/4 of mob level */
     GET_SAVE(OLC_MOB(d), ABIL_STR) = mob_lev / 4;
