@@ -21,6 +21,7 @@
 #include "house.h"
 #include "constants.h"
 #include "oasis.h"
+#include "species.h"
 #include "dg_scripts.h"
 #include "dg_event.h"
 #include "act.h"
@@ -2740,6 +2741,18 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   } else
     mob->points.max_hit = rand_number(mob->points.hit, mob->points.mana);
 
+  {
+    int base_hit = 0;
+    int base_mana = 0;
+    int base_stamina = 0;
+
+    if (get_species_base_points(GET_SPECIES(mob), &base_hit, &base_mana, &base_stamina)) {
+      mob->points.max_hit += base_hit;
+      mob->points.max_mana += base_mana;
+      mob->points.max_stamina += base_stamina;
+    }
+  }
+
   mob->points.hit = mob->points.max_hit;
   mob->points.mana = mob->points.max_mana;
   mob->points.stamina = mob->points.max_stamina;
@@ -3813,9 +3826,9 @@ void init_char(struct char_data *ch)
     GET_EXP(ch) = 7000000;
 
     /* The implementor never goes through do_start(). */
-    GET_MAX_HIT(ch) = 500;
-    GET_MAX_MANA(ch) = 100;
-    GET_MAX_STAMINA(ch) = 82;
+    GET_MAX_HIT(ch) = 999;
+    GET_MAX_MANA(ch) = 999;
+    GET_MAX_STAMINA(ch) = 999;
     GET_HIT(ch) = GET_MAX_HIT(ch);
     GET_MANA(ch) = GET_MAX_MANA(ch);
     GET_STAMINA(ch) = GET_MAX_STAMINA(ch);

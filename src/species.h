@@ -17,6 +17,7 @@ bool species_is_pc_selectable(int species);
 int species_ability_mod(int species, int ability);
 int species_ability_min(int species, int ability);
 int species_ability_cap(int species, int ability);
+bool get_species_base_points(int species, int *hit, int *mana, int *stamina);
 
 void apply_species_bonuses(struct char_data *ch);
 void grant_species_skills(struct char_data *ch);

@@ -584,14 +584,24 @@ void grant_class_skills(struct char_data *ch, bool reset)
 /* Some initializations for characters, including initial skills */
 void do_start(struct char_data *ch)
 {
+  int base_hit = 90;
+  int base_mana = 100;
+  int base_stamina = 90;
+
   GET_LEVEL(ch) = 1;
   GET_EXP(ch) = 1;
 
   roll_real_abils(ch);
 
-  GET_MAX_HIT(ch)  = 90;
-  GET_MAX_MANA(ch) = 100;
-  GET_MAX_STAMINA(ch) = 90;
+  if (!get_species_base_points(GET_SPECIES(ch), &base_hit, &base_mana, &base_stamina)) {
+    base_hit = 90;
+    base_mana = 100;
+    base_stamina = 90;
+  }
+
+  GET_MAX_HIT(ch) = base_hit;
+  GET_MAX_MANA(ch) = base_mana;
+  GET_MAX_STAMINA(ch) = base_stamina;
 
   grant_class_skills(ch, TRUE);
   grant_species_skills(ch);
@@ -615,6 +625,20 @@ void do_start(struct char_data *ch)
 void advance_level(struct char_data *ch)
 {
   int add_hp, add_mana = 0, add_move = 0, i;
+
+  if (GET_LEVEL(ch) >= LVL_IMMORT) {
+    GET_MAX_HIT(ch) = 999;
+    GET_MAX_MANA(ch) = 999;
+    GET_MAX_STAMINA(ch) = 999;
+
+    for (i = 0; i < 3; i++)
+      GET_COND(ch, i) = (char) -1;
+    SET_BIT_AR(PRF_FLAGS(ch), PRF_HOLYLIGHT);
+
+    snoop_check(ch);
+    save_char(ch);
+    return;
+  }
 
   add_hp = GET_ABILITY_MOD(GET_CON(ch));
 

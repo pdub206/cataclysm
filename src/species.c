@@ -65,6 +65,43 @@ const int pc_species_list[] = {
   -1
 };
 
+struct species_base_points {
+  int hit;
+  int mana;
+  int stamina;
+};
+
+static const struct species_base_points species_base_points[NUM_SPECIES] = {
+  { 100, 90, 100 },  /* Human */
+  { 90, 110, 90 },   /* City Elf */
+  { 100, 80, 140 },  /* Desert Elf */
+  { 95, 90, 95 },    /* Half-Elf */
+  { 110, 75, 110 },  /* Dwarf */
+  { 110, 80, 110 },  /* Mul */
+  { 180, 50, 180 },  /* Half-Giant */
+  { 90, 90, 90 },    /* Mantis */
+  { 90, 100, 90 },   /* Gith */
+  { 90, 90, 90 },    /* Aarakocra */
+  { 100, 100, 100 }, /* Dray */
+  { 70, 120, 80 },   /* Kenku */
+  { 60, 10, 80 },    /* Jozhal */
+  { 120, 10, 120 },  /* Pterran */
+  { 100, 60, 100 },  /* Tarek */
+  { 60, 10, 80 },    /* Aprig */
+  { 100, 10, 100 },  /* Carru */
+  { 100, 10, 80 },   /* Crodlu */
+  { 80, 10, 200 },   /* Erdlu */
+  { 120, 10, 400 },  /* Inix */
+  { 75, 10, 75 },    /* Jhakar */
+  { 100, 10, 300 },  /* Kank */
+  { 200, 10, 150 },  /* Mekillot */
+  { 100, 10, 150 },  /* Worm */
+  { 10, 10, 20 },    /* Renk */
+  { 10, 10, 20 },    /* Rat */
+  { 110, 110, 110 }, /* Undead */
+  { 250, 250, 250 }  /* Dragon */
+};
+
 static const struct species_skill_bonus species_skill_none[] = {
   { -1, 0 }
 };
@@ -283,6 +320,21 @@ int species_ability_cap(int species, int ability)
   if (ability < 0 || ability >= NUM_ABILITIES)
     return 0;
   return species_ability_caps[species][ability];
+}
+
+bool get_species_base_points(int species, int *hit, int *mana, int *stamina)
+{
+  if (species < 0 || species >= NUM_SPECIES)
+    return FALSE;
+
+  if (hit)
+    *hit = species_base_points[species].hit;
+  if (mana)
+    *mana = species_base_points[species].mana;
+  if (stamina)
+    *stamina = species_base_points[species].stamina;
+
+  return TRUE;
 }
 
 static void apply_species_ranges(struct char_data *ch)
