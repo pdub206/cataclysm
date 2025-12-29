@@ -1021,6 +1021,7 @@ struct char_special_data
   byte carry_items; /**< Number of items carried */
   int timer;        /**< Timer for update */
   int stealth_check;  /* last rolled Stealth value for Hide; 0 = not hiding/opposed */
+  bool custom_ldesc;  /* temporary ldesc override from change command */
 
   struct char_special_data_saved saved; /**< Constants saved for PCs. */
 };

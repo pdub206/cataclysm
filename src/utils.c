@@ -1700,6 +1700,74 @@ const char *get_char_sdesc(const struct char_data *ch)
   return "someone";
 }
 
+void clear_custom_ldesc(struct char_data *ch)
+{
+  char base_buf[MAX_INPUT_LENGTH];
+  char ldesc[MAX_STRING_LENGTH];
+  const char *base;
+
+  if (!ch || !ch->char_specials.custom_ldesc)
+    return;
+
+  ch->char_specials.custom_ldesc = FALSE;
+
+  if (ch->player.long_descr) {
+    if (!IS_NPC(ch) || GET_MOB_RNUM(ch) == NOBODY ||
+        ch->player.long_descr != mob_proto[GET_MOB_RNUM(ch)].player.long_descr) {
+      free(ch->player.long_descr);
+    }
+    ch->player.long_descr = NULL;
+  }
+
+  base = (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch)) ? GET_SHORT_DESC(ch) : GET_NAME(ch);
+  if (!base || !*base)
+    base = "someone";
+
+  strlcpy(base_buf, base, sizeof(base_buf));
+  if (*base_buf)
+    base_buf[0] = UPPER(*base_buf);
+
+  snprintf(ldesc, sizeof(ldesc), "%s is standing here.\r\n", base_buf);
+  ch->player.long_descr = strdup(ldesc);
+}
+
+bool build_hidden_ldesc(const struct char_data *ch, char *out, size_t outsz)
+{
+  char base_buf[MAX_INPUT_LENGTH];
+  const char *base;
+  size_t base_len;
+  const char *suffix;
+
+  if (!out || outsz == 0) return FALSE;
+  *out = '\0';
+
+  if (!ch || !ch->char_specials.custom_ldesc || !ch->player.long_descr)
+    return FALSE;
+  if (GET_POS(ch) != GET_DEFAULT_POS(ch))
+    return FALSE;
+
+  base = (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch)) ? GET_SHORT_DESC(ch) : GET_NAME(ch);
+  if (!base || !*base)
+    base = "someone";
+
+  strlcpy(base_buf, base, sizeof(base_buf));
+  if (*base_buf)
+    base_buf[0] = UPPER(*base_buf);
+
+  base_len = strlen(base_buf);
+  if (strncmp(ch->player.long_descr, base_buf, base_len) != 0)
+    return FALSE;
+
+  suffix = ch->player.long_descr + base_len;
+  if (*suffix == ' ')
+    suffix++;
+  else
+    return FALSE;
+
+  snprintf(out, outsz, "A shadowy figure %s", suffix);
+  return TRUE;
+}
+
 /* 5e system helpers */
 
 extern const struct armor_slot armor_slots[];      /* in constants.c */

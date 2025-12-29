@@ -569,8 +569,30 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
               CCNRM(ch, C_NRM));
   }
 
-  /* NPCs with a full long description at default position: print that and bail. */
-  if (IS_NPC(i) && i->player.long_descr && GET_POS(i) == GET_DEFAULT_POS(i)) {
+  /* Custom ldesc overrides position-based output. */
+  if (i->char_specials.custom_ldesc && i->player.long_descr) {
+    if (AFF_FLAGGED(i, AFF_INVISIBLE))
+      send_to_char(ch, "*");
+
+    if (AFF_FLAGGED(ch, AFF_DETECT_ALIGN)) {
+      if (IS_EVIL(i))
+        send_to_char(ch, "(Red Aura) ");
+      else if (IS_GOOD(i))
+        send_to_char(ch, "(Blue Aura) ");
+    }
+
+    send_to_char(ch, "%s", i->player.long_descr);
+
+    if (AFF_FLAGGED(i, AFF_SANCTUARY))
+      act("...$e glows with a bright light!", FALSE, i, 0, ch, TO_VICT);
+    if (AFF_FLAGGED(i, AFF_BLIND) && GET_LEVEL(i) < LVL_IMMORT)
+      act("...$e is groping around blindly!", FALSE, i, 0, ch, TO_VICT);
+
+    return;
+  }
+
+  /* Characters with a full long description at default position: print that and bail. */
+  if (i->player.long_descr && GET_POS(i) == GET_DEFAULT_POS(i)) {
     if (AFF_FLAGGED(i, AFF_INVISIBLE))
       send_to_char(ch, "*");
 
@@ -892,7 +914,11 @@ static bool look_list_direction_chars(struct char_data *ch, room_rnum room)
 
     if (AFF_FLAGGED(tch, AFF_HIDE)) {
       if (CAN_SEE(ch, tch) || look_can_spot_hidden(ch, tch, room)) {
-        send_to_char(ch, "a shadowy figure\r\n");
+        char hidden_ldesc[MAX_STRING_LENGTH];
+        if (build_hidden_ldesc(tch, hidden_ldesc, sizeof(hidden_ldesc)))
+          send_to_char(ch, "%s", hidden_ldesc);
+        else
+          send_to_char(ch, "a shadowy figure\r\n");
         found = TRUE;
       }
       continue;

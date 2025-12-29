@@ -257,6 +257,7 @@ ACMD(do_group);
 ACMD(do_hide);
 ACMD(do_listen);
 ACMD(do_not_here);
+ACMD(do_change);
 ACMD(do_report);
 ACMD(do_save);
 ACMD(do_skills);

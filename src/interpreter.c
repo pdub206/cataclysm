@@ -118,6 +118,7 @@ cpp_extern const struct command_info cmd_info[] = {
 
   { "cast"     , "c"       , POS_SITTING , do_cast     , 1, 0 },
   { "cedit"    , "cedit"   , POS_DEAD    , do_oasis_cedit, LVL_IMPL, 0 },
+  { "change"   , "chang"   , POS_RESTING , do_change   , 0, 0 },
   { "changelog", "cha"     , POS_DEAD    , do_changelog, LVL_IMPL, 0 },
   { "check"    , "ch"      , POS_STANDING, do_not_here , 1, 0 },
   { "checkload", "checkl"  , POS_DEAD    , do_checkloadstatus, LVL_GOD, 0 },
@@ -483,8 +484,6 @@ void command_interpreter(struct char_data *ch, char *argument)
   char *line;
   char arg[MAX_INPUT_LENGTH];
 
-  REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
-
   /* just drop to next line for hitting CR */
   skip_spaces(&argument);
   if (!*argument)
@@ -499,6 +498,9 @@ void command_interpreter(struct char_data *ch, char *argument)
     line = argument + 1;
   } else
     line = any_one_arg(argument, arg);
+
+  if (!is_abbrev(arg, "change"))
+    REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
 
   /* Since all command triggers check for valid_dg_target before acting, the levelcheck
    * here has been removed. Otherwise, find the command. */

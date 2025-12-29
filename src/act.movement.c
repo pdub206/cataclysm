@@ -492,6 +492,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
 
   /* Only here is the move successful *and* complete. Return success for
    * calling functions to handle post move operations. */
+  clear_custom_ldesc(ch);
   return (1);
 }
 
@@ -1000,6 +1001,7 @@ ACMD(do_stand)
     act(self_msg, TRUE, ch, furniture, 0, TO_CHAR);
     act(room_msg, TRUE, ch, furniture, 0, TO_ROOM);
     GET_POS(ch) = FIGHTING(ch) ? POS_FIGHTING : POS_STANDING;
+    clear_custom_ldesc(ch);
     return;
   }
 
@@ -1020,6 +1022,7 @@ ACMD(do_stand)
     char_from_furniture(ch);
     /* Will be standing after a successful bash and may still be fighting. */
     GET_POS(ch) = FIGHTING(ch) ? POS_FIGHTING : POS_STANDING;
+    clear_custom_ldesc(ch);
     break;
 
   case POS_RESTING:
@@ -1033,6 +1036,7 @@ ACMD(do_stand)
     GET_POS(ch) = POS_STANDING;
     /* Were they sitting in something. */
     char_from_furniture(ch);
+    clear_custom_ldesc(ch);
     break;
 
   case POS_SLEEPING:
@@ -1050,6 +1054,7 @@ ACMD(do_stand)
     else
       act("$n stops floating around, and puts $s feet on the ground.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_STANDING;
+    clear_custom_ldesc(ch);
     break;
   }
 }
@@ -1122,6 +1127,7 @@ ACMD(do_sit)
     act(self_msg, TRUE, ch, furniture, 0, TO_CHAR);
     act(room_msg, TRUE, ch, furniture, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
+    clear_custom_ldesc(ch);
     return;
   }
 
@@ -1130,6 +1136,7 @@ ACMD(do_sit)
     send_to_char(ch, "You sit down.\r\n");
     act("$n sits down.", FALSE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
+    clear_custom_ldesc(ch);
     break;
   case POS_SITTING:
     send_to_char(ch, "You're sitting already.\r\n");
@@ -1141,6 +1148,7 @@ ACMD(do_sit)
     else
       act("$n stops resting and sits up.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
+    clear_custom_ldesc(ch);
     break;
   case POS_SLEEPING:
     send_to_char(ch, "You have to wake up first.\r\n");
@@ -1155,6 +1163,7 @@ ACMD(do_sit)
     else
       act("$n stops floating around, and sits down.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
+    clear_custom_ldesc(ch);
     break;
   }
 }
@@ -1227,6 +1236,7 @@ ACMD(do_rest)
     act(self_msg, TRUE, ch, furniture, 0, TO_CHAR);
     act(room_msg, TRUE, ch, furniture, 0, TO_ROOM);
     GET_POS(ch) = POS_RESTING;
+    clear_custom_ldesc(ch);
     return;
   }
 
@@ -1240,6 +1250,7 @@ ACMD(do_rest)
       act("$n sits down and rests.", TRUE, ch, 0, 0, TO_ROOM);
     }
     GET_POS(ch) = POS_RESTING;
+    clear_custom_ldesc(ch);
     break;
 
   case POS_SITTING:
@@ -1258,6 +1269,7 @@ ACMD(do_rest)
       act("$n rests.", TRUE, ch, 0, 0, TO_ROOM);
     }
     GET_POS(ch) = POS_RESTING;
+    clear_custom_ldesc(ch);
     break;
 
   case POS_RESTING:
@@ -1279,6 +1291,7 @@ ACMD(do_rest)
     else
       act("$n stops floating around, and rests.", FALSE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_RESTING;
+    clear_custom_ldesc(ch);
     break;
   }
 }
@@ -1332,6 +1345,7 @@ ACMD(do_sleep)
     act("You go to sleep on $p.", TRUE, ch, furniture, 0, TO_CHAR);
     act("$n lies down and falls asleep on $p.", TRUE, ch, furniture, 0, TO_ROOM);
     GET_POS(ch) = POS_SLEEPING;
+    clear_custom_ldesc(ch);
     return;
   }
 
@@ -1354,6 +1368,7 @@ ACMD(do_sleep)
       act("$n lies down and falls asleep.", TRUE, ch, 0, 0, TO_ROOM);
     }
     GET_POS(ch) = POS_SLEEPING;
+    clear_custom_ldesc(ch);
     break;
 
   case POS_SLEEPING:
@@ -1371,6 +1386,7 @@ ACMD(do_sleep)
     else
       act("$n stops floating around, and lies down to sleep.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SLEEPING;
+    clear_custom_ldesc(ch);
     break;
   }
 }

@@ -45,6 +45,7 @@ Features in Miranthas MUD Alpha release:
  * Account system for tracking players/characters over long periods of time
  * Race/species selection and stat ranges (elves have higher dex, dwarves have higher str, etc)
  * Prioritized stats during character generation
+ * Ability to change ldesc of PC/NPC's in some situations
 
 Features to be implemented in the next few releases:
 

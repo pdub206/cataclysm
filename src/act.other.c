@@ -36,6 +36,36 @@
 static void print_group(struct char_data *ch);
 static void display_group_list(struct char_data * ch);
 
+static bool change_has_emote_tokens(const char *text)
+{
+  for (; text && *text; text++) {
+    switch (*text) {
+      case '~': case '!': case '%': case '^':
+      case '#': case '&': case '=': case '+':
+      case '@':
+        return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+static bool change_ends_with_punct(const char *text)
+{
+  size_t len = text ? strlen(text) : 0;
+  if (len == 0)
+    return FALSE;
+  return (text[len - 1] == '.' || text[len - 1] == '!' || text[len - 1] == '?');
+}
+
+static void change_trim_trailing_spaces(char *text)
+{
+  size_t len = text ? strlen(text) : 0;
+  while (len > 0 && isspace((unsigned char)text[len - 1])) {
+    text[len - 1] = '\0';
+    len--;
+  }
+}
+
 ACMD(do_quit)
 {
   char first[MAX_INPUT_LENGTH];
@@ -180,6 +210,69 @@ ACMD(do_save)
   send_to_char(ch, "Saving %s.\r\n", GET_NAME(ch));
   save_char(ch);
   Crash_crashsave(ch);
+}
+
+ACMD(do_change)
+{
+  char option[MAX_INPUT_LENGTH];
+  char suffix[MAX_INPUT_LENGTH];
+  char base_buf[MAX_INPUT_LENGTH];
+  char ldesc[MAX_STRING_LENGTH];
+  char *rest = argument;
+  const char *base;
+
+  rest = one_argument(rest, option);
+  if (!*option) {
+    send_to_char(ch, "Usage: change ldesc <string>\r\n");
+    return;
+  }
+
+  if (!is_abbrev(option, "ldesc")) {
+    send_to_char(ch, "Unknown change option. Available: ldesc\r\n");
+    return;
+  }
+
+  skip_spaces(&rest);
+  if (!*rest) {
+    send_to_char(ch, "Usage: change ldesc <string>\r\n");
+    return;
+  }
+
+  if (change_has_emote_tokens(rest)) {
+    send_to_char(ch, "You can't use emote tokens in your ldesc.\r\n");
+    return;
+  }
+
+  strlcpy(suffix, rest, sizeof(suffix));
+  change_trim_trailing_spaces(suffix);
+  if (!*suffix) {
+    send_to_char(ch, "Usage: change ldesc <string>\r\n");
+    return;
+  }
+
+  if (!change_ends_with_punct(suffix))
+    strlcat(suffix, ".", sizeof(suffix));
+
+  base = (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch)) ? GET_SHORT_DESC(ch) : GET_NAME(ch);
+  if (!base || !*base)
+    base = "someone";
+
+  strlcpy(base_buf, base, sizeof(base_buf));
+  if (*base_buf)
+    base_buf[0] = UPPER(*base_buf);
+
+  snprintf(ldesc, sizeof(ldesc), "%s %s\r\n", base_buf, suffix);
+
+  if (ch->player.long_descr) {
+    if (!IS_NPC(ch) || GET_MOB_RNUM(ch) == NOBODY ||
+        ch->player.long_descr != mob_proto[GET_MOB_RNUM(ch)].player.long_descr) {
+      free(ch->player.long_descr);
+    }
+  }
+  ch->player.long_descr = strdup(ldesc);
+  ch->char_specials.custom_ldesc = TRUE;
+
+  send_to_char(ch, "Long description updated.\r\n");
 }
 
 /* Generic function for commands which are normally overridden by special
@@ -886,7 +979,11 @@ bool perform_scan_sweep(struct char_data *ch)
       continue;
 
     if (total >= scan_target_dc(tch)) {
-      send_to_char(ch, "A shadowy figure.\r\n");
+      char hidden_ldesc[MAX_STRING_LENGTH];
+      if (build_hidden_ldesc(tch, hidden_ldesc, sizeof(hidden_ldesc)))
+        send_to_char(ch, "%s", hidden_ldesc);
+      else
+        send_to_char(ch, "A shadowy figure.\r\n");
       remember_scan_target(ch, tch);
       found_any = TRUE;
     } else {
