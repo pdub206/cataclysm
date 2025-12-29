@@ -421,12 +421,11 @@ static void medit_disp_menu(struct descriptor_data *d)
 {
   struct char_data *mob;
   char flags[MAX_STRING_LENGTH], flag2[MAX_STRING_LENGTH];
-  const char *background, *classname, *speciesname;
+  const char *classname, *speciesname;
 
   mob = OLC_MOB(d);
   get_char_colors(d->character);
   clear_screen(d);
-  background = GET_BACKGROUND(mob) ? GET_BACKGROUND(mob) : "<None>\r\n";
   classname = HAS_VALID_CLASS(mob) ? pc_class_types[GET_CLASS(mob)] : "Unassigned";
   speciesname = HAS_VALID_SPECIES(mob) ? species_types[GET_SPECIES(mob)] : "Unassigned";
 
@@ -461,7 +460,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  "%s-%s) Skills Menu...\r\n"
 	  "%sA%s) NPC Flags : %s%s\r\n"
 	  "%sB%s) AFF Flags : %s%s\r\n"
-    "%sC%s) Background:-\r\n%s%s\r\n"
+    "%sC%s) Background...\r\n"
 	  "%sS%s) Script    : %s%s\r\n"
 	  "%sW%s) Copy mob\r\n"
 	  "%sX%s) Delete mob\r\n"
@@ -478,7 +477,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  grn, nrm,
 	  grn, nrm, cyn, flags,
 	  grn, nrm, cyn, flag2,
-          grn, nrm, yel, background,
+	  grn, nrm,
 	  grn, nrm, cyn, OLC_SCRIPT(d) ?"Set.":"Not Set.",
           grn, nrm,
 	  grn, nrm,
