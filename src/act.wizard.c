@@ -26,6 +26,7 @@
 #include "act.h"
 #include "genzon.h" /* for real_zone_by_thing */
 #include "class.h"
+#include "species.h"
 #include "genmob.h"
 #include "genolc.h"
 #include "genobj.h"
@@ -1818,6 +1819,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
   }
 
   stat_table_row_fmt(ch, "Class", "%s", CLASS_NAME(k));
+  stat_table_row_fmt(ch, "Species", "%s", get_species_name(GET_SPECIES(k)));
 
   stat_table_row_fmt(ch, "Attributes",
     "Str %d Int %d Wis %d Dex %d Con %d Cha %d",
@@ -3806,7 +3808,8 @@ static struct set_struct {
    { "weight",		LVL_BUILDER,	BOTH,	NUMBER },
    { "wis", 		LVL_BUILDER, 	BOTH, 	NUMBER }, 
    { "questpoints",     LVL_GOD,        PC,     NUMBER }, 
-   { "questhistory",    LVL_GOD,        PC,   NUMBER }, /* 55 */
+   { "questhistory",    LVL_GOD,        PC,   NUMBER },
+   { "species",         LVL_BUILDER,    BOTH, MISC },
    { "\n", 0, BOTH, MISC }
   };
 
@@ -4316,6 +4319,16 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         }
         break;
       }
+    case 54: /* species */
+      if ((i = parse_species(val_arg)) == SPECIES_UNDEFINED) {
+        send_to_char(ch, "That is not a species.\r\n");
+        return (0);
+      }
+      update_species(vict, i);
+      affect_total(vict);
+      send_to_char(ch, "You set %s's species to %s.\r\n",
+                   get_char_sdesc(vict), get_species_name(GET_SPECIES(vict)));
+      break;
     default:
       send_to_char(ch, "Can't set that!\r\n");
       return (0);
@@ -4402,7 +4415,21 @@ ACMD(do_set)
   } else if (!str_cmp(name, "mob"))
     half_chop(buf, name, buf);
 
-  half_chop(buf, field, buf);
+  if (!is_file && !is_player && !str_cmp(name, "species")) {
+    char val[MAX_INPUT_LENGTH];
+    char target[MAX_INPUT_LENGTH];
+
+    half_chop(buf, val, target);
+    if (!*val || !*target) {
+      send_to_char(ch, "Usage: set species <type> <target>\r\n");
+      return;
+    }
+    strlcpy(field, "species", sizeof(field));
+    strlcpy(name, target, sizeof(name));
+    strlcpy(buf, val, sizeof(buf));
+  } else {
+    half_chop(buf, field, buf);
+  }
 
   if (!*name || !*field) {
     send_to_char(ch, "Usage: set <victim> <field> <value>\r\n");

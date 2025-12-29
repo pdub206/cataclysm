@@ -255,6 +255,7 @@ int load_char(const char *name, struct char_data *ch)
         ch->player_specials->saved.skills[i] = 0;
     GET_SEX(ch) = PFDEF_SEX;
     GET_CLASS(ch) = PFDEF_CLASS;
+    GET_SPECIES(ch) = PFDEF_SPECIES;
     GET_LEVEL(ch) = PFDEF_LEVEL;
     GET_HEIGHT(ch) = PFDEF_HEIGHT;
     GET_WEIGHT(ch) = PFDEF_WEIGHT;
@@ -437,7 +438,13 @@ int load_char(const char *name, struct char_data *ch)
 	break;
 
       case 'S':
-	     if (!strcmp(tag, "Sex "))	GET_SEX(ch)		= atoi(line);
+	     if (!strcmp(tag, "Spec")) {
+        int val = atoi(line);
+        if (val < SPECIES_UNDEFINED || val >= NUM_SPECIES)
+          val = SPECIES_UNDEFINED;
+        GET_SPECIES(ch) = val;
+      }
+	else if (!strcmp(tag, "Sex "))	GET_SEX(ch)		= atoi(line);
   else if (!strcmp(tag, "Sdsc")) {
     /* Clear any existing sdesc to avoid leaks */
     if (GET_SHORT_DESC(ch))
@@ -614,6 +621,7 @@ void save_char(struct char_data * ch)
   if (POOFOUT(ch))				fprintf(fl, "PfOt: %s\n", POOFOUT(ch));
   if (GET_SEX(ch)	     != PFDEF_SEX)	fprintf(fl, "Sex : %d\n", GET_SEX(ch));
   if (GET_CLASS(ch)	   != PFDEF_CLASS)	fprintf(fl, "Clas: %d\n", GET_CLASS(ch));
+  if (GET_SPECIES(ch)  != PFDEF_SPECIES)	fprintf(fl, "Spec: %d\n", GET_SPECIES(ch));
   if (GET_LEVEL(ch)	   != PFDEF_LEVEL)	fprintf(fl, "Levl: %d\n", GET_LEVEL(ch));
 
   fprintf(fl, "Id  : %ld\n", GET_IDNUM(ch));

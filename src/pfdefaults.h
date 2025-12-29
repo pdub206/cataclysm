@@ -15,6 +15,7 @@
 
 #define PFDEF_SEX		0
 #define PFDEF_CLASS		0
+#define PFDEF_SPECIES		SPECIES_UNDEFINED
 #define PFDEF_LEVEL		0
 #define PFDEF_HEIGHT		0
 #define PFDEF_WEIGHT		0

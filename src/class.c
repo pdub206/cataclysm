@@ -23,6 +23,7 @@
 #include "constants.h"
 #include "act.h"
 #include "class.h"
+#include "species.h"
 
 /* Names first */
 const char *class_abbrevs[] = {
@@ -231,7 +232,10 @@ void roll_real_abils(struct char_data *ch)
     ch->real_abils.cha = table[5];
     break;
   }
-  ch->aff_abils = ch->real_abils;
+  if (HAS_VALID_SPECIES(ch))
+    apply_species_bonuses(ch);
+  else
+    ch->aff_abils = ch->real_abils;
 }
 
 /* Per-class skill caps */
@@ -489,6 +493,7 @@ void do_start(struct char_data *ch)
   GET_MAX_MOVE(ch) = 90;
 
   grant_class_skills(ch, TRUE);
+  grant_species_skills(ch);
 
   advance_level(ch);
 

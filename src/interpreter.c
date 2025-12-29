@@ -27,6 +27,7 @@
 #include "act.h" /* ACMDs located within the act*.c files */
 #include "ban.h"
 #include "class.h"
+#include "species.h"
 #include "graph.h"
 #include "hedit.h"
 #include "house.h"
@@ -47,6 +48,7 @@ static int _parse_name(char *arg, char *name);
 static bool perform_new_char_dupe_check(struct descriptor_data *d);
 /* sort_commands utility */
 static int sort_commands_helper(const void *a, const void *b);
+static void show_species_menu(struct descriptor_data *d);
 
 /* globals defined here, used here and elsewhere */
 int *cmd_sort_info = NULL;
@@ -1303,6 +1305,18 @@ static bool perform_new_char_dupe_check(struct descriptor_data *d)
   return (found);
 }
 
+static void show_species_menu(struct descriptor_data *d)
+{
+  int count = pc_species_count();
+
+  write_to_output(d, "Select a species:\r\n");
+  for (int i = 0; i < count; i++) {
+    int species = pc_species_list[i];
+    write_to_output(d, " %2d) %s\r\n", i + 1, species_types[species]);
+  }
+  write_to_output(d, "Species: ");
+}
+
 /* load the player, put them in the right room - used by copyover_recover too */
 int enter_player_game (struct descriptor_data *d)
 {
@@ -1869,9 +1883,25 @@ void nanny(struct descriptor_data *d, char *arg)
       return;
     }
 
-    write_to_output(d, "%s\r\nClass: ", class_menu);
-    STATE(d) = CON_QCLASS;
+    show_species_menu(d);
+    STATE(d) = CON_QSPECIES;
     break;
+
+case CON_QSPECIES: {
+  int choice = atoi(arg);
+  int species = species_from_pc_choice(choice);
+
+  if (species == SPECIES_UNDEFINED) {
+    write_to_output(d, "\r\nThat's not a species.\r\n");
+    show_species_menu(d);
+    return;
+  }
+
+  GET_SPECIES(d->character) = species;
+  write_to_output(d, "%s\r\nClass: ", class_menu);
+  STATE(d) = CON_QCLASS;
+  break;
+}
 
 case CON_QCLASS:
   load_result = parse_class(*arg);

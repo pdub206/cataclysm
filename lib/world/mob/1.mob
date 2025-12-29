@@ -15,13 +15,14 @@ B
 
 
 
+
 ~
 6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
 8 8 1
 Str: 16
 Class: 3
-SaveStr: 3
+Species: 0
 Skill 132 5
 Skill 134 5
 Skill 137 5
@@ -33,17 +34,17 @@ Skill 145 5
 Skill 146 5
 Skill 147 5
 E
-L 17 127 1
-L 16 117 1
-L 15 117 1
-L 11 111 1
-L 10 107 1
-L 9 124 1
-L 8 115 1
-L 7 108 1
-L 6 110 1
-L 5 131 1
 L 3 118 1
+L 5 131 1
+L 6 110 1
+L 7 108 1
+L 8 115 1
+L 9 124 1
+L 10 107 1
+L 11 111 1
+L 15 117 1
+L 16 117 1
+L 17 127 1
 #101
 Sally~
 slim lanky human soldier guard~
@@ -62,32 +63,38 @@ B
 
 
 
+
 ~
 6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
 8 8 2
+Class: 3
+Species: 0
 Skill 132 5
 Skill 134 5
 Skill 137 5
+Skill 140 5
 Skill 141 5
 Skill 142 5
 Skill 143 5
 Skill 144 5
 Skill 145 5
 Skill 146 5
-Skill 147 5
+Skill 152 5
+Skill 156 5
+Skill 163 5
 E
-L 3 118 1
-L 5 131 1
-L 6 110 1
-L 7 108 1
-L 8 115 1
-L 9 124 1
-L 10 107 1
-L 11 111 1
-L 15 117 1
-L 16 117 1
 L 17 127 1
+L 16 117 1
+L 15 117 1
+L 11 111 1
+L 10 107 1
+L 9 124 1
+L 8 115 1
+L 7 108 1
+L 6 110 1
+L 5 131 1
+L 3 118 1
 #102
 Baldy~
 barkeep stocky bald~
@@ -106,13 +113,14 @@ B
 
 
 
+
 ~
 10 0 0 0 0 0 0 0 0 E
 1 3d12+60
 8 8 1
 E
-L 9 112 1
 L 14 113 1
+L 9 112 1
 #103
 Lanky~
 woman lanky scarred~
@@ -127,6 +135,7 @@ descending to just above her shoulders.  Her eyes are a light blue color and
 appear slightly bloodshot.
 ~
 B
+
 
 
 
@@ -161,6 +170,7 @@ appear thick and ready to propel the animal if it feels threatened.
 B
 
 
+
 It's a rat.
 ~
 8 0 0 0 0 0 0 0 0 E
@@ -172,6 +182,7 @@ Int: 4
 Wis: 4
 Con: 6
 Cha: 3
+Species: 25
 AtkT 4
 E
 $

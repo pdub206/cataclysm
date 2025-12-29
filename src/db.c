@@ -1624,6 +1624,7 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
   GET_SEX(mob_proto + i) = t[2];
 
   GET_CLASS(mob_proto + i) = CLASS_UNDEFINED;
+  GET_SPECIES(mob_proto + i) = SPECIES_UNDEFINED;
   GET_WEIGHT(mob_proto + i) = 200;
   GET_HEIGHT(mob_proto + i) = 198;
 
@@ -1706,6 +1707,10 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
   CASE("Class") {
     RANGE(CLASS_UNDEFINED, NUM_CLASSES - 1);
     mob_proto[i].player.chclass = num_arg;
+  }
+  CASE("Species") {
+    RANGE(SPECIES_UNDEFINED, NUM_SPECIES - 1);
+    mob_proto[i].player.species = num_arg;
   }
 
   /* --- 5e-style Saving Throws --- */
@@ -3766,6 +3771,7 @@ void clear_char(struct char_data *ch)
   GET_PFILEPOS(ch) = -1;
   GET_MOB_RNUM(ch) = NOBODY;
   GET_CLASS(ch) = CLASS_UNDEFINED;
+  GET_SPECIES(ch) = SPECIES_UNDEFINED;
   GET_WAS_IN(ch) = NOWHERE;
   GET_POS(ch) = POS_STANDING;
   ch->mob_specials.default_pos = POS_STANDING;

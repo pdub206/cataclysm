@@ -556,6 +556,8 @@ do                                                              \
 
 /** Class of ch. */
 #define GET_CLASS(ch)   ((ch)->player.chclass)
+/** Species of ch. */
+#define GET_SPECIES(ch) ((ch)->player.species)
 /** Height of ch. */
 #define GET_HEIGHT(ch)	((ch)->player.height)
 /** Weight of ch. */
@@ -936,6 +938,7 @@ do                                                              \
 
 /** True if ch has a valid player class assigned. */
 #define HAS_VALID_CLASS(ch) ((GET_CLASS(ch) >= CLASS_SORCEROR) && (GET_CLASS(ch) < NUM_CLASSES))
+#define HAS_VALID_SPECIES(ch) ((GET_SPECIES(ch) >= 0) && (GET_SPECIES(ch) < NUM_SPECIES))
 
 /** Return the class abbreviation for ch. */
 #define CLASS_ABBR(ch)    (HAS_VALID_CLASS(ch) ? class_abbrevs[(int)GET_CLASS(ch)] : "--")

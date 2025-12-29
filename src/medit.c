@@ -13,6 +13,7 @@
 #include "comm.h"
 #include "spells.h"
 #include "class.h"
+#include "species.h"
 #include "db.h"
 #include "shop.h"
 #include "genolc.h"
@@ -41,6 +42,7 @@ static void medit_disp_mob_flags(struct descriptor_data *d);
 static void medit_disp_aff_flags(struct descriptor_data *d);
 static void medit_disp_menu(struct descriptor_data *d);
 static void medit_disp_class_menu(struct descriptor_data *d);
+static void medit_disp_species_menu(struct descriptor_data *d);
 
 /*  utility functions */
 ACMD(do_oasis_medit)
@@ -419,13 +421,14 @@ static void medit_disp_menu(struct descriptor_data *d)
 {
   struct char_data *mob;
   char flags[MAX_STRING_LENGTH], flag2[MAX_STRING_LENGTH];
-  const char *background, *classname;
+  const char *background, *classname, *speciesname;
 
   mob = OLC_MOB(d);
   get_char_colors(d->character);
   clear_screen(d);
   background = GET_BACKGROUND(mob) ? GET_BACKGROUND(mob) : "<None>\r\n";
   classname = HAS_VALID_CLASS(mob) ? pc_class_types[GET_CLASS(mob)] : "Unassigned";
+  speciesname = HAS_VALID_SPECIES(mob) ? species_types[GET_SPECIES(mob)] : "Unassigned";
 
   write_to_output(d,
     "-- Mob Number:  [%s%d%s]\r\n"
@@ -452,6 +455,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  "%s8%s) Default   : %s%s\r\n"
 	  "%s9%s) Attack    : %s%s\r\n"
     "%sD%s) Class     : %s%s\r\n"
+    "%sE%s) Species   : %s%s\r\n"
 	  "%sK%s) Skinning Menu...\r\n"
     "%s0%s) Stats Menu...\r\n"
 	  "%s-%s) Skills Menu...\r\n"
@@ -468,6 +472,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  grn, nrm, yel, position_types[(int)GET_DEFAULT_POS(mob)],
 	  grn, nrm, yel, attack_hit_text[(int)GET_ATTACK(mob)].singular,
     grn, nrm, yel, classname,
+    grn, nrm, yel, speciesname,
 	  grn, nrm,
 	  grn, nrm,
 	  grn, nrm,
@@ -521,6 +526,46 @@ static void medit_disp_class_menu(struct descriptor_data *d)
     cyn, nrm);
 
   OLC_MODE(d) = MEDIT_CLASS_MENU;
+}
+
+static void medit_disp_species_menu(struct descriptor_data *d)
+{
+  struct char_data *mob = OLC_MOB(d);
+  const char *current = HAS_VALID_SPECIES(mob) ? species_types[GET_SPECIES(mob)] : "Unassigned";
+
+  get_char_colors(d->character);
+  clear_screen(d);
+
+  write_to_output(d,
+    "-- Mob Number:  %s[%s%d%s]%s\r\n"
+    "Species selection for %s%s%s\r\n\r\n",
+    cyn, yel, OLC_NUM(d), cyn, nrm,
+    yel, GET_SDESC(mob), nrm);
+
+  for (int i = 0; i < NUM_SPECIES; i++) {
+    bool selected = HAS_VALID_SPECIES(mob) && (GET_SPECIES(mob) == i);
+    write_to_output(d, "%s%2d%s) %s%-12s%s%s\r\n",
+                    cyn, i + 1, nrm,
+                    selected ? grn : yel,
+                    species_types[i],
+                    nrm,
+                    selected ? " (current)" : "");
+  }
+
+  write_to_output(d, "%s%2d%s) %sUnassigned%s%s\r\n",
+                  cyn, NUM_SPECIES + 1, nrm,
+                  !HAS_VALID_SPECIES(mob) ? grn : yel,
+                  nrm,
+                  !HAS_VALID_SPECIES(mob) ? " (current)" : "");
+
+  write_to_output(d,
+    "\r\nCurrent choice: %s%s%s\r\n"
+    "%s0%s) Return to main menu\r\n"
+    "Enter choice : ",
+    cyn, current, nrm,
+    cyn, nrm);
+
+  OLC_MODE(d) = MEDIT_SPECIES_MENU;
 }
 
 /* Display main menu. */
@@ -756,6 +801,10 @@ void medit_parse(struct descriptor_data *d, char *arg)
     case 'd':
     case 'D':
       medit_disp_class_menu(d);
+      return;
+    case 'e':
+    case 'E':
+      medit_disp_species_menu(d);
       return;
     case '0':
       OLC_MODE(d) = MEDIT_STATS_MENU;
@@ -1162,6 +1211,30 @@ void medit_parse(struct descriptor_data *d, char *arg)
     grant_class_skills(OLC_MOB(d), TRUE);
     OLC_VAL(d) = TRUE;
     write_to_output(d, "Class set to %s.\r\n", pc_class_types[GET_CLASS(OLC_MOB(d))]);
+    medit_disp_menu(d);
+    return;
+
+  case MEDIT_SPECIES_MENU:
+    i = atoi(arg);
+    if (i == 0) {
+      medit_disp_menu(d);
+      return;
+    }
+    if (i == NUM_SPECIES + 1) {
+      GET_SPECIES(OLC_MOB(d)) = SPECIES_UNDEFINED;
+      OLC_VAL(d) = TRUE;
+      write_to_output(d, "Species cleared.\r\n");
+      medit_disp_menu(d);
+      return;
+    }
+    if (i < 1 || i > NUM_SPECIES + 1) {
+      write_to_output(d, "Invalid choice!\r\n");
+      medit_disp_species_menu(d);
+      return;
+    }
+    GET_SPECIES(OLC_MOB(d)) = i - 1;
+    OLC_VAL(d) = TRUE;
+    write_to_output(d, "Species set to %s.\r\n", species_types[GET_SPECIES(OLC_MOB(d))]);
     medit_disp_menu(d);
     return;
 
