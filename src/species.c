@@ -69,6 +69,18 @@ static const struct species_skill_bonus species_skill_none[] = {
   { -1, 0 }
 };
 
+/* Skill percent values map to proficiency tiers via GET_PROFICIENCY(). */
+static const struct species_skill_bonus species_skill_crodlu[] = {
+  { SKILL_PERCEPTION, 45 }, /* +3 proficiency */
+  { -1, 0 }
+};
+
+static const struct species_skill_bonus species_skill_jhakar[] = {
+  { SKILL_PERCEPTION, 45 }, /* +3 proficiency */
+  { SKILL_STEALTH, 60 },    /* +4 proficiency */
+  { -1, 0 }
+};
+
 /* Per-species skill bonuses.
  * Usage:
  * 1) Define a bonus list for a species (see commented example below).
@@ -101,10 +113,10 @@ static const struct species_skill_bonus *species_skill_bonuses[NUM_SPECIES] = {
   species_skill_none, /* Tarek */
   species_skill_none, /* Aprig */
   species_skill_none, /* Carru */
-  species_skill_none, /* Crodlu */
+  species_skill_crodlu, /* Crodlu */
   species_skill_none, /* Erdlu */
   species_skill_none, /* Inix */
-  species_skill_none, /* Jhakar */
+  species_skill_jhakar, /* Jhakar */
   species_skill_none, /* Kank */
   species_skill_none, /* Mekillot */
   species_skill_none, /* Worm */
@@ -180,34 +192,34 @@ static const int species_ability_mods[NUM_SPECIES][NUM_ABILITIES] = {
 
 /* Ability caps by species (STR, DEX, CON, INT, WIS, CHA). Zero = no cap. */
 static const int species_ability_caps[NUM_SPECIES][NUM_ABILITIES] = {
-  { 16, 0, 0, 0, 0, 0 }, /* Human */
-  { 14, 0, 0, 0, 0, 0 }, /* City Elf */
-  { 14, 0, 0, 0, 0, 0 }, /* Desert Elf */
-  { 14, 0, 0, 0, 0, 0 }, /* Half-Elf */
-  { 18, 0, 0, 0, 0, 0 }, /* Dwarf */
-  { 20, 0, 0, 0, 0, 0 }, /* Mul */
-  { 24, 0, 0, 0, 0, 0 }, /* Half-Giant */
-  { 0, 0, 0, 0, 0, 0 },  /* Mantis */
-  { 0, 0, 0, 0, 0, 0 },  /* Gith */
-  { 0, 0, 0, 0, 0, 0 },  /* Aarakocra */
-  { 0, 0, 0, 0, 0, 0 },  /* Dray */
-  { 0, 0, 0, 0, 0, 0 },  /* Kenku */
-  { 0, 0, 0, 0, 0, 0 },  /* Jozhal */
-  { 0, 0, 0, 0, 0, 0 },  /* Pterran */
-  { 0, 0, 0, 0, 0, 0 },  /* Tarek */
-  { 0, 0, 0, 0, 0, 0 },  /* Aprig */
-  { 0, 0, 0, 0, 0, 0 },  /* Carru */
-  { 0, 0, 0, 0, 0, 0 },  /* Crodlu */
-  { 0, 0, 0, 0, 0, 0 },  /* Erdlu */
-  { 0, 0, 0, 0, 0, 0 },  /* Inix */
-  { 0, 0, 0, 0, 0, 0 },  /* Jhakar */
-  { 0, 0, 0, 0, 0, 0 },  /* Kank */
-  { 0, 0, 0, 0, 0, 0 },  /* Mekillot */
-  { 0, 0, 0, 0, 0, 0 },  /* Worm */
-  { 0, 0, 0, 0, 0, 0 },  /* Renk */
-  { 0, 0, 0, 0, 0, 0 },  /* Rat */
-  { 0, 0, 0, 0, 0, 0 },  /* Undead */
-  { 0, 0, 0, 0, 0, 0 }   /* Dragon */
+  { 14, 14, 14, 14, 14, 14 },  /* Human */
+  { 10, 18, 10, 14, 16, 14 },  /* City Elf */
+  { 12, 18, 12, 12, 14, 12 },  /* Desert Elf */
+  { 13, 16, 13, 13, 15, 10 },  /* Half-Elf */
+  { 18, 10, 18, 10, 10, 10 },  /* Dwarf */
+  { 20, 14, 18, 10, 10, 8 },   /* Mul */
+  { 24, 8, 20, 6, 6, 6 },      /* Half-Giant */
+  { 14, 14, 16, 10, 12, 6 },   /* Mantis */
+  { 12, 16, 14, 10, 8, 6 },    /* Gith */
+  { 13, 16, 14, 13, 13, 13 },  /* Aarakocra */
+  { 15, 13, 15, 12, 12, 14 },  /* Dray */
+  { 12, 16, 12, 15, 15, 13 },  /* Kenku */
+  { 8, 10, 8, 8, 8, 6 },       /* Jozhal */
+  { 15, 12, 15, 15, 12, 10 },  /* Pterran */
+  { 17, 13, 18, 10, 10, 6 },   /* Tarek */
+  { 8, 10, 12, 2, 10, 5 },     /* Aprig */
+  { 21, 8, 15, 2, 12, 6 },     /* Carru */
+  { 16, 15, 14, 4, 12, 6 },    /* Crodlu */
+  { 16, 10, 12, 2, 11, 7 },    /* Erdlu */
+  { 22, 12, 18, 2, 10, 7 },    /* Inix */
+  { 17, 15, 16, 3, 12, 7 },    /* Jhakar */
+  { 18, 10, 14, 2, 10, 4 },    /* Kank */
+  { 24, 9, 21, 3, 11, 6 },     /* Mekillot */
+  { 22, 8, 19, 2, 2, 6 },      /* Worm */
+  { 2, 4, 10, 4, 10, 4 },      /* Renk */
+  { 2, 11, 9, 2, 10, 4 },      /* Rat */
+  { 18, 16, 18, 16, 16, 16 },  /* Undead */
+  { 25, 25, 25, 25, 25, 25 }   /* Dragon */
 };
 
 const char *get_species_name(int species)
