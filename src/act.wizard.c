@@ -1827,13 +1827,13 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
     GET_DEX(k), GET_CON(k), GET_CHA(k));
 
   stat_table_row_fmt(ch, "Saving Throws",
-    "Str %+d (%+d) Dex %+d (%+d) Con %+d (%+d) Int %+d (%+d) Wis %+d (%+d) Cha %+d (%+d)",
-    get_save_mod(k, ABIL_STR), GET_SAVE(k, ABIL_STR),
-    get_save_mod(k, ABIL_DEX), GET_SAVE(k, ABIL_DEX),
-    get_save_mod(k, ABIL_CON), GET_SAVE(k, ABIL_CON),
-    get_save_mod(k, ABIL_INT), GET_SAVE(k, ABIL_INT),
-    get_save_mod(k, ABIL_WIS), GET_SAVE(k, ABIL_WIS),
-    get_save_mod(k, ABIL_CHA), GET_SAVE(k, ABIL_CHA));
+    "Str %+d Dex %+d Con %+d Int %+d Wis %+d Cha %+d",
+    get_save_mod(k, ABIL_STR),
+    get_save_mod(k, ABIL_DEX),
+    get_save_mod(k, ABIL_CON),
+    get_save_mod(k, ABIL_INT),
+    get_save_mod(k, ABIL_WIS),
+    get_save_mod(k, ABIL_CHA));
 
   stat_table_row_fmt(ch, "Vitals",
     "HP %d/%d (+%d) | Mana %d/%d (+%d) | Move %d/%d (+%d)",
