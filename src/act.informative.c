@@ -41,6 +41,8 @@ static void look_at_target(struct char_data *ch, char *arg);
 static void look_in_direction(struct char_data *ch, int dir);
 static void look_in_obj(struct char_data *ch, char *arg);
 static void look_at_tables(struct char_data *ch);
+static bool look_can_spot_hidden(struct char_data *ch, struct char_data *tch, room_rnum room);
+static bool look_list_direction_chars(struct char_data *ch, room_rnum room);
 /* do_look, do_inventory utility functions */
 static void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mode, int show);
 /* do_look, do_equipment, do_examine, do_inventory */
@@ -809,18 +811,100 @@ void look_at_room(struct char_data *ch, int ignore_brief)
 
 static void look_in_direction(struct char_data *ch, int dir)
 {
-  if (EXIT(ch, dir)) {
-    if (EXIT(ch, dir)->general_description)
-      send_to_char(ch, "%s", EXIT(ch, dir)->general_description);
-    else
-      send_to_char(ch, "You see nothing special.\r\n");
+  static const char *range_labels[] = { "[near]", "[far]", "[very far]" };
+  room_rnum room = IN_ROOM(ch);
+  int distance;
+  bool blocked = FALSE;
 
-    if (EXIT_FLAGGED(EXIT(ch, dir), EX_CLOSED) && EXIT(ch, dir)->keyword)
-      send_to_char(ch, "The %s is closed.\r\n", fname(EXIT(ch, dir)->keyword));
-    else if (EXIT_FLAGGED(EXIT(ch, dir), EX_ISDOOR) && EXIT(ch, dir)->keyword)
-      send_to_char(ch, "The %s is open.\r\n", fname(EXIT(ch, dir)->keyword));
-  } else
-    send_to_char(ch, "Nothing special there...\r\n");
+  send_to_char(ch, ">look %s\r\n\r\n", dirs[dir]);
+  send_to_char(ch, "You look to the %s and see:\r\n", dirs[dir]);
+
+  for (distance = 0; distance < 3; distance++) {
+    struct room_direction_data *exit = NULL;
+
+    send_to_char(ch, "%s\r\n", range_labels[distance]);
+
+    if (!blocked) {
+      exit = W_EXIT(room, dir);
+
+      if (!exit || exit->to_room == NOWHERE)
+        blocked = TRUE;
+      else if (EXIT_FLAGGED(exit, EX_HIDDEN) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT))
+        blocked = TRUE;
+      else if (EXIT_FLAGGED(exit, EX_CLOSED))
+        blocked = TRUE;
+      else
+        room = exit->to_room;
+    }
+
+    if (blocked || !VALID_ROOM_RNUM(room)) {
+      send_to_char(ch, "nothing\r\n");
+      continue;
+    }
+
+    if (!look_list_direction_chars(ch, room))
+      send_to_char(ch, "nothing\r\n");
+  }
+}
+
+static bool look_can_spot_hidden(struct char_data *ch, struct char_data *tch, room_rnum room)
+{
+  int total;
+
+  if (!ch || !tch)
+    return FALSE;
+  if (!AFF_FLAGGED(tch, AFF_HIDE))
+    return FALSE;
+  if (!GET_SKILL(ch, SKILL_PERCEPTION))
+    return FALSE;
+  if (AFF_FLAGGED(ch, AFF_BLIND))
+    return FALSE;
+  if (IS_DARK(room) && !CAN_SEE_IN_DARK(ch))
+    return FALSE;
+
+  total = roll_scan_perception(ch);
+
+  if (AFF_FLAGGED(ch, AFF_SCAN))
+    total += 5; /* Match scan bonus from other detection checks. */
+
+  if (GET_STEALTH_CHECK(tch) <= 0)
+    SET_STEALTH_CHECK(tch, 5);
+
+  return (total >= (GET_STEALTH_CHECK(tch) + 2));
+}
+
+static bool look_list_direction_chars(struct char_data *ch, room_rnum room)
+{
+  struct char_data *tch;
+  bool found = FALSE;
+
+  if (!VALID_ROOM_RNUM(room))
+    return FALSE;
+  if (IS_DARK(room) && !CAN_SEE_IN_DARK(ch))
+    return FALSE;
+
+  for (tch = world[room].people; tch; tch = tch->next_in_room) {
+    if (tch == ch)
+      continue;
+    if (!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT) &&
+        IS_NPC(tch) && tch->player.long_descr && *tch->player.long_descr == '.')
+      continue;
+
+    if (AFF_FLAGGED(tch, AFF_HIDE)) {
+      if (CAN_SEE(ch, tch) || look_can_spot_hidden(ch, tch, room)) {
+        send_to_char(ch, "a shadowy figure\r\n");
+        found = TRUE;
+      }
+      continue;
+    }
+
+    if (CAN_SEE(ch, tch)) {
+      send_to_char(ch, "%s\r\n", get_char_sdesc(tch));
+      found = TRUE;
+    }
+  }
+
+  return found;
 }
 
 static void look_in_obj(struct char_data *ch, char *arg)
