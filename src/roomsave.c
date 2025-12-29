@@ -182,6 +182,9 @@ static struct obj_data *roomsave_read_list_ctx(FILE *fl, int stop_on_E)
     }
 
     /* Append to this scope's list */
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      update_money_obj(obj);
+
     obj->next_content = NULL;
     if (!head) head = tail = obj;
     else { tail->next_content = obj; tail = obj; }

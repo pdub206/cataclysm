@@ -573,6 +573,9 @@ obj_save_data *objsave_parse_objects(FILE *fl)
   void commit_current(void) {
     if (!temp) return;
 
+    if (GET_OBJ_TYPE(temp) == ITEM_MONEY)
+      update_money_obj(temp);
+
     /* sanitize top-level locate range only; children will be negative later */
     int loc = pending_locate;
     if (pending_nest <= 0) {

@@ -2801,6 +2801,9 @@ struct obj_data *read_object(obj_vnum nr, int type) /* and obj_rnum */
   copy_proto_script(&obj_proto[i], obj, OBJ_TRIGGER);
   assign_triggers(obj, OBJ_TRIGGER);
 
+  if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+    update_money_obj(obj);
+
   return (obj);
 }
 

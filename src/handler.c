@@ -569,6 +569,7 @@ void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
   GET_EQ(ch, pos) = obj;
   obj->worn_by = ch;
   obj->worn_on = pos;
+  IS_CARRYING_W(ch) += GET_OBJ_WEIGHT(obj);
 
   if (GET_OBJ_TYPE(obj) == ITEM_ARMOR)
     GET_AC(ch) -= apply_ac(ch, pos);
@@ -601,6 +602,7 @@ struct obj_data *unequip_char(struct char_data *ch, int pos)
   obj = GET_EQ(ch, pos);
   obj->worn_by = NULL;
   obj->worn_on = -1;
+  IS_CARRYING_W(ch) -= GET_OBJ_WEIGHT(obj);
 
   if (GET_OBJ_TYPE(obj) == ITEM_ARMOR)
     GET_AC(ch) += apply_ac(ch, pos);
@@ -798,6 +800,8 @@ void obj_to_obj(struct obj_data *obj, struct obj_data *obj_to)
     GET_OBJ_WEIGHT(tmp_obj) += GET_OBJ_WEIGHT(obj);
     if (tmp_obj->carried_by)
       IS_CARRYING_W(tmp_obj->carried_by) += GET_OBJ_WEIGHT(obj);
+    else if (tmp_obj->worn_by)
+      IS_CARRYING_W(tmp_obj->worn_by) += GET_OBJ_WEIGHT(obj);
   }
 }
 
@@ -831,6 +835,8 @@ void obj_from_obj(struct obj_data *obj)
     GET_OBJ_WEIGHT(temp) -= GET_OBJ_WEIGHT(obj);
     if (temp->carried_by)
       IS_CARRYING_W(temp->carried_by) -= GET_OBJ_WEIGHT(obj);
+    else if (temp->worn_by)
+      IS_CARRYING_W(temp->worn_by) -= GET_OBJ_WEIGHT(obj);
   }
   obj->in_obj = NULL;
   obj->next_content = NULL;
@@ -1456,7 +1462,7 @@ int get_obj_pos_in_equip_vis(struct char_data *ch, char *arg, int *number, struc
 
 static int money_weight(int amount)
 {
-  const int coins_per_weight = 10;
+  const int coins_per_weight = 30;
 
   if (amount <= 0)
     return 0;

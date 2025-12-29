@@ -920,6 +920,9 @@ void weight_change_object(struct obj_data *obj, int weight)
     obj_from_char(obj);
     GET_OBJ_WEIGHT(obj) += weight;
     obj_to_char(obj, tmp_ch);
+  } else if ((tmp_ch = obj->worn_by)) {
+    IS_CARRYING_W(tmp_ch) += weight;
+    GET_OBJ_WEIGHT(obj) += weight;
   } else if ((tmp_obj = obj->in_obj)) {
     obj_from_obj(obj);
     GET_OBJ_WEIGHT(obj) += weight;
