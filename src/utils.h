@@ -598,10 +598,10 @@ do                                                              \
 #define GET_HIT(ch)	  ((ch)->points.hit)
 /** Maximum hit points of ch. */
 #define GET_MAX_HIT(ch)	  ((ch)->points.max_hit)
-/** Current move points (stamina) of ch. */
-#define GET_MOVE(ch)	  ((ch)->points.move)
-/** Maximum move points (stamina) of ch. */
-#define GET_MAX_MOVE(ch)  ((ch)->points.max_move)
+/** Current stamina points of ch. */
+#define GET_STAMINA(ch)	  ((ch)->points.stamina)
+/** Maximum stamina points of ch. */
+#define GET_MAX_STAMINA(ch)  ((ch)->points.max_stamina)
 /** Current mana points (magic) of ch. */
 #define GET_MANA(ch)	  ((ch)->points.mana)
 /** Maximum mana points (magic) of ch. */

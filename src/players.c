@@ -25,7 +25,7 @@
 
 #define LOAD_HIT	0
 #define LOAD_MANA	1
-#define LOAD_MOVE	2
+#define LOAD_STAMINA	2
 #define LOAD_STRENGTH	3
 
 #define PT_PNAME(i) (player_table[(i)].name)
@@ -232,6 +232,7 @@ int load_char(const char *name, struct char_data *ch)
   char filename[40];
   char buf[128], buf2[128], line[MAX_INPUT_LENGTH + 1], tag[6];
   char f1[128], f2[128], f3[128], f4[128];
+  bool loaded_stamina = FALSE;
   trig_data *t = NULL;
   trig_rnum t_rnum = NOTHING;
 
@@ -284,8 +285,8 @@ int load_char(const char *name, struct char_data *ch)
     GET_MAX_HIT(ch) = PFDEF_MAXHIT;
     GET_MANA(ch) = PFDEF_MANA;
     GET_MAX_MANA(ch) = PFDEF_MAXMANA;
-    GET_MOVE(ch) = PFDEF_MOVE;
-    GET_MAX_MOVE(ch) = PFDEF_MAXMOVE;
+    GET_STAMINA(ch) = PFDEF_STAMINA;
+    GET_MAX_STAMINA(ch) = PFDEF_MAXSTAMINA;
     GET_OLC_ZONE(ch) = PFDEF_OLC;
     GET_PAGE_LENGTH(ch) = PFDEF_PAGELENGTH;
     GET_SCREEN_WIDTH(ch) = PFDEF_SCREENWIDTH;
@@ -397,7 +398,7 @@ int load_char(const char *name, struct char_data *ch)
 
       case 'M':
 	     if (!strcmp(tag, "Mana"))	load_HMVS(ch, line, LOAD_MANA);
-	else if (!strcmp(tag, "Move"))	load_HMVS(ch, line, LOAD_MOVE);
+	else if (!strcmp(tag, "Move") && !loaded_stamina)	load_HMVS(ch, line, LOAD_STAMINA);
 	break;
 
       case 'N':
@@ -444,6 +445,10 @@ int load_char(const char *name, struct char_data *ch)
           val = SPECIES_UNDEFINED;
         GET_SPECIES(ch) = val;
       }
+  else if (!strcmp(tag, "Stam")) {
+    load_HMVS(ch, line, LOAD_STAMINA);
+    loaded_stamina = TRUE;
+  }
 	else if (!strcmp(tag, "Sex "))	GET_SEX(ch)		= atoi(line);
   else if (!strcmp(tag, "Sdsc")) {
     /* Clear any existing sdesc to avoid leaks */
@@ -677,7 +682,7 @@ void save_char(struct char_data * ch)
 
   if (GET_HIT(ch)	   != PFDEF_HIT  || GET_MAX_HIT(ch)  != PFDEF_MAXHIT)  fprintf(fl, "Hit : %d/%d\n", GET_HIT(ch),  GET_MAX_HIT(ch));
   if (GET_MANA(ch)	   != PFDEF_MANA || GET_MAX_MANA(ch) != PFDEF_MAXMANA) fprintf(fl, "Mana: %d/%d\n", GET_MANA(ch), GET_MAX_MANA(ch));
-  if (GET_MOVE(ch)	   != PFDEF_MOVE || GET_MAX_MOVE(ch) != PFDEF_MAXMOVE) fprintf(fl, "Move: %d/%d\n", GET_MOVE(ch), GET_MAX_MOVE(ch));
+  if (GET_STAMINA(ch)	   != PFDEF_STAMINA || GET_MAX_STAMINA(ch) != PFDEF_MAXSTAMINA) fprintf(fl, "Stam: %d/%d\n", GET_STAMINA(ch), GET_MAX_STAMINA(ch));
 
   if (GET_STR(ch)	   != PFDEF_STR)  fprintf(fl, "Str : %d\n", GET_STR(ch));
   if (GET_INT(ch)	   != PFDEF_INT)	fprintf(fl, "Int : %d\n", GET_INT(ch));
@@ -954,9 +959,9 @@ static void load_HMVS(struct char_data *ch, const char *line, int mode)
     GET_MAX_MANA(ch) = num2;
     break;
 
-  case LOAD_MOVE:
-    GET_MOVE(ch) = num;
-    GET_MAX_MOVE(ch) = num2;
+  case LOAD_STAMINA:
+    GET_STAMINA(ch) = num;
+    GET_MAX_STAMINA(ch) = num2;
     break;
 
   case LOAD_STRENGTH:

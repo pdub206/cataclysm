@@ -451,7 +451,7 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
           GET_LEVEL(mob),
           GET_HIT(mob),
           GET_MANA(mob),
-          GET_MOVE(mob));
+          GET_STAMINA(mob));
 
   /* --- Position / default position / sex --- */
   fprintf(fd, "%d %d %d\n",

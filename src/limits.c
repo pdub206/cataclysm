@@ -142,7 +142,7 @@ int hit_gain(struct char_data *ch)
   return (gain);
 }
 
-/* move gain pr. game hour */
+/* stamina gain pr. game hour */
 int move_gain(struct char_data *ch)
 {
   int gain;
@@ -417,7 +417,7 @@ void point_update(void)
     if (GET_POS(i) >= POS_STUNNED) {
       GET_HIT(i) = MIN(GET_HIT(i) + hit_gain(i), GET_MAX_HIT(i));
       GET_MANA(i) = MIN(GET_MANA(i) + mana_gain(i), GET_MAX_MANA(i));
-      GET_MOVE(i) = MIN(GET_MOVE(i) + move_gain(i), GET_MAX_MOVE(i));
+      GET_STAMINA(i) = MIN(GET_STAMINA(i) + move_gain(i), GET_MAX_STAMINA(i));
       if (AFF_FLAGGED(i, AFF_POISON))
         if (damage(i, i, 2, SPELL_POISON) == -1)
           continue; /* Oops, they died. -gg 6/24/98 */

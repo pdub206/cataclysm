@@ -591,7 +591,7 @@ void do_start(struct char_data *ch)
 
   GET_MAX_HIT(ch)  = 90;
   GET_MAX_MANA(ch) = 100;
-  GET_MAX_MOVE(ch) = 90;
+  GET_MAX_STAMINA(ch) = 90;
 
   grant_class_skills(ch, TRUE);
   grant_species_skills(ch);
@@ -600,7 +600,7 @@ void do_start(struct char_data *ch)
 
   GET_HIT(ch) = GET_MAX_HIT(ch);
   GET_MANA(ch) = GET_MAX_MANA(ch);
-  GET_MOVE(ch) = GET_MAX_MOVE(ch);
+  GET_STAMINA(ch) = GET_MAX_STAMINA(ch);
 
   GET_COND(ch, THIRST) = 24;
   GET_COND(ch, HUNGER) = 24;
@@ -610,7 +610,7 @@ void do_start(struct char_data *ch)
     SET_BIT_AR(PLR_FLAGS(ch), PLR_SITEOK);
 }
 
-/* This function controls the change to maxmove, maxmana, and maxhp for each
+/* This function controls the change to maxstamina, maxmana, and maxhp for each
  * class every time they gain a level. */
 void advance_level(struct char_data *ch)
 {
@@ -674,7 +674,7 @@ void advance_level(struct char_data *ch)
   }
 
   ch->points.max_hit += MAX(1, add_hp);
-  ch->points.max_move += MAX(1, add_move);
+  ch->points.max_stamina += MAX(1, add_move);
 
   if (GET_LEVEL(ch) > 1)
     ch->points.max_mana += add_mana;

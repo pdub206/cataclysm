@@ -1,14 +1,10 @@
 /**
 * @file roomsave.h
-* Core structures used within the core mud code.
-*
-* An addition to the core tbaMUD source code distribution, which is a derivative
-* of, and continuation of, CircleMUD.
-*
-* All rights reserved.  See license for complete information.
-* Copyright (C) 1993, 94 by the Trustees of the Johns Hopkins University
-* CircleMUD is based on DikuMUD, Copyright (C) 1990, 1991.
+* Room file loading/saving and utility headers.
+* 
+* This set of code was not originally part of the circlemud distribution.
 */
+
 #ifndef ROOMSAVE_H_
 #define ROOMSAVE_H_
 

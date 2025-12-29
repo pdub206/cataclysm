@@ -2165,7 +2165,7 @@ ACMD(do_forage)
   prof_bonus = GET_PROFICIENCY(GET_SKILL(ch, SKILL_SURVIVAL));
   cost = MAX(1, 10 - prof_bonus);
 
-  if (!IS_NPC(ch) && GET_MOVE(ch) < cost) {
+  if (!IS_NPC(ch) && GET_STAMINA(ch) < cost) {
     send_to_char(ch, "You are too exhausted to forage.\r\n");
     return;
   }
@@ -2174,7 +2174,7 @@ ACMD(do_forage)
   WAIT_STATE(ch, delay_seconds * PASSES_PER_SEC);
 
   if (!IS_NPC(ch))
-    GET_MOVE(ch) = MAX(0, GET_MOVE(ch) - cost);
+    GET_STAMINA(ch) = MAX(0, GET_STAMINA(ch) - cost);
 
   total = roll_skill_check(ch, SKILL_SURVIVAL, 0, NULL);
 

@@ -557,7 +557,7 @@ ACMD(do_sneak)
   if (total < dc) {
     gain_skill(ch, "stealth", FALSE);
     WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-    GET_MOVE(ch) -= 10;
+    GET_STAMINA(ch) -= 10;
     return;
   }
 
@@ -576,7 +576,7 @@ ACMD(do_sneak)
   SET_STEALTH_CHECK(ch, MAX(GET_STEALTH_CHECK(ch), total));
 
   gain_skill(ch, "stealth", TRUE);
-  GET_MOVE(ch) -= 10;
+  GET_STAMINA(ch) -= 10;
 }
 
 ACMD(do_hide)
@@ -612,7 +612,7 @@ ACMD(do_hide)
     /* Failure */
     gain_skill(ch, "stealth", FALSE);
     WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-    GET_MOVE(ch) -= 10;
+    GET_STAMINA(ch) -= 10;
     return;
   }
 
@@ -623,7 +623,7 @@ ACMD(do_hide)
   send_to_char(ch, "You hide yourself as best you can.\r\n");
   gain_skill(ch, "stealth", TRUE);
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-  GET_MOVE(ch) -= 10;
+  GET_STAMINA(ch) -= 10;
 }
 
 static void remember_scan_target(struct char_data *ch, struct char_data *tch)
@@ -929,7 +929,7 @@ ACMD(do_scan)
   act("$n studies $s surroundings with a wary gaze.", TRUE, ch, 0, 0, TO_ROOM);
 
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-  GET_MOVE(ch) -= 10;
+  GET_STAMINA(ch) -= 10;
 }
 
 ACMD(do_listen)
@@ -959,7 +959,7 @@ ACMD(do_listen)
   send_to_char(ch, "You focus entirely on every whisper and distant sound.\r\n");
 
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-  GET_MOVE(ch) -= 10;
+  GET_STAMINA(ch) -= 10;
 }
 
 ACMD(do_palm)
@@ -1307,7 +1307,7 @@ static void print_group(struct char_data *ch)
 	    GROUP_LEADER(GROUP(ch)) == k ? CBGRN(ch, C_NRM) : CCGRN(ch, C_NRM),
 	    GET_HIT(k), GET_MAX_HIT(k),
 	    GET_MANA(k), GET_MAX_MANA(k),
-	    GET_MOVE(k), GET_MAX_MOVE(k),
+	    GET_STAMINA(k), GET_MAX_STAMINA(k),
 	    CCNRM(ch, C_NRM));
 }
 
@@ -1464,7 +1464,7 @@ ACMD(do_report)
 	  GET_NAME(ch),
 	  GET_HIT(ch), GET_MAX_HIT(ch),
 	  GET_MANA(ch), GET_MAX_MANA(ch),
-	  GET_MOVE(ch), GET_MAX_MOVE(ch));
+	  GET_STAMINA(ch), GET_MAX_STAMINA(ch));
 }
 
 ACMD(do_split)
@@ -1600,7 +1600,7 @@ ACMD(do_display)
   skip_spaces(&argument);
 
   if (!*argument) {
-    send_to_char(ch, "Usage: prompt { { H | M | V } | all | auto | none }\r\n");
+    send_to_char(ch, "Usage: prompt { { H | M | S } | all | auto | none }\r\n");
     return;
   }
 
@@ -1613,15 +1613,15 @@ ACMD(do_display)
   if (!str_cmp(argument, "on") || !str_cmp(argument, "all")) {
     SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPHP);
     SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
-    SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+    SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
   } else if (!str_cmp(argument, "off") || !str_cmp(argument, "none")) {
     REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPHP);
     REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
-    REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+    REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
   } else {
     REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPHP);
     REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
-    REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+    REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
 
     for (i = 0; i < strlen(argument); i++) {
       switch (LOWER(argument[i])) {
@@ -1631,11 +1631,12 @@ ACMD(do_display)
       case 'm':
         SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
 	break;
+      case 's':
       case 'v':
-        SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+        SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
 	break;
       default:
-	send_to_char(ch, "Usage: prompt { { H | M | V } | all | auto | none }\r\n");
+	send_to_char(ch, "Usage: prompt { { H | M | S } | all | auto | none }\r\n");
 	return;
       }
     }

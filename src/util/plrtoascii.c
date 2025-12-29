@@ -39,8 +39,8 @@ struct char_point_data_plrtoascii {
    sh_int max_mana;     /* Max mana for PC/NPC			   */
    sh_int hit;
    sh_int max_hit;      /* Max hit for PC/NPC                      */
-   sh_int move;
-   sh_int max_move;     /* Max move for PC/NPC                     */
+   sh_int stamina;
+   sh_int max_stamina;  /* Max stamina for PC/NPC                  */
 
    sh_int armor;        /* Internal -100..100, external -10..10 AC */
    int	coins;          /* Money carried                           */
@@ -285,8 +285,8 @@ void convert(char *filename)
       fprintf(outfile, "Hit : %d/%d\n", cpd->hit, cpd->max_hit);
     if (cpd->mana != PFDEF_MANA || cpd->max_mana != PFDEF_MAXMANA)
       fprintf(outfile, "Mana: %d/%d\n", cpd->mana, cpd->max_mana);
-    if (cpd->move != PFDEF_MOVE || cpd->max_move != PFDEF_MAXMOVE)
-      fprintf(outfile, "Move: %d/%d\n", cpd->move, cpd->max_move);
+    if (cpd->stamina != PFDEF_STAMINA || cpd->max_stamina != PFDEF_MAXSTAMINA)
+      fprintf(outfile, "Stam: %d/%d\n", cpd->stamina, cpd->max_stamina);
     if (cpd->armor != PFDEF_AC)
       fprintf(outfile, "Ac  : %d\n", cpd->armor);
     if (cpd->coins != PFDEF_COINS)

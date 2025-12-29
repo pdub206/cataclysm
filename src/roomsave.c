@@ -1,15 +1,10 @@
 /**
 * @file roomsave.c
-* Numeric and string contants used by the MUD.
-*
-* An addition to the core tbaMUD source code distribution, which is a derivative
-* of, and continuation of, CircleMUD.
-*
-* All rights reserved.  See license for complete information.
-* Copyright (C) 1993, 94 by the Trustees of the Johns Hopkins University
-* CircleMUD is based on DikuMUD, Copyright (C) 1990, 1991.
-*
+* Room file loading/saving and utility routines.
+* 
+* This set of code was not originally part of the circlemud distribution.
 */
+
 #include "conf.h"
 #include "sysdep.h"
 

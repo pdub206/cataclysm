@@ -277,7 +277,7 @@
 #define PRF_NOTELL        3   /**< Can't receive tells */
 #define PRF_DISPHP        4   /**< Display hit points in prompt */
 #define PRF_DISPMANA      5   /**< Display mana points in prompt */
-#define PRF_DISPMOVE      6   /**< Display move points in prompt */
+#define PRF_DISPSTAMINA   6   /**< Display stamina points in prompt */
 #define PRF_AUTOEXIT      7   /**< Display exits in a room */
 #define PRF_NOHASSLE      8   /**< Aggr mobs won't attack */
 #define PRF_QUEST         9   /**< On quest */
@@ -506,7 +506,7 @@
 #define APPLY_CHAR_HEIGHT      11	/**< Apply to height		*/
 #define APPLY_MANA             12	/**< Apply to max mana		*/
 #define APPLY_HIT              13	/**< Apply to max hit points	*/
-#define APPLY_MOVE             14	/**< Apply to max move points	*/
+#define APPLY_STAMINA          14	/**< Apply to max stamina points	*/
 #define APPLY_COINS             15	/**< Reserved			*/
 #define APPLY_EXP              16	/**< Reserved			*/
 #define APPLY_AC               17	/**< Apply to Armor Class		*/
@@ -980,8 +980,8 @@ struct char_point_data
   sh_int max_mana; /**< Max mana level */
   sh_int hit;      /**< Curent hit point, or health, level */
   sh_int max_hit;  /**< Max hit point, or health, level */
-  sh_int move;     /**< Current move point, or stamina, level */
-  sh_int max_move; /**< Max move point, or stamina, level */
+  sh_int stamina;     /**< Current stamina level */
+  sh_int max_stamina; /**< Max stamina level */
 
   /** Current armor class. Internal use goes from -100 (totally armored) to
    * 100 (totally naked). Externally expressed as -10 (totally armored) to

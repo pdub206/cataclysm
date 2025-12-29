@@ -1836,10 +1836,10 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
     get_save_mod(k, ABIL_CHA));
 
   stat_table_row_fmt(ch, "Vitals",
-    "HP %d/%d (+%d) | Mana %d/%d (+%d) | Move %d/%d (+%d)",
+    "HP %d/%d (+%d) | Mana %d/%d (+%d) | Stamina %d/%d (+%d)",
     GET_HIT(k), GET_MAX_HIT(k), hit_gain(k),
     GET_MANA(k), GET_MAX_MANA(k), mana_gain(k),
-    GET_MOVE(k), GET_MAX_MOVE(k), move_gain(k));
+    GET_STAMINA(k), GET_MAX_STAMINA(k), move_gain(k));
 
   stat_table_row_fmt(ch, "Currency", "Coins %d, Bank %d (Total %d)",
     GET_COINS(k), GET_BANK_COINS(k), GET_COINS(k) + GET_BANK_COINS(k));
@@ -2542,7 +2542,7 @@ ACMD(do_restore)
 
       GET_HIT(vict)  = GET_MAX_HIT(vict);
       GET_MANA(vict) = GET_MAX_MANA(vict);
-      GET_MOVE(vict) = GET_MAX_MOVE(vict);
+      GET_STAMINA(vict) = GET_MAX_STAMINA(vict);
 
       update_pos(vict);
       send_to_char(ch, "%s has been fully healed.\r\n", GET_NAME(vict));
@@ -2558,7 +2558,7 @@ ACMD(do_restore)
 
     GET_HIT(vict) = GET_MAX_HIT(vict);
     GET_MANA(vict) = GET_MAX_MANA(vict);
-    GET_MOVE(vict) = GET_MAX_MOVE(vict);
+    GET_STAMINA(vict) = GET_MAX_STAMINA(vict);
 
     if (!IS_NPC(vict) && GET_LEVEL(ch) >= LVL_GRGOD) {
       if (GET_LEVEL(vict) >= LVL_IMMORT)
@@ -3783,31 +3783,31 @@ static struct set_struct {
    { "mana",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "maxhit",	        LVL_BUILDER, 	BOTH, 	NUMBER },
    { "maxmana",       	LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "maxmove",		LVL_BUILDER, 	BOTH, 	NUMBER },  /* 30 */
-   { "move",		LVL_BUILDER, 	BOTH, 	NUMBER },
+   { "maxstam",		LVL_BUILDER, 	BOTH, 	NUMBER },  /* 28 */
    { "name",	LVL_IMMORT, 	PC, 	MISC },
    { "nodelete",	LVL_GOD, 	PC, 	BINARY },
    { "nohassle",	LVL_GOD, 	PC, 	BINARY },
-   { "nosummon",	LVL_BUILDER,	PC,	BINARY },  /* 35 */
+   { "nosummon",	LVL_BUILDER,	PC,	BINARY },
    { "nowizlist", 	LVL_GRGOD, 	PC, 	BINARY },
    { "olc",		LVL_GRGOD,	PC,	MISC },
    { "password",	LVL_GRGOD,	PC,	MISC },
    { "poofin",		LVL_IMMORT,	PC,	MISC },
-   { "poofout",         LVL_IMMORT,	PC,	MISC },   /* 40 */
+   { "poofout",         LVL_IMMORT,	PC,	MISC },
    { "quest",		LVL_GOD, 	PC, 	BINARY },
    { "room",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "screenwidth", LVL_GOD,  PC,   NUMBER },
+   { "screenwidth", LVL_GOD,  PC,   NUMBER }, /* 40 */
    { "sex", 		LVL_GOD, 	BOTH, 	MISC },
-   { "showvnums",  LVL_BUILDER,  PC, BINARY }, /* 45 */
+   { "showvnums",  LVL_BUILDER,  PC, BINARY },
    { "siteok",   LVL_GOD,  PC,   BINARY },
    { "skill",   LVL_GOD,  BOTH,   NUMBER },
+   { "stam",		LVL_BUILDER, 	BOTH, 	NUMBER },  /* 45 */
    { "str",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "unused1",		LVL_GOD, 	PC, 	BINARY }, 
-   { "thirst",		LVL_BUILDER, 	BOTH, 	MISC }, /* 50 */
+   { "unused1",		LVL_GOD, 	PC, 	BINARY },
+   { "thirst",		LVL_BUILDER, 	BOTH, 	MISC },
    { "variable",        LVL_GRGOD,	PC,	MISC },
    { "weight",		LVL_BUILDER,	BOTH,	NUMBER },
    { "wis", 		LVL_BUILDER, 	BOTH, 	NUMBER }, 
-   { "questpoints",     LVL_GOD,        PC,     NUMBER }, 
+   { "questpoints",     LVL_GOD,        PC,     NUMBER },  /* 52 */
    { "questhistory",    LVL_GOD,        PC,   NUMBER },
    { "species",         LVL_BUILDER,    BOTH, MISC },
    { "\n", 0, BOTH, MISC }
@@ -4060,15 +4060,11 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->points.max_mana = RANGE(1, 5000);
       affect_total(vict);
       break;
-    case 28: /* maxmove */
-      vict->points.max_move = RANGE(1, 5000);
+    case 28: /* maxstam */
+      vict->points.max_stamina = RANGE(1, 5000);
       affect_total(vict);
       break;
-    case 29: /* move */
-      vict->points.move = RANGE(0, vict->points.max_move);
-      affect_total(vict);
-      break;
-    case 30: /* name */
+    case 29: /* name */
       if (ch != vict && GET_LEVEL(ch) < LVL_IMPL) {
         send_to_char(ch, "Only Imps can change the name of other players.\r\n");
         return (0);
@@ -4078,24 +4074,24 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 31: /* nodelete */
+    case 30: /* nodelete */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_NODELETE);
       break;
-    case 32: /* nohassle */
+    case 31: /* nohassle */
       if (GET_LEVEL(ch) < LVL_GOD && ch != vict) {
         send_to_char(ch, "You aren't godly enough for that!\r\n");
         return (0);
       }
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_NOHASSLE);
       break;
-    case 33: /* nosummon */
+    case 32: /* nosummon */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_SUMMONABLE);
       send_to_char(ch, "Nosummon %s for %s.\r\n", ONOFF(!on), GET_NAME(vict));
       break;
-    case 34: /* nowiz */
+    case 33: /* nowiz */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_NOWIZLIST);
       break;
-    case 35: /* olc */
+    case 34: /* olc */
       if (is_abbrev(val_arg, "socials") || is_abbrev(val_arg, "actions") || is_abbrev(val_arg, "aedit"))
         GET_OLC_ZONE(vict) = AEDIT_PERMISSION;
       else if (is_abbrev(val_arg, "hedit") || is_abbrev(val_arg, "help"))
@@ -4110,7 +4106,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       } else
         GET_OLC_ZONE(vict) = atoi(val_arg);
       break;
-    case 36: /* password */
+    case 35: /* password */
       if (GET_LEVEL(vict) >= LVL_GRGOD) {
         send_to_char(ch, "You cannot change that.\r\n");
         return (0);
@@ -4119,7 +4115,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       *(GET_PASSWD(vict) + MAX_PWD_LENGTH) = '\0';
       send_to_char(ch, "Password changed to '%s'.\r\n", val_arg);
       break;
-    case 37: /* poofin */
+    case 36: /* poofin */
       if ((vict == ch) || (GET_LEVEL(ch) == LVL_IMPL)) {
         skip_spaces(&val_arg);
         parse_at(val_arg);
@@ -4133,7 +4129,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
           POOFIN(vict) = strdup(val_arg);
         }
       break;
-    case 38: /* poofout */
+    case 37: /* poofout */
       if ((vict == ch) || (GET_LEVEL(ch) == LVL_IMPL)) {
         skip_spaces(&val_arg);
         parse_at(val_arg);
@@ -4147,10 +4143,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
           POOFOUT(vict) = strdup(val_arg);
         }
       break;
-    case 39: /* quest */
+    case 38: /* quest */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_QUEST);
       break;
-    case 40: /* room */
+    case 39: /* room */
       if ((rnum = real_room(value)) == NOWHERE) {
         send_to_char(ch, "No room exists with that number.\r\n");
         return (0);
@@ -4159,23 +4155,23 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         char_from_room(vict);
       char_to_room(vict, rnum);
       break;
-    case 41: /* screenwidth */
+    case 40: /* screenwidth */
       GET_SCREEN_WIDTH(vict) = RANGE(40, 200);
       break;
-    case 42: /* sex */
+    case 41: /* sex */
       if ((i = search_block(val_arg, genders, FALSE)) < 0) {
         send_to_char(ch, "Must be 'male', 'female', or 'neutral'.\r\n");
         return (0);
       }
       GET_SEX(vict) = i;
       break;
-    case 43: /* showvnums */
+    case 42: /* showvnums */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_SHOWVNUMS);
       break;
-    case 44: /* siteok */
+    case 43: /* siteok */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_SITEOK);
       break;
-    case 45: /* skills/spells */
+    case 44: /* skills/spells */
     {
       char local_buf[MAX_INPUT_LENGTH], *value_arg, *name_end;
       char skill_name[MAX_INPUT_LENGTH];
@@ -4259,6 +4255,11 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
 
     }
     break;
+
+    case 45: /* stam */
+      vict->points.stamina = RANGE(0, vict->points.max_stamina);
+      affect_total(vict);
+      break;
 
     case 46: /* str */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
@@ -4615,7 +4616,7 @@ static struct zcheck_affs {
   {APPLY_CHAR_HEIGHT,-50,  50, "character height"},
   {APPLY_MANA,       -50,  50, "mana"},
   {APPLY_HIT,        -50,  50, "hit points"},
-  {APPLY_MOVE,       -50,  50, "movement"},
+  {APPLY_STAMINA,       -50,  50, "stamina"},
   {APPLY_COINS,         0,   0, "coins"},
   {APPLY_EXP,          0,   0, "experience"},
   {APPLY_AC,         -10,  10, "magical AC"},

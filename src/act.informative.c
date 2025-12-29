@@ -1155,10 +1155,10 @@ ACMD(do_score)
       "====================[ Score ]====================\r\n");
 
   send_to_char(ch,
-      "HP:   %d/%d   Mana: %d/%d   Move: %d/%d\r\n",
+      "HP:   %d/%d   Mana: %d/%d   Stamina: %d/%d\r\n",
       GET_HIT(ch), GET_MAX_HIT(ch),
       GET_MANA(ch), GET_MAX_MANA(ch),
-      GET_MOVE(ch), GET_MAX_MOVE(ch));
+      GET_STAMINA(ch), GET_MAX_STAMINA(ch));
 
   /* Abilities and 5e modifiers */
   send_to_char(ch,
@@ -2329,7 +2329,7 @@ ACMD(do_toggle)
     "          Brief: %-3s    "
     "     Summonable: %-3s\r\n"
 
-    "   Move Display: %-3s    "
+    "   Stamina Display: %-3s    "
     "        Compact: %-3s    "
     "          Quest: %-3s\r\n"
 
@@ -2358,7 +2358,7 @@ ACMD(do_toggle)
     ONOFF(PRF_FLAGGED(ch, PRF_BRIEF)),
     ONOFF(PRF_FLAGGED(ch, PRF_SUMMONABLE)),
 
-    ONOFF(PRF_FLAGGED(ch, PRF_DISPMOVE)),
+    ONOFF(PRF_FLAGGED(ch, PRF_DISPSTAMINA)),
     ONOFF(PRF_FLAGGED(ch, PRF_COMPACT)),
     ONOFF(PRF_FLAGGED(ch, PRF_QUEST)),
 

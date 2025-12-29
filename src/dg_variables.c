@@ -843,19 +843,19 @@ void find_replacement(void *go, struct script_data *sc, trig_data *trig,
             }
             snprintf(str, slen, "%d", GET_MAX_MANA(c));
           }
-          else if (!str_cmp(field, "maxmove")) {
+          else if (!str_cmp(field, "maxmove") || !str_cmp(field, "maxstamina")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_MAX_MOVE(c) = MAX(GET_MAX_MOVE(c) + addition, 1);
+              GET_MAX_STAMINA(c) = MAX(GET_MAX_STAMINA(c) + addition, 1);
             }
-            snprintf(str, slen, "%d", GET_MAX_MOVE(c));
+            snprintf(str, slen, "%d", GET_MAX_STAMINA(c));
           }
-          else if (!str_cmp(field, "move")) {
+          else if (!str_cmp(field, "move") || !str_cmp(field, "stamina")) {
             if (subfield && *subfield) {
               int addition = atoi(subfield);
-              GET_MOVE(c) += addition;
+              GET_STAMINA(c) += addition;
             }
-            snprintf(str, slen, "%d", GET_MOVE(c));
+            snprintf(str, slen, "%d", GET_STAMINA(c));
           }
           break;
         case 'n':

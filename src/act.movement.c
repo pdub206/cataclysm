@@ -290,7 +290,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   room_rnum was_in = IN_ROOM(ch);
   /* ... and the room the character will move into. */
   room_rnum going_to = EXIT(ch, dir)->to_room;
-  /* How many movement points are required to travel from was_in to going_to.
+  /* How many stamina points are required to travel from was_in to going_to.
    * We redefine this later when we need it. */
   int need_movement = 0;
   /* Contains the "leave" message to display to the was_in room. */
@@ -400,13 +400,13 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   }
 
   /* All checks passed, nothing will prevent movement now other than lack of
-   * move points. */
-  /* move points needed is avg. move loss for src and destination sect type */
+   * stamina points. */
+  /* stamina points needed is avg. move loss for src and destination sect type */
   need_movement = (movement_loss[SECT(was_in)] +
 		   movement_loss[SECT(going_to)]) / 2;
 
   /* Move Point Requirement Check */
-  if (GET_MOVE(ch) < need_movement && !IS_NPC(ch))
+  if (GET_STAMINA(ch) < need_movement && !IS_NPC(ch))
   {
     if (need_specials_check && ch->master)
       send_to_char(ch, "You are too exhausted to follow.\r\n");
@@ -424,7 +424,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /*---------------------------------------------------------------------*/
   /* If applicable, subtract movement cost. */
   if (GET_LEVEL(ch) < LVL_IMMORT && !IS_NPC(ch))
-    GET_MOVE(ch) -= need_movement;
+    GET_STAMINA(ch) -= need_movement;
 
   /* Generate the leave message and display to others in the was_in room. */
   if (AFF_FLAGGED(ch, AFF_SNEAK)) {

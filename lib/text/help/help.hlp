@@ -1676,8 +1676,10 @@ mana()          - The current mana points of the actor. Subfield adjusts.
 master          - The master of the actor (as an id), or an empty return.
 maxhitp()       - The maximum hit points of the actor. Subfield adjusts.
 maxmana()       - The maximum mana points of the actor. Subfield adjusts.
-maxmove()       - The maximum movement points of the actor. Subfield adjusts.
-move()          - The movement points of the actor. Subfield adjusts.
+maxstamina()    - The maximum stamina points of the actor. Subfield adjusts.
+stamina()       - The stamina points of the actor. Subfield adjusts.
+maxmove()       - Alias for maxstamina().
+move()          - Alias for stamina().
 name            - The actor's name (the short description for mobs).
 next_in_room    - The next mob/player in the room as a variable (id) nice to 
                   use for loops, or an empty return @RTSTAT 23@n
@@ -2561,13 +2563,13 @@ See also: DISPEL-EVIL
 #0
 DISPLAYS PROMPTS HIT-PNT-DISPLAY
 
-Usage: prompt < H | M | V | all | auto | off >
+Usage: prompt < H | M | S | all | auto | off >
 
-Modify your prompt to show your hit points, mana, and/or movement points.
+Modify your prompt to show your hit points, mana, and/or stamina points.
 
-  > prompt hv       Display hit points and movement points.
+  > prompt hs       Display hit points and stamina points.
   > prompt off      Return to no prompt.
-  > prompt all      Display hit, mana, and movement points.
+  > prompt all      Display hit, mana, and stamina points.
 
   > prompt auto     A separate toggle that will only display your selected 
                     prompt if the values drop below 30% of max.
@@ -4530,7 +4532,7 @@ OBJECT STANDARDS:
 |Age                           |   10   |   -10   |
 |Weight                        |   50   |    1    |
 |Cost                          |  1000  |    1    |
-|Hitpoints, Mana, Movement     |   50   |   -50   |
+|Hitpoints, Mana, Stamina      |   50   |   -50   |
 |Coins                          |   Do not use.    |
 |Experience                    |   Do not use.    |
 |Armor Class Values            |   10   |   -10   |
@@ -5459,10 +5461,11 @@ It is a toggle that can be turned on and off by the same command.
 
 See also: SKILLS
 #2
-MV MOVEPOINTS MOVE-POINTS MOVEMENTPOINTS MOVEMENT-POINTS
+STAMINA STAMINA-POINTS STAMINAPOINTS MV MOVEPOINTS MOVE-POINTS MOVEMENTPOINTS MOVEMENT-POINTS
 
-   Depending on the type of terrain your character will tire from too much
-traveling and require some rest to continue.
+   Stamina points measure how tired you are. Depending on the type of terrain,
+your character will tire from too much traveling and require some rest to
+continue.
 
 See also: MANA, HITPOINTS
 #0
@@ -5824,7 +5827,7 @@ applies. Suggested object standards are displayed at the end of each apply
 12)  CHAR_HEIGHT        Apply to height. 
 13)  MAXMANA            Apply to MAX mana points. 
 14)  MAXHIT             Apply to MAX hit points.
-15)  MAXMOVE            Apply to MAX movement points.
+15)  MAXSTAMINA         Apply to MAX stamina points.
 16)  COINS               Unimplemented.  Do not use.
 17)  EXP                Unimplemented.  Do not use.
 18)  ARMOR              Apply to armor class (AC). negative is better.
@@ -7000,7 +7003,7 @@ NO_SHOUT   - Player can not see shouts.
 NO_TELL    - Player can not see tells.
 D_HP       - Player can see their HP.
 D_MANA     - Player can see their MANA.
-D_MOVE     - Player can see their MOVE.
+D_STAMINA  - Player can see their Stamina.
 AUTOEX     - Player can see exits.
 NO_HASS    - Builder is safe from aggressive mobs, triggers will not work.  
 QUEST      - Player is on a quest.
@@ -7746,10 +7749,10 @@ and VNUM have the same first few numbers.
 REDIT-SECTOR-TYPE SECTORS SECTOR-TYPE TERRAIN-TYPE FIELDS FORESTS REDIT-SECTOR-FLAGS SCUBA UNDERWATER
 
 4) Sector type : @cInside@n
-   This defines movement point, light, and boat requirements.
+   This defines stamina point, light, and boat requirements.
 The following terrains may be selected (only one):
 
-                                                       Movement Points
+                                                       Stamina Points
  1)  Inside           Indoors (no light required)             1 
  2)  City             The streets of a city.                  1
  3)  Field            An open field.                          2
@@ -7984,7 +7987,7 @@ RESTORE REVIVE
 
 Usage: restore <player | mobile | all>
 
-   RESTORE restores a player or mobile to full hit, mana, and movement points.
+   RESTORE restores a player or mobile to full hit, mana, and stamina points.
 Restore all will restore all players in the game. If used on immortals, it 
 also sets all skill levels to 100%.
 
@@ -8113,7 +8116,7 @@ SCORE
    Summary: Score provides useful information about your character that you
 would find on a traditional tabletop character sheet. Examples:
 
-HP, Mana, and Movement points
+HP, Mana, and Stamina points
 Strength, Dexterity, Constituion, Intelligence, Wisdom, and Charisma scores
 Armor Class with breakdown
 Stealth Disadvantage
@@ -8500,8 +8503,8 @@ loadroom            Imm    PC    MISC
 mana                Imm    BOTH  NUMBER
 maxhit              Imm    BOTH  NUMBER
 maxmana             Imm    BOTH  NUMBER
-maxmove             Imm    BOTH  NUMBER
-move                Imm    BOTH  NUMBER
+maxstam             Imm    BOTH  NUMBER
+stam                Imm    BOTH  NUMBER
 name                Imm    PC    MISC  
 nodelete            God    PC    BINARY
 nohassle            God    PC    BINARY
@@ -9165,7 +9168,7 @@ A list is below:
 Wisdom       - How wise you are. Helps in combat, and when regaining mana.
 Constitution - How healthy and robust you are. Determines how many hit points
                you gain per level, and how well you heal.
-Dexterity    - How agile you are. How many movement points you gain per level, 
+Dexterity    - How agile you are. How many stamina points you gain per level, 
                and how well you dodge attacks, pick locks, and kick without 
                falling over.
 Charisma     - How personable your character is. This can affect shop prices
@@ -10317,7 +10320,7 @@ time you change it. Level IMP toggle includes:
        NoHassle: ON           Holylight: ON           ShowVnums: ON 
          Syslog: normal
 Hit Pnt Display: OFF              Brief: OFF         Summonable: OFF
-   Move Display: OFF            Compact: ON               Quest: OFF
+   Stamina Display: OFF            Compact: ON               Quest: OFF
    Mana Display: OFF             NoTell: OFF           NoRepeat: OFF
       AutoExits: OFF            NoShout: OFF              Wimpy: OFF
        AutoLoot: ON           AutoSplit: ON
@@ -10338,7 +10341,7 @@ argument. When a toggle is set, it will be saved in that state until the next
 time you change it. 
 
 Hit Pnt Display: OFF              Brief: OFF         Summonable: OFF
-   Move Display: OFF            Compact: ON               Quest: OFF
+   Stamina Display: OFF            Compact: ON               Quest: OFF
    Mana Display: OFF             NoTell: OFF           NoRepeat: OFF
       AutoExits: OFF            NoShout: OFF              Wimpy: OFF
        AutoLoot: ON           AutoSplit: ON

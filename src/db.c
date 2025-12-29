@@ -1602,10 +1602,10 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
   GET_MAX_HIT(mob_proto + i) = 0;
   GET_HIT(mob_proto + i) = t[1];
   GET_MANA(mob_proto + i) = t[2];
-  GET_MOVE(mob_proto + i) = t[3];
+  GET_STAMINA(mob_proto + i) = t[3];
 
   GET_MAX_MANA(mob_proto + i) = 10;
-  GET_MAX_MOVE(mob_proto + i) = 50;
+  GET_MAX_STAMINA(mob_proto + i) = 50;
 
   if (!get_line(mob_f, line)) {
     log("SYSERR: Format error in last line of mob #%d\n"
@@ -2736,13 +2736,13 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   
   if (!mob->points.max_hit) {
     mob->points.max_hit = dice(mob->points.hit, mob->points.mana) +
-      mob->points.move;
+      mob->points.stamina;
   } else
     mob->points.max_hit = rand_number(mob->points.hit, mob->points.mana);
 
   mob->points.hit = mob->points.max_hit;
   mob->points.mana = mob->points.max_mana;
-  mob->points.move = mob->points.max_move;
+  mob->points.stamina = mob->points.max_stamina;
 
   mob->player.time.birth = time(0);
   mob->player.time.played = 0;
@@ -3757,8 +3757,8 @@ void reset_char(struct char_data *ch)
 
   if (GET_HIT(ch) <= 0)
     GET_HIT(ch) = 1;
-  if (GET_MOVE(ch) <= 0)
-    GET_MOVE(ch) = 1;
+  if (GET_STAMINA(ch) <= 0)
+    GET_STAMINA(ch) = 1;
   if (GET_MANA(ch) <= 0)
     GET_MANA(ch) = 1;
 
@@ -3815,10 +3815,10 @@ void init_char(struct char_data *ch)
     /* The implementor never goes through do_start(). */
     GET_MAX_HIT(ch) = 500;
     GET_MAX_MANA(ch) = 100;
-    GET_MAX_MOVE(ch) = 82;
+    GET_MAX_STAMINA(ch) = 82;
     GET_HIT(ch) = GET_MAX_HIT(ch);
     GET_MANA(ch) = GET_MAX_MANA(ch);
-    GET_MOVE(ch) = GET_MAX_MOVE(ch);
+    GET_STAMINA(ch) = GET_MAX_STAMINA(ch);
   }
 
   ch->player.short_descr = NULL;
@@ -3891,7 +3891,7 @@ void init_char(struct char_data *ch)
     } 
   SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPHP);  
   SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
-  SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+  SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
 }
 
 /* returns the real number of the room with given virtual number */

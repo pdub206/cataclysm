@@ -148,7 +148,7 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
   case APPLY_CHAR_HEIGHT:  GET_HEIGHT(ch) += mod; break;
   case APPLY_MANA:         GET_MAX_MANA(ch) += mod; break;
   case APPLY_HIT:          GET_MAX_HIT(ch) += mod; break;
-  case APPLY_MOVE:         GET_MAX_MOVE(ch) += mod; break;
+  case APPLY_STAMINA:         GET_MAX_STAMINA(ch) += mod; break;
   case APPLY_COINS:         break;
   case APPLY_EXP:          break;
 

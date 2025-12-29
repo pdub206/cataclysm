@@ -238,7 +238,7 @@ static void init_mobile(struct char_data *mob)
   clear_char(mob);
 
   GET_HIT(mob) = GET_MANA(mob) = 1;
-  GET_MAX_MANA(mob) = GET_MAX_MOVE(mob) = 100;
+  GET_MAX_MANA(mob) = GET_MAX_STAMINA(mob) = 100;
   GET_WEIGHT(mob) = 200;
   GET_HEIGHT(mob) = 198;
 
@@ -580,8 +580,8 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
   clear_screen(d);
 
   /* Color codes have to be used here, for count_color_codes to work */
-  sprintf(buf, "(range \ty%d\tn to \ty%d\tn)", GET_HIT(mob) + GET_MOVE(mob),
-          (GET_HIT(mob) * GET_MANA(mob)) + GET_MOVE(mob));
+  sprintf(buf, "(range \ty%d\tn to \ty%d\tn)", GET_HIT(mob) + GET_STAMINA(mob),
+          (GET_HIT(mob) * GET_MANA(mob)) + GET_STAMINA(mob));
 
   /* Top section - standard stats */
   write_to_output(d,
@@ -595,7 +595,7 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
       cyn, nrm, cyn, nrm,
       cyn, nrm, cyn, yel, GET_HIT(mob), cyn, nrm,
       cyn, nrm, cyn, yel, GET_MANA(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_MOVE(mob), cyn, nrm
+      cyn, nrm, cyn, yel, GET_STAMINA(mob), cyn, nrm
       );
 
   if (CONFIG_MEDIT_ADVANCED) {
@@ -1321,7 +1321,7 @@ void medit_parse(struct descriptor_data *d, char *arg)
     return;
 
   case MEDIT_ADD_HP:
-    GET_MOVE(OLC_MOB(d)) = LIMIT(i, 0, 30000);
+    GET_STAMINA(OLC_MOB(d)) = LIMIT(i, 0, 30000);
     OLC_VAL(d) = TRUE;
     medit_disp_stats_menu(d);
     return;
@@ -1540,7 +1540,7 @@ void medit_autoroll_stats(struct descriptor_data *d)
   if (mob_lev < 1)
     mob_lev = 1;
 
-  GET_MOVE(OLC_MOB(d))    = mob_lev * 10;        /* hit point bonus (mobs don't use movement points) */
+  GET_STAMINA(OLC_MOB(d))    = mob_lev * 10;        /* hit point bonus (mobs don't use stamina points) */
   GET_HIT(OLC_MOB(d))     = mob_lev / 5;         /* number of hitpoint dice */
   GET_MANA(OLC_MOB(d))    = mob_lev / 5;         /* size of hitpoint dice   */
 

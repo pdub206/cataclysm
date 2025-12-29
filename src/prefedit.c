@@ -104,7 +104,7 @@ static void prefedit_disp_main_menu(struct descriptor_data *d)
   vict = PREFEDIT_GET_CHAR;
 
   sprintf(prompt_string, "%s%s%s", PREFEDIT_FLAGGED(PRF_DISPHP) ? "H" : "",   PREFEDIT_FLAGGED(PRF_DISPMANA) ? "M" : "",
-                                   PREFEDIT_FLAGGED(PRF_DISPMOVE) ? "V" : "" );
+                                   PREFEDIT_FLAGGED(PRF_DISPSTAMINA) ? "S" : "" );
 
   sprintf(color_string, "%s", multi_types[(PREFEDIT_FLAGGED(PRF_COLOR_1) ? 1 : 0) + (PREFEDIT_FLAGGED(PRF_COLOR_2) ? 2 : 0)]);
 
@@ -292,12 +292,12 @@ static void prefedit_disp_prompt_menu(struct descriptor_data *d)
     sprintf(prompt_string, "<Auto>");
   else
     sprintf(prompt_string, "%s%s%s", PREFEDIT_FLAGGED(PRF_DISPHP) ? "H" : "",   PREFEDIT_FLAGGED(PRF_DISPMANA) ? "M" : "",
-                                     PREFEDIT_FLAGGED(PRF_DISPMOVE) ? "V" : "");
+                                     PREFEDIT_FLAGGED(PRF_DISPSTAMINA) ? "S" : "");
 
   send_to_char(d->character, "%sPrompt Settings\r\n"
                              "%s1%s) Toggle HP\r\n"
                              "%s2%s) Toggle Mana\r\n"
-                             "%s3%s) Toggle Moves\r\n"
+                             "%s3%s) Toggle Stamina\r\n"
                              "%s4%s) Toggle auto flag\r\n\r\n"
                              "%sCurrent Prompt: %s%s%s\r\n\r\n"
                              "%s0%s) Quit (to main menu)\r\n",
@@ -730,10 +730,10 @@ void prefedit_parse(struct descriptor_data * d, char *arg)
         }
         else if (number == 3)
         {
-          if (PREFEDIT_FLAGGED(PRF_DISPMOVE))
-            REMOVE_BIT_AR(PREFEDIT_GET_FLAGS, PRF_DISPMOVE);
+          if (PREFEDIT_FLAGGED(PRF_DISPSTAMINA))
+            REMOVE_BIT_AR(PREFEDIT_GET_FLAGS, PRF_DISPSTAMINA);
           else
-            SET_BIT_AR(PREFEDIT_GET_FLAGS, PRF_DISPMOVE);
+            SET_BIT_AR(PREFEDIT_GET_FLAGS, PRF_DISPSTAMINA);
         }
         else if (number == 4)
         {
@@ -784,9 +784,9 @@ void prefedit_Restore_Defaults(struct descriptor_data *d)
   if (!PREFEDIT_FLAGGED(PRF_DISPMANA))
      SET_BIT_AR(PREFEDIT_GET_FLAGS, PRF_DISPMANA);
 
-  /* PRF_DISPMOVE   - On */
-  if (!PREFEDIT_FLAGGED(PRF_DISPMOVE))
-     SET_BIT_AR(PREFEDIT_GET_FLAGS, PRF_DISPMOVE);
+  /* PRF_DISPSTAMINA   - On */
+  if (!PREFEDIT_FLAGGED(PRF_DISPSTAMINA))
+     SET_BIT_AR(PREFEDIT_GET_FLAGS, PRF_DISPSTAMINA);
 
   /* PRF_AUTOEXIT   - On */
   if (!PREFEDIT_FLAGGED(PRF_AUTOEXIT))
