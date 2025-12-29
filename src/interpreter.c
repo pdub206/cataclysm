@@ -49,6 +49,10 @@ static bool perform_new_char_dupe_check(struct descriptor_data *d);
 /* sort_commands utility */
 static int sort_commands_helper(const void *a, const void *b);
 static void show_species_menu(struct descriptor_data *d);
+static bool is_creation_state(int state);
+static void show_stat_pref_prompt(struct descriptor_data *d);
+static int ability_from_pref_arg(const char *arg);
+static bool parse_stat_preference(char *input, ubyte *order, ubyte *count);
 
 /* globals defined here, used here and elsewhere */
 int *cmd_sort_info = NULL;
@@ -1270,7 +1274,7 @@ static bool perform_new_char_dupe_check(struct descriptor_data *d)
     /* Do the player names match? */
     if (!strcmp(GET_NAME(k->character), GET_NAME(d->character))) {
       /* Check the other character is still in creation? */
-      if ((STATE(k) > CON_PLAYING) && (STATE(k) < CON_QCLASS)) {
+      if (is_creation_state(STATE(k))) {
         /* Boot the older one */
         k->character->desc = NULL;
         k->character = NULL;
@@ -1315,6 +1319,107 @@ static void show_species_menu(struct descriptor_data *d)
     write_to_output(d, " %2d) %s\r\n", i + 1, species_types[species]);
   }
   write_to_output(d, "Species: ");
+}
+
+static bool is_creation_state(int state)
+{
+  switch (state) {
+    case CON_GET_NAME:
+    case CON_NAME_CNFRM:
+    case CON_PASSWORD:
+    case CON_NEWPASSWD:
+    case CON_CNFPASSWD:
+    case CON_QSEX:
+    case CON_QSPECIES:
+    case CON_QCLASS:
+    case CON_QSTAT_PREF:
+    case CON_QSHORTDESC:
+    case CON_PLR_DESC:
+    case CON_PLR_BACKGROUND:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+static void show_stat_pref_prompt(struct descriptor_data *d)
+{
+  write_to_output(d,
+    "\r\nEnter your stat preference, with the first stat being your preferred highest,\r\n"
+    "followed by the others in descending order.\r\n"
+    "If you list fewer than six, those listed get the highest rolls; the rest are FIFO.\r\n"
+    "Example: strength dexterity constitution intelligence wisdom charisma\r\n"
+    "   or:  str dex con int wis cha\r\n"
+    "Press Enter to skip (first-in, first-out).\r\n"
+    "Stat preference: ");
+}
+
+static int ability_from_pref_arg(const char *arg)
+{
+  if (!arg || !*arg)
+    return -1;
+  if (!str_cmp(arg, "str") || is_abbrev(arg, "strength"))
+    return ABIL_STR;
+  if (!str_cmp(arg, "dex") || is_abbrev(arg, "dexterity"))
+    return ABIL_DEX;
+  if (!str_cmp(arg, "con") || is_abbrev(arg, "constitution"))
+    return ABIL_CON;
+  if (!str_cmp(arg, "int") || is_abbrev(arg, "intelligence"))
+    return ABIL_INT;
+  if (!str_cmp(arg, "wis") || is_abbrev(arg, "wisdom"))
+    return ABIL_WIS;
+  if (!str_cmp(arg, "cha") || is_abbrev(arg, "charisma"))
+    return ABIL_CHA;
+  return -1;
+}
+
+static bool parse_stat_preference(char *input, ubyte *order, ubyte *count)
+{
+  char arg[MAX_INPUT_LENGTH];
+  bool seen[NUM_ABILITIES] = { FALSE };
+
+  if (!order || !count)
+    return FALSE;
+
+  *count = 0;
+  skip_spaces(&input);
+  if (!*input)
+    return TRUE;
+
+  if (!str_cmp(input, "none") || !str_cmp(input, "no") || !str_cmp(input, "skip"))
+    return TRUE;
+
+  while (*input) {
+    size_t len;
+    int ability;
+
+    input = one_argument(input, arg);
+    if (!*arg)
+      break;
+
+    len = strlen(arg);
+    while (len > 0 && (arg[len - 1] == ',' || arg[len - 1] == '.')) {
+      arg[len - 1] = '\0';
+      len--;
+    }
+
+    if (!*arg)
+      continue;
+
+    ability = ability_from_pref_arg(arg);
+    if (ability < 0 || ability >= NUM_ABILITIES)
+      return FALSE;
+    if (seen[ability])
+      return FALSE;
+    if (*count >= NUM_ABILITIES)
+      return FALSE;
+
+    order[*count] = (ubyte)ability;
+    (*count)++;
+    seen[ability] = TRUE;
+  }
+
+  return TRUE;
 }
 
 /* load the player, put them in the right room - used by copyover_recover too */
@@ -1912,6 +2017,27 @@ case CON_QCLASS:
     GET_CLASS(d->character) = load_result;
   }
 
+  show_stat_pref_prompt(d);
+  STATE(d) = CON_QSTAT_PREF;
+  return;
+
+case CON_QSTAT_PREF: {
+  ubyte order[NUM_ABILITIES];
+  ubyte count = 0;
+
+  if (!parse_stat_preference(arg, order, &count)) {
+    write_to_output(d,
+      "\r\nInvalid stat list. Please enter a valid order, or press Enter to skip.\r\n");
+    show_stat_pref_prompt(d);
+    return;
+  }
+
+  d->character->stat_pref_use = TRUE;
+  d->character->stat_pref_count = count;
+  for (int i = 0; i < NUM_ABILITIES; i++) {
+    d->character->stat_pref_order[i] = (i < count) ? order[i] : 0;
+  }
+
   /* Create player entry and initialize character now so file exists */
   if (d->olc) {
     free(d->olc);
@@ -1958,6 +2084,7 @@ case CON_QCLASS:
 
   STATE(d) = CON_QSHORTDESC;
   return;
+}
 
   case CON_QSHORTDESC: {
       skip_spaces(&arg);

@@ -139,10 +139,103 @@ bool has_save_proficiency(int class_num, int ability) {
   }
 }
 
+static void set_real_ability(struct char_data *ch, int ability, int value)
+{
+  switch (ability) {
+    case ABIL_STR: ch->real_abils.str = value; break;
+    case ABIL_DEX: ch->real_abils.dex = value; break;
+    case ABIL_CON: ch->real_abils.con = value; break;
+    case ABIL_INT: ch->real_abils.intel = value; break;
+    case ABIL_WIS: ch->real_abils.wis = value; break;
+    case ABIL_CHA: ch->real_abils.cha = value; break;
+  }
+}
+
+static void roll_real_abils_preference(struct char_data *ch)
+{
+  int i, j, temp;
+  int rolls[NUM_ABILITIES];
+  int sorted[NUM_ABILITIES];
+  bool used[NUM_ABILITIES] = { FALSE };
+  bool assigned[NUM_ABILITIES] = { FALSE };
+  static const int default_order[NUM_ABILITIES] = {
+    ABIL_STR, ABIL_DEX, ABIL_CON, ABIL_INT, ABIL_WIS, ABIL_CHA
+  };
+
+  for (i = 0; i < NUM_ABILITIES; i++) {
+    int die[4];
+
+    for (j = 0; j < 4; j++)
+      die[j] = rand_number(1, 6);
+
+    temp = die[0] + die[1] + die[2] + die[3] -
+      MIN(die[0], MIN(die[1], MIN(die[2], die[3])));
+
+    rolls[i] = temp;
+    sorted[i] = temp;
+  }
+
+  for (i = 0; i < NUM_ABILITIES - 1; i++) {
+    for (j = i + 1; j < NUM_ABILITIES; j++) {
+      if (sorted[j] > sorted[i]) {
+        temp = sorted[i];
+        sorted[i] = sorted[j];
+        sorted[j] = temp;
+      }
+    }
+  }
+
+  int pref_count = ch->stat_pref_count;
+  if (pref_count > NUM_ABILITIES)
+    pref_count = NUM_ABILITIES;
+
+  for (i = 0; i < pref_count; i++) {
+    int ability = ch->stat_pref_order[i];
+
+    if (ability < 0 || ability >= NUM_ABILITIES)
+      continue;
+
+    set_real_ability(ch, ability, sorted[i]);
+    assigned[ability] = TRUE;
+
+    for (j = 0; j < NUM_ABILITIES; j++) {
+      if (!used[j] && rolls[j] == sorted[i]) {
+        used[j] = TRUE;
+        break;
+      }
+    }
+  }
+
+  int fifo_idx = 0;
+  for (i = 0; i < NUM_ABILITIES; i++) {
+    int ability = default_order[i];
+
+    if (assigned[ability])
+      continue;
+
+    while (fifo_idx < NUM_ABILITIES && used[fifo_idx])
+      fifo_idx++;
+    if (fifo_idx >= NUM_ABILITIES)
+      break;
+
+    set_real_ability(ch, ability, rolls[fifo_idx]);
+    used[fifo_idx] = TRUE;
+    assigned[ability] = TRUE;
+    fifo_idx++;
+  }
+
+  if (HAS_VALID_SPECIES(ch))
+    apply_species_bonuses(ch);
+  else
+    ch->aff_abils = ch->real_abils;
+
+  ch->stat_pref_use = FALSE;
+}
+
 /* Roll the 6 stats for a character... each stat is made of the sum of the best
  * 3 out of 4 rolls of a 6-sided die.  Each class then decides which priority
  * will be given for the best to worst stats. */
-void roll_real_abils(struct char_data *ch)
+static void roll_real_abils_classic(struct char_data *ch)
 {
   int i, j, k, temp;
   ubyte table[6];
@@ -236,6 +329,14 @@ void roll_real_abils(struct char_data *ch)
     apply_species_bonuses(ch);
   else
     ch->aff_abils = ch->real_abils;
+}
+
+void roll_real_abils(struct char_data *ch)
+{
+  if (ch && ch->stat_pref_use)
+    roll_real_abils_preference(ch);
+  else
+    roll_real_abils_classic(ch);
 }
 
 /* Per-class skill caps */

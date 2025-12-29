@@ -347,6 +347,7 @@
 #define CON_QSEX          7 /**< Choose character sex */
 #define CON_QSPECIES      8 /**< Choose character species */
 #define CON_QCLASS        9 /**< Choose character class */
+#define CON_QSTAT_PREF   44 /**< Choose character stat preference order */
 #define CON_QSHORTDESC   10 /**< Enter a new character short description prompt */
 #define CON_RMOTD        11 /**< Reading the message of the day */
 #define CON_MENU         12 /**< At the main menu */
@@ -1162,6 +1163,10 @@ struct char_data
   struct group_data *group;      /**< Character's Group */
 
   long pref; /**< unique session id */
+
+  bool stat_pref_use; /**< Use stat preference ordering when rolling abilities */
+  ubyte stat_pref_count; /**< Number of preferred stats entered */
+  ubyte stat_pref_order[NUM_ABILITIES]; /**< Ability order preferences */
   
   struct list_data * events;
 };

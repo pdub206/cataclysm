@@ -43,12 +43,12 @@ Features in Miranthas MUD Alpha release:
  * PC's now use a short description for identification instead of name
  * Backgrounds are now available for PC's and NPC's
  * Account system for tracking players/characters over long periods of time
+ * Race/species selection and stat ranges (elves have higher dex, dwarves have higher str, etc)
+ * Prioritized stats during character generation
 
 Features to be implemented in the next few releases:
 
-* Race/species selection and stat ranges (elves have higher dex, dwarves have higher str, etc)
 * Subclass selection to personalize character further
-* Prioritized stats during character generation
 * Combat is slowed down so it isn't over in < 15 seconds (unless you're far outmatched)
 * Mounts added to help with long trips
 * Wagons added to help with caravans
