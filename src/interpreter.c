@@ -87,7 +87,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "sw"       , "sw"      , POS_STANDING, do_move     , 0, SCMD_SW },
   
   /* now, the main list */
-  { "acaudit"  , "acaudi"  , POS_DEAD    , do_acaudit  , LVL_IMMORT, 0 },
+  { "audit"    , "aud"     , POS_DEAD    , do_audit    , LVL_IMMORT, 0 },
   { "at"       , "at"      , POS_DEAD    , do_at       , LVL_IMMORT, 0 },
   { "advance"  , "adv"     , POS_DEAD    , do_advance  , LVL_GRGOD, 0 },
   { "aedit"    , "aed"     , POS_DEAD    , do_oasis_aedit, LVL_GOD, 0 },

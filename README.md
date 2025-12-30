@@ -49,7 +49,7 @@ Features in Cataclysm MUD Alpha release:
 Alpha 1.1 release:
 
  * Cleaned up legacy practice system code
- * Added skill caps for classes to limit ability of everyone to reach skill leve 100 (and respective proficiency)
+ * Added skill caps for classes to limit ability of everyone to reach skill level 100 (and respective proficiency)
  * Race/species selection and stat ranges (elves have higher dex, dwarves have higher str, etc)
  * Renamed move to stamina in code to reflect how much energy is used for certain actions
  * Species have base hit/mana/stamina now, plus their class modifier rolls
@@ -57,10 +57,10 @@ Alpha 1.1 release:
  * Ability to change ldesc of PC/NPC's in some situations
  * Ability to look in certain directions to see what is 1-3 rooms away
  * PC's and NPC's can now have an age set between 18-65
+ * "audit ac" command for immortals (formerly "acaudit"), allowing for further audit commands in the future
 
 Features to be implemented in the next few releases:
 
-* "acaudit" command to be "audit ac", allowing for further audit commands in the future
 * Subclass selection to personalize character further
 * Combat is slowed down so it isn't over in < 15 seconds (unless you're far outmatched)
 * Mounts added to help with long trips

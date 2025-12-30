@@ -343,7 +343,7 @@ ACMD(do_wizutil);
 #define SCMD_THAW     4
 #define SCMD_UNAFFECT 5
 /* Functions without subcommands */
-ACMD(do_acaudit);
+ACMD(do_audit);
 ACMD(do_advance);
 ACMD(do_at);
 ACMD(do_checkloadstatus);

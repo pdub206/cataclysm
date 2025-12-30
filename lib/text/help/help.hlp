@@ -315,14 +315,16 @@ Situational: cover (+2/+5), spells (Shield, Haste, etc.)
 
 See Also: SCORE
 #0
-ACAUDIT ARMOR-AUDIT AUDIT-ARMOR IMMORTAL
+AUDIT AC AUDIT-AC ACAUDIT ARMOR-AUDIT AUDIT-ARMOR IMMORTAL
 
    Summary: Imm-only tool that scans all ITEM\_ARMOR prototypes and reports
 per-piece fields against slot caps. Use this to catch outliers and quickly
 rebalance items to the Light/Medium/Heavy targets.
 
 Usage:
-acaudit
+audit ac
+
+If you omit the option, you'll be prompted with "Audit what?"
 
 What it does:
 
@@ -12644,7 +12646,7 @@ ban          copyover     freeze       hcontrol     reroll       skillset
 thaw         unban        wizupdate    
 
 Level 32 (God):
-acaudit      advance      aedit        checkload    dc           file
+audit        advance      aedit        checkload    dc           file
 force        gecho        hedit        helpcheck    hsedit       last
 links        mcopy        mute         notitle      ocopy        pardon
 plist        qecho        rcopy        restore      scopy        send

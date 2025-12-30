@@ -6186,9 +6186,20 @@ static const char *slot_name_from_index(int idx) {
 }
 
 /* Wizard command: scan armor prototypes, validate per-piece fields (compact, paged, 25 lines) */
-ACMD(do_acaudit)
+ACMD(do_audit)
 {
   int found = 0, warned = 0;
+  char arg[MAX_INPUT_LENGTH];
+
+  one_argument(argument, arg);
+  if (!*arg) {
+    send_to_char(ch, "Audit what?\r\n");
+    return;
+  }
+  if (!is_abbrev(arg, "ac")) {
+    send_to_char(ch, "Usage: audit ac\r\n");
+    return;
+  }
 
   if (IS_NPC(ch) || GET_LEVEL(ch) < LVL_IMMORT) {
     send_to_char(ch, "You lack the authority to use this.\r\n");
