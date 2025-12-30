@@ -60,7 +60,9 @@ Changes in v1.1.0-alpha:
  * "audit ac" command for immortals (formerly "acaudit"), allowing for further audit commands in the future
  * Minor score output change to only show quest status while on a quest, PC/NPC name, sdesc, and current ldesc
  * Added ability to reroll initial stats if they are not to player's liking, and undo reroll if needed
- * Removed alignment from game - no more GOOD/EVIL flags and restrictions on items/shops
+ * Removed alignment from game - no more GOOD/EVIL flags or restrictions on shops
+ * Removed ANTI_ flags related to class restrictions on what objects they can use
+ * Mounts added to help with long trips, and ability to use them as pack animals
 
 Features to be implemented in the next few releases:
 
@@ -68,7 +70,6 @@ Features to be implemented in the next few releases:
 * SECTOR/ROOM type changes to make terrain movement easier or more difficult
 * Subclass selection to personalize character further
 * Combat is slowed down so it isn't over in < 15 seconds (unless you're far outmatched)
-* Mounts added to help with long trips
 * Wagons added to help with caravans
 * BUILDING object type created to allow enter/leave
 * Updated BUILDING object type so that it can be damaged and no longer enterable (but someone can leave at cost to health)

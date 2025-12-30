@@ -569,6 +569,43 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
               CCNRM(ch, C_NRM));
   }
 
+  if (AFF_FLAGGED(i, AFF_MOUNTED) && MOUNT(i) &&
+      IN_ROOM(MOUNT(i)) == IN_ROOM(i) &&
+      MOB_FLAGGED(MOUNT(i), MOB_MOUNT)) {
+    const char *rdesc = get_char_sdesc(i);
+    const char *mdesc = get_char_sdesc(MOUNT(i));
+
+    if (rdesc && *rdesc)
+      send_to_char(ch, "%c%s", UPPER(*rdesc), rdesc + 1);
+    else
+      send_to_char(ch, "Someone");
+
+    if (mdesc && *mdesc)
+      send_to_char(ch, " is riding %s here.", mdesc);
+    else
+      send_to_char(ch, " is riding someone here.");
+
+    if (AFF_FLAGGED(i, AFF_INVISIBLE))
+      send_to_char(ch, " (invisible)");
+    if (AFF_FLAGGED(i, AFF_HIDE))
+      send_to_char(ch, " (hidden)");
+    if (!IS_NPC(i) && !i->desc)
+      send_to_char(ch, " (linkless)");
+    if (!IS_NPC(i) && PLR_FLAGGED(i, PLR_WRITING))
+      send_to_char(ch, " (writing)");
+    if (!IS_NPC(i) && PRF_FLAGGED(i, PRF_BUILDWALK))
+      send_to_char(ch, " (buildwalk)");
+    if (!IS_NPC(i) && PRF_FLAGGED(i, PRF_AFK))
+      send_to_char(ch, " (AFK)");
+
+    send_to_char(ch, "\r\n");
+
+    if (AFF_FLAGGED(i, AFF_SANCTUARY))
+      act("...$e glows with a bright light!", FALSE, i, 0, ch, TO_VICT);
+
+    return;
+  }
+
   /* Custom ldesc overrides position-based output. */
   if (i->char_specials.custom_ldesc && i->player.long_descr) {
     if (AFF_FLAGGED(i, AFF_INVISIBLE))
@@ -692,6 +729,23 @@ static void build_current_ldesc(const struct char_data *ch, char *out, size_t ou
     return;
   }
 
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) &&
+      IN_ROOM(MOUNT(ch)) == IN_ROOM(ch) &&
+      MOB_FLAGGED(MOUNT(ch), MOB_MOUNT)) {
+    const char *rdesc = get_char_sdesc(ch);
+    const char *mdesc = get_char_sdesc(MOUNT(ch));
+
+    if (!rdesc || !*rdesc)
+      rdesc = "someone";
+    if (!mdesc || !*mdesc)
+      mdesc = "someone";
+
+    snprintf(out, outsz, "%c%s is riding %s here.",
+             UPPER(*rdesc), rdesc + 1, mdesc);
+    strip_trailing_crlf(out);
+    return;
+  }
+
   if (ch->char_specials.custom_ldesc && ch->player.long_descr) {
     strlcpy(out, ch->player.long_descr, outsz);
     strip_trailing_crlf(out);
@@ -745,6 +799,9 @@ static void list_char_to_char(struct char_data *list, struct char_data *ch)
       /* hide npcs whose description starts with a '.' from non-holylighted people - Idea from Elaseth of TBA */
       if (!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT) &&
              IS_NPC(i) && i->player.long_descr && *i->player.long_descr == '.')
+        continue;
+      if (RIDDEN_BY(i) && IN_ROOM(RIDDEN_BY(i)) == IN_ROOM(i) &&
+          CAN_SEE(ch, RIDDEN_BY(i)))
         continue;
       send_to_char(ch, "%s", CCYEL(ch, C_NRM));
       if (CAN_SEE(ch, i))
@@ -972,6 +1029,9 @@ static bool look_list_direction_chars(struct char_data *ch, room_rnum room)
     if (!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT) &&
         IS_NPC(tch) && tch->player.long_descr && *tch->player.long_descr == '.')
       continue;
+    if (RIDDEN_BY(tch) && IN_ROOM(RIDDEN_BY(tch)) == room &&
+        CAN_SEE(ch, RIDDEN_BY(tch)))
+      continue;
 
     if (AFF_FLAGGED(tch, AFF_HIDE)) {
       if (CAN_SEE(ch, tch) || look_can_spot_hidden(ch, tch, room)) {
@@ -1130,6 +1190,42 @@ static void look_at_target(struct char_data *ch, char *arg)
     if (ch != found_char) {
       if (CAN_SEE(found_char, ch))
     act("$n looks at you.", TRUE, ch, 0, found_char, TO_VICT);
+      act("$n looks at $N.", TRUE, ch, 0, found_char, TO_NOTVICT);
+    }
+    return;
+  }
+
+  if (!found_char) {
+    struct char_data *tch;
+    char tmp[MAX_INPUT_LENGTH];
+    char *name = tmp;
+    int matchnum;
+
+    strlcpy(tmp, arg, sizeof(tmp));
+    matchnum = get_number(&name);
+    if (matchnum > 0) {
+      for (tch = world[IN_ROOM(ch)].people; tch && matchnum; tch = tch->next_in_room) {
+        if (tch == ch)
+          continue;
+        if (!AFF_FLAGGED(tch, AFF_MOUNTED))
+          continue;
+        if (!CAN_SEE(ch, tch))
+          continue;
+        if (isname(name, (char *)get_char_sdesc(tch))) {
+          if (--matchnum == 0) {
+            found_char = tch;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (found_char != NULL) {
+    look_at_char(found_char, ch);
+    if (ch != found_char) {
+      if (CAN_SEE(found_char, ch))
+        act("$n looks at you.", TRUE, ch, 0, found_char, TO_VICT);
       act("$n looks at $N.", TRUE, ch, 0, found_char, TO_NOTVICT);
     }
     return;
@@ -1436,7 +1532,13 @@ ACMD(do_score)
                  FIGHTING(ch) ? PERS(FIGHTING(ch), ch) : "thin air");
     break;
   case POS_STANDING:
-    send_to_char(ch, "You are standing.\r\n");
+    if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) &&
+        IN_ROOM(MOUNT(ch)) == IN_ROOM(ch) &&
+        MOB_FLAGGED(MOUNT(ch), MOB_MOUNT)) {
+      send_to_char(ch, "You are riding %s.\r\n", get_char_sdesc(MOUNT(ch)));
+    } else {
+      send_to_char(ch, "You are standing.\r\n");
+    }
     break;
   default:
     send_to_char(ch, "You are floating.\r\n");

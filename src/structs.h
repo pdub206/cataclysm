@@ -267,8 +267,9 @@
 #define MOB_NOBLIND        17   /**< Mob can't be blinded */
 #define MOB_NOKILL         18   /**< Mob can't be attacked */
 #define MOB_NOTDEADYET     19   /**< (R) Mob being extracted */
+#define MOB_MOUNT          20   /**< Mob can be mounted */
 
-#define NUM_MOB_FLAGS      19
+#define NUM_MOB_FLAGS      21
 
 /* Preference flags: used by char_data.player_specials.pref */
 #define PRF_BRIEF         0   /**< Room descs won't normally be shown */
@@ -333,8 +334,9 @@
 #define AFF_CHARM          22   /**< Char is charmed */
 #define AFF_BANDAGED       23   /**< Character was bandaged recently */
 #define AFF_LISTEN         24   /**< Actively eavesdropping */
+#define AFF_MOUNTED        25   /**< Riding a mount */
 /** Total number of affect flags */
-#define NUM_AFF_FLAGS   25
+#define NUM_AFF_FLAGS   26
 
 /* Modes of connectedness: used by descriptor_data.state 		*/
 #define CON_PLAYING       0 /**< Playing - Nominal state 		*/
@@ -1005,6 +1007,8 @@ struct char_special_data
   struct char_data *fighting;  /**< Target of fight; else NULL */
   struct char_data *hunting;   /**< Target of NPC hunt; else NULL */
   struct obj_data *furniture;  /**< Object being sat on/in; else NULL */
+  struct char_data *mount;     /**< Mount being ridden; else NULL */
+  struct char_data *rider;     /**< Rider, if being mounted; else NULL */
   struct char_data *next_in_furniture; /**< Next person sitting, else NULL */
 
   byte position; /**< Standing, fighting, sleeping, etc. */

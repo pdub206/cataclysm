@@ -240,6 +240,7 @@ const char *action_bits[] = {
   "NO_BLIND",
   "NO_KILL",
   "DEAD",    /* You should never see this. */
+  "MOUNT",
   "\n"
 };
 
@@ -311,6 +312,7 @@ const char *affected_bits[] =
   "CHARM",
   "BANDAGED",
   "LISTEN",
+  "MOUNTED",
   "\n"
 };
 

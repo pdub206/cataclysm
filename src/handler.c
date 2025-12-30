@@ -1003,6 +1003,22 @@ void extract_char_final(struct char_data *ch)
     }
   }
 
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) || MOUNT(ch)) {
+    struct char_data *mount = MOUNT(ch);
+    if (mount && RIDDEN_BY(mount) == ch)
+      RIDDEN_BY(mount) = NULL;
+    MOUNT(ch) = NULL;
+    REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_MOUNTED);
+  }
+  if (RIDDEN_BY(ch)) {
+    struct char_data *rider = RIDDEN_BY(ch);
+    if (rider && MOUNT(rider) == ch) {
+      MOUNT(rider) = NULL;
+      REMOVE_BIT_AR(AFF_FLAGS(rider), AFF_MOUNTED);
+    }
+    RIDDEN_BY(ch) = NULL;
+  }
+
   /* On with the character's assets... */
   if (ch->followers || ch->master)
     die_follower(ch);

@@ -196,6 +196,10 @@ void    advance_level(struct char_data *ch);
 void char_from_furniture(struct char_data *ch);
 /** What ch is currently sitting on. */
 #define SITTING(ch)             ((ch)->char_specials.furniture)
+/** Mount ch is currently riding. */
+#define MOUNT(ch)               ((ch)->char_specials.mount)
+/** Rider currently mounted on ch. */
+#define RIDDEN_BY(ch)           ((ch)->char_specials.rider)
 /** Who is sitting next to ch, if anyone. */
 #define NEXT_SITTING(ch)        ((ch)->char_specials.next_in_furniture)
 /** Who is sitting on this obj */

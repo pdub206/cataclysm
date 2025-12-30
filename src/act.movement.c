@@ -44,6 +44,9 @@ static bool validate_furniture_use(struct char_data *ch, struct obj_data *furnit
                                    bool already_there);
 static void attach_char_to_furniture(struct char_data *ch, struct obj_data *furniture);
 static const char *position_gerund(int pos);
+static void clear_mount_state(struct char_data *ch);
+static bool mount_skill_check(struct char_data *ch, int dc);
+static bool resolve_mounted_move(struct char_data *ch, struct char_data **mount);
 
 
 /* simple function to determine if char can walk on water */
@@ -263,6 +266,67 @@ static const char *position_gerund(int pos)
     return "using";
   }
 }
+
+static void clear_mount_state(struct char_data *ch)
+{
+  struct char_data *mount;
+
+  if (!ch)
+    return;
+
+  mount = MOUNT(ch);
+  if (mount && RIDDEN_BY(mount) == ch)
+    RIDDEN_BY(mount) = NULL;
+  MOUNT(ch) = NULL;
+  REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_MOUNTED);
+}
+
+static bool mount_skill_check(struct char_data *ch, int dc)
+{
+  int total = roll_skill_check(ch, SKILL_ANIMAL_HANDLING, 0, NULL);
+  bool success = (total >= dc);
+
+  gain_skill(ch, "animal handling", success);
+  return success;
+}
+
+static bool resolve_mounted_move(struct char_data *ch, struct char_data **mount)
+{
+  struct char_data *mount_ch;
+
+  if (!AFF_FLAGGED(ch, AFF_MOUNTED))
+    return FALSE;
+
+  mount_ch = MOUNT(ch);
+  if (!mount_ch || IN_ROOM(mount_ch) != IN_ROOM(ch)) {
+    clear_mount_state(ch);
+    send_to_char(ch, "You aren't mounted on anything.\r\n");
+    return FALSE;
+  }
+
+  if (!mount_skill_check(ch, 5)) {
+    send_to_char(ch, "%s refuses to move.\r\n", get_char_sdesc(mount_ch));
+    act("$n tries to urge $N forward, but $N refuses to move.",
+        TRUE, ch, 0, mount_ch, TO_ROOM);
+    return FALSE;
+  }
+
+  if (!mount_skill_check(ch, 3)) {
+    int dam = dice(1, 8);
+
+    send_to_char(ch, "You are thrown from %s!\r\n", get_char_sdesc(mount_ch));
+    act("$n is thrown from $N!", TRUE, ch, 0, mount_ch, TO_ROOM);
+    clear_mount_state(ch);
+    GET_POS(ch) = POS_RESTING;
+    WAIT_STATE(ch, PULSE_VIOLENCE);
+    damage(ch, ch, dam, TYPE_SUFFERING);
+    return FALSE;
+  }
+
+  if (mount)
+    *mount = mount_ch;
+  return TRUE;
+}
 /** Move a PC/NPC character from their current location to a new location. This
  * is the standard movement locomotion function that all normal walking
  * movement by characters should be sent through. This function also defines
@@ -293,6 +357,9 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /* How many stamina points are required to travel from was_in to going_to.
    * We redefine this later when we need it. */
   int need_movement = 0;
+  /* Character whose stamina is used for movement (mounts override). */
+  struct char_data *stamina_ch = ch;
+  bool mounted_move = FALSE;
   /* Contains the "leave" message to display to the was_in room. */
   char leave_message[SMALL_BUFSIZE];
   /*---------------------------------------------------------------------*/
@@ -406,10 +473,18 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
 		   movement_loss[SECT(going_to)]) / 2;
 
   /* Move Point Requirement Check */
-  if (GET_STAMINA(ch) < need_movement && !IS_NPC(ch))
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) && IN_ROOM(MOUNT(ch)) == was_in)
+  {
+    stamina_ch = MOUNT(ch);
+    mounted_move = TRUE;
+  }
+
+  if (GET_STAMINA(stamina_ch) < need_movement && (mounted_move || !IS_NPC(ch)))
   {
     if (need_specials_check && ch->master)
       send_to_char(ch, "You are too exhausted to follow.\r\n");
+    else if (mounted_move)
+      send_to_char(ch, "Your mount is too exhausted.\r\n");
     else
       send_to_char(ch, "You are too exhausted.\r\n");
 
@@ -423,8 +498,8 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /* Begin: the leave operation. */
   /*---------------------------------------------------------------------*/
   /* If applicable, subtract movement cost. */
-  if (GET_LEVEL(ch) < LVL_IMMORT && !IS_NPC(ch))
-    GET_STAMINA(ch) -= need_movement;
+  if (GET_LEVEL(ch) < LVL_IMMORT && (mounted_move || !IS_NPC(ch)))
+    GET_STAMINA(stamina_ch) -= need_movement;
 
   /* Generate the leave message and display to others in the was_in room. */
   if (AFF_FLAGGED(ch, AFF_SNEAK)) {
@@ -500,6 +575,7 @@ int perform_move(struct char_data *ch, int dir, int need_specials_check)
 {
   room_rnum was_in;
   struct follow_type *k, *next;
+  struct char_data *mount = NULL;
 
   if (ch == NULL || dir < 0 || dir >= NUM_OF_DIRS || FIGHTING(ch))
     return (0);
@@ -513,12 +589,21 @@ int perform_move(struct char_data *ch, int dir, int need_specials_check)
     else
       send_to_char(ch, "It seems to be closed.\r\n");
   } else {
-    if (!ch->followers)
-      return (do_simple_move(ch, dir, need_specials_check));
-
     was_in = IN_ROOM(ch);
+    if (AFF_FLAGGED(ch, AFF_MOUNTED) &&
+        !resolve_mounted_move(ch, &mount))
+      return (0);
+
     if (!do_simple_move(ch, dir, need_specials_check))
       return (0);
+
+    if (mount && IN_ROOM(mount) == was_in) {
+      char_from_room(mount);
+      char_to_room(mount, IN_ROOM(ch));
+    }
+
+    if (!ch->followers)
+      return (1);
 
     for (k = ch->followers; k; k = next) {
       next = k->next;
@@ -941,6 +1026,11 @@ ACMD(do_stand)
   int ordinal = 0;
   int orig_pos = GET_POS(ch);
 
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You must dismount first.\r\n");
+    return;
+  }
+
   if (*argument) {
     if (!extract_furniture_token(ch, argument, token, sizeof(token), "Stand"))
       return;
@@ -1067,6 +1157,11 @@ ACMD(do_sit)
   int ordinal = 0;
   int orig_pos = GET_POS(ch);
 
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You must dismount first.\r\n");
+    return;
+  }
+
   if (*argument) {
     if (!extract_furniture_token(ch, argument, token, sizeof(token), "Sit"))
       return;
@@ -1174,6 +1269,11 @@ ACMD(do_rest)
   struct obj_data *furniture = NULL, *current_furniture = SITTING(ch);
   bool has_target = FALSE, used_number = FALSE;
   int ordinal = 0;
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You must dismount first.\r\n");
+    return;
+  }
 
   if (*argument) {
     if (!extract_furniture_token(ch, argument, token, sizeof(token), "Rest"))
@@ -1302,6 +1402,11 @@ ACMD(do_sleep)
   struct obj_data *furniture = NULL, *current_furniture = SITTING(ch);
   bool has_target = FALSE, used_number = FALSE;
   int ordinal = 0;
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You must dismount first.\r\n");
+    return;
+  }
 
   if (*argument) {
     if (!extract_furniture_token(ch, argument, token, sizeof(token), "Sleep"))
@@ -1482,6 +1587,66 @@ ACMD(do_follow)
       add_follower(ch, leader);
     }
   }
+}
+
+ACMD(do_mount)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct char_data *mount;
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch, "Mount what?\r\n");
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You are already mounted.\r\n");
+    return;
+  }
+
+  if (!(mount = get_char_vis(ch, arg, NULL, FIND_CHAR_ROOM))) {
+    send_to_char(ch, "%s", CONFIG_NOPERSON);
+    return;
+  }
+
+  if (mount == ch) {
+    send_to_char(ch, "You can't mount yourself.\r\n");
+    return;
+  }
+
+  if (!IS_NPC(mount) || !MOB_FLAGGED(mount, MOB_MOUNT)) {
+    send_to_char(ch, "You can't mount %s!\r\n", get_char_sdesc(mount));
+    return;
+  }
+
+  if (RIDDEN_BY(mount)) {
+    act("$N is already being ridden.", FALSE, ch, 0, mount, TO_CHAR);
+    return;
+  }
+
+  SET_BIT_AR(AFF_FLAGS(ch), AFF_MOUNTED);
+  MOUNT(ch) = mount;
+  RIDDEN_BY(mount) = ch;
+
+  act("You mount $N.", FALSE, ch, 0, mount, TO_CHAR);
+  act("$n mounts $N.", TRUE, ch, 0, mount, TO_ROOM);
+}
+
+ACMD(do_dismount)
+{
+  struct char_data *mount = MOUNT(ch);
+
+  if (!AFF_FLAGGED(ch, AFF_MOUNTED) || !mount) {
+    clear_mount_state(ch);
+    send_to_char(ch, "You aren't mounted on anything.\r\n");
+    return;
+  }
+
+  act("You dismount $N.", FALSE, ch, 0, mount, TO_CHAR);
+  act("$n dismounts $N.", TRUE, ch, 0, mount, TO_ROOM);
+  clear_mount_state(ch);
 }
 
 ACMD(do_unfollow)

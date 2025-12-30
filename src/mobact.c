@@ -81,6 +81,7 @@ void mobile_activity(void)
        ((door = rand_number(0, 18)) < DIR_COUNT) && CAN_GO(ch, door) &&
        !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_NOMOB) &&
        !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_DEATH) &&
+       !RIDDEN_BY(ch) &&
        (!MOB_FLAGGED(ch, MOB_STAY_ZONE) ||
            (world[EXIT(ch, door)->to_room].zone == world[IN_ROOM(ch)].zone))) 
     {
