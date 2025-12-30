@@ -985,6 +985,13 @@ void extract_char_final(struct char_data *ch)
           STATE(d) = CON_CLOSE;
       }
       if (GET_POS(ch) == POS_DEAD) {
+        int pfilepos = GET_PFILEPOS(ch);
+
+        if (pfilepos < 0)
+          pfilepos = get_ptable_by_name(GET_NAME(ch));
+        if (pfilepos >= 0)
+          SET_BIT(player_table[pfilepos].flags, PINDEX_DELETED);
+
         STATE(ch->desc) = CON_ACCOUNT_MENU;
         send_account_menu(ch->desc);
         ch->desc->character = NULL;
