@@ -81,6 +81,7 @@ Features to be implemented in the next few releases:
 * New elemental classes
 * Introduction of gathering mana/magic for sorceror class
 * Highly modified magic system
+* Ranged weapons and ammo
 * Components for some magical spells
 * Reading/writing limited to specific castes of society
 * Haggling and bartering system

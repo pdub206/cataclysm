@@ -900,7 +900,6 @@ static void look_in_direction(struct char_data *ch, int dir)
   int distance;
   bool blocked = FALSE;
 
-  send_to_char(ch, ">look %s\r\n\r\n", dirs[dir]);
   send_to_char(ch, "You look to the %s and see:\r\n", dirs[dir]);
 
   for (distance = 0; distance < 3; distance++) {
@@ -987,7 +986,10 @@ static bool look_list_direction_chars(struct char_data *ch, room_rnum room)
     }
 
     if (CAN_SEE(ch, tch)) {
-      send_to_char(ch, "%s\r\n", get_char_sdesc(tch));
+      char ldesc[MAX_STRING_LENGTH];
+
+      build_current_ldesc(tch, ldesc, sizeof(ldesc));
+      send_to_char(ch, "%s\r\n", ldesc);
       found = TRUE;
     }
   }
