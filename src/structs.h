@@ -1052,6 +1052,9 @@ struct player_special_data_saved
   int    quest_counter;         /**< Count of targets left to get  */
   time_t   lastmotd;            /**< Last time player read motd */
   time_t   lastnews;            /**< Last time player read news */
+  bool reroll_used;             /**< Has the PC used their one-time reroll */
+  time_t reroll_expires;        /**< When the reroll review period ends */
+  struct char_ability_data reroll_old_abils; /**< Original stats before reroll */
   time_t next_skill_gain[MAX_SKILLS+1];  /* indexed by skill/spell number */
 };
 

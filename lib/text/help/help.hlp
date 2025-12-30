@@ -7962,7 +7962,15 @@ From: justo
 #2
 REROLL
 
-Usage: reroll <player>
+Usage: reroll
+       reroll undo
+
+Reroll lets you roll a new set of stats once. Your original stats are saved
+for 2 hours; during that window you may use 'reroll undo' to restore them.
+After the review period or after using reroll undo, your stats are permanent
+and you cannot reroll again.
+
+Immortals: reroll <player> rerolls that player's stats.
 
 REROLL gives a player new stats (i.e., Str, Int, Wis, Dex, Con, and Cha)
 

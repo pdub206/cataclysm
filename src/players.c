@@ -315,6 +315,9 @@ int load_char(const char *name, struct char_data *ch)
     GET_NUM_QUESTS(ch) = PFDEF_COMPQUESTS;
     GET_LAST_MOTD(ch) = PFDEF_LASTMOTD;
     GET_LAST_NEWS(ch) = PFDEF_LASTNEWS;
+    GET_REROLL_USED(ch) = PFDEF_REROLL_USED;
+    GET_REROLL_EXPIRES(ch) = PFDEF_REROLL_EXPIRES;
+    memset(&GET_REROLL_OLD_ABILS(ch), 0, sizeof(struct char_ability_data));
     if (GET_ACCOUNT(ch)) {
       free(GET_ACCOUNT(ch));
       GET_ACCOUNT(ch) = NULL;
@@ -454,6 +457,20 @@ int load_char(const char *name, struct char_data *ch)
 
       case 'R':
 	     if (!strcmp(tag, "Room"))	GET_LOADROOM(ch)	= atoi(line);
+        else if (!strcmp(tag, "RrUs")) GET_REROLL_USED(ch)   = atoi(line);
+        else if (!strcmp(tag, "RrTm")) GET_REROLL_EXPIRES(ch) = (time_t)atol(line);
+        else if (!strcmp(tag, "RrAb")) {
+          int rstr, rint, rwis, rdex, rcon, rcha;
+
+          if (sscanf(line, "%d %d %d %d %d %d", &rstr, &rint, &rwis, &rdex, &rcon, &rcha) == 6) {
+            GET_REROLL_OLD_ABILS(ch).str = rstr;
+            GET_REROLL_OLD_ABILS(ch).intel = rint;
+            GET_REROLL_OLD_ABILS(ch).wis = rwis;
+            GET_REROLL_OLD_ABILS(ch).dex = rdex;
+            GET_REROLL_OLD_ABILS(ch).con = rcon;
+            GET_REROLL_OLD_ABILS(ch).cha = rcha;
+          }
+        }
 	break;
 
       case 'S':
@@ -663,6 +680,18 @@ void save_char(struct char_data * ch)
     fprintf(fl, "Lmot: %d\n", (int)GET_LAST_MOTD(ch));
   if (GET_LAST_NEWS(ch) != PFDEF_LASTNEWS)
     fprintf(fl, "Lnew: %d\n", (int)GET_LAST_NEWS(ch));
+  if (GET_REROLL_USED(ch) != PFDEF_REROLL_USED)
+    fprintf(fl, "RrUs: %d\n", (int)GET_REROLL_USED(ch));
+  if (GET_REROLL_EXPIRES(ch) != PFDEF_REROLL_EXPIRES) {
+    fprintf(fl, "RrTm: %ld\n", (long)GET_REROLL_EXPIRES(ch));
+    fprintf(fl, "RrAb: %d %d %d %d %d %d\n",
+            GET_REROLL_OLD_ABILS(ch).str,
+            GET_REROLL_OLD_ABILS(ch).intel,
+            GET_REROLL_OLD_ABILS(ch).wis,
+            GET_REROLL_OLD_ABILS(ch).dex,
+            GET_REROLL_OLD_ABILS(ch).con,
+            GET_REROLL_OLD_ABILS(ch).cha);
+  }
 
   if (GET_HOST(ch))				fprintf(fl, "Host: %s\n", GET_HOST(ch));
   if (GET_HEIGHT(ch)	   != PFDEF_HEIGHT)	fprintf(fl, "Hite: %d\n", GET_HEIGHT(ch));

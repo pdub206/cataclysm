@@ -66,6 +66,14 @@ static void change_trim_trailing_spaces(char *text)
   }
 }
 
+#define REROLL_REVIEW_SECONDS (2 * SECS_PER_REAL_HOUR)
+
+static void reroll_clear_saved(struct char_data *ch)
+{
+  GET_REROLL_EXPIRES(ch) = 0;
+  memset(&GET_REROLL_OLD_ABILS(ch), 0, sizeof(struct char_ability_data));
+}
+
 ACMD(do_quit)
 {
   char first[MAX_INPUT_LENGTH];
@@ -273,6 +281,105 @@ ACMD(do_change)
   ch->char_specials.custom_ldesc = TRUE;
 
   send_to_char(ch, "Long description updated.\r\n");
+}
+
+ACMD(do_reroll)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct char_data *vict;
+  time_t now;
+  time_t remaining;
+  bool expired = FALSE;
+
+  one_argument(argument, arg);
+
+  if (IS_NPC(ch)) {
+    send_to_char(ch, "You can't reroll stats.\r\n");
+    return;
+  }
+
+  now = time(0);
+  if (GET_REROLL_EXPIRES(ch) > 0 && now >= GET_REROLL_EXPIRES(ch)) {
+    reroll_clear_saved(ch);
+    save_char(ch);
+    expired = TRUE;
+  }
+
+  if (*arg && is_abbrev(arg, "undo")) {
+    if (!GET_REROLL_USED(ch)) {
+      send_to_char(ch, "You haven't rerolled yet.\r\n");
+      return;
+    }
+    if (GET_REROLL_EXPIRES(ch) <= 0 || expired) {
+      send_to_char(ch, "You no longer have a reroll pending; your stats are permanent.\r\n");
+      return;
+    }
+
+    ch->real_abils = GET_REROLL_OLD_ABILS(ch);
+    affect_total(ch);
+    reroll_clear_saved(ch);
+    save_char(ch);
+
+    send_to_char(ch, "Your original stats have been restored. You cannot reroll again.\r\n");
+    send_to_char(ch, "Stats: Str %d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+                 GET_STR(ch), GET_INT(ch), GET_WIS(ch),
+                 GET_DEX(ch), GET_CON(ch), GET_CHA(ch));
+    return;
+  }
+
+  if (*arg && GET_LEVEL(ch) >= LVL_GRGOD) {
+    if (!(vict = get_char_vis(ch, arg, NULL, FIND_CHAR_WORLD)))
+      send_to_char(ch, "There is no such player.\r\n");
+    else if (IS_NPC(vict))
+      send_to_char(ch, "You can't do that to a mob!\r\n");
+    else {
+      roll_real_abils(vict);
+      affect_total(vict);
+      send_to_char(ch, "Rerolled...\r\n");
+      log("(GC) %s has rerolled %s.", GET_NAME(ch), GET_NAME(vict));
+      send_to_char(ch, "New stats: Str %d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+                   GET_STR(vict), GET_INT(vict), GET_WIS(vict),
+                   GET_DEX(vict), GET_CON(vict), GET_CHA(vict));
+      save_char(vict);
+    }
+    return;
+  }
+
+  if (*arg) {
+    send_to_char(ch, "Usage: reroll | reroll undo\r\n");
+    return;
+  }
+
+  if (GET_REROLL_USED(ch)) {
+    if (GET_REROLL_EXPIRES(ch) > 0 && now < GET_REROLL_EXPIRES(ch)) {
+      remaining = GET_REROLL_EXPIRES(ch) - now;
+      int hours = remaining / SECS_PER_REAL_HOUR;
+      int mins = (remaining % SECS_PER_REAL_HOUR) / SECS_PER_REAL_MIN;
+
+      if (hours > 0)
+        send_to_char(ch, "You have already rerolled. You can 'reroll undo' within %d hour%s %d minute%s.\r\n",
+                     hours, hours == 1 ? "" : "s", mins, mins == 1 ? "" : "s");
+      else
+        send_to_char(ch, "You have already rerolled. You can 'reroll undo' within %d minute%s.\r\n",
+                     mins, mins == 1 ? "" : "s");
+    } else {
+      send_to_char(ch, "You have already rerolled and cannot reroll again.\r\n");
+    }
+    return;
+  }
+
+  GET_REROLL_OLD_ABILS(ch) = ch->real_abils;
+  roll_real_abils(ch);
+  affect_total(ch);
+  GET_REROLL_USED(ch) = TRUE;
+  GET_REROLL_EXPIRES(ch) = now + REROLL_REVIEW_SECONDS;
+  save_char(ch);
+
+  send_to_char(ch, "Your stats have been rerolled. You have 2 hours to review them.\r\n");
+  send_to_char(ch, "New stats: Str %d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+               GET_STR(ch), GET_INT(ch), GET_WIS(ch),
+               GET_DEX(ch), GET_CON(ch), GET_CHA(ch));
+  send_to_char(ch, "Use 'reroll undo' to restore your original stats before the timer expires.\r\n");
 }
 
 /* Generic function for commands which are normally overridden by special

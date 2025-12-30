@@ -678,6 +678,9 @@ do                                                              \
 #define GET_SCAN_RESULTS(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->scan_results))
 #define GET_LAST_MOTD(ch)       CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.lastmotd))
 #define GET_LAST_NEWS(ch)       CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.lastnews))
+#define GET_REROLL_USED(ch)     CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.reroll_used))
+#define GET_REROLL_EXPIRES(ch)  CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.reroll_expires))
+#define GET_REROLL_OLD_ABILS(ch) CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.reroll_old_abils))
 /** Get channel history i for ch. */
 #define GET_HISTORY(ch, i)      CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.comm_hist[i]))
 /** Return the page length (height) for ch. */
