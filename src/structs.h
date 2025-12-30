@@ -474,23 +474,12 @@
 #define ITEM_MAGIC             6   /**< Item is magical */
 #define ITEM_NODROP            7   /**< Item is cursed: can't drop */
 #define ITEM_BLESS             8   /**< Item is blessed */
-#define ITEM_RESERVED9        9   /**< Reserved (unused) */
-#define ITEM_RESERVED10      10   /**< Reserved (unused) */
-#define ITEM_RESERVED11      11   /**< Reserved (unused) */
-#define ITEM_ANTI_SORCEROR    12   /**< Not usable by sorcerors */
-#define ITEM_ANTI_CLERIC      13   /**< Not usable by clerics */
-#define ITEM_ANTI_ROGUE	      14   /**< Not usable by rogues */
-#define ITEM_ANTI_FIGHTER     15   /**< Not usable by fighters */
-#define ITEM_ANTI_BARBARIAN   16   /**< Not usable by barbarians */
-#define ITEM_ANTI_RANGER      17   /**< Not usable by rangers */
-#define ITEM_ANTI_BARD        18   /**< Not usable by bards */
-#define ITEM_ANTI_DRUID       19   /**< Not usable by druids */
-#define ITEM_NOSELL           20   /**< Shopkeepers won't touch it */
-#define ITEM_QUEST            21   /**< Item is a quest item         */
-#define ITEM_HOOD_UP          22   /**< WORN item hood is currently up */
-#define ITEM_SKINNED          23   /* Item/corpse can be skinned */
+#define ITEM_NOSELL            9   /**< Shopkeepers won't touch it */
+#define ITEM_QUEST            10   /**< Item is a quest item         */
+#define ITEM_HOOD_UP          11   /**< WORN item hood is currently up */
+#define ITEM_SKINNED          12   /* Item/corpse can be skinned */
 /** Total number of item flags */
-#define NUM_ITEM_FLAGS        24
+#define NUM_ITEM_FLAGS        13
 
 /* Modifier constants used with obj affects ('A' fields) */
 #define APPLY_NONE              0	/**< No effect			*/

@@ -726,32 +726,12 @@ int backstab_mult(int level)
 }
 
 /* invalid_class is used by handler.c to determine if a piece of equipment is
- * usable by a particular class, based on the ITEM_ANTI_{class} bitvectors. */
+ * usable by a particular class. Class-based anti item flags are no longer
+ * enforced. */
 int invalid_class(struct char_data *ch, struct obj_data *obj)
 {
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_SORCEROR) && IS_SORCEROR(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_CLERIC) && IS_CLERIC(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_FIGHTER) && IS_FIGHTER(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_ROGUE) && IS_ROGUE(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_BARBARIAN) && IS_BARBARIAN(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_RANGER) && IS_RANGER(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_BARD) && IS_BARD(ch))
-    return TRUE;
-
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_DRUID) && IS_DRUID(ch))
-    return TRUE;
+  (void) ch;
+  (void) obj;
 
   return FALSE;
 }

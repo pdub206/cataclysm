@@ -1020,21 +1020,17 @@ but has no substantive effect otherwise. The flags have the following values:
 
 1)   GLOW            Item is glowing (cosmetic).
 2)   HUM             Item is humming (cosmetic).
-3)   RESERVED        Reserved (unused).
+3)   UNUSED          Reserved (unused).
 4)   NODONATE        Item cannot be donated.
 5)   NOINVIS         Item cannot be made invisible.
 6)   INVISIBLE       Item is invisible.
 7)   MAGIC           Item has a magical aura and cannot be enchanted.
 8)   NODROP          Item is cursed and cannot be removed or dropped.
 9)   BLESS           Item is blessed (cosmetic).
-10)  RESERVED        Not used.
-11)  RESERVED        Not used.
-12)  RESERVED        Not used.
-13)  ANTI_MAGIC_USER Item cannot be used by the Mage class.
-14)  ANTI_CLERIC     Item cannot be used by the Cleric class.
-15)  ANTI_THIEF      Item cannot be used by the Thief class.
-16)  ANTI_WARRIOR    Item cannot be used by the Warrior class.
-17)  NOSELL          Shopkeepers will not buy or sell the item.
+10)  NOSELL          Shopkeepers will not buy or sell the item.
+11)  QUEST_ITEM      Shopkeepers will only accept questpoints for this item.
+12)  HOOD_UP         WORN item hood is currently up.
+13)  SKINNED         Item/corpse can be skinned.
 
 Wear Bitvector A bitvector (see section 2.4 on ‘Using Bitvectors’) with 
 the following values: 
