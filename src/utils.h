@@ -54,6 +54,7 @@ void sprintbitarray(int bitvector[], const char *names[], int maxar, char *resul
 int get_line(FILE *fl, char *buf);
 int get_filename(char *filename, size_t fbufsize, int mode, const char *orig_name);
 time_t mud_time_to_secs(struct time_info_data *now);
+time_t get_total_played_seconds(const struct char_data *ch);
 struct time_info_data *age(struct char_data *ch);
 int num_pc_in_room(struct room_data *room);
 void core_dump_real(const char *who, int line);
@@ -235,6 +236,9 @@ void char_from_furniture(struct char_data *ch);
 /** Real life seconds per mud month.
  * Current calculation ~= 12.4 real life days */
 #define SECS_PER_MUD_YEAR	(17*SECS_PER_MUD_MONTH)
+
+#define MIN_CHAR_AGE 18
+#define MAX_CHAR_AGE 65
 
 /** The number of seconds in a real minute. */
 #define SECS_PER_REAL_MIN	60
@@ -516,6 +520,8 @@ do                                                              \
 #define GET_WAS_IN(ch)	((ch)->was_in_room)
 /** How old is PC/NPC, at last recorded time? */
 #define GET_AGE(ch)     (age(ch)->year)
+#define GET_ROLEPLAY_AGE(ch) ((ch)->player.roleplay_age)
+#define GET_ROLEPLAY_AGE_YEAR(ch) ((ch)->player.roleplay_age_year)
 
 /** Proper name for PCs and NPCs. */
 #define GET_NAME(ch)        ((ch)->player.name)

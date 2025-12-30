@@ -274,6 +274,7 @@ extern const char *nrm, *grn, *cyn, *yel;
 /* Numerical responses. */
 #define MEDIT_NUMERICAL_RESPONSE	       15
 #define MEDIT_SEX			                16
+#define MEDIT_AGE                         44
 #define MEDIT_NUM_HP_DICE		          17
 #define MEDIT_SIZE_HP_DICE		          18
 #define MEDIT_ADD_HP			             19

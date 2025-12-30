@@ -1254,7 +1254,10 @@ ACMD(do_coins)
 
 ACMD(do_score)
 {
-  struct time_info_data playing_time;
+  time_t played_seconds;
+  int played_minutes;
+  int played_hours;
+  int played_days;
   struct ac_breakdown acb;
   bool ismob = IS_NPC(ch);
 
@@ -1299,12 +1302,9 @@ ACMD(do_score)
   send_to_char(ch, "Stealth Disadvantage: %s\r\n",
              has_stealth_disadv(ch) ? "Yes" : "No");
 
-  send_to_char(ch, "You are %d years old.", GET_AGE(ch));
+  send_to_char(ch, "You are %d years old.", GET_ROLEPLAY_AGE(ch));
 
-  if (age(ch)->month == 0 && age(ch)->day == 0)
-    send_to_char(ch, "  It's your birthday today.\r\n");
-  else
-    send_to_char(ch, "\r\n");
+  send_to_char(ch, "\r\n");
 
   /* Only players have quest data */
   if (!ismob) {
@@ -1324,11 +1324,15 @@ ACMD(do_score)
 
   /* Only players have valid playtime data */
   if (!ismob) {
-    playing_time = *real_time_passed((time(0) - ch->player.time.logon) +
-                                     ch->player.time.played, 0);
-    send_to_char(ch, "You have been playing for %d day%s and %d hour%s.\r\n",
-       playing_time.day, playing_time.day == 1 ? "" : "s",
-       playing_time.hours, playing_time.hours == 1 ? "" : "s");
+    played_seconds = get_total_played_seconds(ch);
+    played_minutes = (played_seconds / SECS_PER_REAL_MIN) % 60;
+    played_hours = (played_seconds / SECS_PER_REAL_HOUR) % 24;
+    played_days = played_seconds / SECS_PER_REAL_DAY;
+    send_to_char(ch,
+                 "You have been playing for %d minute%s, %d hour%s, and %d day%s.\r\n",
+                 played_minutes, played_minutes == 1 ? "" : "s",
+                 played_hours, played_hours == 1 ? "" : "s",
+                 played_days, played_days == 1 ? "" : "s");
   }
 
   /* Position */

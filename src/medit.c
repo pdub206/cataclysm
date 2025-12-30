@@ -241,6 +241,9 @@ static void init_mobile(struct char_data *mob)
   GET_MAX_MANA(mob) = GET_MAX_STAMINA(mob) = 100;
   GET_WEIGHT(mob) = 200;
   GET_HEIGHT(mob) = 198;
+  mob->player.time.birth = time(0);
+  mob->player.roleplay_age = MIN_CHAR_AGE;
+  mob->player.roleplay_age_year = time_info.year;
 
   /* Only assign defaults if the individual stat is unset (zero) */
   if (!mob->real_abils.str)   mob->real_abils.str   = 11;
@@ -436,6 +439,7 @@ static void medit_disp_menu(struct descriptor_data *d)
     "%s1%s) Name: %s%s\r\n"
     "%s2%s) Keywords: %s%s\r\n"
     "%s3%s) Sex: %s%-7.7s%s\r\n"
+    "%sG%s) Age: %s%d%s\r\n"
     "%s4%s) S-Desc: %s%s\r\n"
     "%s5%s) L-Desc:-\r\n%s%s\r\n"
     "%s6%s) D-Desc:-\r\n%s%s\r\n",
@@ -444,6 +448,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  grn, nrm, yel, GET_NAME(mob),
 	  grn, nrm, yel, GET_KEYWORDS(mob),
 	  grn, nrm, yel, genders[(int)GET_SEX(mob)], nrm,
+	  grn, nrm, yel, GET_ROLEPLAY_AGE(mob), nrm,
 	  grn, nrm, yel, GET_SDESC(mob),
 	  grn, nrm, yel, GET_LDESC(mob),
 	  grn, nrm, yel, GET_DDESC(mob)
@@ -763,6 +768,11 @@ void medit_parse(struct descriptor_data *d, char *arg)
     case '3':
       OLC_MODE(d) = MEDIT_SEX;
       medit_disp_sex(d);
+      return;
+    case 'g':
+    case 'G':
+      OLC_MODE(d) = MEDIT_AGE;
+      write_to_output(d, "Enter age (%d-%d): ", MIN_CHAR_AGE, MAX_CHAR_AGE);
       return;
     case '4':
       OLC_MODE(d) = MEDIT_S_DESC;
@@ -1307,6 +1317,19 @@ void medit_parse(struct descriptor_data *d, char *arg)
   case MEDIT_SEX:
     GET_SEX(OLC_MOB(d)) = LIMIT(i - 1, 0, NUM_GENDERS - 1);
     break;
+
+  case MEDIT_AGE:
+    if (i < MIN_CHAR_AGE || i > MAX_CHAR_AGE) {
+      write_to_output(d, "Age must be between %d and %d.\r\n",
+                      MIN_CHAR_AGE, MAX_CHAR_AGE);
+      write_to_output(d, "Enter age (%d-%d): ", MIN_CHAR_AGE, MAX_CHAR_AGE);
+      return;
+    }
+    GET_ROLEPLAY_AGE(OLC_MOB(d)) = i;
+    GET_ROLEPLAY_AGE_YEAR(OLC_MOB(d)) = time_info.year;
+    OLC_VAL(d) = TRUE;
+    medit_disp_menu(d);
+    return;
 
   case MEDIT_NUM_HP_DICE:
     GET_HIT(OLC_MOB(d)) = LIMIT(i, 0, 30);

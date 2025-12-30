@@ -222,6 +222,20 @@ char *get_name_by_id(long id)
   return (NULL);
 }
 
+static void update_roleplay_age(struct char_data *ch)
+{
+  if (GET_ROLEPLAY_AGE(ch) == 0)
+    GET_ROLEPLAY_AGE(ch) = MIN_CHAR_AGE;
+
+  if (GET_ROLEPLAY_AGE_YEAR(ch) == 0)
+    GET_ROLEPLAY_AGE_YEAR(ch) = time_info.year;
+
+  if (time_info.year > GET_ROLEPLAY_AGE_YEAR(ch)) {
+    GET_ROLEPLAY_AGE(ch) += (time_info.year - GET_ROLEPLAY_AGE_YEAR(ch));
+    GET_ROLEPLAY_AGE_YEAR(ch) = time_info.year;
+  }
+}
+
 /* Stuff related to the save/load player system. */
 /* New load_char reads ASCII Player Files. Load a char, TRUE if loaded, FALSE
  * if not. */
@@ -260,6 +274,8 @@ int load_char(const char *name, struct char_data *ch)
     GET_LEVEL(ch) = PFDEF_LEVEL;
     GET_HEIGHT(ch) = PFDEF_HEIGHT;
     GET_WEIGHT(ch) = PFDEF_WEIGHT;
+    GET_ROLEPLAY_AGE(ch) = 0;
+    GET_ROLEPLAY_AGE_YEAR(ch) = 0;
     GET_ALIGNMENT(ch) = PFDEF_ALIGNMENT;
     for (i = 0; i < NUM_OF_SAVING_THROWS; i++)
       GET_SAVE(ch, i) = PFDEF_SAVETHROW;
@@ -317,6 +333,8 @@ int load_char(const char *name, struct char_data *ch)
       switch (*tag) {
       case 'A':
         if (!strcmp(tag, "Ac  "))	GET_AC(ch)		= atoi(line);
+	else if (!strcmp(tag, "AgYr"))	GET_ROLEPLAY_AGE_YEAR(ch) = atoi(line);
+	else if (!strcmp(tag, "Age "))	GET_ROLEPLAY_AGE(ch)	= LIMIT(atoi(line), MIN_CHAR_AGE, MAX_CHAR_AGE);
 	else if (!strcmp(tag, "Acct")) {
           if (GET_ACCOUNT(ch))
             free(GET_ACCOUNT(ch));
@@ -515,6 +533,8 @@ int load_char(const char *name, struct char_data *ch)
     }
   }
 
+  update_roleplay_age(ch);
+  ch->player.time.birth = time(0) - get_total_played_seconds(ch);
   affect_total(ch);
 
   /* initialization for imms */
@@ -563,6 +583,9 @@ void save_char(struct char_data * ch)
       ch->player.time.logon = time(0);
     }
   }
+
+  update_roleplay_age(ch);
+  ch->player.time.birth = time(0) - get_total_played_seconds(ch);
 
   if (!get_filename(filename, sizeof(filename), PLR_FILE, GET_NAME(ch)))
     return;
@@ -631,6 +654,8 @@ void save_char(struct char_data * ch)
 
   fprintf(fl, "Id  : %ld\n", GET_IDNUM(ch));
   fprintf(fl, "Brth: %ld\n", (long)ch->player.time.birth);
+  fprintf(fl, "Age : %d\n", GET_ROLEPLAY_AGE(ch));
+  fprintf(fl, "AgYr: %d\n", GET_ROLEPLAY_AGE_YEAR(ch));
   fprintf(fl, "Plyd: %d\n",  ch->player.time.played);
   fprintf(fl, "Last: %ld\n", (long)ch->player.time.logon);
 

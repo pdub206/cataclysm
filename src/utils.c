@@ -570,17 +570,24 @@ time_t mud_time_to_secs(struct time_info_data *now)
   return (time(NULL) - when);
 }
 
-/** Calculate a player's MUD age.
- * @todo The minimum starting age of 17 is hardcoded in this function. Recommend
- * changing the minimum age to a property (variable) external to this function.
+time_t get_total_played_seconds(const struct char_data *ch)
+{
+  time_t played = ch->player.time.played;
+
+  if (ch->desc && STATE(ch->desc) == CON_PLAYING)
+    played += time(0) - ch->player.time.logon;
+
+  return played;
+}
+
+/** Calculate a player's mechanical age based on total played time.
  * @param ch A valid player character. */
 struct time_info_data *age(struct char_data *ch)
 {
   static struct time_info_data player_age;
 
-  player_age = *mud_time_passed(time(0), ch->player.time.birth);
-
-  player_age.year += 17;	/* All players start at 17 */
+  time_t played = get_total_played_seconds(ch);
+  player_age = *mud_time_passed(time(0), time(0) - played);
 
   return (&player_age);
 }

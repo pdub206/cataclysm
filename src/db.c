@@ -1713,6 +1713,10 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
     RANGE(SPECIES_UNDEFINED, NUM_SPECIES - 1);
     mob_proto[i].player.species = num_arg;
   }
+  CASE("Age") {
+    RANGE(MIN_CHAR_AGE, MAX_CHAR_AGE);
+    mob_proto[i].player.roleplay_age = num_arg;
+  }
 
   /* --- 5e-style Saving Throws --- */
   CASE("SaveStr") {
@@ -1962,6 +1966,13 @@ void parse_mobile(FILE *mob_f, int nr)
     log("SYSERR: Unsupported mob type '%c' in mob #%d", letter, nr);
     exit(1);
   }
+
+  if (mob_proto[i].player.time.birth == 0)
+    mob_proto[i].player.time.birth = time(0);
+  if (mob_proto[i].player.roleplay_age == 0)
+    mob_proto[i].player.roleplay_age = MIN_CHAR_AGE;
+  if (mob_proto[i].player.roleplay_age_year == 0)
+    mob_proto[i].player.roleplay_age_year = time_info.year;
 
   letter = fread_letter(mob_f);
   while (letter == 'L') {
@@ -2757,7 +2768,8 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   mob->points.mana = mob->points.max_mana;
   mob->points.stamina = mob->points.max_stamina;
 
-  mob->player.time.birth = time(0);
+  if (mob->player.time.birth == 0)
+    mob->player.time.birth = time(0);
   mob->player.time.played = 0;
   mob->player.time.logon = time(0);
 
@@ -3843,7 +3855,12 @@ void init_char(struct char_data *ch)
   ch->player_specials->saved.completed_quests = NULL;
   GET_QUEST(ch) = NOTHING;
 
-  ch->player.time.birth = time(0);
+  if (ch->player.time.birth == 0)
+    ch->player.time.birth = time(0);
+  if (GET_ROLEPLAY_AGE(ch) == 0)
+    GET_ROLEPLAY_AGE(ch) = MIN_CHAR_AGE;
+  if (GET_ROLEPLAY_AGE_YEAR(ch) == 0)
+    GET_ROLEPLAY_AGE_YEAR(ch) = time_info.year;
   ch->player.time.logon = time(0);
   ch->player.time.played = 0;
 

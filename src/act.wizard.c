@@ -1793,8 +1793,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
       zone_table[world[IN_ROOM(k)].zone].number);
 
   if (!IS_NPC(k)) {
-    char created[64], logon[64], olc[64] = "";
-    strftime(created, sizeof(created), "%b %d %Y", localtime(&(k->player.time.birth)));
+    char logon[64], olc[64] = "";
     strftime(logon, sizeof(logon), "%b %d %Y", localtime(&(k->player.time.logon)));
 
     if (GET_LEVEL(k) >= LVL_BUILDER) {
@@ -1810,12 +1809,16 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
         snprintf(olc, sizeof(olc), ", OLC %d", GET_OLC_ZONE(k));
     }
 
-    stat_table_row_fmt(ch, "Account", "Created %s, Last %s%s",
-      created, logon, olc);
-    stat_table_row_fmt(ch, "Age/Play", "Age %d, Played %dh %dm",
-      age(k)->year,
-      k->player.time.played / 3600,
-      (k->player.time.played % 3600) / 60);
+    stat_table_row_fmt(ch, "Account", "Last %s%s",
+      logon, olc);
+    {
+      time_t played_seconds = get_total_played_seconds(k);
+      int played_minutes = (played_seconds / SECS_PER_REAL_MIN) % 60;
+      int played_hours = (played_seconds / SECS_PER_REAL_HOUR) % 24;
+      int played_days = played_seconds / SECS_PER_REAL_DAY;
+      stat_table_row_fmt(ch, "Age/Playtime", "Age %d, %dd %dh %dm",
+        GET_ROLEPLAY_AGE(k), played_days, played_hours, played_minutes);
+    }
   }
 
   stat_table_row_fmt(ch, "Class", "%s", CLASS_NAME(k));
@@ -3864,10 +3867,8 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         send_to_char(ch, "Ages 2 to 200 accepted.\r\n");
         return (0);
       }
-      /* NOTE: May not display the exact age specified due to the integer
-       * division used elsewhere in the code.  Seems to only happen for
-       * some values below the starting age (17) anyway. -gg 5/27/98 */
-      vict->player.time.birth = time(0) - ((value - 17) * SECS_PER_MUD_YEAR);
+      GET_ROLEPLAY_AGE(vict) = LIMIT(value, MIN_CHAR_AGE, MAX_CHAR_AGE);
+      GET_ROLEPLAY_AGE_YEAR(vict) = time_info.year;
       break;
     case 3: /* align */
       GET_ALIGNMENT(vict) = RANGE(-1000, 1000);

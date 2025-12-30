@@ -1,7 +1,9 @@
-***Files for Miranthas MUD.***
+***Files for Cataclysm MUD.***
 
-Miranthas MUD is a continuation of tbaMUD/CircleMUD, which is built on DIKU MUD.
-The code here is freeware to honor that tradition.
+Cataclysm MUD is a continuation of tbaMUD/CircleMUD, which is built on DIKU MUD.
+The code here is freeware to honor that tradition. Licensing and use should be based
+on what was outlined previously. Any new code added here is released under the same
+license.
 
 Due to the sensitive nature of topics found in this setting, all characters and
 players are 18+. The game world is derived from several inspirational sources,
@@ -9,7 +11,7 @@ most notably the former Armageddon MUD.
 
 Roleplay is highly encouraged, but not enforced.
 
-Features in Miranthas MUD Alpha release:
+Features in Cataclysm MUD Alpha release:
 
 * The city of Caleran is available for exploration
 * Experience points and levels are removed in favor of skill based progression
@@ -43,12 +45,22 @@ Features in Miranthas MUD Alpha release:
  * PC's now use a short description for identification instead of name
  * Backgrounds are now available for PC's and NPC's
  * Account system for tracking players/characters over long periods of time
+
+Alpha 1.1 release:
+
+ * Cleaned up legacy practice system code
+ * Added skill caps for classes to limit ability of everyone to reach skill leve 100 (and respective proficiency)
  * Race/species selection and stat ranges (elves have higher dex, dwarves have higher str, etc)
+ * Renamed move to stamina in code to reflect how much energy is used for certain actions
+ * Species have base hit/mana/stamina now, plus their class modifier rolls
  * Prioritized stats during character generation
  * Ability to change ldesc of PC/NPC's in some situations
+ * Ability to look in certain directions to see what is 1-3 rooms away
+ * PC's and NPC's can now have an age set between 18-65
 
 Features to be implemented in the next few releases:
 
+* "acaudit" command to be "audit ac", allowing for further audit commands in the future
 * Subclass selection to personalize character further
 * Combat is slowed down so it isn't over in < 15 seconds (unless you're far outmatched)
 * Mounts added to help with long trips
@@ -78,6 +90,10 @@ Features to be implemented in the next few releases:
 * Additional zones/cities based on Miranthas world map
 * Resources on the world map can be claimed by different city-states or independent factions
 * Claimed resources improve quality of armor/weapons/food/prices available
+* Death from old age if you roll badly on your birthday after the expected lifespan of a species
+* Attacks hit different parts of the body and have different damage effects
+* Armor degradation based on damage taken per body part
+* Weapon degradation based on damage dealt - potentially shattering weapons
 
 ...and down the road:
 

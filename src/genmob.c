@@ -363,6 +363,14 @@ int write_mobile_espec(mob_vnum mvnum, struct char_data *mob, FILE *fd)
     fprintf(fd, "Species: %d\n", (int)GET_SPECIES(mob));
     count++;
   }
+  {
+    int age_years = GET_ROLEPLAY_AGE(mob);
+    if (age_years >= MIN_CHAR_AGE && age_years <= MAX_CHAR_AGE &&
+        age_years != MIN_CHAR_AGE) {
+      fprintf(fd, "Age: %d\n", age_years);
+      count++;
+    }
+  }
 
   /* --- 5e-style saving throws --- */
   if (GET_SAVE(mob, ABIL_STR) != 0) {

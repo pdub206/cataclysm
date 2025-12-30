@@ -348,6 +348,7 @@
 #define CON_QSPECIES      8 /**< Choose character species */
 #define CON_QCLASS        9 /**< Choose character class */
 #define CON_QSTAT_PREF   44 /**< Choose character stat preference order */
+#define CON_QAGE         45 /**< Choose character age */
 #define CON_QSHORTDESC   10 /**< Enter a new character short description prompt */
 #define CON_RMOTD        11 /**< Reading the message of the day */
 #define CON_MENU         12 /**< At the main menu */
@@ -906,7 +907,7 @@ struct time_info_data
 /** Player specific time information. */
 struct time_data
 {
-  time_t birth; /**< Represents the PCs birthday, used to calculate age. */
+  time_t birth; /**< Anchor for calculating mechanical age from played time. */
   time_t logon; /**< Time of the last logon, used to calculate time played */
   int played;   /**< This is the total accumulated time played in secs */
 };
@@ -943,7 +944,9 @@ struct char_player_data
   byte chclass;                  /**< PC / NPC class */
   byte species;                  /**< PC / NPC species */
   byte level;                    /**< PC / NPC level */
-  struct time_data time;         /**< PC AGE in days */
+  struct time_data time;         /**< Playtime tracking */
+  int roleplay_age;              /**< Roleplay age in years */
+  int roleplay_age_year;         /**< Last mud year roleplay age was updated */
   ubyte weight;                  /**< PC / NPC weight */
   ubyte height;                  /**< PC / NPC height */
 };

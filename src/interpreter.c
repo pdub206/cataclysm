@@ -1323,6 +1323,11 @@ static void show_species_menu(struct descriptor_data *d)
   write_to_output(d, "Species: ");
 }
 
+static void show_age_prompt(struct descriptor_data *d)
+{
+  write_to_output(d, "Age (%d-%d): ", MIN_CHAR_AGE, MAX_CHAR_AGE);
+}
+
 static bool is_creation_state(int state)
 {
   switch (state) {
@@ -1334,6 +1339,7 @@ static bool is_creation_state(int state)
     case CON_QSEX:
     case CON_QSPECIES:
     case CON_QCLASS:
+    case CON_QAGE:
     case CON_QSTAT_PREF:
     case CON_QSHORTDESC:
     case CON_PLR_DESC:
@@ -2019,9 +2025,33 @@ case CON_QCLASS:
     GET_CLASS(d->character) = load_result;
   }
 
+  show_age_prompt(d);
+  STATE(d) = CON_QAGE;
+  return;
+
+case CON_QAGE: {
+  if (!is_number(arg)) {
+    write_to_output(d, "\r\nPlease enter a number between %d and %d.\r\n",
+                    MIN_CHAR_AGE, MAX_CHAR_AGE);
+    show_age_prompt(d);
+    return;
+  }
+
+  int age_years = atoi(arg);
+  if (age_years < MIN_CHAR_AGE || age_years > MAX_CHAR_AGE) {
+    write_to_output(d, "\r\nAge must be between %d and %d.\r\n",
+                    MIN_CHAR_AGE, MAX_CHAR_AGE);
+    show_age_prompt(d);
+    return;
+  }
+
+  GET_ROLEPLAY_AGE(d->character) = age_years;
+  GET_ROLEPLAY_AGE_YEAR(d->character) = time_info.year;
+
   show_stat_pref_prompt(d);
   STATE(d) = CON_QSTAT_PREF;
   return;
+}
 
 case CON_QSTAT_PREF: {
   ubyte order[NUM_ABILITIES];
