@@ -962,8 +962,6 @@ static void look_in_direction(struct char_data *ch, int dir)
   for (distance = 0; distance < 3; distance++) {
     struct room_direction_data *exit = NULL;
 
-    send_to_char(ch, "%s\r\n", range_labels[distance]);
-
     if (!blocked) {
       exit = W_EXIT(room, dir);
 
@@ -978,9 +976,12 @@ static void look_in_direction(struct char_data *ch, int dir)
     }
 
     if (blocked || !VALID_ROOM_RNUM(room)) {
-      send_to_char(ch, "nothing\r\n");
-      continue;
+      if (distance == 0)
+        send_to_char(ch, "nothing\r\n");
+      break;
     }
+
+    send_to_char(ch, "%s\r\n", range_labels[distance]);
 
     if (!look_list_direction_chars(ch, room))
       send_to_char(ch, "nothing\r\n");
