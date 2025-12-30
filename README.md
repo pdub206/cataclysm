@@ -11,7 +11,7 @@ most notably the former Armageddon MUD.
 
 Roleplay is highly encouraged, but not enforced.
 
-Features in Cataclysm MUD Alpha release:
+Changes from stock tbaMUD 2025 to Cataclysm MUD v1.0.0-alpha:
 
 * The city of Caleran is available for exploration
 * Experience points and levels are removed in favor of skill based progression
@@ -46,7 +46,7 @@ Features in Cataclysm MUD Alpha release:
  * Backgrounds are now available for PC's and NPC's
  * Account system for tracking players/characters over long periods of time
 
-Alpha 1.1 release:
+Changes in v1.1.0-alpha:
 
  * Cleaned up legacy practice system code
  * Added skill caps for classes to limit ability of everyone to reach skill level 100 (and respective proficiency)
@@ -58,6 +58,7 @@ Alpha 1.1 release:
  * Ability to look in certain directions to see what is 1-3 rooms away
  * PC's and NPC's can now have an age set between 18-65
  * "audit ac" command for immortals (formerly "acaudit"), allowing for further audit commands in the future
+ * Minor score output change to only show quest status while on a quest, PC/NPC name, sdesc, and current ldesc
 
 Features to be implemented in the next few releases:
 

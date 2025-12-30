@@ -674,6 +674,89 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
     act("...$e glows with a bright light!", FALSE, i, 0, ch, TO_VICT);
 }
 
+static void strip_trailing_crlf(char *str)
+{
+  size_t len;
+
+  if (!str)
+    return;
+
+  len = strlen(str);
+  while (len > 0 && (str[len - 1] == '\n' || str[len - 1] == '\r'))
+    str[--len] = '\0';
+}
+
+static void build_current_ldesc(const struct char_data *ch, char *out, size_t outsz)
+{
+  struct obj_data *furniture;
+  const char *positions[] = {
+    " is lying here, dead.",
+    " is lying here, mortally wounded.",
+    " is lying here, incapacitated.",
+    " is lying here, stunned.",
+    " is sleeping here.",
+    " is resting here.",
+    " is sitting here.",
+    " is here, fighting someone.",
+    " is standing here."
+  };
+  const char *sdesc;
+  char base[MAX_INPUT_LENGTH];
+
+  if (!out || outsz == 0)
+    return;
+
+  *out = '\0';
+
+  if (!ch) {
+    strlcpy(out, "Someone is here.", outsz);
+    return;
+  }
+
+  if (ch->char_specials.custom_ldesc && ch->player.long_descr) {
+    strlcpy(out, ch->player.long_descr, outsz);
+    strip_trailing_crlf(out);
+    return;
+  }
+
+  if (ch->player.long_descr && GET_POS(ch) == GET_DEFAULT_POS(ch)) {
+    strlcpy(out, ch->player.long_descr, outsz);
+    strip_trailing_crlf(out);
+    return;
+  }
+
+  sdesc = get_char_sdesc(ch);
+  if (!sdesc || !*sdesc)
+    sdesc = "someone";
+
+  strlcpy(base, sdesc, sizeof(base));
+  if (*base)
+    base[0] = UPPER(*base);
+
+  if (GET_POS(ch) != POS_FIGHTING) {
+    if (!SITTING(ch)) {
+      snprintf(out, outsz, "%s%s", base, positions[(int) GET_POS(ch)]);
+    } else {
+      furniture = SITTING(ch);
+      snprintf(out, outsz, "%s is %s upon %s.", base,
+               (GET_POS(ch) == POS_SLEEPING ? "sleeping" :
+                (GET_POS(ch) == POS_RESTING ? "resting" : "sitting")),
+               OBJS(furniture, ch));
+    }
+  } else {
+    if (FIGHTING(ch)) {
+      if (IN_ROOM(ch) == IN_ROOM(FIGHTING(ch)))
+        snprintf(out, outsz, "%s is here, fighting %s!", base, PERS(FIGHTING(ch), ch));
+      else
+        snprintf(out, outsz, "%s is here, fighting someone who has already left!", base);
+    } else {
+      snprintf(out, outsz, "%s is here, fighting someone who has already left!", base);
+    }
+  }
+
+  strip_trailing_crlf(out);
+}
+
 static void list_char_to_char(struct char_data *list, struct char_data *ch)
 {
   struct char_data *i;
@@ -1260,6 +1343,8 @@ ACMD(do_score)
   int played_days;
   struct ac_breakdown acb;
   bool ismob = IS_NPC(ch);
+  char ldesc[MAX_STRING_LENGTH];
+  const char *sdesc = get_char_sdesc(ch);
 
   compute_ac_breakdown(ch, &acb);
 
@@ -1267,11 +1352,19 @@ ACMD(do_score)
       "\r\n"
       "====================[ Score ]====================\r\n");
 
+  build_current_ldesc(ch, ldesc, sizeof(ldesc));
+  send_to_char(ch, "Name:  %s\r\n", GET_NAME(ch) ? GET_NAME(ch) : "someone");
+  send_to_char(ch, "Sdesc: %s\r\n", sdesc && *sdesc ? sdesc : "someone");
+  send_to_char(ch, "Ldesc: %s\r\n", *ldesc ? ldesc : "None");
+
   send_to_char(ch,
       "HP:   %d/%d   Mana: %d/%d   Stamina: %d/%d\r\n",
       GET_HIT(ch), GET_MAX_HIT(ch),
       GET_MANA(ch), GET_MAX_MANA(ch),
       GET_STAMINA(ch), GET_MAX_STAMINA(ch));
+
+  send_to_char(ch, "Carrying Weight: %d/%d\r\n",
+               IS_CARRYING_W(ch), CAN_CARRY_W(ch));
 
   /* Abilities and 5e modifiers */
   send_to_char(ch,
@@ -1307,19 +1400,13 @@ ACMD(do_score)
   send_to_char(ch, "\r\n");
 
   /* Only players have quest data */
-  if (!ismob) {
-    send_to_char(ch, "You have %d questpoints.\r\n", GET_QUESTPOINTS(ch));
-
-    if (GET_QUEST(ch) == NOTHING)
-      send_to_char(ch, "You are not on a quest at the moment.\r\n");
-    else {
-      send_to_char(ch, "Your current quest is: %s",
-                   QST_NAME(real_quest(GET_QUEST(ch))));
-      if (PRF_FLAGGED(ch, PRF_SHOWVNUMS))
-        send_to_char(ch, " [%d]\r\n", GET_QUEST(ch));
-      else
-        send_to_char(ch, "\r\n");
-    }
+  if (!ismob && GET_QUEST(ch) != NOTHING) {
+    send_to_char(ch, "Your current quest is: %s",
+                 QST_NAME(real_quest(GET_QUEST(ch))));
+    if (PRF_FLAGGED(ch, PRF_SHOWVNUMS))
+      send_to_char(ch, " [%d]\r\n", GET_QUEST(ch));
+    else
+      send_to_char(ch, "\r\n");
   }
 
   /* Only players have valid playtime data */
