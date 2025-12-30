@@ -60,13 +60,18 @@ Changes in v1.1.0-alpha:
  * "audit ac" command for immortals (formerly "acaudit"), allowing for further audit commands in the future
  * Minor score output change to only show quest status while on a quest, PC/NPC name, sdesc, and current ldesc
  * Added ability to reroll initial stats if they are not to player's liking, and undo reroll if needed
+ * Removed alignment from game - no more GOOD/EVIL flags and restrictions on items/shops
 
 Features to be implemented in the next few releases:
 
+* Updated door code so that it can be closed/locked/saved with rsave code
+* SECTOR/ROOM type changes to make terrain movement easier or more difficult
 * Subclass selection to personalize character further
 * Combat is slowed down so it isn't over in < 15 seconds (unless you're far outmatched)
 * Mounts added to help with long trips
 * Wagons added to help with caravans
+* BUILDING object type created to allow enter/leave
+* Updated BUILDING object type so that it can be damaged and no longer enterable (but someone can leave at cost to health)
 * Plantlife introduced
 * Updated lockpicking skill
 * Trap as a skill - one focused on city and one focused on desert
@@ -81,7 +86,7 @@ Features to be implemented in the next few releases:
 * Haggling and bartering system
 * New calendar and moon cycles
 * Heat based on time of day increases/decreases, changing hunger/thirst levels
-* Sandstorms limiting visibility
+* Weather updates and sandstorms limiting visibility
 * Shaded rooms providing bonuses to regeneration
 * Criminal system for cities and jails
 * Basic Psionics

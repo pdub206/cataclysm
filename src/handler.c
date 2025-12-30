@@ -525,17 +525,6 @@ static int apply_ac(struct char_data *ch, int eq_pos)
   return (factor * GET_OBJ_VAL(GET_EQ(ch, eq_pos), 0));
 }
 
-int invalid_align(struct char_data *ch, struct obj_data *obj)
-{
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_EVIL) && IS_EVIL(ch))
-    return TRUE;
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_GOOD) && IS_GOOD(ch))
-    return TRUE;
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_NEUTRAL) && IS_NEUTRAL(ch))
-    return TRUE;
-  return FALSE;
-}
-
 void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
 {
   int j;
@@ -558,7 +547,7 @@ void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
     log("SYSERR: EQUIP: Obj is in_room when equip.");
     return;
   }
-  if (invalid_align(ch, obj) || invalid_class(ch, obj)) {
+  if (invalid_class(ch, obj)) {
     act("You are zapped by $p and instantly let go of it.", FALSE, ch, obj, 0, TO_CHAR);
     act("$n is zapped by $p and instantly lets go of it.", FALSE, ch, obj, 0, TO_ROOM);
     /* Changed to drop in inventory instead of the ground. */

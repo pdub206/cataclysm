@@ -237,23 +237,9 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
     /* Mostly clerics */
   case SPELL_DISPEL_EVIL:
     dam = dice(6, 8) + 6;
-    if (IS_EVIL(ch)) {
-      victim = ch;
-      dam = GET_HIT(ch) - 1;
-    } else if (IS_GOOD(victim)) {
-      act("The gods protect $N.", FALSE, ch, 0, victim, TO_CHAR);
-      return (0);
-    }
     break;
   case SPELL_DISPEL_GOOD:
     dam = dice(6, 8) + 6;
-    if (IS_GOOD(ch)) {
-      victim = ch;
-      dam = GET_HIT(ch) - 1;
-    } else if (IS_EVIL(victim)) {
-      act("The gods protect $N.", FALSE, ch, 0, victim, TO_CHAR);
-      return (0);
-    }
     break;
 
 
@@ -459,13 +445,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     SET_BIT_AR(af[0].bitvector, AFF_POISON);
     to_vict = "You feel very sick.";
     to_room = "$n gets violently ill!";
-    break;
-
-  case SPELL_PROT_FROM_EVIL:
-    af[0].duration = 24;
-    SET_BIT_AR(af[0].bitvector, AFF_PROTECT_EVIL);
-    accum_duration = TRUE;
-    to_vict = "You feel invulnerable!";
     break;
 
   case SPELL_SANCTUARY:

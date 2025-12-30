@@ -319,13 +319,6 @@ SPECIAL(sorceror)
   if (GET_LEVEL(ch) > 7 && rand_number(0, 8) == 0)
     cast_spell(ch, vict, NULL, SPELL_BLINDNESS);
 
-  if (GET_LEVEL(ch) > 12 && rand_number(0, 12) == 0) {
-    if (IS_EVIL(ch))
-      cast_spell(ch, vict, NULL, SPELL_ENERGY_DRAIN);
-    else if (IS_GOOD(ch))
-      cast_spell(ch, vict, NULL, SPELL_DISPEL_EVIL);
-  }
-
   if (rand_number(0, 4))
     return (TRUE);
 

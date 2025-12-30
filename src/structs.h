@@ -255,9 +255,9 @@
 #define MOB_AGGRESSIVE      5   /**< Mob auto-attacks everybody nearby */
 #define MOB_STAY_ZONE       6   /**< Mob shouldn't wander out of zone */
 #define MOB_WIMPY           7   /**< Mob flees if severely injured */
-#define MOB_AGGR_EVIL       8   /**< Auto-attack any evil PC's */
-#define MOB_AGGR_GOOD       9   /**< Auto-attack any good PC's */
-#define MOB_AGGR_NEUTRAL   10   /**< Auto-attack any neutral PC's */
+#define MOB_AGGR_RESERVED1  8   /**< Reserved (unused) */
+#define MOB_AGGR_RESERVED2  9   /**< Reserved (unused) */
+#define MOB_AGGR_RESERVED3 10   /**< Reserved (unused) */
 #define MOB_MEMORY         11   /**< remember attackers if attacked */
 #define MOB_HELPER         12   /**< attack PCs fighting other NPCs */
 #define MOB_NOCHARM        13   /**< Mob can't be charmed */
@@ -321,8 +321,8 @@
 #define AFF_CURSE          10   /**< Char is cursed */
 #define AFF_INFRAVISION    11   /**< Char can see in dark */
 #define AFF_POISON         12   /**< (R) Char is poisoned */
-#define AFF_PROTECT_EVIL   13   /**< Char protected from evil */
-#define AFF_PROTECT_GOOD   14   /**< Char protected from good */
+#define AFF_RESERVED13     13   /**< Reserved (unused) */
+#define AFF_RESERVED14     14   /**< Reserved (unused) */
 #define AFF_SLEEP          15   /**< (R) Char magically asleep */
 #define AFF_NOTRACK        16   /**< Char can't be tracked */
 #define AFF_FLYING         17   /**< Char is flying */
@@ -474,9 +474,9 @@
 #define ITEM_MAGIC             6   /**< Item is magical */
 #define ITEM_NODROP            7   /**< Item is cursed: can't drop */
 #define ITEM_BLESS             8   /**< Item is blessed */
-#define ITEM_ANTI_GOOD         9   /**< Not usable by good people	*/
-#define ITEM_ANTI_EVIL        10   /**< Not usable by evil people	*/
-#define ITEM_ANTI_NEUTRAL     11   /**< Not usable by neutral people */
+#define ITEM_RESERVED9        9   /**< Reserved (unused) */
+#define ITEM_RESERVED10      10   /**< Reserved (unused) */
+#define ITEM_RESERVED11      11   /**< Reserved (unused) */
 #define ITEM_ANTI_SORCEROR    12   /**< Not usable by sorcerors */
 #define ITEM_ANTI_CLERIC      13   /**< Not usable by clerics */
 #define ITEM_ANTI_ROGUE	      14   /**< Not usable by rogues */

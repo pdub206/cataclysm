@@ -388,14 +388,7 @@ ASPELL(spell_enchant_weapon)
   obj->affected[1].location = APPLY_PROFICIENCY;
   obj->affected[1].modifier = 1 + (level >= 20);
 
-  if (IS_GOOD(ch)) {
-    SET_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_ANTI_EVIL);
-    act("$p glows blue.", FALSE, ch, obj, 0, TO_CHAR);
-  } else if (IS_EVIL(ch)) {
-    SET_BIT_AR(GET_OBJ_EXTRA(obj), ITEM_ANTI_GOOD);
-    act("$p glows red.", FALSE, ch, obj, 0, TO_CHAR);
-  } else
-    act("$p glows yellow.", FALSE, ch, obj, 0, TO_CHAR);
+  act("$p glows yellow.", FALSE, ch, obj, 0, TO_CHAR);
 }
 
 ASPELL(spell_detect_poison)

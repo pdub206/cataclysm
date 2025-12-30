@@ -57,7 +57,6 @@ static struct char_data *next_combat_list = NULL;
 static void perform_group_gain(struct char_data *ch, int base, struct char_data *victim);
 static void dam_message(int dam, struct char_data *ch, struct char_data *victim, int w_type);
 static void make_corpse(struct char_data *ch);
-static void change_alignment(struct char_data *ch, struct char_data *victim);
 static void group_gain(struct char_data *ch, struct char_data *victim);
 static void solo_gain(struct char_data *ch, struct char_data *victim);
 /** @todo refactor this function name */
@@ -281,14 +280,6 @@ static void make_corpse(struct char_data *ch)
   obj_to_room(corpse, IN_ROOM(ch));
 }
 
-/* When ch kills victim */
-static void change_alignment(struct char_data *ch, struct char_data *victim)
-{
-  /* new alignment change algorithm: if you kill a monster with alignment A,
-   * you move 1/16th of the way to having alignment -A.  Simple and fast. */
-  GET_ALIGNMENT(ch) += (-GET_ALIGNMENT(victim) - GET_ALIGNMENT(ch)) / 16;
-}
-
 void death_cry(struct char_data *ch)
 {
   int door;
@@ -354,11 +345,9 @@ void die(struct char_data * ch, struct char_data * killer)
 static void perform_group_gain(struct char_data *ch, int base,
 			     struct char_data *victim)
 {
-  int share;
-
-  share = MIN(CONFIG_MAX_EXP_GAIN, MAX(1, base));
-
-  change_alignment(ch, victim);
+  (void)ch;
+  (void)base;
+  (void)victim;
 }
 
 static void group_gain(struct char_data *ch, struct char_data *victim)
@@ -400,8 +389,6 @@ static void solo_gain(struct char_data *ch, struct char_data *victim)
     exp += MAX(0, (exp * MIN(8, (GET_LEVEL(victim) - GET_LEVEL(ch)))) / 8);
 
   exp = MAX(exp, 1);
-
-  change_alignment(ch, victim);
 }
 
 static char *replace_string(const char *str, const char *weapon_singular, const char *weapon_plural)

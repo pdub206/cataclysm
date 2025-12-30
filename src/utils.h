@@ -749,13 +749,6 @@ do                                                              \
 #define CAN_SEE_IN_DARK(ch) \
    (AFF_FLAGGED(ch, AFF_INFRAVISION) || (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_HOLYLIGHT)))
 
-/** Defines if ch is good. */
-#define IS_GOOD(ch)    (GET_ALIGNMENT(ch) >= 350)
-/** Defines if ch is evil. */
-#define IS_EVIL(ch)    (GET_ALIGNMENT(ch) <= -350)
-/** Defines if ch is neither good nor evil. */
-#define IS_NEUTRAL(ch) (!IS_GOOD(ch) && !IS_EVIL(ch))
-
 /** Old wait state function.
  * @deprecated Use GET_WAIT_STATE */
 #define WAIT_STATE(ch, cycle) do { GET_WAIT_STATE(ch) = (cycle); } while(0)

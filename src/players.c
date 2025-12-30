@@ -276,7 +276,6 @@ int load_char(const char *name, struct char_data *ch)
     GET_WEIGHT(ch) = PFDEF_WEIGHT;
     GET_ROLEPLAY_AGE(ch) = 0;
     GET_ROLEPLAY_AGE_YEAR(ch) = 0;
-    GET_ALIGNMENT(ch) = PFDEF_ALIGNMENT;
     for (i = 0; i < NUM_OF_SAVING_THROWS; i++)
       GET_SAVE(ch, i) = PFDEF_SAVETHROW;
     GET_LOADROOM(ch) = PFDEF_LOADROOM;
@@ -361,7 +360,6 @@ int load_char(const char *name, struct char_data *ch)
           AFF_FLAGS(ch)[0] = asciiflag_conv(line);
 	}
 	if (!strcmp(tag, "Affs")) 	load_affects(fl, ch);
-        else if (!strcmp(tag, "Alin"))	GET_ALIGNMENT(ch)	= atoi(line);
 	else if (!strcmp(tag, "Alis"))	read_aliases_ascii(fl, ch, atoi(line));
 	break;
 
@@ -696,7 +694,6 @@ void save_char(struct char_data * ch)
   if (GET_HOST(ch))				fprintf(fl, "Host: %s\n", GET_HOST(ch));
   if (GET_HEIGHT(ch)	   != PFDEF_HEIGHT)	fprintf(fl, "Hite: %d\n", GET_HEIGHT(ch));
   if (GET_WEIGHT(ch)	   != PFDEF_WEIGHT)	fprintf(fl, "Wate: %d\n", GET_WEIGHT(ch));
-  if (GET_ALIGNMENT(ch)  != PFDEF_ALIGNMENT)	fprintf(fl, "Alin: %d\n", GET_ALIGNMENT(ch));
 
 
   sprintascii(bits,  PLR_FLAGS(ch)[0]);

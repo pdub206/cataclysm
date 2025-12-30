@@ -574,13 +574,6 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
     if (AFF_FLAGGED(i, AFF_INVISIBLE))
       send_to_char(ch, "*");
 
-    if (AFF_FLAGGED(ch, AFF_DETECT_ALIGN)) {
-      if (IS_EVIL(i))
-        send_to_char(ch, "(Red Aura) ");
-      else if (IS_GOOD(i))
-        send_to_char(ch, "(Blue Aura) ");
-    }
-
     send_to_char(ch, "%s", i->player.long_descr);
 
     if (AFF_FLAGGED(i, AFF_SANCTUARY))
@@ -595,13 +588,6 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
   if (i->player.long_descr && GET_POS(i) == GET_DEFAULT_POS(i)) {
     if (AFF_FLAGGED(i, AFF_INVISIBLE))
       send_to_char(ch, "*");
-
-    if (AFF_FLAGGED(ch, AFF_DETECT_ALIGN)) {
-      if (IS_EVIL(i))
-        send_to_char(ch, "(Red Aura) ");
-      else if (IS_GOOD(i))
-        send_to_char(ch, "(Blue Aura) ");
-    }
 
     send_to_char(ch, "%s", i->player.long_descr);
 
@@ -659,13 +645,6 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
       }
     } else            /* NIL fighting pointer */
       send_to_char(ch, " is here struggling with thin air.");
-  }
-
-  if (AFF_FLAGGED(ch, AFF_DETECT_ALIGN)) {
-    if (IS_EVIL(i))
-      send_to_char(ch, " (Red Aura)");
-    else if (IS_GOOD(i))
-      send_to_char(ch, " (Blue Aura)");
   }
 
   send_to_char(ch, "\r\n");

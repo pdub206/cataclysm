@@ -59,7 +59,7 @@ struct char_point_data_plrtoascii {
  * in player_special_data.
  */
 struct char_special_data_saved_plrtoascii {
-   int	alignment;		/* +-1000 for alignments                */
+   int	alignment;
    long	idnum;			/* player's idnum; -1 for mobiles	*/
    long /*bitvector_t*/ act;	/* act flag for NPC's; player flag for PC's */
 
@@ -212,8 +212,6 @@ void convert(char *filename)
 
 /* char_special_data_saved */
     csds = &(player.char_specials_saved);
-    if (csds->alignment != PFDEF_ALIGNMENT)
-      fprintf(outfile, "Alin: %d\n", csds->alignment);
     fprintf(outfile, "Id  : %d\n", (int)csds->idnum);
     if (csds->act != PFDEF_PLRFLAGS)
       fprintf(outfile, "Act : %d\n", (int)csds->act);

@@ -474,7 +474,7 @@ set one of these:
 P)  Perm Affects: @cNOBITS@n
 1)  BLIND      DO NOT USE.
 2)  INVIS      The wearer becomes invisible.
-3)  DET-ALIGN  The wearer detects alignments.
+3)  RESERVED   DO NOT USE.
 4)  DET-INVIS  The wearer sees invisible objects and players.
 5)  DET-MAGIC  The wearer sees a magic flag on magical objects.
 6)  SENSE-LIFE The wearer sees hidden mobs/players.
@@ -484,15 +484,15 @@ P)  Perm Affects: @cNOBITS@n
 10) CURSE      DO NOT USE.
 11) INFRA      The wearer sees in the dark.
 12) POISON     The wearer is poisoned.
-13) PROT-EVIL  The wearer is protected from evil.
-14) PROT-GOOD  The wearer is protected from good.
+13) RESERVED   DO NOT USE.
+14) RESERVED   DO NOT USE.
 15) SLEEP      DO NOT USE.
 16) NO_TRACK   DO NOT USE.
 17) FLYING     The wearer can travel through room sector type IN FLIGHT.
 18) SCUBA      The wearer can travel through room sector type UNDERWATER.
 19) SNEAK      DO NOT USE.
 20) HIDE       DO NOT USE.
-21) UNUSED     DO NOT USE.
+21) SCAN       Actively scanning for hidden threats.
 22) CHARM      DO NOT USE.
 
 #2
@@ -572,45 +572,6 @@ I would type "all 13" to list everything in zone 13. I use this to check what
 people have done with their zone.
 
 See also: ^, RUMBLE-ALIASES
-#0
-ALIGNMENT GOOD NEUTRAL EVIL %ACTOR.ALIGN% %ALIGN% %ALIGNMENT% 
-
-   Different characters and mobs have different alignments depending upon their
-way of life. Because of this, they may be aggressive or friendly depending on 
-the mix. Some objects cannot be used by certain alignments. For mobs alignment 
-ranges from:
-
- -1000 to -350  Evil
-  -350 to  350  Neutral
-   350 to 1000  Good
-
-See also: ALIGNMENTS
-#2
-ALIGNMENTS
-
-   Many good areas stick to a defined level range, such as 10-20 or 25-30. Do 
-not try and make your new area cover the entire range of levels.  Every area
-should have its moment in the sun. Conversely, it would be nice if there were
-something really unique and challenging to do at every stage in a characters
-history. Your area might be the most successful if you can gear it for a range
-of levels that people believe is otherwise boring or neglected.
-   You should always try to match your mobiles to the area and the players you
-want to play there. For example, you should make the mobs in the area a 
-similar level to the players you want to play there since a level X warrior
-should be able to kill a level X mobile if the warrior is at full health. Also,
-the quality of objects or mobiles should be matched with their level.
-   Will your area be mostly good, neutral, or evil.  If it is mostly good or
-mostly evil, is it strongly good or evil or just weakly aligned?  In any case
-try not to make your area completely homogenous (equal). In neutral
-communities there is going to be some evil and good elements, and likewise with
-other communities. To some extent this goes along with the question about zone
-level, consider what seem to be "gaps" among the zones in the world as far as
-good or evil aligned areas for a particular level range, and try to fill those
-needs. Everyone's first tendency is to make extremists--The ultimate evil hell
-area, or the blindingly good paladin fortress. Keep in mind that there are
-many layers in between, and these are often more interesting.    
-
-See also: ALIGN
 #2
 ANIMATE-DEAD
 
@@ -1650,7 +1611,6 @@ Excluding the subfield () returns the value. Adding a subfield adjusts it.
 cha/con/dex/int - Checks the stat. @RHELP TRIG-STAT@n. Subfield adjusts. 
 str/wis()        () is a subfield and allows a change to the variable.
 alias           - The list of aliases of the mob or the player name. 
-align()         - The actor's alignment @RHELP ALIGN@n. Subfield adjusts.
 affect()        - Checks the actor for the affect. @RHELP AFFECT@n 
 armor           - Checks the actor's armor class.
 canbeseen       - Checks if the the mob can see the actor. @RHELP CANBESEEN@n
@@ -2366,18 +2326,6 @@ detach obj sword 1300   - You guessed it - same as above.
 detach sword all        - detach all triggers from the sword.
 
 See also: ATTACH, TRIG-DETACH, TRIG-ATTACH, OLC, TRIGEDIT, TSTAT, STAT, ROOMFLAGS
-#2
-DETECT-ALIGNMENT
-
-Usage       : cast 'detect alignment'
-Accumulative: Yes (Duration)
-Duration    : 12 hours + level
-Level       : Cleric level 4.
-
-Allows the caster to detect the alignment of those around them.
-Evil will show as a red aura, good in a blue aura.
-
-See also: "DETECT INVISIBILITY"
 #0
 DETECT-INVISIBILITY
 
@@ -2530,38 +2478,6 @@ when done type /fi to format with indent.
 
 See also: TEXT-EDITOR
 
-#2
-DISPEL-EVIL
-
-Usage       : cast 'dispel evil' <victim>
-Accumulative: -
-Duration    : Instantaneous
-Level       : Cleric level 14.
-Save        : Special
-
-This spell will only affect evil creatures.  An evil person of level
-equal or less than caster will suffer 100 damage points.
-
-If the victim is higher level than caster, the spell will inflict
-(caster_level)d4 damage points, saving throw versus half damage.
-
-See also: DISPEL-GOOD
-#0
-DISPEL-GOOD
-
-Usage       : cast 'dispel good' <victim>
-Accumulative: -
-Duration    : Instantaneous
-Level       : Cleric level 14.
-Save        : Special
-
-This spell will only affect good creatures.  A good person of level
-equal or less than caster will suffer 100 damage points.
-
-If the victim is higher level than caster, the spell will inflict
-(caster_level)d4 damage points, saving throw versus half damage.
-
-See also: DISPEL-EVIL
 #0
 DISPLAYS PROMPTS HIT-PNT-DISPLAY
 
@@ -2825,30 +2741,23 @@ of CircleMUD expect it first).
 i.e. a shot of whisky should have the keyword: whisky shot whisky
      a cup of slime mold juice keyword should be: juice cup slime juice
 
-3: SYSERR: Mob #5 both Aggressive and Aggressive_to_Alignment.
-
-   Another harmless error. If your mob is aggressive there is no need to also
-make it aggressive to certain alignments since AGGR means it will attack any
-player it can see. Choose to make it aggressive to an alignment or aggressive 
-to all.
- 
-4: SYSERR: Object # (oedit-s-desc) has out of range level #.
+3: SYSERR: Object # (oedit-s-desc) has out of range level #.
 
    A simple one. Limit spell levels to the levels available, on TBA that would 
 be 1-30.
 
-5: SYSERR: Object # (oedit-s-desc) has negative weight (-2147483644).
+4: SYSERR: Object # (oedit-s-desc) has negative weight (-2147483644).
    SYSERR: Object # (oedit-s-desc) has out of range level #2147483647.
 
    These are really annoying. This happens when you use numbers larger than 
 necessary. This will actually crash many older versions of CircleMUD. Just do
 not do it. Use realistic numbers.
 
-6: SYSERR: Object # (oedit-s-desc) uses 'UNDEFINED' spell #.
+5: SYSERR: Object # (oedit-s-desc) uses 'UNDEFINED' spell #.
 
    There is no spell zero. Either select a spell or put -1 for none. 
 
-7: SYSERR: Object # (oedit-s-desc) contains (5) more than maximum (3).
+6: SYSERR: Object # (oedit-s-desc) contains (5) more than maximum (3).
 
    When making a drink container you will set how much it initially contains 
 on creation and the max it can hold if a player were to fill it. Common sense 
@@ -2930,7 +2839,7 @@ Objects      : 42
 Triggers     : 129 
 Theme        : Its purpose, hack & slash, quest, rescue princess, kill ogre...
 Completion   : When do you expect to finish it, how is the progress going?
-Notes        : Such things as zone alignment, economy, quests, special mobs and
+Notes        : Such things as zone economy, quests, special mobs and
        objs, and anything else I should know about your zone. What 
        makes it unique?
 
@@ -2985,8 +2894,8 @@ right. Parenthesis can be used to create priority.
 |    |                       | (if actor age is not equal to 1)
 | <  | less than             | if %actor.dex% < 16 
 |    |                       | (if actor dexterity is less than 16)
-| >  | greater than          | if %actor.align% > 349 
-|    |                       | (if actor alignment is greater than 349)
+| >  | greater than          | if %actor.level% > 30 
+|    |                       | (if actor level is greater than 30)
 | <= | less than or equal    | if %actor.exp% <= 2 
 |    |                       | (if actor experience is less than or equal to 1)
 | >= | greater than or equal | if %actor.mana% >= 1 
@@ -4852,7 +4761,7 @@ MEDIT-AFF-FLAGS AFFECTIONS AFFECTS
 M) AFF Flags : @cNOBITS@n
 1)  BLIND          Mob is blind.
 2)  INVIS          Mob is invisible.
-3)  DET-ALIGN      NOT USED.
+3)  RESERVED       NOT USED.
 4)  DET-INVIS      Mob can see invisible characters and objects.
 5)  DET-MAGIC      Mob is sensitive to magical presence.
 6)  SENSE-LIFE     Mob can sense hidden life.
@@ -4863,15 +4772,15 @@ M) AFF Flags : @cNOBITS@n
 10) CURSE          Mob is cursed.
 11) INFRA          Mob can see in dark.
 12) POISON         Reserved for internal use.  Do not set.
-13) PROT-EVIL      Mob is protected from evil characters.
-14) PROT-GOOD      Mob is protected from good characters.
+13) RESERVED       NOT USED.
+14) RESERVED       NOT USED.
 15) SLEEP          Reserved for internal use.  Do not set.
 16) NO_TRACK       Mob cannot be tracked.
 17) FLY            Mob is flying.
 18) SCUBA          Mob can breathe underwater.
 19) SNEAK          Mob can move quietly without room being informed.
 20) HIDE           Mob is hidden; can only be seen with sense life.
-21) UNUSED         Unused (room for future expansion).
+21) SCAN           Actively scanning for hidden threats.
 22) CHARM          Reserved for internal use.  Do not set.
  
 See also: INVIS, MEDIT-NPC-FLAGS, DG_AFFECT, TRIG-AFFECT
@@ -4903,20 +4812,9 @@ should be one of the following numbers:
  5) bludgeon
 
 #2
-MEDIT-EXPERIENCE MEDIT-XP MEDIT-ALIGNMENT
+MEDIT-EXPERIENCE MEDIT-XP
 
-(B) Exp Points:  [    115600]  (E) Alignment: [ 1000]
-
-Alignment
-A number from -1000 to 1000 representing the mobs initial alignment.
- 
-Evil     -1000  to  -350 
-Neutral  -349   to   349 
-Good      350   to  1000
- 
-The alignment of a mobile is determined entirely by you, depending on
-the type of area you are creating. The alignment can be from -1000 
-(extremely evil) to +1000 (divinely good).
+(B) Exp Points:  [    115600]
 
    Experience is simply the number of experience points the mobile is born 
 with. This is not the exact number of experience points the player will get
@@ -5019,7 +4917,7 @@ X) Delete Mob                                      @RHELP MEDIT-DELETE@n
 Q) Quit
 Enter choice :
 #2
-MEDIT-NPC-FLAGS MEDIT-FLAGS SPEC STAYZONE AGGRESSIVE AGGR_GOOD AGGR_NEU AGGR_EVIL STAY-ZONE STAY_ZONE SCAVENGER NPCFLAGS NPC-FLAGS MOBFLAGS MOB-FLAGS SENTINEL AWARE NOCHARM MOB-NPC NPC_FLAGS HELPER
+MEDIT-NPC-FLAGS MEDIT-FLAGS SPEC STAYZONE AGGRESSIVE STAY-ZONE STAY_ZONE SCAVENGER NPCFLAGS NPC-FLAGS MOBFLAGS MOB-FLAGS SENTINEL AWARE NOCHARM MOB-NPC NPC_FLAGS HELPER
  
 NPC stands for non-player-character (mob)
  
@@ -5042,9 +4940,9 @@ L) NPC Flags : @cISNPC@n
                its hit points.  If the WIMPY bit is set in conjunction with
                any of the forms of the AGGRESSIVE bit, the mob will only
                attack mobs that are unconscious (sleeping or incapacitated).
-8) AGGR_EVIL   Mob will attack players that are evil-aligned.
-9) AGGR_GOOD   Mob will attack players that are good-aligned.
-10) AGGR_NEU   Mob will attack players that are neutrally aligned.
+8) RESERVED    Not used.
+9) RESERVED    Not used.
+10) RESERVED   Not used.
 11) MEMORY     Mob will remember players that initiate attacks on it, and will
                attack that player if it ever runs into him again.
 12) HELPER     The mob will attack any player it sees in the room that is
@@ -5332,7 +5230,7 @@ MOBILE-FORMATS MOB-FORMATS MOB-FILES
 ~ 
 <detailed description> 
 ~ 
-<mob flags> <affect flags> <alignment> <type flag>
+<mob flags> <affect flags> <reserved> <type flag>
 <level> <thaco> <armor class> <hitpoints> <damage>
 <coins> <experience points> 
 <load position> <default position> <sex> 
@@ -5382,11 +5280,11 @@ Message List:
 0 ) [5  ] 1, burning hands        30) [314] 2, Unknown           
 1 ) [6  ] 1, call lightning       31) [399] 2, Unknown           
 2 ) [8  ] 1, chill touch          32) [33 ] 1, poison            
-3 ) [10 ] 1, color spray          33) [202] 1, !UNUSED!          
-4 ) [22 ] 1, dispel evil          34) [203] 1, !UNUSED!          
-5 ) [23 ] 1, earthquake           35) [204] 1, !UNUSED!          
-6 ) [25 ] 1, energy drain         36) [205] 1, !UNUSED!          
-7 ) [26 ] 1, fireball             37) [206] 1, !UNUSED!      
+3 ) [10 ] 1, color spray          33) [202] 1, !RESERVED!        
+4 ) [22 ] 1, dispel               34) [203] 1, !RESERVED!        
+5 ) [23 ] 1, earthquake           35) [204] 1, !RESERVED!        
+6 ) [25 ] 1, energy drain         36) [205] 1, !RESERVED!        
+7 ) [26 ] 1, fireball             37) [206] 1, !RESERVED!        
 =========================================
 MSG #, SKILL NUMBER, NUMBER OF ENTRIES, NAME (if applicable)
 0 )    [5  ]         1,                 burning hands
@@ -5901,9 +5799,9 @@ OEDIT-EXTRA-FLAGS OEDIT-FLAGS OBJECT-FLAGS OBJECTFLAGS GLOW HUM NODROP NO_DROP O
 7)   MAGIC           Item has a magical aura and cannot be enchanted.
 8)   NODROP          Item is cursed and cannot be removed or dropped.
 9)   BLESS           Item is blessed (cosmetic).
-10)  ANTI_GOOD       Item cannot be used by good-aligned characters.
-11)  ANTI_EVIL       Item cannot be used by evil-aligned characters.
-12)  ANTI_NEUTRAL    Item cannot be used by neutral align characters.
+10)  RESERVED        Not used.
+11)  RESERVED        Not used.
+12)  RESERVED        Not used.
 13)  ANTI_MAGIC_USER Item cannot be used by the Mage class.
 14)  ANTI_CLERIC     Item cannot be used by the Cleric class.
 15)  ANTI_THIEF      Item cannot be used by the Thief class.
@@ -6516,7 +6414,7 @@ this method is that if you accidentally wipe out your work on the MUD you will
 have a ready backup. Be careful cutting and pasting to the MUD; if you send too
 much text at once you will be disconnected.
 
-See also: WORK, CARTOGRAPHY, LOCATION, THEME, PLOT, SIZE, ALIGN, BIAS
+See also: WORK, CARTOGRAPHY, LOCATION, THEME, PLOT, SIZE, BIAS
 #2
 PLAYER-SHOPS PLAYER-OWNED-SHOPS
 
@@ -7079,7 +6977,7 @@ what it takes to properly plan out your first zone. It is extremely important
 that you put some forethought into what you will be creating. Remember, zones
 are built for others to play. Be sure to make it something a player will enjoy.
 A zone proposal consists of an informal MUDmail to your Head Builder. It should
-contain: the location, level, alignment, theme, plot, size, and any other 
+contain: the location, level, theme, plot, size, and any other 
 important notes about the zone. Detailed descriptions and help files are 
 available in the hallways starting from room 14 and 15.
 
@@ -7089,15 +6987,6 @@ deadlines, so take the time to give your zone character.
 Required Reading: @RHELP PLANNING, HELP STYLISTICS@n
 
 See also: EXAMPLE-PROPOSAL
-#2
-PROTECTION-FROM-EVIL PROT-EVIL 
-
-Usage       : cast 'protection from evil' [self]
-Accumulative: Yes (Duration)
-Duration    : 24 hours
-Level       : Cleric level 8.
-
-The meaning of this spell is not yet fully defined.
 #0
 PURGE DESTROY UNLOAD DELETE-MOBILE DISINTEGRATE DECOMPOSE CLEANUP 
 
@@ -8396,12 +8285,12 @@ Enter choice :
 SEDIT-TRADE
 
 E) No Trade With  : @cNOBITS@n
-   Designates certain alignments or classes that the shop will not trade with:
+   Designates certain classes that the shop will not trade with:
  
- 1) Good                    2) Evil                   
- 3) Neutral                 4) Magic User             
- 5) Cleric                  6) Thief                  
- 7) Warrior                
+ 1) Sorceror               2) Cleric                 
+ 3) Rogue                  4) Fighter                
+ 5) Barbarian              6) Ranger                 
+ 7) Bard                   8) Druid                  
 
 Currently will not trade with: @cNOBITS@n
 Enter choice (-1 for none):
@@ -8700,11 +8589,11 @@ The following room flags can be selected:
 16) *          - DO NOT USE. Breadth-first search mark used by track and hunt.
 17) WORLDMAP   - DO NOT USE. World Map style maps.
 
-Never set UNUSED or DO NOT USE bits, if you find them anywhere. If you 
+Never set RESERVED or DO NOT USE bits, if you find them anywhere. If you 
 do not know what a flag does, DO NOT SET IT!
 
 This requires repeating since it is so often ignored:
-   @YIf a flag says UNUSED; DO NOT SET IT. If you do not know what it does; DO NOT SET IT!@n
+   @YIf a flag says RESERVED; DO NOT SET IT. If you do not know what it does; DO NOT SET IT!@n
 
 See Also: TOGGLE
 #2
@@ -8973,18 +8862,18 @@ SPELLS
  7) charm person          8) chill touch           9) clone                
 10) color spray          11) control weather      12) create food          
 13) create water         14) cure blind           15) cure critic          
-16) cure light           17) curse                18) detect alignment     
+16) cure light           17) curse                18) reserved             
 19) detect invisibility  20) detect magic         21) detect poison        
-22) dispel evil          23) earthquake           24) enchant weapon       
+22) reserved             23) earthquake           24) enchant weapon       
 25) energy drain         26) fireball             27) harm                 
 28) heal                 29) invisibility         30) lightning bolt       
 31) locate object        32) magic missile        33) poison               
-34) protection from evil 35) remove curse         36) sanctuary            
+34) reserved             35) remove curse         36) sanctuary            
 37) shocking grasp       38) sleep                39) strength             
-40) summon               41) !UNUSED!             42) word of recall       
+40) summon               41) !RESERVED!           42) word of recall       
 43) remove poison        44) sense life           45) animate dead         
-46) dispel good          47) group armor          48) group heal           
-49) !UNUSED!             50) infravision          51) waterwalk            
+46) reserved             47) group armor          48) group heal           
+49) !RESERVED!           50) infravision          51) waterwalk            
 52) identify
 
 #2
@@ -8997,13 +8886,13 @@ SPELLS MAGICS SPELLBOOKS TOMBS SPELL-LEVELS SPELLS-STOCK SPELLLIST
 | Detect Magic         2   |   Create Food           2   |
 | Chill Touch          3   |   Create Water          2   |
 | Infravision          3   |   Detect Poison         3   |
-| Invisibility         4   |   Detect Alignment      4   |
+| Invisibility         4   |   Reserved              4   |
 | Armor                4   |   Cure Blind            4   |
 | Burning Hands        5   |   Bless                 5   |
 | Locate Object        6   |   Detect Invisibility   6   |
 | Strength             6   |   Blindness             6   |
 | Shocking Grasp       7   |   Infravision           7   |
-| Sleep                8   |   Protection from Evil  8   |
+| Sleep                8   |   Reserved              8   |
 | Lightning Bolt       9   |   Poison                8   |
 | Blindness            9   |   Group Armor           9   |
 | Detect Poison       10   |   Cure Crit             9   |
@@ -9013,8 +8902,8 @@ SPELLS MAGICS SPELLBOOKS TOMBS SPELL-LEVELS SPELLS-STOCK SPELLLIST
 | Poison              14   |   Word of Recall       12   |
 | Fireball            15   |   Earthquake           12   |
 | Charm               16   |   Darkness             13   |
-| Identify            20   |   Dispel Evil          14   |
-| Enchant Weapon      26   |   Dispel Good          14   |
+| Identify            20   |   Reserved             14   |
+| Enchant Weapon      26   |   Reserved             14   |
 | Clone               30   |   Sanctuary            15   |
 |                          |   Call Lightning       15   |
 |                          |   Heal                 16   |

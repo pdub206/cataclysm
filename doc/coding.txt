@@ -813,7 +813,7 @@ equips it to the character for the specified location. unequip_char() does the
 opposite; it removes the object from the character’s equipment list and returns it 
 as a free-floating object. The object being unequipped must be placed elsewhere or 
 destroyed. Note that some objects may not be equipped by characters of certain 
-classes and/or alignments. 
+classes. 
 
 void obj_to_char (struct obj_data *object, struct char_data *ch) 
 
@@ -1427,9 +1427,9 @@ search it for "ITEM_x (extra bits)". Add a string giving a short name for the ne
 ITEM_ANTI_xxx flag, in the appropriate order, before the "\n" entry near the 
 bottom. 
 
-The shops have a similar "don’t trade" setup, so search shop.hfor "TRADE_NOGOOD" 
+The shops have a similar "don’t trade" setup, so search shop.h for "TRADE_NOSORCEROR" 
 to add a new TRADE_NOxxx item to the list for the class to be added. Below that 
-(near "NOTRADE_GOOD"), a line will need to be added for each new class so the ’no 
+(near "NOTRADE_SORCEROR"), a line will need to be added for each new class so the ’no 
 trade’ status of a shop can be tested for the class. 
 
 With the definitions in shop.h, the shop code in shop.c can then be modified to 
