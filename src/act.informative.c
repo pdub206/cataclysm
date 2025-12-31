@@ -103,8 +103,11 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
           found++;
       }
       if (found) {
-        send_to_char(ch, "You are %s upon %s.", GET_POS(ch) == POS_SITTING ? "sitting" :
-        "resting", obj->short_description);
+        const char *pos = (GET_POS(ch) == POS_STANDING ? "standing" :
+                          (GET_POS(ch) == POS_SITTING ? "sitting" :
+                          (GET_POS(ch) == POS_SLEEPING ? "sleeping" : "resting")));
+        const char *prep = (GET_POS(ch) == POS_STANDING || GET_POS(ch) == POS_SITTING) ? "at" : "upon";
+        send_to_char(ch, "You are %s %s %s.", pos, prep, obj->short_description);
         goto end;
       }
     }
@@ -662,9 +665,13 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
       send_to_char(ch, "%s", positions[(int) GET_POS(i)]);
     else {
       furniture = SITTING(i);
-      send_to_char(ch, " is %s upon %s.", (GET_POS(i) == POS_SLEEPING ?
-        "sleeping" : (GET_POS(i) == POS_RESTING ? "resting" : "sitting")),
-        OBJS(furniture, ch));
+      {
+        const char *pos = (GET_POS(i) == POS_STANDING ? "standing" :
+                          (GET_POS(i) == POS_SITTING ? "sitting" :
+                          (GET_POS(i) == POS_SLEEPING ? "sleeping" : "resting")));
+        const char *prep = (GET_POS(i) == POS_STANDING || GET_POS(i) == POS_SITTING) ? "at" : "upon";
+        send_to_char(ch, " is %s %s %s.", pos, prep, OBJS(furniture, ch));
+      }
     }
   } else {
     if (FIGHTING(i)) {
@@ -768,10 +775,13 @@ static void build_current_ldesc(const struct char_data *ch, char *out, size_t ou
       snprintf(out, outsz, "%s%s", base, positions[(int) GET_POS(ch)]);
     } else {
       furniture = SITTING(ch);
-      snprintf(out, outsz, "%s is %s upon %s.", base,
-               (GET_POS(ch) == POS_SLEEPING ? "sleeping" :
-                (GET_POS(ch) == POS_RESTING ? "resting" : "sitting")),
-               OBJS(furniture, ch));
+      {
+        const char *pos = (GET_POS(ch) == POS_STANDING ? "standing" :
+                          (GET_POS(ch) == POS_SITTING ? "sitting" :
+                          (GET_POS(ch) == POS_SLEEPING ? "sleeping" : "resting")));
+        const char *prep = (GET_POS(ch) == POS_STANDING || GET_POS(ch) == POS_SITTING) ? "at" : "upon";
+        snprintf(out, outsz, "%s is %s %s %s.", base, pos, prep, OBJS(furniture, ch));
+      }
     }
   } else {
     if (FIGHTING(ch)) {
@@ -1525,7 +1535,7 @@ ACMD(do_score)
       send_to_char(ch, "You are sitting.\r\n");
     else {
       struct obj_data *furniture = SITTING(ch);
-      send_to_char(ch, "You are sitting upon %s.\r\n", furniture->short_description);
+      send_to_char(ch, "You are sitting at %s.\r\n", furniture->short_description);
     }
     break;
   case POS_FIGHTING:
