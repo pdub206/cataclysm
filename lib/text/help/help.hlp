@@ -315,29 +315,35 @@ Situational: cover (+2/+5), spells (Shield, Haste, etc.)
 
 See Also: SCORE
 #0
-AUDIT AC AUDIT-AC ACAUDIT ARMOR-AUDIT AUDIT-ARMOR IMMORTAL
+AUDIT ARMOR AUDIT-ARMOR AUDIT AC AUDIT-AC ACAUDIT AUDIT MELEE AUDIT-MELEE IMMORTAL
 
-   Summary: Imm-only tool that scans all ITEM\_ARMOR prototypes and reports
-per-piece fields against slot caps. Use this to catch outliers and quickly
-rebalance items to the Light/Medium/Heavy targets.
+   Summary: Imm-only tool that scans armor and weapons for invalid config.
 
 Usage:
-audit ac
+audit armor|melee
 
-If you omit the option, you'll be prompted with "Audit what?"
-
-What it does:
+What auditing armor does:
 
 Scans prototypes for armor slots (head, body, legs, arms, hands, feet) and
 prints one line per item:
-\[#VNUM] <name> slot=<slot>  ac=\<piece\_ac>  bulk=<bulk>  mag=+<magic>  flags=<mask>
+[#VNUM] <name> sl=<slot> ac=<piece_ac> b=<bulk> m=<magic> sd=<0/1> str=<req>
 
 Markers:
 
-OVER  : value exceeds the slot’s hard cap (e.g., piece AC > slot max, or
-magic > slot max)
-WARN  : value outside 0..3 (invalid for piece AC, bulk, or magic)
-(STEALTHDISADV): flag is set (the piece imposes Stealth Disadvantage)
+R!    : value exceeds the slot’s hard cap (e.g., piece AC > slot max, or
+        magic > slot max)
+Y?    : value outside 0..3 (invalid for piece AC, bulk, or magic)
+sd=1  : piece imposes Stealth Disadvantage
+
+What auditing melee weapons does:
+
+Scans melee weapon prototypes and reports attack type, damage (1d4/1d6/1d8/
+1d10/1d12), and weight.
+
+Melee markers:
+
+R!    : attack type is missing/invalid or damage is not 1d4/1d6/1d8/1d10/1d12
+Y?    : weight is 0 or less
 
 Notes:
 
@@ -358,7 +364,7 @@ Medium : AC \~14–18
 Heavy  : AC \~16–20
 
 See Also: ARMOR PIECES, BULK, SHIELDS, MAGIC CAPS, SCORE, OEDIT ARMOR
-#32
+#2
 ACRONYMS TERMINOLOGY VOCABULARY
 
 Here are some common terms used in building, and TBA zone:
@@ -9822,7 +9828,7 @@ redit 34800
 q
 y
 See Also: TBA-STAFF, TBA-ZONES
-#32
+#2
 TBA-ADVERTISING
 
 Mud Created: 2000 
@@ -12568,7 +12574,7 @@ Examples:
 >; @              - shows all gods that are on and visible to you.
                   - also shows if the gods who are visible to you are writing.
 >;#<level> <text> - sends text to everyone <level> and above.
-                  - ;#32 only God and above will see this.
+                  - ;#2 only God and above will see this.
 
 See also: NOWIZ
 #2

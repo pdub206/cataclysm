@@ -6183,14 +6183,20 @@ ACMD(do_audit)
 {
   int found = 0, warned = 0;
   char arg[MAX_INPUT_LENGTH];
+  bool do_armor = FALSE;
+  bool do_weapons = FALSE;
 
   one_argument(argument, arg);
   if (!*arg) {
     send_to_char(ch, "Audit what?\r\n");
     return;
   }
-  if (!is_abbrev(arg, "ac")) {
-    send_to_char(ch, "Usage: audit ac\r\n");
+  if (is_abbrev(arg, "armor"))
+    do_armor = TRUE;
+  else if (is_abbrev(arg, "melee"))
+    do_weapons = TRUE;
+  else {
+    send_to_char(ch, "Usage: audit armor | audit melee\r\n");
     return;
   }
 
@@ -6218,74 +6224,134 @@ ACMD(do_audit)
     len += (size_t)snprintf(out + len, cap - len, __VA_ARGS__);             \
   } while (0)
 
-  /* Header (short so it won’t wrap) */
-  APPEND_FMT("\r\n\tY[Armor Audit]\tn ITEM_ARMOR scan\r\n");
-  APPEND_FMT("Legend: \tR!\tn over-cap, \tY?\tn warn, S stealth-disadv\r\n");
+  if (do_armor) {
+    /* Header (short so it won’t wrap) */
+    APPEND_FMT("\r\n\tY[Armor Audit]\tn ITEM_ARMOR scan\r\n");
+    APPEND_FMT("Legend: \tR!\tn over-cap, \tY?\tn warn, S stealth-disadv\r\n");
 
-  for (obj_rnum r = 0; r <= top_of_objt; r++) {
-    struct obj_data *obj = &obj_proto[r];
-    char namebuf[128] = {0};
-    int idx, vnum, piece_ac, bulk, magic, stealth, strreq;
+    for (obj_rnum r = 0; r <= top_of_objt; r++) {
+      struct obj_data *obj = &obj_proto[r];
+      char namebuf[128] = {0};
+      int idx, vnum, piece_ac, bulk, magic, stealth, strreq;
 
-    if (GET_OBJ_TYPE(obj) != ITEM_ARMOR)
-      continue;
+      if (GET_OBJ_TYPE(obj) != ITEM_ARMOR)
+        continue;
 
-    /* Identify slot (skip shields here) */
-    idx = armor_slot_index_from_wear(obj);
-    if (idx == -2) continue; /* shield handled in AC; skip */
-    if (idx < 0)  continue;  /* not a supported armor slot */
+      /* Identify slot (skip shields here) */
+      idx = armor_slot_index_from_wear(obj);
+      if (idx == -2) continue; /* shield handled in AC; skip */
+      if (idx < 0)  continue;  /* not a supported armor slot */
 
-    vnum     = GET_OBJ_VNUM(obj);
-    piece_ac = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
-    bulk     = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
-    magic    = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
-    stealth  = GET_OBJ_VAL(obj, VAL_ARMOR_STEALTH_DISADV); /* 1/0, yes or no */
-    strreq   = GET_OBJ_VAL(obj, VAL_ARMOR_STR_REQ);        /* 0 or 13/15/16 typically */
+      vnum     = GET_OBJ_VNUM(obj);
+      piece_ac = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
+      bulk     = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
+      magic    = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
+      stealth  = GET_OBJ_VAL(obj, VAL_ARMOR_STEALTH_DISADV); /* 1/0, yes or no */
+      strreq   = GET_OBJ_VAL(obj, VAL_ARMOR_STR_REQ);        /* 0 or 13/15/16 typically */
 
-    /* Display name (trim to keep line width < ~78 cols) */
-    if (obj->short_description)
-      snprintf(namebuf, sizeof(namebuf), "%s", obj->short_description);
-    else if (obj->name)
-      snprintf(namebuf, sizeof(namebuf), "%s", obj->name);
-    else
-      snprintf(namebuf, sizeof(namebuf), "object");
+      /* Display name (trim to keep line width < ~78 cols) */
+      if (obj->short_description)
+        snprintf(namebuf, sizeof(namebuf), "%s", obj->short_description);
+      else if (obj->name)
+        snprintf(namebuf, sizeof(namebuf), "%s", obj->name);
+      else
+        snprintf(namebuf, sizeof(namebuf), "object");
 
-    /* Slot caps */
-    const int max_piece_ac = armor_slots[idx].max_piece_ac;
-    const int max_magic    = armor_slots[idx].max_magic;
+      /* Slot caps */
+      const int max_piece_ac = armor_slots[idx].max_piece_ac;
+      const int max_magic    = armor_slots[idx].max_magic;
 
-    /* Validations */
-    bool over_ac    = (piece_ac > max_piece_ac);
-    bool over_magic = (magic    > max_magic);
-    bool bad_ac     = (piece_ac < 0 || piece_ac > 3);
-    bool bad_bulk   = (bulk     < 0 || bulk     > 3);
-    bool bad_magic  = (magic    < 0 || magic    > 3);
+      /* Validations */
+      bool over_ac    = (piece_ac > max_piece_ac);
+      bool over_magic = (magic    > max_magic);
+      bool bad_ac     = (piece_ac < 0 || piece_ac > 3);
+      bool bad_bulk   = (bulk     < 0 || bulk     > 3);
+      bool bad_magic  = (magic    < 0 || magic    > 3);
 
-    found++;
+      found++;
 
-    /* Compact, non-wrapping row (~70 cols worst case) */
-    APPEND_FMT("\tc[#%5d]\tn %-24.24s sl=%-5.5s ac=%2d%s b=%d%s m=%+d%s sd=%d str=%d\r\n",
-      vnum,
-      namebuf,
-      slot_name_from_index(idx),
-      piece_ac,  over_ac    ? " \tR!\tn" : (bad_ac   ? " \tY?\tn" : ""),
-      bulk,      bad_bulk   ? " \tY?\tn" : "",
-      magic,     over_magic ? " \tR!\tn" : (bad_magic? " \tY?\tn" : ""),
-      stealth, strreq);
+      /* Compact, non-wrapping row (~70 cols worst case) */
+      APPEND_FMT("\tc[#%5d]\tn %-24.24s sl=%-5.5s ac=%2d%s b=%d%s m=%+d%s sd=%d str=%d\r\n",
+        vnum,
+        namebuf,
+        slot_name_from_index(idx),
+        piece_ac,  over_ac    ? " \tR!\tn" : (bad_ac   ? " \tY?\tn" : ""),
+        bulk,      bad_bulk   ? " \tY?\tn" : "",
+        magic,     over_magic ? " \tR!\tn" : (bad_magic? " \tY?\tn" : ""),
+        stealth, strreq);
 
-    if (over_ac || over_magic || bad_ac || bad_bulk || bad_magic)
-      warned++;
+      if (over_ac || over_magic || bad_ac || bad_bulk || bad_magic)
+        warned++;
+    }
+
+    if (!found) {
+      free(out);
+      send_to_char(ch, "No ITEM_ARMOR prototypes found for the audited slots.\r\n");
+      return;
+    }
+
+    /* Footer */
+    APPEND_FMT("\r\nScanned: %d items, %d with issues. Armor magic cap +%d (shield separate).\r\n",
+               found, warned, MAX_TOTAL_ARMOR_MAGIC);
+  } else if (do_weapons) {
+    APPEND_FMT("\r\n\tY[Weapon Audit]\tn ITEM_WEAPON scan\r\n");
+    APPEND_FMT("Legend: \tR!\tn error, \tY?\tn warn, dmg=1d4/1d6/1d8/1d10/1d12\r\n");
+
+    for (obj_rnum r = 0; r <= top_of_objt; r++) {
+      struct obj_data *obj = &obj_proto[r];
+      char namebuf[128] = {0};
+      int vnum, ndice, sdice, atype, weight;
+      bool bad_type, bad_dmg, bad_weight;
+      const char *atype_name;
+
+      if (GET_OBJ_TYPE(obj) != ITEM_WEAPON)
+        continue;
+
+      vnum   = GET_OBJ_VNUM(obj);
+      ndice  = GET_OBJ_VAL(obj, 0);
+      sdice  = GET_OBJ_VAL(obj, 1);
+      atype  = GET_OBJ_VAL(obj, 2);
+      weight = GET_OBJ_WEIGHT(obj);
+
+      /* Display name (trim to keep line width < ~78 cols) */
+      if (obj->short_description)
+        snprintf(namebuf, sizeof(namebuf), "%s", obj->short_description);
+      else if (obj->name)
+        snprintf(namebuf, sizeof(namebuf), "%s", obj->name);
+      else
+        snprintf(namebuf, sizeof(namebuf), "object");
+
+      bad_type = (atype < 0 || atype >= NUM_ATTACK_TYPES);
+      bad_dmg = !(ndice == 1 &&
+                  (sdice == 4 || sdice == 6 || sdice == 8 || sdice == 10 || sdice == 12));
+      bad_weight = (weight <= 0);
+
+      if (bad_type)
+        atype_name = "invalid";
+      else
+        atype_name = attack_hit_text[atype].singular;
+
+      found++;
+
+      APPEND_FMT("\tc[#%5d]\tn %-24.24s at=%-7.7s%s dmg=%dd%d%s wt=%d%s\r\n",
+        vnum,
+        namebuf,
+        atype_name, bad_type ? " \tR!\tn" : "",
+        ndice, sdice, bad_dmg ? " \tR!\tn" : "",
+        weight, bad_weight ? " \tY?\tn" : "");
+
+      if (bad_type || bad_dmg || bad_weight)
+        warned++;
+    }
+
+    if (!found) {
+      free(out);
+      send_to_char(ch, "No ITEM_WEAPON prototypes found.\r\n");
+      return;
+    }
+
+    APPEND_FMT("\r\nScanned: %d items, %d with issues.\r\n", found, warned);
   }
-
-  if (!found) {
-    free(out);
-    send_to_char(ch, "No ITEM_ARMOR prototypes found for the audited slots.\r\n");
-    return;
-  }
-
-  /* Footer */
-  APPEND_FMT("\r\nScanned: %d items, %d with issues. Armor magic cap +%d (shield separate).\r\n",
-             found, warned, MAX_TOTAL_ARMOR_MAGIC);
 
   /* Page it (copy mode) and try to force 25-line pages */
   if (ch->desc) {

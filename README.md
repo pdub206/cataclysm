@@ -57,7 +57,7 @@ Changes in v1.1.0-alpha:
  * Ability to change ldesc of PC/NPC's in some situations
  * Ability to look in certain directions to see what is 1-3 rooms away
  * PC's and NPC's can now have an age set between 18-65
- * "audit ac" command for immortals (formerly "acaudit"), allowing for further audit commands in the future
+ * "audit armor" command for immortals (formerly "acaudit")
  * Minor score output change to only show quest status while on a quest, PC/NPC name, sdesc, and current ldesc
  * Added ability to reroll initial stats if they are not to player's liking, and undo reroll if needed
  * Removed alignment from game - no more GOOD/EVIL flags or restrictions on shops
