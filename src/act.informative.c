@@ -961,10 +961,23 @@ static void look_in_direction(struct char_data *ch, int dir)
 {
   static const char *range_labels[] = { "[near]", "[far]", "[very far]" };
   room_rnum room = IN_ROOM(ch);
+  struct room_direction_data *start_exit = W_EXIT(room, dir);
+  const char *door_name = NULL;
   int distance;
   bool blocked = FALSE;
 
-  send_to_char(ch, "You look to the %s and see:\r\n", dirs[dir]);
+  if (start_exit && start_exit->to_room != NOWHERE &&
+      EXIT_FLAGGED(start_exit, EX_ISDOOR) &&
+      (!EXIT_FLAGGED(start_exit, EX_HIDDEN) || PRF_FLAGGED(ch, PRF_HOLYLIGHT))) {
+    door_name = start_exit->keyword ? fname(start_exit->keyword) : "door";
+    if (EXIT_FLAGGED(start_exit, EX_CLOSED)) {
+      send_to_char(ch, "You look to the %s and see the %s is closed.\r\n", dirs[dir], door_name);
+      return;
+    }
+    send_to_char(ch, "You look to the %s and see the %s is open:\r\n", dirs[dir], door_name);
+  } else {
+    send_to_char(ch, "You look to the %s and see:\r\n", dirs[dir]);
+  }
 
   for (distance = 0; distance < 3; distance++) {
     struct room_direction_data *exit = NULL;
