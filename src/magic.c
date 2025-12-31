@@ -235,14 +235,6 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
     break;
 
     /* Mostly clerics */
-  case SPELL_DISPEL_EVIL:
-    dam = dice(6, 8) + 6;
-    break;
-  case SPELL_DISPEL_GOOD:
-    dam = dice(6, 8) + 6;
-    break;
-
-
   case SPELL_CALL_LIGHTNING:
     dam = dice(7, 8) + 7;
     break;
@@ -382,13 +374,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     accum_affect = TRUE;
     to_room = "$n briefly glows red!";
     to_vict = "You feel very uncomfortable.";
-    break;
-
-  case SPELL_DETECT_ALIGN:
-    af[0].duration = 12 + level;
-    SET_BIT_AR(af[0].bitvector, AFF_DETECT_ALIGN);
-    accum_duration = TRUE;
-    to_vict = "Your eyes tingle.";
     break;
 
   case SPELL_DETECT_INVIS:

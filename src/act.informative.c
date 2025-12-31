@@ -236,9 +236,6 @@ static void show_obj_modifiers(struct obj_data *obj, struct char_data *ch)
   if (OBJ_FLAGGED(obj, ITEM_INVISIBLE))
     send_to_char(ch, " (invisible)");
 
-  if (OBJ_FLAGGED(obj, ITEM_BLESS) && AFF_FLAGGED(ch, AFF_DETECT_ALIGN))
-    send_to_char(ch, " ..It glows blue!");
-
   if (OBJ_FLAGGED(obj, ITEM_MAGIC) && AFF_FLAGGED(ch, AFF_DETECT_MAGIC))
     send_to_char(ch, " ..It glows yellow!");
 

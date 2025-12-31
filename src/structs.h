@@ -312,31 +312,30 @@
 #define AFF_DONTUSE         0   /**< DON'T USE! This allows 0 to mean "no bits set" in the database */
 #define AFF_BLIND           1   /**< (R) Char is blind */
 #define AFF_INVISIBLE       2   /**< Char is invisible */
-#define AFF_DETECT_ALIGN    3   /**< Char is sensitive to align */
-#define AFF_DETECT_INVIS    4   /**< Char can see invis chars */
-#define AFF_DETECT_MAGIC    5   /**< Char is sensitive to magic */
-#define AFF_SENSE_LIFE      6   /**< Char can sense hidden life */
-#define AFF_WATERWALK       7   /**< Char can walk on water */
-#define AFF_SANCTUARY       8   /**< Char protected by sanct */
-#define AFF_UNUSED          9   /**< (R) Char is grouped */
-#define AFF_CURSE          10   /**< Char is cursed */
-#define AFF_INFRAVISION    11   /**< Char can see in dark */
-#define AFF_POISON         12   /**< (R) Char is poisoned */
-#define AFF_RESERVED13     13   /**< Reserved (unused) */
-#define AFF_RESERVED14     14   /**< Reserved (unused) */
-#define AFF_SLEEP          15   /**< (R) Char magically asleep */
-#define AFF_NOTRACK        16   /**< Char can't be tracked */
-#define AFF_FLYING         17   /**< Char is flying */
-#define AFF_SCUBA          18   /**< Room for future expansion */
-#define AFF_SNEAK          19   /**< Char can move quietly */
-#define AFF_HIDE           20   /**< Char is hidden */
-#define AFF_SCAN           21   /**< Actively scanning for hidden threats */
-#define AFF_CHARM          22   /**< Char is charmed */
-#define AFF_BANDAGED       23   /**< Character was bandaged recently */
-#define AFF_LISTEN         24   /**< Actively eavesdropping */
-#define AFF_MOUNTED        25   /**< Riding a mount */
+#define AFF_DETECT_INVIS    3   /**< Char can see invis chars */
+#define AFF_DETECT_MAGIC    4   /**< Char is sensitive to magic */
+#define AFF_SENSE_LIFE      5   /**< Char can sense hidden life */
+#define AFF_WATERWALK       6   /**< Char can walk on water */
+#define AFF_SANCTUARY       7   /**< Char protected by sanct */
+#define AFF_UNUSED          8   /**< (R) Char is grouped */
+#define AFF_CURSE           9   /**< Char is cursed */
+#define AFF_INFRAVISION    10   /**< Char can see in dark */
+#define AFF_POISON         11   /**< (R) Char is poisoned */
+#define AFF_RESERVED13     12   /**< Reserved (unused) */
+#define AFF_RESERVED14     13   /**< Reserved (unused) */
+#define AFF_SLEEP          14   /**< (R) Char magically asleep */
+#define AFF_NOTRACK        15   /**< Char can't be tracked */
+#define AFF_FLYING         16   /**< Char is flying */
+#define AFF_SCUBA          17   /**< Room for future expansion */
+#define AFF_SNEAK          18   /**< Char can move quietly */
+#define AFF_HIDE           19   /**< Char is hidden */
+#define AFF_SCAN           20   /**< Actively scanning for hidden threats */
+#define AFF_CHARM          21   /**< Char is charmed */
+#define AFF_BANDAGED       22   /**< Character was bandaged recently */
+#define AFF_LISTEN         23   /**< Actively eavesdropping */
+#define AFF_MOUNTED        24   /**< Riding a mount */
 /** Total number of affect flags */
-#define NUM_AFF_FLAGS   26
+#define NUM_AFF_FLAGS   25
 
 /* Modes of connectedness: used by descriptor_data.state 		*/
 #define CON_PLAYING       0 /**< Playing - Nominal state 		*/

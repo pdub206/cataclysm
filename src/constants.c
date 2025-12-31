@@ -290,7 +290,6 @@ const char *affected_bits[] =
   "\0", /* DO NOT REMOVE!! */
   "BLIND",
   "INVIS",
-  "DET-ALIGN",
   "DET-INVIS",
   "DET-MAGIC",
   "SENSE-LIFE",

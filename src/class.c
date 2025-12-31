@@ -404,7 +404,6 @@ static void apply_class_skills(int chclass, struct char_data *ch)
     apply_class_skill(chclass, ch, SPELL_CREATE_FOOD, 5, 90);
     apply_class_skill(chclass, ch, SPELL_CREATE_WATER, 5, 90);
     apply_class_skill(chclass, ch, SPELL_DETECT_POISON, 5, 90);
-    apply_class_skill(chclass, ch, SPELL_DETECT_ALIGN, 5, 90);
     apply_class_skill(chclass, ch, SPELL_CURE_BLIND, 5, 90);
     apply_class_skill(chclass, ch, SPELL_BLESS, 5, 90);
     apply_class_skill(chclass, ch, SPELL_DETECT_INVIS, 5, 90);
@@ -420,8 +419,6 @@ static void apply_class_skills(int chclass, struct char_data *ch)
     apply_class_skill(chclass, ch, SPELL_WORD_OF_RECALL, 5, 90);
     apply_class_skill(chclass, ch, SPELL_DARKNESS, 5, 90);
     apply_class_skill(chclass, ch, SPELL_EARTHQUAKE, 5, 90);
-    apply_class_skill(chclass, ch, SPELL_DISPEL_EVIL, 5, 90);
-    apply_class_skill(chclass, ch, SPELL_DISPEL_GOOD, 5, 90);
     apply_class_skill(chclass, ch, SPELL_SANCTUARY, 5, 90);
     apply_class_skill(chclass, ch, SPELL_CALL_LIGHTNING, 5, 90);
     apply_class_skill(chclass, ch, SPELL_HEAL, 5, 90);
@@ -778,7 +775,6 @@ void init_spell_levels(void)
   spell_level(SPELL_CREATE_FOOD, CLASS_CLERIC, 1);
   spell_level(SPELL_CREATE_WATER, CLASS_CLERIC, 1);
   spell_level(SPELL_DETECT_POISON, CLASS_CLERIC, 1);
-  spell_level(SPELL_DETECT_ALIGN, CLASS_CLERIC, 1);
   spell_level(SPELL_CURE_BLIND, CLASS_CLERIC, 1);
   spell_level(SPELL_BLESS, CLASS_CLERIC, 1);
   spell_level(SPELL_DETECT_INVIS, CLASS_CLERIC, 1);
@@ -794,8 +790,6 @@ void init_spell_levels(void)
   spell_level(SPELL_WORD_OF_RECALL, CLASS_CLERIC, 1);
   spell_level(SPELL_DARKNESS, CLASS_CLERIC, 1);
   spell_level(SPELL_EARTHQUAKE, CLASS_CLERIC, 1);
-  spell_level(SPELL_DISPEL_EVIL, CLASS_CLERIC, 1);
-  spell_level(SPELL_DISPEL_GOOD, CLASS_CLERIC, 1);
   spell_level(SPELL_SANCTUARY, CLASS_CLERIC, 1);
   spell_level(SPELL_CALL_LIGHTNING, CLASS_CLERIC, 1);
   spell_level(SPELL_HEAL, CLASS_CLERIC, 1);
