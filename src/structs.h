@@ -1009,6 +1009,7 @@ struct char_special_data
   struct obj_data *furniture;  /**< Object being sat on/in; else NULL */
   struct char_data *mount;     /**< Mount being ridden; else NULL */
   struct char_data *rider;     /**< Rider, if being mounted; else NULL */
+  struct char_data *hitched_to; /**< Person this mount is hitched to; else NULL */
   struct char_data *next_in_furniture; /**< Next person sitting, else NULL */
 
   byte position; /**< Standing, fighting, sleeping, etc. */

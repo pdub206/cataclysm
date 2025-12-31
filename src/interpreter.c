@@ -181,6 +181,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "hold"     , "hold"    , POS_RESTING , do_grab     , 1, 0 },
   { "holylight", "holy"    , POS_DEAD    , do_gen_tog  , LVL_IMMORT, SCMD_HOLYLIGHT },
   { "house"    , "house"   , POS_RESTING , do_house    , 0, 0 },
+  { "hitch"    , "hitc"    , POS_STANDING, do_hitch    , 0, 0 },
 
   { "inventory", "i"       , POS_DEAD    , do_inventory, 0, 0 },
   { "idea"     , "ide"      , POS_DEAD    , do_ibt      , 0, SCMD_IDEA },
@@ -233,6 +234,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "ocopy"    , "ocopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_OEDIT },
 
   { "put"      , "p"       , POS_RESTING , do_put      , 0, 0 },
+  { "pack"     , "pac"     , POS_RESTING , do_pack     , 0, 0 },
   { "peace"    , "pe"      , POS_DEAD    , do_peace    , LVL_BUILDER, 0 },
   { "pemote"   , "pem"     , POS_SLEEPING, do_pemote   , 0, SCMD_PEMOTE },
   { "phemote"  , "phem"    , POS_SLEEPING, do_phemote  , 0, SCMD_PHEMOTE },
@@ -329,7 +331,9 @@ cpp_extern const struct command_info cmd_info[] = {
   { "unlock"   , "unlock"  , POS_SITTING , do_gen_door , 0, SCMD_UNLOCK },
   { "unban"    , "unban"   , POS_DEAD    , do_unban    , LVL_GRGOD, 0 },
   { "unaffect" , "unaffect", POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_UNAFFECT },
+  { "unhitch"  , "unh"     , POS_STANDING, do_unhitch  , 0, 0 },
   { "unfollow" , "unf"     , POS_RESTING , do_unfollow , 0, 0 },
+  { "unpack"   , "unpa"    , POS_RESTING , do_unpack   , 0, 0 },
   { "uptime"   , "uptime"  , POS_DEAD    , do_date     , LVL_GOD, SCMD_UPTIME },
   { "use"      , "use"     , POS_SITTING , do_use      , 1, SCMD_USE },
   { "users"    , "users"   , POS_DEAD    , do_users    , LVL_GOD, 0 },

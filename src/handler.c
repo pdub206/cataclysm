@@ -446,6 +446,8 @@ void obj_to_char(struct obj_data *object, struct char_data *ch)
       RoomSave_mark_dirty_room(__rs_room);
     IS_CARRYING_W(ch) += GET_OBJ_WEIGHT(object);
     IS_CARRYING_N(ch)++;
+    if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) && RIDDEN_BY(MOUNT(ch)) == ch)
+      IS_CARRYING_W(MOUNT(ch)) += GET_OBJ_WEIGHT(object);
 
     autoquest_trigger_check(ch, NULL, object, AQ_OBJ_FIND);
 
@@ -487,6 +489,11 @@ void obj_from_char(struct obj_data *object)
 
   IS_CARRYING_W(object->carried_by) -= GET_OBJ_WEIGHT(object);
   IS_CARRYING_N(object->carried_by)--;
+  if (AFF_FLAGGED(object->carried_by, AFF_MOUNTED) &&
+      MOUNT(object->carried_by) &&
+      RIDDEN_BY(MOUNT(object->carried_by)) == object->carried_by)
+    IS_CARRYING_W(MOUNT(object->carried_by)) =
+      MAX(0, IS_CARRYING_W(MOUNT(object->carried_by)) - GET_OBJ_WEIGHT(object));
   object->carried_by = NULL;
   object->next_content = NULL;
   if (__rs_room != NOWHERE)
@@ -559,6 +566,8 @@ void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
   obj->worn_by = ch;
   obj->worn_on = pos;
   IS_CARRYING_W(ch) += GET_OBJ_WEIGHT(obj);
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) && RIDDEN_BY(MOUNT(ch)) == ch)
+    IS_CARRYING_W(MOUNT(ch)) += GET_OBJ_WEIGHT(obj);
 
   if (GET_OBJ_TYPE(obj) == ITEM_ARMOR)
     GET_AC(ch) -= apply_ac(ch, pos);
@@ -592,6 +601,9 @@ struct obj_data *unequip_char(struct char_data *ch, int pos)
   obj->worn_by = NULL;
   obj->worn_on = -1;
   IS_CARRYING_W(ch) -= GET_OBJ_WEIGHT(obj);
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) && RIDDEN_BY(MOUNT(ch)) == ch)
+    IS_CARRYING_W(MOUNT(ch)) =
+      MAX(0, IS_CARRYING_W(MOUNT(ch)) - GET_OBJ_WEIGHT(obj));
 
   if (GET_OBJ_TYPE(obj) == ITEM_ARMOR)
     GET_AC(ch) += apply_ac(ch, pos);
@@ -1005,8 +1017,11 @@ void extract_char_final(struct char_data *ch)
 
   if (AFF_FLAGGED(ch, AFF_MOUNTED) || MOUNT(ch)) {
     struct char_data *mount = MOUNT(ch);
-    if (mount && RIDDEN_BY(mount) == ch)
+    if (mount && RIDDEN_BY(mount) == ch) {
+      int rider_weight = GET_WEIGHT(ch) + IS_CARRYING_W(ch);
+      IS_CARRYING_W(mount) = MAX(0, IS_CARRYING_W(mount) - rider_weight);
       RIDDEN_BY(mount) = NULL;
+    }
     MOUNT(ch) = NULL;
     REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_MOUNTED);
   }

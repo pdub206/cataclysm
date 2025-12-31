@@ -200,6 +200,8 @@ void char_from_furniture(struct char_data *ch);
 #define MOUNT(ch)               ((ch)->char_specials.mount)
 /** Rider currently mounted on ch. */
 #define RIDDEN_BY(ch)           ((ch)->char_specials.rider)
+/** Person ch is hitched to. */
+#define HITCHED_TO(ch)          ((ch)->char_specials.hitched_to)
 /** Who is sitting next to ch, if anyone. */
 #define NEXT_SITTING(ch)        ((ch)->char_specials.next_in_furniture)
 /** Who is sitting on this obj */

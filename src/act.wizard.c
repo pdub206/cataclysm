@@ -1829,6 +1829,9 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
     GET_STR(k), GET_INT(k), GET_WIS(k),
     GET_DEX(k), GET_CON(k), GET_CHA(k));
 
+  stat_table_row_fmt(ch, "Size", "Weight %d, Height %d",
+    GET_WEIGHT(k), GET_HEIGHT(k));
+
   stat_table_row_fmt(ch, "Saving Throws",
     "Str %+d Dex %+d Con %+d Int %+d Wis %+d Cha %+d",
     get_save_mod(k, ABIL_STR),

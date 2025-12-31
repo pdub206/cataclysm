@@ -175,14 +175,18 @@ ACMD(do_gen_door);
 /* Functions without subcommands */
 ACMD(do_enter);
 ACMD(do_follow);
+ACMD(do_hitch);
 ACMD(do_leave);
 ACMD(do_mount);
 ACMD(do_move);
+ACMD(do_pack);
 ACMD(do_rest);
 ACMD(do_dismount);
 ACMD(do_sit);
 ACMD(do_sleep);
 ACMD(do_stand);
+ACMD(do_unhitch);
+ACMD(do_unpack);
 ACMD(do_unfollow);
 ACMD(do_wake);
 /* Global variables from act.movement.c */

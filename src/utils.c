@@ -654,6 +654,8 @@ void stop_follower(struct char_data *ch)
   }
 
   ch->master = NULL;
+  if (HITCHED_TO(ch))
+    HITCHED_TO(ch) = NULL;
   REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_CHARM);
 }
 

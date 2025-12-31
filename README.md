@@ -66,6 +66,8 @@ Changes in v1.1.0-alpha:
 
 Features to be implemented in the next few releases:
 
+* Height and weight normalized to species
+* Stables will take mounts and provide tickets to get them out
 * Updated door code so that it can be closed/locked/saved with rsave code
 * SECTOR/ROOM type changes to make terrain movement easier or more difficult
 * Subclass selection to personalize character further
@@ -73,7 +75,8 @@ Features to be implemented in the next few releases:
 * Wagons added to help with caravans
 * BUILDING object type created to allow enter/leave
 * Updated BUILDING object type so that it can be damaged and no longer enterable (but someone can leave at cost to health)
-* Plantlife introduced
+* Plantlife introduced, allowing a plant object to produce fruit or herbs every few hours/days
+* Plantlife can be refreshed to spawn fruits/herbs more frequently by watering it
 * Updated lockpicking skill
 * Trap as a skill - one focused on city and one focused on desert
 * Poisons and antidotes

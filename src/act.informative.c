@@ -1435,6 +1435,9 @@ ACMD(do_score)
   send_to_char(ch, "Sdesc: %s\r\n", sdesc && *sdesc ? sdesc : "someone");
   send_to_char(ch, "Ldesc: %s\r\n", *ldesc ? ldesc : "None");
 
+  send_to_char(ch, "Weight: %d   Height: %d\r\n",
+      GET_WEIGHT(ch), GET_HEIGHT(ch));
+
   send_to_char(ch,
       "HP:   %d/%d   Mana: %d/%d   Stamina: %d/%d\r\n",
       GET_HIT(ch), GET_MAX_HIT(ch),

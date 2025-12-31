@@ -551,6 +551,10 @@ int load_char(const char *name, struct char_data *ch)
   update_roleplay_age(ch);
   ch->player.time.birth = time(0) - get_total_played_seconds(ch);
   affect_total(ch);
+  MOUNT(ch) = NULL;
+  RIDDEN_BY(ch) = NULL;
+  HITCHED_TO(ch) = NULL;
+  REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_MOUNTED);
 
   /* initialization for imms */
   if (GET_LEVEL(ch) >= LVL_IMMORT) {
