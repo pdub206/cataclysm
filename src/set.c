@@ -1,6 +1,6 @@
 /**
-* @file rset.c
-* Room creation/configuration and utility routines.
+* @file set.c
+* Builder room/object creation and utility functions.
 * 
 * This set of code was not originally part of the circlemud distribution.
 */
@@ -21,8 +21,10 @@
 #include "oasis.h"
 #include "improved-edit.h"
 #include "modify.h"
+#include "genobj.h"
+#include "dg_scripts.h"
 
-#include "rset.h"
+#include "set.h"
 
 static void rset_show_usage(struct char_data *ch)
 {
@@ -1289,4 +1291,231 @@ ACMD(do_rset)
   }
 
   rset_show_usage(ch);
+}
+
+static struct obj_data *find_obj_vnum_nearby(struct char_data *ch, obj_vnum vnum)
+{
+  struct obj_data *obj;
+
+  if (!ch || IN_ROOM(ch) == NOWHERE)
+    return NULL;
+
+  for (obj = ch->carrying; obj; obj = obj->next_content)
+    if (CAN_SEE_OBJ(ch, obj) && GET_OBJ_VNUM(obj) == vnum)
+      return obj;
+
+  for (obj = world[IN_ROOM(ch)].contents; obj; obj = obj->next_content)
+    if (CAN_SEE_OBJ(ch, obj) && GET_OBJ_VNUM(obj) == vnum)
+      return obj;
+
+  return NULL;
+}
+
+ACMD(do_ocreate)
+{
+  char arg[MAX_INPUT_LENGTH];
+  char buf[MAX_STRING_LENGTH];
+  char namebuf[MAX_NAME_LENGTH];
+  char timestr[MAX_STRING_LENGTH];
+  struct obj_data *newobj;
+  struct obj_data *obj;
+  obj_vnum vnum;
+  zone_rnum znum;
+  time_t ct;
+
+  if (IS_NPC(ch) || ch->desc == NULL) {
+    send_to_char(ch, "ocreate is only usable by connected players.\r\n");
+    return;
+  }
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch,
+      "Creates a new unfinished object which can be configured.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  ocreate <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  ocreate 1001\r\n");
+    return;
+  }
+
+  if (!is_number(arg)) {
+    send_to_char(ch,
+      "Creates a new unfinished object which can be configured.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  ocreate <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  ocreate 1001\r\n");
+    return;
+  }
+
+  vnum = atoi(arg);
+  if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+    send_to_char(ch, "That object VNUM can't exist.\r\n");
+    return;
+  }
+
+  if (real_object(vnum) != NOTHING) {
+    send_to_char(ch, "Object %d already exists.\r\n", vnum);
+    return;
+  }
+
+  znum = real_zone_by_thing(vnum);
+  if (znum == NOWHERE) {
+    send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+    return;
+  }
+
+  if (!can_edit_zone(ch, znum)) {
+    send_cannot_edit(ch, zone_table[znum].number);
+    return;
+  }
+
+  CREATE(newobj, struct obj_data, 1);
+  clear_object(newobj);
+
+  newobj->name = strdup("unfinished object");
+  strlcpy(namebuf, GET_NAME(ch), sizeof(namebuf));
+  snprintf(buf, sizeof(buf), "unfinished object made by %s", namebuf);
+  newobj->short_description = strdup(buf);
+  ct = time(0);
+  strftime(timestr, sizeof(timestr), "%c", localtime(&ct));
+  snprintf(buf, sizeof(buf),
+    "This is an unfinished object created by %s on ", namebuf);
+  strlcat(buf, timestr, sizeof(buf));
+  newobj->description = strdup(buf);
+  SET_BIT_AR(GET_OBJ_WEAR(newobj), ITEM_WEAR_TAKE);
+
+  if (add_object(newobj, vnum) == NOTHING) {
+    free_object_strings(newobj);
+    free(newobj);
+    send_to_char(ch, "ocreate: failed to add object %d.\r\n", vnum);
+    return;
+  }
+
+  if (in_save_list(zone_table[znum].number, SL_OBJ))
+    remove_from_save_list(zone_table[znum].number, SL_OBJ);
+
+  free_object_strings(newobj);
+  free(newobj);
+
+  obj = read_object(vnum, VIRTUAL);
+  if (obj == NULL) {
+    send_to_char(ch, "ocreate: failed to instantiate object %d.\r\n", vnum);
+    return;
+  }
+
+  obj_to_char(obj, ch);
+  send_to_char(ch,
+    "Object %d created (temporary). Use osave to write it to disk.\r\n",
+    vnum);
+}
+
+ACMD(do_osave)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct obj_data *obj;
+  struct obj_data *proto;
+  obj_rnum robj_num;
+  obj_vnum vnum;
+  zone_rnum znum;
+
+  if (IS_NPC(ch) || ch->desc == NULL) {
+    send_to_char(ch, "osave is only usable by connected players.\r\n");
+    return;
+  }
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch,
+      "Saves an object and its current properties to disk, which will load upon next boot.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  osave <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  osave 1001\r\n");
+    return;
+  }
+
+  if (!is_number(arg)) {
+    send_to_char(ch,
+      "Saves an object and its current properties to disk, which will load upon next boot.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  osave <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  osave 1001\r\n");
+    return;
+  }
+
+  vnum = atoi(arg);
+  if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+    send_to_char(ch, "That object VNUM can't exist.\r\n");
+    return;
+  }
+
+  obj = find_obj_vnum_nearby(ch, vnum);
+  if (obj == NULL) {
+    send_to_char(ch,
+      "osave: object %d is not in your inventory or room.\r\n", vnum);
+    return;
+  }
+
+  znum = real_zone_by_thing(vnum);
+  if (znum == NOWHERE) {
+    send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+    return;
+  }
+
+  if (!can_edit_zone(ch, znum)) {
+    send_cannot_edit(ch, zone_table[znum].number);
+    return;
+  }
+
+  CREATE(proto, struct obj_data, 1);
+  clear_object(proto);
+  copy_object(proto, obj);
+  proto->in_room = NOWHERE;
+  proto->carried_by = NULL;
+  proto->worn_by = NULL;
+  proto->worn_on = NOWHERE;
+  proto->in_obj = NULL;
+  proto->contains = NULL;
+  proto->next_content = NULL;
+  proto->next = NULL;
+  proto->sitting_here = NULL;
+  proto->events = NULL;
+  proto->script = NULL;
+  proto->script_id = 0;
+
+  if ((robj_num = add_object(proto, vnum)) == NOTHING) {
+    free_object_strings(proto);
+    free(proto);
+    send_to_char(ch, "osave: failed to update object %d.\r\n", vnum);
+    return;
+  }
+
+  free_object_strings(proto);
+  free(proto);
+
+  for (obj = object_list; obj; obj = obj->next) {
+    if (obj->item_number != robj_num)
+      continue;
+    if (SCRIPT(obj))
+      extract_script(obj, OBJ_TRIGGER);
+    free_proto_script(obj, OBJ_TRIGGER);
+    copy_proto_script(&obj_proto[robj_num], obj, OBJ_TRIGGER);
+    assign_triggers(obj, OBJ_TRIGGER);
+  }
+
+  save_objects(znum);
+  send_to_char(ch, "osave: object %d saved to disk.\r\n", vnum);
 }

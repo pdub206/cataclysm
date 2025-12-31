@@ -50,6 +50,7 @@ Dep_circledexe = \
    act.informative.obj\
    act.offensive.obj\
    act.other.obj\
+   set.obj\
    boards.obj\
    ban.obj\
    act.wizard.obj\
@@ -94,6 +95,7 @@ act.item.obj+
 act.informative.obj+
 act.offensive.obj+
 act.other.obj+
+set.obj+
 boards.obj+
 ban.obj+
 act.wizard.obj+
@@ -160,6 +162,11 @@ act.offensive.obj :  act.offensive.c
 act.other.obj :  act.other.c
   $(BCC32) -P- -c @&&|
  $(CompOptsAt_circledexe) $(CompInheritOptsAt_circledexe) -o$@ act.other.c
+|
+
+set.obj :  set.c
+  $(BCC32) -P- -c @&&|
+ $(CompOptsAt_circledexe) $(CompInheritOptsAt_circledexe) -o$@ set.c
 |
 
 boards.obj :  boards.c
@@ -339,5 +346,3 @@ BccW32.cfg :
 -WC
 -g0
 | $@
-
-

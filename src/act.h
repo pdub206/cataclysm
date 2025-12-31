@@ -19,7 +19,7 @@
 #define _ACT_H_
 
 #include "utils.h" /* for the ACMD macro */
-#include "rset.h"
+#include "set.h"
 
 #ifndef MAX_EMOTE_TOKENS
 #define MAX_EMOTE_TOKENS 16

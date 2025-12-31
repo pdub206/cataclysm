@@ -48,6 +48,7 @@ OBJS=\
 	boards.obj \
 	ban.obj \
 	act.wizard.obj \
+	set.obj \
 	act.social.obj \
 	act.other.obj \
 	act.offensive.obj \
@@ -494,6 +495,29 @@ ACT_WIZARD_C=\
 act.wizard.obj: $(ACT_WIZARD_C) $(DISTDIR)\src\act.wizard.c
     $(CC)  $(CFLAGS) $(DISTDIR)\src\act.wizard.c
 
+# Build SET.C
+SET_C=\
+    $(DISTDIR)\src\sysdep.h\
+    $(DISTDIR)\src\structs.h\
+    $(DISTDIR)\src\utils.h\
+    $(DISTDIR)\src\comm.h\
+    $(DISTDIR)\src\interpreter.h\
+    $(DISTDIR)\src\handler.h\
+    $(DISTDIR)\src\db.h\
+    $(DISTDIR)\src\constants.h\
+    $(DISTDIR)\src\genobj.h\
+    $(DISTDIR)\src\genolc.h\
+    $(DISTDIR)\src\genwld.h\
+    $(DISTDIR)\src\genzon.h\
+    $(DISTDIR)\src\oasis.h\
+    $(DISTDIR)\src\improved-edit.h\
+    $(DISTDIR)\src\modify.h\
+    $(DISTDIR)\src\dg_scripts.h\
+    $(DISTDIR)\src\set.h\
+
+set.obj: $(SET_C) $(DISTDIR)\src\set.c
+    $(CC)  $(CFLAGS) $(DISTDIR)\src\set.c
+
 # Build ACT.SOCIAL.C
 ACT_SOCIAL_C=\
     $(DISTDIR)\src\sysdep.h\
@@ -598,4 +622,3 @@ ACT_COMM_C=\
 
 act.comm.obj: $(ACT_COMM_C) $(DISTDIR)\src\act.comm.c
     $(CC)  $(CFLAGS) $(DISTDIR)\src\act.comm.c
-
