@@ -63,6 +63,8 @@ Changes in v1.1.0-alpha:
  * Removed alignment from game - no more GOOD/EVIL flags or restrictions on shops
  * Removed ANTI_ flags related to class restrictions on what objects they can use
  * Mounts added to help with long trips, and ability to use them as pack animals
+ * Introduced AGENTS.md file to ensure code quality
+ * Migration away from OLC with new commands "rcreate" and "rset" for builders to modify rooms
 
 Features to be implemented in the next few releases:
 

@@ -463,6 +463,7 @@ int free_room_strings(struct room_data *room)
     free(room->description);
   if (room->ex_description)
     free_ex_descriptions(room->ex_description);
+  room->ex_description = NULL;
   if (room->forage)
     free_forage_list(room->forage);
   room->forage = NULL;

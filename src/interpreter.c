@@ -273,6 +273,8 @@ cpp_extern const struct command_info cmd_info[] = {
   { "restore"  , "resto"   , POS_DEAD    , do_restore  , LVL_GOD, 0 },
   { "return"   , "retu"    , POS_DEAD    , do_return   , 0, 0 },
   { "redit"    , "redit"   , POS_DEAD    , do_oasis_redit, LVL_BUILDER, 0 },
+  { "rcreate"  , "rcreate" , POS_DEAD    , do_rcreate  , LVL_BUILDER, 0 },
+  { "rset"     , "rset"    , POS_DEAD    , do_rset     , LVL_BUILDER, 0 },
   { "rlist"    , "rlist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_RLIST },
   { "rcopy"    , "rcopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_REDIT },
   { "roomflags", "roomflags", POS_DEAD   , do_gen_tog  , LVL_IMMORT, SCMD_SHOWVNUMS },
