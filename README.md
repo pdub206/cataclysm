@@ -9,7 +9,7 @@ Due to the sensitive nature of topics found in this setting, all characters and
 players are 18+. The game world is derived from several inspirational sources,
 most notably the former Armageddon MUD.
 
-Roleplay is highly encouraged, but not enforced.
+Roleplay is **highly** encouraged.
 
 Changes from stock tbaMUD 2025 to Cataclysm MUD v1.0.0-alpha:
 
@@ -54,10 +54,10 @@ Changes in v1.1.0-alpha:
  * Renamed move to stamina in code to reflect how much energy is used for certain actions
  * Species have base hit/mana/stamina now, plus their class modifier rolls
  * Prioritized stats during character generation
- * Ability to change ldesc of PC/NPC's in some situations
+ * Ability to change ldesc of PC/NPC's
  * Ability to look in certain directions to see what is 1-3 rooms away
  * PC's and NPC's can now have an age set between 18-65
- * "audit armor" command for immortals (formerly "acaudit")
+ * "audit armor" and "audit melee" commands for immortals (formerly "acaudit") to check non-compliant items
  * Minor score output change to only show quest status while on a quest, PC/NPC name, sdesc, and current ldesc
  * Added ability to reroll initial stats if they are not to player's liking, and undo reroll if needed
  * Removed alignment from game - no more GOOD/EVIL flags or restrictions on shops
@@ -67,6 +67,7 @@ Changes in v1.1.0-alpha:
 Features to be implemented in the next few releases:
 
 * Height and weight normalized to species
+* Stables allow for purchasing of mounts
 * Stables will take mounts and provide tickets to get them out
 * Updated door code so that it can be closed/locked/saved with rsave code
 * SECTOR/ROOM type changes to make terrain movement easier or more difficult

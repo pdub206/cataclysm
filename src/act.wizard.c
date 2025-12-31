@@ -30,6 +30,7 @@
 #include "genmob.h"
 #include "genolc.h"
 #include "genobj.h"
+#include "genshp.h"
 #include "fight.h"
 #include "house.h"
 #include "modify.h"
@@ -44,6 +45,7 @@ static void perform_immort_invis(struct char_data *ch, int level);
 static void do_stat_room(struct char_data *ch, struct room_data *rm);
 static void do_stat_object(struct char_data *ch, struct obj_data *j);
 static void do_stat_character(struct char_data *ch, struct char_data *k);
+static void do_stat_shop(struct char_data *ch, shop_rnum shop_nr);
 static void stop_snooping(struct char_data *ch);
 static struct obj_data *find_inventory_coin(struct char_data *ch);
 static void remove_other_coins_from_list(struct obj_data *list, struct obj_data *keep);
@@ -67,7 +69,12 @@ static const char *stat_border_line(void);
 static void stat_table_border(struct char_data *ch);
 static void stat_table_row(struct char_data *ch, const char *label, const char *value);
 static void stat_table_row_fmt(struct char_data *ch, const char *label, const char *fmt, ...) __attribute__((format(printf,3,4)));
+static void stat_table_border_buf(char *buf, size_t buf_size, size_t *len);
+static void stat_table_row_buf(char *buf, size_t buf_size, size_t *len, const char *label, const char *value);
+static void stat_table_row_fmt_buf(char *buf, size_t buf_size, size_t *len, const char *label, const char *fmt, ...) __attribute__((format(printf,5,6)));
 static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fmt, ...) __attribute__((format(printf,4,5)));
+static void stat_append_list_item(char *buf, size_t buf_size, size_t *len, size_t *line_len, const char *item);
+static void stat_format_notrade_classes(bitvector_t flags, char *out, size_t outsz);
 static void stat_format_script_triggers(struct script_data *sc, char *buf, size_t buf_size);
 static void stat_format_script_globals(struct script_data *sc, char *buf, size_t buf_size);
 static void stat_format_script_memory(struct script_memory *mem, char *buf, size_t buf_size);
@@ -209,6 +216,60 @@ static void stat_table_row_fmt(struct char_data *ch, const char *label, const ch
   stat_table_row(ch, label, buf);
 }
 
+static void stat_table_border_buf(char *buf, size_t buf_size, size_t *len)
+{
+  stat_appendf(buf, buf_size, len, "%s", stat_border_line());
+}
+
+static void stat_table_row_buf(char *buf, size_t buf_size, size_t *len, const char *label, const char *value)
+{
+  const char *text = (value && *value) ? value : "<None>";
+  bool printed = FALSE;
+
+  while (*text) {
+    while (*text == '\r' || *text == '\n')
+      text++;
+    if (!*text)
+      break;
+
+    char chunk[STAT_VALUE_WIDTH + 1];
+    const char *next = stat_next_chunk(text, chunk, STAT_VALUE_WIDTH);
+
+    if (!*chunk) {
+      text = next;
+      continue;
+    }
+
+    stat_appendf(buf, buf_size, len, "| %-*s | %-*s |\r\n",
+      STAT_LABEL_WIDTH,
+      printed || !label ? "" : label,
+      STAT_VALUE_WIDTH,
+      chunk);
+
+    printed = TRUE;
+    text = next;
+  }
+
+  if (!printed)
+    stat_appendf(buf, buf_size, len, "| %-*s | %-*s |\r\n",
+      STAT_LABEL_WIDTH,
+      label ? label : "",
+      STAT_VALUE_WIDTH,
+      (value && *value) ? value : "<None>");
+}
+
+static void stat_table_row_fmt_buf(char *buf, size_t buf_size, size_t *len, const char *label, const char *fmt, ...)
+{
+  char row[MAX_STRING_LENGTH];
+  va_list args;
+
+  va_start(args, fmt);
+  vsnprintf(row, sizeof(row), fmt, args);
+  va_end(args);
+
+  stat_table_row_buf(buf, buf_size, len, label, row);
+}
+
 static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fmt, ...)
 {
   if (*len >= buf_size)
@@ -226,6 +287,52 @@ static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fm
     *len = buf_size - 1;
   else
     *len += wrote;
+}
+
+static void stat_append_list_item(char *buf, size_t buf_size, size_t *len, size_t *line_len, const char *item)
+{
+  size_t item_len = strlen(item);
+
+  if (*line_len && *line_len + 2 + item_len > STAT_VALUE_WIDTH) {
+    stat_appendf(buf, buf_size, len, "\n");
+    *line_len = 0;
+  }
+
+  if (*line_len) {
+    stat_appendf(buf, buf_size, len, ", ");
+    *line_len += 2;
+  }
+
+  stat_appendf(buf, buf_size, len, "%s", item);
+  *line_len += item_len;
+}
+
+static void stat_format_notrade_classes(bitvector_t flags, char *out, size_t outsz)
+{
+  size_t len = 0;
+  int i, found = 0;
+
+  if (!out || outsz == 0)
+    return;
+
+  out[0] = '\0';
+
+  for (i = TRADE_CLASS_START; i < NUM_TRADERS; i++) {
+    if (IS_SET(flags, 1 << i)) {
+      int n = snprintf(out + len, outsz - len, "%s%s", found ? " " : "", trade_letters[i]);
+
+      if (n < 0 || (size_t)n >= outsz - len) {
+        out[outsz - 1] = '\0';
+        return;
+      }
+
+      len += (size_t)n;
+      found = 1;
+    }
+  }
+
+  if (!found)
+    strlcpy(out, "NOBITS", outsz);
 }
 
 static void stat_format_script_triggers(struct script_data *sc, char *buf, size_t buf_size)
@@ -1941,6 +2048,125 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
   stat_table_border(ch);
 }
 
+static void do_stat_shop(struct char_data *ch, shop_rnum shop_nr)
+{
+  char entry[MAX_STRING_LENGTH];
+  char list[MAX_STRING_LENGTH];
+  char buf[MAX_STRING_LENGTH];
+  char bits[MAX_STRING_LENGTH];
+  char *out;
+  size_t out_size = MAX_STRING_LENGTH * 4;
+  size_t len = 0;
+  size_t line_len = 0;
+  size_t list_len = 0;
+  int i;
+
+  CREATE(out, char, out_size);
+  out[0] = '\0';
+
+  stat_table_border_buf(out, out_size, &len);
+  stat_table_row_fmt_buf(out, out_size, &len, "Identifiers", "VNum #%d (RNum %d)",
+    SHOP_NUM(shop_nr), shop_nr);
+
+  if (SHOP_KEEPER(shop_nr) == NOBODY) {
+    strlcpy(buf, "None", sizeof(buf));
+  } else {
+    snprintf(buf, sizeof(buf), "[%d] %s",
+      mob_index[SHOP_KEEPER(shop_nr)].vnum,
+      mob_proto[SHOP_KEEPER(shop_nr)].player.short_descr ?
+        mob_proto[SHOP_KEEPER(shop_nr)].player.short_descr : "<None>");
+  }
+  stat_table_row_buf(out, out_size, &len, "Keeper", buf);
+
+  stat_table_row_fmt_buf(out, out_size, &len, "Open/Close",
+    "Open1 %d Close1 %d, Open2 %d Close2 %d",
+    SHOP_OPEN1(shop_nr), SHOP_CLOSE1(shop_nr),
+    SHOP_OPEN2(shop_nr), SHOP_CLOSE2(shop_nr));
+
+  stat_table_row_fmt_buf(out, out_size, &len, "Rates",
+    "Sell %1.2f, Buy %1.2f",
+    SHOP_BUYPROFIT(shop_nr), SHOP_SELLPROFIT(shop_nr));
+
+  list[0] = '\0';
+  line_len = 0;
+  list_len = 0;
+  for (i = 0; SHOP_ROOM(shop_nr, i) != NOWHERE; i++) {
+    room_rnum rnum = real_room(SHOP_ROOM(shop_nr, i));
+    if (rnum != NOWHERE)
+      snprintf(entry, sizeof(entry), "#%d %s",
+        GET_ROOM_VNUM(rnum), world[rnum].name);
+    else
+      snprintf(entry, sizeof(entry), "<UNKNOWN> (#%d)", SHOP_ROOM(shop_nr, i));
+    stat_append_list_item(list, sizeof(list), &list_len, &line_len, entry);
+  }
+  if (!list_len)
+    strlcpy(list, "None", sizeof(list));
+  stat_table_row_buf(out, out_size, &len, "Rooms", list);
+
+  list[0] = '\0';
+  list_len = 0;
+  line_len = 0;
+  for (i = 0; SHOP_PRODUCT(shop_nr, i) != NOTHING; i++) {
+    obj_rnum rnum = SHOP_PRODUCT(shop_nr, i);
+    if (rnum != NOTHING && rnum >= 0 && rnum <= top_of_objt) {
+      snprintf(entry, sizeof(entry), "%s (#%d)",
+        obj_proto[rnum].short_description ? obj_proto[rnum].short_description : "<None>",
+        obj_index[rnum].vnum);
+    } else
+      snprintf(entry, sizeof(entry), "<UNKNOWN>");
+    stat_append_list_item(list, sizeof(list), &list_len, &line_len, entry);
+  }
+  if (!list_len)
+    strlcpy(list, "None", sizeof(list));
+  stat_table_row_buf(out, out_size, &len, "Products", list);
+
+  list[0] = '\0';
+  list_len = 0;
+  line_len = 0;
+  for (i = 0; SHOP_BUYTYPE(shop_nr, i) != NOTHING; i++) {
+    const char *keyword = SHOP_BUYWORD(shop_nr, i) ? SHOP_BUYWORD(shop_nr, i) : "all";
+    if (SHOP_BUYTYPE(shop_nr, i) >= 0 && SHOP_BUYTYPE(shop_nr, i) < NUM_ITEM_TYPES) {
+      snprintf(entry, sizeof(entry), "%s (#%d) [%s]",
+        item_types[SHOP_BUYTYPE(shop_nr, i)], SHOP_BUYTYPE(shop_nr, i), keyword);
+    } else
+      snprintf(entry, sizeof(entry), "Unknown (#%d) [%s]", SHOP_BUYTYPE(shop_nr, i), keyword);
+    stat_append_list_item(list, sizeof(list), &list_len, &line_len, entry);
+  }
+  if (!list_len)
+    strlcpy(list, "None", sizeof(list));
+  stat_table_row_buf(out, out_size, &len, "Accept Types", list);
+
+  stat_format_notrade_classes(SHOP_TRADE_WITH(shop_nr), buf, sizeof(buf));
+  stat_table_row_buf(out, out_size, &len, "No Trade With", buf);
+
+  sprintbit(SHOP_BITVECTOR(shop_nr), shop_bits, bits, sizeof(bits));
+  stat_table_row_buf(out, out_size, &len, "Shop Flags", bits);
+
+  stat_table_row_buf(out, out_size, &len, "Keeper No Item",
+    shop_index[shop_nr].no_such_item1 ? shop_index[shop_nr].no_such_item1 : "None");
+  stat_table_row_buf(out, out_size, &len, "Player No Item",
+    shop_index[shop_nr].no_such_item2 ? shop_index[shop_nr].no_such_item2 : "None");
+  stat_table_row_buf(out, out_size, &len, "Keeper No Cash",
+    shop_index[shop_nr].missing_cash1 ? shop_index[shop_nr].missing_cash1 : "None");
+  stat_table_row_buf(out, out_size, &len, "Player No Cash",
+    shop_index[shop_nr].missing_cash2 ? shop_index[shop_nr].missing_cash2 : "None");
+  stat_table_row_buf(out, out_size, &len, "Keeper No Buy",
+    shop_index[shop_nr].do_not_buy ? shop_index[shop_nr].do_not_buy : "None");
+  stat_table_row_buf(out, out_size, &len, "Buy Success",
+    shop_index[shop_nr].message_buy ? shop_index[shop_nr].message_buy : "None");
+  stat_table_row_buf(out, out_size, &len, "Sell Success",
+    shop_index[shop_nr].message_sell ? shop_index[shop_nr].message_sell : "None");
+
+  stat_table_border_buf(out, out_size, &len);
+
+  if (ch->desc)
+    page_string(ch->desc, out, TRUE);
+  else
+    send_to_char(ch, "%s", out);
+
+  free(out);
+}
+
 ACMD(do_stat)
 {
   char buf1[MAX_INPUT_LENGTH], buf2[MAX_INPUT_LENGTH];
@@ -2014,6 +2240,33 @@ ACMD(do_stat)
       else
 	send_to_char(ch, "No such object around.\r\n");
     }
+  } else if (is_abbrev(buf1, "shop")) {
+    shop_rnum shop_nr = NOWHERE;
+    if (!*buf2) {
+      int found = FALSE;
+      room_vnum rvnum = GET_ROOM_VNUM(IN_ROOM(ch));
+      for (shop_nr = 0; shop_nr <= top_shop; shop_nr++) {
+        for (int j = 0; SHOP_ROOM(shop_nr, j) != NOWHERE; j++) {
+          if (SHOP_ROOM(shop_nr, j) == rvnum) {
+            found = TRUE;
+            break;
+          }
+        }
+        if (found)
+          break;
+      }
+      if (!found) {
+        send_to_char(ch, "This isn't a shop.\r\n");
+        return;
+      }
+    } else {
+      shop_nr = real_shop(atoi(buf2));
+      if (shop_nr == NOWHERE) {
+        send_to_char(ch, "That is not a valid shop.\r\n");
+        return;
+      }
+    }
+    do_stat_shop(ch, shop_nr);
   } else if (is_abbrev(buf1, "zone")) {
     if (!*buf2) {
       print_zone(ch, zone_table[world[IN_ROOM(ch)].zone].number);
