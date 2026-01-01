@@ -9,6 +9,7 @@
 ACMD(do_rset);
 ACMD(do_rcreate);
 ACMD(do_ocreate);
+ACMD(do_oset);
 ACMD(do_osave);
 
 #endif

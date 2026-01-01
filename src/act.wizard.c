@@ -6350,53 +6350,6 @@ ACMD(do_recent)
 }
 
 
-ACMD(do_oset)
-{
-  char arg[MAX_INPUT_LENGTH];
-  char arg2[MAX_INPUT_LENGTH];
-  const char usage[] = "Usage: \r\n"
-                       "Options: alias, apply, longdesc, shortdesc\r\n"
-                       "> oset <object> <option> <value>\r\n";
-  struct obj_data *obj;
-  bool success = TRUE;
-
-  if (IS_NPC(ch) || ch->desc == NULL) {
-    send_to_char(ch, "oset is only usable by connected players.\r\n");
-    return;
-  }
-
-  argument = one_argument(argument, arg);
-
-  if (!*arg)
-    send_to_char(ch, usage);
-  else if (!(obj = get_obj_in_list_vis(ch, arg, NULL, ch->carrying)) && 
-    !(obj = get_obj_in_list_vis(ch, arg, NULL, world[IN_ROOM(ch)].contents)))
-    send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg), arg);
-  else {
-     argument = one_argument(argument, arg2);
-     
-     if (!*arg2) 
-       send_to_char(ch, usage);
-     else {
-       if (is_abbrev(arg2, "alias") && (success = oset_alias(obj, argument)))
-         send_to_char(ch, "Object alias set.\r\n");
-       else if (is_abbrev(arg2, "longdesc") && (success = oset_long_description(obj, argument)))
-         send_to_char(ch, "Object long description set.\r\n");
-       else if (is_abbrev(arg2, "shortdesc") && (success = oset_short_description(obj, argument)))
-         send_to_char(ch, "Object short description set.\r\n");
-       else if (is_abbrev(arg2, "apply") && (success = oset_apply(obj, argument)))
-         send_to_char(ch, "Object apply set.\r\n");           
-       else {
-         if (!success) 
-           send_to_char(ch, "%s was unsuccessful.\r\n", arg2);
-         else
-           send_to_char(ch, usage);
-         return;
-       }
-     }
-  }
-}
-
 /* 5e system helpers */
 
 /* Helper: map wear flags to our armor_slots[] index (-1 if not an armor slot) */

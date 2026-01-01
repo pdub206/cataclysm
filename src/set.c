@@ -12,9 +12,11 @@
 #include "utils.h"
 #include "comm.h"
 #include "interpreter.h"
+#include "spells.h"
 #include "handler.h"
 #include "db.h"
 #include "constants.h"
+#include "boards.h"
 #include "genolc.h"
 #include "genwld.h"
 #include "genzon.h"
@@ -23,6 +25,7 @@
 #include "modify.h"
 #include "genobj.h"
 #include "dg_scripts.h"
+#include "fight.h"
 
 #include "set.h"
 
@@ -30,13 +33,13 @@ static void rset_show_usage(struct char_data *ch)
 {
   send_to_char(ch,
     "Usage:\r\n"
-    "  rset show                     - show editable fields + current values\r\n"
-    "  rset set  <field> <value>     - set a scalar field\r\n"
-    "  rset add  <field> <value...>  - add to a list field\r\n"
-    "  rset del  <field> <value...>  - remove from a list field\r\n"
-    "  rset desc                     - edit long text (main description)\r\n"
-    "  rset clear                    - clears all fields\r\n"
-    "  rset validate                 - run validation checks\r\n"
+    "  rset show\r\n"
+    "  rset set <field> <value>\r\n"
+    "  rset add <field> <value...>\r\n"
+    "  rset del <field> <value...>\r\n"
+    "  rset desc\r\n"
+    "  rset clear\r\n"
+    "  rset validate\r\n"
     "\r\n"
     "Type:\r\n"
     "  rset set\r\n"
@@ -52,8 +55,8 @@ static void rset_show_set_usage(struct char_data *ch)
     "Sets specific configuration to the room.\r\n"
     "\r\n"
     "Usage:\r\n"
-    "  rset set name <text>                   - add a room name\r\n"
-    "  rset set sector <sector>               - add terrain/sector type\r\n"
+    "  rset set name <text>\r\n"
+    "  rset set sector <sector>\r\n"
     "\r\n"
     "Examples:\r\n"
     "  rset set name \"A wind-scoured alley\"\r\n"
@@ -537,7 +540,7 @@ static void rset_validate_room(struct char_data *ch, struct room_data *room)
       errors++;
     }
 
-    if (exit->key != NOTHING) {
+    if (exit->key > 0) {
       if (!IS_SET(exit->exit_info, EX_ISDOOR)) {
         send_to_char(ch, "Error: key on %s is set without a door.\r\n", dirs[i]);
         errors++;
@@ -1291,6 +1294,1042 @@ ACMD(do_rset)
   }
 
   rset_show_usage(ch);
+}
+
+static void oset_show_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Usage:\r\n"
+    "  oset show <obj>\r\n"
+    "  oset add keywords <obj> <keyword> [keywords]\r\n"
+    "  oset add sdesc <obj> <text>\r\n"
+    "  oset add ldesc <obj> <text>\r\n"
+    "  oset add desc <obj>\r\n"
+    "  oset add type <obj> <item type>\r\n"
+    "  oset add flags <obj> <flags> [flags]\r\n"
+    "  oset add wear <obj> <wear type> [wear types]\r\n"
+    "  oset add weight <obj> <value>\r\n"
+    "  oset add cost <obj> <value>\r\n"
+    "  oset add oval <obj> <oval number> <value>\r\n"
+    "  oset del <obj> <field>\r\n"
+    "  oset clear <obj>\r\n"
+    "  oset validate <obj>\r\n");
+}
+
+static void oset_show_add_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds specific configuration to the object.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  oset add keywords <obj> <keyword> [keywords]\r\n"
+    "  oset add sdesc <obj> <text>\r\n"
+    "  oset add ldesc <obj> <text>\r\n"
+    "  oset add desc <obj>\r\n"
+    "  oset add type <obj> <item type>\r\n"
+    "  oset add flags <obj> <flags> [flags]\r\n"
+    "  oset add wear <obj> <wear type> [wear types]\r\n"
+    "  oset add weight <obj> <value>\r\n"
+    "  oset add cost <obj> <value>\r\n"
+    "  oset add oval <obj> <oval number> <value>\r\n");
+}
+
+static void oset_show_add_keywords_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds keywords to object. Can add a single keyword or several at once.\r\n"
+    "It is always best to use the most specific keyword as the first entry.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add keywords sword steel\r\n"
+    "  oset add keywords armor padded\r\n"
+    "  oset add keywords staff gnarled oak\r\n");
+}
+
+static void oset_show_add_sdesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a short description to the object. This is what is seen in an inventory,\r\n"
+    "in a container, on furniture, or worn by someone.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add sdesc sword a wooden sword\r\n"
+    "  oset add sdesc cloak a dark, hooded cloak\r\n"
+    "  oset add sdesc maul a massive, obsidian-studded maul\r\n");
+}
+
+static void oset_show_add_ldesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a long description to the object. This is what everyone sees when an item\r\n"
+    "is in a room.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add ldesc cloak A pile of dark fabric is here in a heap.\r\n"
+    "  oset add ldesc maul Made of solid wood, a massive, obsidian-studded maul is here.\r\n"
+    "  oset add ldesc bread A piece of bread has been discarded here.\r\n");
+}
+
+static void oset_show_add_type_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies the object type. Can only be one type.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add type chest container\r\n"
+    "  oset add type armor armor\r\n"
+    "  oset add type sword weapon\r\n"
+    "\r\n"
+    "Types:\r\n");
+  column_list(ch, 0, item_types, NUM_ITEM_TYPES, FALSE);
+}
+
+static void oset_show_add_flags_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies object flags. Can be a single flag or multiples.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add flags sword no_drop\r\n"
+    "  oset add flags staff hum glow\r\n"
+    "\r\n"
+    "Flags:\r\n");
+  column_list(ch, 0, extra_bits, NUM_EXTRA_FLAGS, FALSE);
+}
+
+static void oset_show_add_wear_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies object wear types. Can be a single type or multiples.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add wear sword wield\r\n"
+    "  oset add wear staff wield hold\r\n"
+    "\r\n"
+    "Wear types:\r\n");
+  column_list(ch, 0, wear_bits, NUM_ITEM_WEARS, FALSE);
+}
+
+static void oset_show_add_weight_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies object weight. Affects carrying capacity of PC/NPC.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add weight sword 1\r\n");
+}
+
+static void oset_show_add_cost_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies object cost. Determines how much it sells for and is bought for.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add cost sword 100\r\n");
+}
+
+static void oset_show_add_oval_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Sets an oval property on an object. Each object type has its own respective\r\n"
+    "ovals. Some of these influence different code paramters, such as the type\r\n"
+    "CONTAINER having oval1 \"capacity\". This sets how much weight the container\r\n"
+    "object can hold.\r\n"
+    "\r\n"
+    "For a list of ovals each item has, check HELP OVALS.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add oval chest capacity 100 (for a container)\r\n"
+    "  oset add oval armor piece_ac 2 (for armor)\r\n"
+    "  oset add oval sword weapon_type slashing (for weapons)\r\n");
+}
+
+static void oset_show_del_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Deletes specific configuration from the object.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  oset del <obj> keywords <keyword> [keywords]\r\n"
+    "  oset del <obj> flags <flags> [flags]\r\n"
+    "  oset del <obj> wear <wear type> [wear types]\r\n"
+    "  oset del <obj> oval <oval number|oval name>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset del sword keywords sword\r\n"
+    "  oset del sword flags hum\r\n"
+    "  oset del sword wear wield\r\n"
+    "  oset del sword oval 2\r\n");
+}
+
+static void oset_show_del_flags_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Deletes object flags.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  oset del <obj> flags <flag> [flags]\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset del sword flags hum\r\n"
+    "\r\n"
+    "Flags:\r\n");
+  column_list(ch, 0, extra_bits, NUM_EXTRA_FLAGS, FALSE);
+}
+
+static void oset_show_del_wear_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Deletes object wear types.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  oset del <obj> wear <wear type> [wear types]\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset del sword wear wield\r\n"
+    "\r\n"
+    "Wear types:\r\n");
+  column_list(ch, 0, wear_bits, NUM_ITEM_WEARS, FALSE);
+}
+
+static void oset_show_clear_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Clears all configuration from an object to start over fresh.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  oset clear <obj>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset clear sword\r\n");
+}
+
+static struct obj_data *oset_get_target_obj_keyword(struct char_data *ch, char *keyword)
+{
+  struct obj_data *obj;
+
+  if (!ch || !keyword || !*keyword)
+    return NULL;
+
+  obj = get_obj_in_list_vis(ch, keyword, NULL, ch->carrying);
+  if (obj)
+    return obj;
+
+  return get_obj_in_list_vis(ch, keyword, NULL, world[IN_ROOM(ch)].contents);
+}
+
+static void oset_replace_string(struct obj_data *obj, char **field, const char *value, const char *proto_field)
+{
+  if (*field && (!proto_field || *field != proto_field))
+    free(*field);
+
+  *field = strdup(value ? value : "");
+}
+
+static int oset_find_item_type(const char *arg)
+{
+  int i;
+
+  if (!arg || !*arg)
+    return -1;
+
+  for (i = 0; *item_types[i] != '\n'; i++) {
+    if (is_abbrev(arg, item_types[i]))
+      return i;
+  }
+
+  return -1;
+}
+
+static int oset_find_extra_flag(const char *arg)
+{
+  int i;
+
+  if (!arg || !*arg)
+    return -1;
+
+  for (i = 0; i < NUM_EXTRA_FLAGS; i++) {
+    if (is_abbrev(arg, extra_bits[i]))
+      return i;
+  }
+
+  return -1;
+}
+
+static int oset_find_wear_flag(const char *arg)
+{
+  int i;
+
+  if (!arg || !*arg)
+    return -1;
+
+  for (i = 0; i < NUM_ITEM_WEARS; i++) {
+    if (is_abbrev(arg, wear_bits[i]))
+      return i;
+  }
+
+  return -1;
+}
+
+static int oset_find_oval_by_name(const char *arg, const char * const *labels)
+{
+  int i;
+
+  if (!arg || !*arg || !labels)
+    return -1;
+
+  for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
+    if (labels[i] && *labels[i] && is_abbrev(arg, labels[i]))
+      return i;
+  }
+
+  return -1;
+}
+
+static int oset_find_attack_type(const char *arg)
+{
+  int i;
+
+  if (!arg || !*arg)
+    return -1;
+
+  for (i = 0; i < NUM_ATTACK_TYPES; i++) {
+    if (is_abbrev(arg, attack_hit_text[i].singular) ||
+        is_abbrev(arg, attack_hit_text[i].plural))
+      return i;
+  }
+
+  if (!str_cmp(arg, "slashing"))
+    return oset_find_attack_type("slash");
+  if (!str_cmp(arg, "piercing"))
+    return oset_find_attack_type("pierce");
+  if (!str_cmp(arg, "bludgeoning"))
+    return oset_find_attack_type("bludgeon");
+
+  return -1;
+}
+
+static bool oset_add_keywords(struct char_data *ch, struct obj_data *obj, char *argument)
+{
+  char buf[MAX_STRING_LENGTH];
+  char arg[MAX_INPUT_LENGTH];
+  bool changed = FALSE;
+  obj_rnum rnum = GET_OBJ_RNUM(obj);
+  const char *proto_name = (rnum != NOTHING) ? obj_proto[rnum].name : NULL;
+
+  buf[0] = '\0';
+  if (obj->name && *obj->name)
+    strlcpy(buf, obj->name, sizeof(buf));
+
+  while (*argument) {
+    argument = one_argument(argument, arg);
+    if (!*arg)
+      break;
+
+    if (!isname(arg, buf)) {
+      size_t needed = strlen(buf) + strlen(arg) + 2;
+      if (needed >= sizeof(buf)) {
+        send_to_char(ch, "Keyword list is too long.\r\n");
+        return FALSE;
+      }
+      if (*buf)
+        strlcat(buf, " ", sizeof(buf));
+      strlcat(buf, arg, sizeof(buf));
+      changed = TRUE;
+    }
+  }
+
+  if (!changed) {
+    send_to_char(ch, "Keywords unchanged.\r\n");
+    return TRUE;
+  }
+
+  oset_replace_string(obj, &obj->name, buf, proto_name);
+  send_to_char(ch, "Keywords updated.\r\n");
+  return TRUE;
+}
+
+static bool oset_del_keywords(struct char_data *ch, struct obj_data *obj, char *argument)
+{
+  char buf[MAX_STRING_LENGTH];
+  char work[MAX_STRING_LENGTH];
+  char word[MAX_INPUT_LENGTH];
+  bool changed = FALSE;
+  obj_rnum rnum = GET_OBJ_RNUM(obj);
+  const char *proto_name = (rnum != NOTHING) ? obj_proto[rnum].name : NULL;
+  char *ptr;
+
+  buf[0] = '\0';
+  if (!obj->name || !*obj->name) {
+    send_to_char(ch, "Object has no keywords to remove.\r\n");
+    return TRUE;
+  }
+
+  strlcpy(work, obj->name, sizeof(work));
+  ptr = work;
+  while (*ptr) {
+    ptr = one_argument(ptr, word);
+    if (!*word)
+      break;
+
+    if (isname(word, argument)) {
+      changed = TRUE;
+      continue;
+    }
+
+    if (*buf)
+      strlcat(buf, " ", sizeof(buf));
+    strlcat(buf, word, sizeof(buf));
+  }
+
+  if (!changed) {
+    send_to_char(ch, "No matching keywords found.\r\n");
+    return TRUE;
+  }
+
+  oset_replace_string(obj, &obj->name, buf, proto_name);
+  send_to_char(ch, "Keywords updated.\r\n");
+  return TRUE;
+}
+
+static void oset_show_object(struct char_data *ch, struct obj_data *obj)
+{
+  char buf[MAX_STRING_LENGTH];
+  char buf2[MAX_STRING_LENGTH];
+  int i;
+  const char * const *labels = obj_value_labels(GET_OBJ_TYPE(obj));
+
+  sprinttype(GET_OBJ_TYPE(obj), item_types, buf, sizeof(buf));
+  sprintbitarray(GET_OBJ_EXTRA(obj), extra_bits, EF_ARRAY_MAX, buf2);
+
+  send_to_char(ch, "Object [%d]: %s\r\n",
+    GET_OBJ_VNUM(obj), obj->short_description ? obj->short_description : "<None>");
+  send_to_char(ch, "Keywords: %s\r\n", obj->name ? obj->name : "<None>");
+  send_to_char(ch, "Short desc: %s\r\n", obj->short_description ? obj->short_description : "<None>");
+  send_to_char(ch, "Long desc: %s\r\n", obj->description ? obj->description : "<None>");
+  send_to_char(ch, "Main desc:\r\n%s", obj->main_description ? obj->main_description : "  <None>\r\n");
+  send_to_char(ch, "Type: %s\r\n", buf);
+  send_to_char(ch, "Flags: %s\r\n", buf2);
+  sprintbitarray(GET_OBJ_WEAR(obj), wear_bits, TW_ARRAY_MAX, buf);
+  send_to_char(ch, "Wear: %s\r\n", buf);
+  send_to_char(ch, "Weight: %d\r\n", GET_OBJ_WEIGHT(obj));
+  send_to_char(ch, "Cost: %d\r\n", GET_OBJ_COST(obj));
+
+  send_to_char(ch, "Ovals:\r\n");
+  for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
+    const char *label = labels ? labels[i] : "Value";
+    send_to_char(ch, "  [%d] %s: %d\r\n", i, label, GET_OBJ_VAL(obj, i));
+  }
+}
+
+static void oset_desc_edit(struct char_data *ch, struct obj_data *obj)
+{
+  char *oldtext = NULL;
+
+  send_editor_help(ch->desc);
+  write_to_output(ch->desc, "Enter object description:\r\n\r\n");
+
+  if (obj->main_description) {
+    write_to_output(ch->desc, "%s", obj->main_description);
+    oldtext = strdup(obj->main_description);
+  }
+
+  string_write(ch->desc, &obj->main_description, MAX_MESSAGE_LENGTH, 0, oldtext);
+}
+
+static void oset_clear_object(struct obj_data *obj)
+{
+  obj_rnum rnum = GET_OBJ_RNUM(obj);
+
+  if (rnum != NOTHING)
+    free_object_strings_proto(obj);
+  else
+    free_object_strings(obj);
+
+  obj->name = NULL;
+  obj->description = NULL;
+  obj->short_description = NULL;
+  obj->main_description = NULL;
+  obj->ex_description = NULL;
+
+  obj->name = strdup("unfinished object");
+  obj->description = strdup("An unfinished object is lying here.");
+  obj->short_description = strdup("an unfinished object");
+
+  GET_OBJ_TYPE(obj) = 0;
+  GET_OBJ_WEIGHT(obj) = 0;
+  GET_OBJ_COST(obj) = 0;
+  GET_OBJ_COST_PER_DAY(obj) = 0;
+  GET_OBJ_TIMER(obj) = 0;
+  GET_OBJ_LEVEL(obj) = 0;
+
+  memset(obj->obj_flags.extra_flags, 0, sizeof(obj->obj_flags.extra_flags));
+  memset(obj->obj_flags.wear_flags, 0, sizeof(obj->obj_flags.wear_flags));
+  memset(obj->obj_flags.value, 0, sizeof(obj->obj_flags.value));
+  memset(obj->obj_flags.bitvector, 0, sizeof(obj->obj_flags.bitvector));
+  memset(obj->affected, 0, sizeof(obj->affected));
+
+  SET_BIT_AR(GET_OBJ_WEAR(obj), ITEM_WEAR_TAKE);
+}
+
+static void oset_validate_object(struct char_data *ch, struct obj_data *obj)
+{
+  int errors = 0;
+
+  if (!obj->name || !*obj->name) {
+    send_to_char(ch, "Error: keywords are not set.\r\n");
+    errors++;
+  }
+
+  if (!obj->short_description || !*obj->short_description) {
+    send_to_char(ch, "Error: short description is not set.\r\n");
+    errors++;
+  }
+
+  if (!obj->description || !*obj->description) {
+    send_to_char(ch, "Error: long description is not set.\r\n");
+    errors++;
+  }
+
+  if (!obj->main_description || !*obj->main_description) {
+    send_to_char(ch, "Error: main description is not set.\r\n");
+    errors++;
+  }
+
+  if (GET_OBJ_TYPE(obj) < 1 || GET_OBJ_TYPE(obj) >= NUM_ITEM_TYPES) {
+    send_to_char(ch, "Error: object type is not set.\r\n");
+    errors++;
+  }
+
+  if (GET_OBJ_WEIGHT(obj) <= 0) {
+    send_to_char(ch, "Error: weight must be above zero.\r\n");
+    errors++;
+  }
+
+  if (GET_OBJ_COST(obj) <= 0) {
+    send_to_char(ch, "Error: cost must be above zero.\r\n");
+    errors++;
+  }
+
+  if (!errors)
+    send_to_char(ch, "Object validates cleanly.\r\n");
+  else
+    send_to_char(ch, "Validation failed: %d issue%s.\r\n", errors, errors == 1 ? "" : "s");
+}
+
+ACMD(do_oset)
+{
+  char arg1[MAX_INPUT_LENGTH];
+  char arg2[MAX_INPUT_LENGTH];
+  char arg3[MAX_INPUT_LENGTH];
+  char arg4[MAX_INPUT_LENGTH];
+  struct obj_data *obj;
+
+  if (IS_NPC(ch) || ch->desc == NULL) {
+    send_to_char(ch, "oset is only usable by connected players.\r\n");
+    return;
+  }
+
+  argument = one_argument(argument, arg1);
+
+  if (!*arg1) {
+    oset_show_usage(ch);
+    return;
+  }
+
+  if (is_abbrev(arg1, "show")) {
+    char *keyword;
+
+    skip_spaces(&argument);
+    keyword = argument;
+    if (!*keyword) {
+      send_to_char(ch, "Provide a keyword of an object to show.\r\n");
+      return;
+    }
+    obj = oset_get_target_obj_keyword(ch, keyword);
+    if (!obj) {
+      send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(keyword), keyword);
+      return;
+    }
+    oset_show_object(ch, obj);
+    return;
+  }
+
+  if (is_abbrev(arg1, "add")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2) {
+      oset_show_add_usage(ch);
+      return;
+    }
+
+    if (is_abbrev(arg2, "keywords")) {
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        oset_show_add_keywords_usage(ch);
+        return;
+      }
+      if (!*argument) {
+        oset_show_add_keywords_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      oset_add_keywords(ch, obj, argument);
+      return;
+    }
+
+    if (is_abbrev(arg2, "sdesc")) {
+      static size_t max_len = 64;
+      obj_rnum rnum;
+      const char *proto_sdesc;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        oset_show_add_sdesc_usage(ch);
+        return;
+      }
+      skip_spaces(&argument);
+      if (!*argument) {
+        oset_show_add_sdesc_usage(ch);
+        return;
+      }
+      if (strlen(argument) > max_len) {
+        send_to_char(ch, "Short description is too long.\r\n");
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      rnum = GET_OBJ_RNUM(obj);
+      proto_sdesc = (rnum != NOTHING) ? obj_proto[rnum].short_description : NULL;
+      oset_replace_string(obj, &obj->short_description, argument, proto_sdesc);
+      send_to_char(ch, "Short description set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "ldesc")) {
+      static size_t max_len = 128;
+      obj_rnum rnum;
+      const char *proto_ldesc;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        oset_show_add_ldesc_usage(ch);
+        return;
+      }
+      skip_spaces(&argument);
+      if (!*argument) {
+        oset_show_add_ldesc_usage(ch);
+        return;
+      }
+      if (strlen(argument) > max_len) {
+        send_to_char(ch, "Long description is too long.\r\n");
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      rnum = GET_OBJ_RNUM(obj);
+      proto_ldesc = (rnum != NOTHING) ? obj_proto[rnum].description : NULL;
+      oset_replace_string(obj, &obj->description, argument, proto_ldesc);
+      send_to_char(ch, "Long description set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "desc")) {
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        oset_show_add_usage(ch);
+        return;
+      }
+      if (*argument) {
+        oset_show_add_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      oset_desc_edit(ch, obj);
+      return;
+    }
+
+    if (is_abbrev(arg2, "type")) {
+      int type;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        oset_show_add_type_usage(ch);
+        return;
+      }
+      skip_spaces(&argument);
+      if (!*argument) {
+        oset_show_add_type_usage(ch);
+        return;
+      }
+      type = oset_find_item_type(argument);
+      if (type < 0 || type >= NUM_ITEM_TYPES) {
+        send_to_char(ch, "Invalid object type.\r\n");
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      GET_OBJ_TYPE(obj) = type;
+      send_to_char(ch, "Object type set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "flags")) {
+      bool any = FALSE;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        oset_show_add_flags_usage(ch);
+        return;
+      }
+      if (!*argument) {
+        oset_show_add_flags_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg3);
+        if (!*arg3)
+          break;
+
+        flag = oset_find_extra_flag(arg3);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown flag: %s\r\n", arg3);
+          continue;
+        }
+
+        SET_BIT_AR(GET_OBJ_EXTRA(obj), flag);
+        any = TRUE;
+      }
+      if (any)
+        send_to_char(ch, "Object flags updated.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "wear")) {
+      bool any = FALSE;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        oset_show_add_wear_usage(ch);
+        return;
+      }
+      if (!*argument) {
+        oset_show_add_wear_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg3);
+        if (!*arg3)
+          break;
+
+        flag = oset_find_wear_flag(arg3);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown wear type: %s\r\n", arg3);
+          continue;
+        }
+
+        SET_BIT_AR(GET_OBJ_WEAR(obj), flag);
+        any = TRUE;
+      }
+      if (any)
+        send_to_char(ch, "Wear flags updated.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "weight")) {
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        oset_show_add_weight_usage(ch);
+        return;
+      }
+      skip_spaces(&argument);
+      if (!*argument || !is_number(argument)) {
+        oset_show_add_weight_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      GET_OBJ_WEIGHT(obj) = LIMIT(atoi(argument), 0, MAX_OBJ_WEIGHT);
+      send_to_char(ch, "Weight set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "cost")) {
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        oset_show_add_cost_usage(ch);
+        return;
+      }
+      skip_spaces(&argument);
+      if (!*argument || !is_number(argument)) {
+        oset_show_add_cost_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      GET_OBJ_COST(obj) = LIMIT(atoi(argument), 0, MAX_OBJ_COST);
+      send_to_char(ch, "Cost set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "oval")) {
+      int pos;
+      int value;
+      const char * const *labels;
+
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      if (!*arg3 || !*arg4) {
+        oset_show_add_oval_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+      argument = one_argument(argument, arg1);
+      if (!*arg1) {
+        oset_show_add_oval_usage(ch);
+        return;
+      }
+
+      labels = obj_value_labels(GET_OBJ_TYPE(obj));
+      if (is_number(arg4)) {
+        pos = atoi(arg4);
+      } else {
+        pos = oset_find_oval_by_name(arg4, labels);
+      }
+
+      if (pos < 0 || pos >= NUM_OBJ_VAL_POSITIONS) {
+        send_to_char(ch, "Invalid oval position.\r\n");
+        return;
+      }
+
+      if (GET_OBJ_TYPE(obj) == ITEM_WEAPON && pos == 2 &&
+          !is_number(arg1)) {
+        value = oset_find_attack_type(arg1);
+        if (value < 0) {
+          send_to_char(ch, "Unknown weapon type: %s\r\n", arg1);
+          return;
+        }
+      } else {
+        if (!is_number(arg1)) {
+          send_to_char(ch, "Oval value must be numeric.\r\n");
+          return;
+        }
+        value = atoi(arg1);
+      }
+
+      GET_OBJ_VAL(obj, pos) = value;
+      send_to_char(ch, "Oval set.\r\n");
+      return;
+    }
+
+    oset_show_add_usage(ch);
+    return;
+  }
+
+  if (is_abbrev(arg1, "del")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2) {
+      oset_show_del_usage(ch);
+      return;
+    }
+
+    argument = one_argument(argument, arg3);
+    if (!*arg3) {
+      oset_show_del_usage(ch);
+      return;
+    }
+
+    if (is_abbrev(arg3, "keywords")) {
+      if (!*argument) {
+        oset_show_del_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg2);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg2), arg2);
+        return;
+      }
+      oset_del_keywords(ch, obj, argument);
+      return;
+    }
+
+    if (is_abbrev(arg3, "flags")) {
+      bool any = FALSE;
+
+      if (!*argument) {
+        oset_show_del_flags_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg2);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg2), arg2);
+        return;
+      }
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg3);
+        if (!*arg3)
+          break;
+
+        flag = oset_find_extra_flag(arg3);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown flag: %s\r\n", arg3);
+          continue;
+        }
+
+        REMOVE_BIT_AR(GET_OBJ_EXTRA(obj), flag);
+        any = TRUE;
+      }
+      if (any)
+        send_to_char(ch, "Object flags updated.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "wear")) {
+      bool any = FALSE;
+
+      if (!*argument) {
+        oset_show_del_wear_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg2);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg2), arg2);
+        return;
+      }
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg3);
+        if (!*arg3)
+          break;
+
+        flag = oset_find_wear_flag(arg3);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown wear type: %s\r\n", arg3);
+          continue;
+        }
+
+        REMOVE_BIT_AR(GET_OBJ_WEAR(obj), flag);
+        any = TRUE;
+      }
+      if (any)
+        send_to_char(ch, "Wear flags updated.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "oval")) {
+      int pos;
+      const char * const *labels;
+
+      argument = one_argument(argument, arg4);
+      if (!*arg4) {
+        oset_show_del_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg2);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg2), arg2);
+        return;
+      }
+
+      labels = obj_value_labels(GET_OBJ_TYPE(obj));
+      if (is_number(arg4)) {
+        pos = atoi(arg4);
+      } else {
+        pos = oset_find_oval_by_name(arg4, labels);
+      }
+
+      if (pos < 0 || pos >= NUM_OBJ_VAL_POSITIONS) {
+        send_to_char(ch, "Invalid oval position.\r\n");
+        return;
+      }
+
+      GET_OBJ_VAL(obj, pos) = 0;
+      send_to_char(ch, "Oval cleared.\r\n");
+      return;
+    }
+
+    oset_show_del_usage(ch);
+    return;
+  }
+
+  if (is_abbrev(arg1, "clear")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2) {
+      oset_show_clear_usage(ch);
+      return;
+    }
+    obj = oset_get_target_obj_keyword(ch, arg2);
+    if (!obj) {
+      send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg2), arg2);
+      return;
+    }
+    oset_clear_object(obj);
+    send_to_char(ch, "Object cleared.\r\n");
+    return;
+  }
+
+  if (is_abbrev(arg1, "validate")) {
+    char *keyword;
+
+    skip_spaces(&argument);
+    keyword = argument;
+    if (!*keyword) {
+      send_to_char(ch, "Provide a keyword of an object to validate.\r\n");
+      return;
+    }
+    obj = oset_get_target_obj_keyword(ch, keyword);
+    if (!obj) {
+      send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(keyword), keyword);
+      return;
+    }
+    oset_validate_object(ch, obj);
+    return;
+  }
+
+  oset_show_usage(ch);
 }
 
 static struct obj_data *find_obj_vnum_nearby(struct char_data *ch, obj_vnum vnum)

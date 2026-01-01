@@ -13447,4 +13447,89 @@ Amos sees:
 Gesturing to your empty mug, the bald, pudgy man waves you over with his right
 hand, pointing to an empty seat at his table.
 #0
+OVALS
+
+   Ovals are object value slots (0-7). Use OSET ADD OVAL <position|name> <value>
+to set them. Positions are 0-based.
+
+LIGHT:
+  2 - hours_left
+
+SCROLL:
+  0 - spell_level
+  1 - spell1
+  2 - spell2
+  3 - spell3
+
+POTION:
+  0 - spell_level
+  1 - spell1
+  2 - spell2
+  3 - spell3
+
+WAND:
+  0 - level
+  1 - max_charges
+  2 - remaining_charges
+  3 - spell
+
+STAFF:
+  0 - level
+  1 - max_charges
+  2 - remaining_charges
+  3 - spell
+
+WEAPON:
+  0 - dice_num
+  1 - dice_size
+  2 - weapon_type
+  3 - message_type
+
+ARMOR:
+  0 - piece_ac
+  1 - bulk
+  2 - magic_bonus
+  3 - stealth_disadv
+  4 - durability
+  5 - str_requirement
+
+CONTAINER:
+  0 - capacity
+  1 - flags
+  2 - key_vnum
+  3 - corpse
+
+WORN:
+  0 - closable
+  1 - hooded
+  2 - is_closed
+  3 - capacity
+  4 - hood_raised
+
+LIQ CONTAINER:
+  0 - capacity
+  1 - contains
+  2 - liquid_type
+  3 - poisoned
+
+FOUNTAIN:
+  0 - capacity
+  1 - contains
+  2 - liquid_type
+  3 - poisoned
+
+FOOD:
+  0 - bites_capacity
+  1 - bites_left
+  2 - hours_full_per_bite
+  3 - poisoned
+
+COINS:
+  0 - coins
+
+FURNITURE:
+  0 - max_seats
+  1 - current_occupants
+  2 - allowed_pos
+#0
 $~
