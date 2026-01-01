@@ -1,6 +1,8 @@
 /**
 * @file set.h
 * Builder room/object creation and utility headers.
+* 
+* This set of code was not originally part of the circlemud distribution.
 */
 
 #ifndef SET_H

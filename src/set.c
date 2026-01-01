@@ -7,7 +7,6 @@
 
 #include "conf.h"
 #include "sysdep.h"
-
 #include "structs.h"
 #include "utils.h"
 #include "comm.h"
@@ -34,45 +33,45 @@ static void rset_show_usage(struct char_data *ch)
   send_to_char(ch,
     "Usage:\r\n"
     "  rset show\r\n"
-    "  rset set <field> <value>\r\n"
-    "  rset add <field> <value...>\r\n"
-    "  rset del <field> <value...>\r\n"
-    "  rset desc\r\n"
-    "  rset clear\r\n"
-    "  rset validate\r\n"
-    "\r\n"
-    "Type:\r\n"
-    "  rset set\r\n"
-    "  rset add\r\n"
-    "  rset del\r\n"
-    "\r\n"
-    "For command-specific options.\r\n");
+    "  rset add name <text>\r\n"
+    "  rset add sector <sector>\r\n"
+    "  rset add flags <flag> [flag ...]\r\n"
+    "  rset add exit <direction> <room number>\r\n"
+    "  rset add door <direction> <name of door>\r\n"
+    "  rset add key <direction> <key number>\r\n"
+    "  rset add hidden <direction>\r\n"
+    "  rset add forage <object vnum> <dc check>\r\n"
+    "  rset add edesc <keyword> <description>\r\n"
+    "  rset add desc\r\n"
+    "  rset del <field>\r\n"
+    "  rset clear force\r\n"
+    "  rset validate\r\n");
 }
 
 static void rset_show_set_usage(struct char_data *ch)
 {
   send_to_char(ch,
-    "Sets specific configuration to the room.\r\n"
+    "Adds basic configuration to the room.\r\n"
     "\r\n"
     "Usage:\r\n"
-    "  rset set name <text>\r\n"
-    "  rset set sector <sector>\r\n"
+    "  rset add name <text>\r\n"
+    "  rset add sector <sector>\r\n"
     "\r\n"
     "Examples:\r\n"
-    "  rset set name \"A wind-scoured alley\"\r\n"
-    "  rset set sector desert\r\n");
+    "  rset add name \"A wind-scoured alley\"\r\n"
+    "  rset add sector desert\r\n");
 }
 
 static void rset_show_set_sector_usage(struct char_data *ch)
 {
   send_to_char(ch,
-    "Sets room sector type.\r\n"
+    "Adds room sector type.\r\n"
     "\r\n"
     "Usage:\r\n"
-    "  rset set sector <sector>\r\n"
+    "  rset add sector <sector>\r\n"
     "\r\n"
     "Examples:\r\n"
-    "  rset set sector desert\r\n"
+    "  rset add sector desert\r\n"
     "\r\n"
     "Sectors:\r\n");
   column_list(ch, 0, sector_types, NUM_ROOM_SECTORS, FALSE);
@@ -84,23 +83,16 @@ static void rset_show_add_usage(struct char_data *ch)
     "Adds specific configuration to the room.\r\n"
     "\r\n"
     "Usage:\r\n"
-    "  rset add flags:\r\n"
-    "    <flag> [flag ...]\r\n"
+    "  rset add name <text>\r\n"
+    "  rset add sector <sector>\r\n"
+    "  rset add flags <flag> [flag ...]\r\n"
     "  rset add exit <direction> <room number>\r\n"
     "  rset add door <direction> <name of door>\r\n"
     "  rset add key <direction> <key number>\r\n"
     "  rset add hidden <direction>\r\n"
     "  rset add forage <object vnum> <dc check>\r\n"
     "  rset add edesc <keyword> <description>\r\n"
-    "\r\n"
-    "Examples:\r\n"
-    "  rset add flags INDOORS QUITSAFE\r\n"
-    "  rset add exit n 101\r\n"
-    "  rset add door n door\r\n"
-    "  rset add key n 201\r\n"
-    "  rset add hidden n\r\n"
-    "  rset add forage 301 15\r\n"
-    "  rset add edesc mosaic A beautiful mosaic is here on the wall.\r\n");
+    "  rset add desc\r\n");
 }
 
 static void rset_show_del_usage(struct char_data *ch)
@@ -127,18 +119,6 @@ static void rset_show_del_usage(struct char_data *ch)
     "  rset del edesc mosaic\r\n");
 }
 
-static void rset_show_clear_usage(struct char_data *ch)
-{
-  send_to_char(ch,
-    "Clears all configuration from a room to start over fresh.\r\n"
-    "\r\n"
-    "Usage:\r\n"
-    "  rset clear\r\n"
-    "\r\n"
-    "Examples:\r\n"
-    "  rset clear\r\n");
-}
-
 static void rset_show_validate_usage(struct char_data *ch)
 {
   send_to_char(ch,
@@ -158,7 +138,7 @@ static void rset_show_desc_usage(struct char_data *ch)
     "Enters text editor for editing the main description of the room.\r\n"
     "\r\n"
     "Usage:\r\n"
-    "  rset desc\r\n");
+    "  rset add desc\r\n");
 }
 
 static void rset_show_rcreate_usage(struct char_data *ch)
@@ -701,10 +681,12 @@ ACMD(do_rset)
     return;
   }
 
-  if (is_abbrev(arg1, "set")) {
+  if (is_abbrev(arg1, "add") || is_abbrev(arg1, "set")) {
+    bool set_alias = is_abbrev(arg1, "set");
+
     argument = one_argument(argument, arg2);
     if (!*arg2) {
-      rset_show_set_usage(ch);
+      rset_show_add_usage(ch);
       return;
     }
 
@@ -753,26 +735,12 @@ ACMD(do_rset)
       return;
     }
 
-    {
-      int flag;
-
-      flag = rset_find_room_flag(arg2);
-      if (flag >= 0) {
-        SET_BIT_AR(room->room_flags, flag);
-        rset_mark_room_modified(rnum);
-        send_to_char(ch, "Room flag set.\r\n");
+    if (is_abbrev(arg2, "desc")) {
+      if (*argument) {
+        rset_show_add_usage(ch);
         return;
       }
-    }
-
-    rset_show_set_usage(ch);
-    return;
-  }
-
-  if (is_abbrev(arg1, "add")) {
-    argument = one_argument(argument, arg2);
-    if (!*arg2) {
-      rset_show_add_usage(ch);
+      rset_desc_edit(ch, room);
       return;
     }
 
@@ -966,7 +934,7 @@ ACMD(do_rset)
       }
 
       if (!is_number(arg3) || !is_number(arg1)) {
-        send_to_char(ch, "Usage: rset add forage <object vnum> <dc check>\r\n");
+        rset_show_add_forage_usage(ch);
         return;
       }
 
@@ -1019,6 +987,18 @@ ACMD(do_rset)
       rset_mark_room_modified(rnum);
       send_to_char(ch, "Extra description added.\r\n");
       return;
+    }
+
+    if (set_alias) {
+      int flag;
+
+      flag = rset_find_room_flag(arg2);
+      if (flag >= 0) {
+        SET_BIT_AR(room->room_flags, flag);
+        rset_mark_room_modified(rnum);
+        send_to_char(ch, "Room flag set.\r\n");
+        return;
+      }
     }
 
     rset_show_add_usage(ch);
@@ -1194,7 +1174,7 @@ ACMD(do_rset)
       }
 
       if (!is_number(arg3)) {
-        send_to_char(ch, "Usage: rset del forage <object vnum>\r\n");
+        rset_show_del_forage_usage(ch);
         return;
       }
 
@@ -1269,8 +1249,13 @@ ACMD(do_rset)
   }
 
   if (is_abbrev(arg1, "clear")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2 || !is_abbrev(arg2, "force")) {
+      rset_show_usage(ch);
+      return;
+    }
     if (*argument) {
-      rset_show_clear_usage(ch);
+      rset_show_usage(ch);
       return;
     }
 
@@ -1312,7 +1297,7 @@ static void oset_show_usage(struct char_data *ch)
     "  oset add cost <obj> <value>\r\n"
     "  oset add oval <obj> <oval number> <value>\r\n"
     "  oset del <obj> <field>\r\n"
-    "  oset clear <obj>\r\n"
+    "  oset clear <obj> force\r\n"
     "  oset validate <obj>\r\n");
 }
 
@@ -1498,10 +1483,10 @@ static void oset_show_clear_usage(struct char_data *ch)
     "Clears all configuration from an object to start over fresh.\r\n"
     "\r\n"
     "Usage:\r\n"
-    "  oset clear <obj>\r\n"
+    "  oset clear <obj> force\r\n"
     "\r\n"
     "Examples:\r\n"
-    "  oset clear sword\r\n");
+    "  oset clear sword force\r\n");
 }
 
 static struct obj_data *oset_get_target_obj_keyword(struct char_data *ch, char *keyword)
@@ -2304,6 +2289,15 @@ ACMD(do_oset)
     obj = oset_get_target_obj_keyword(ch, arg2);
     if (!obj) {
       send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg2), arg2);
+      return;
+    }
+    argument = one_argument(argument, arg3);
+    if (!*arg3 || !is_abbrev(arg3, "force")) {
+      oset_show_clear_usage(ch);
+      return;
+    }
+    if (*argument) {
+      oset_show_clear_usage(ch);
       return;
     }
     oset_clear_object(obj);
