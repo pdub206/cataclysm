@@ -40,7 +40,6 @@
 #include "mud_event.h"
 #include "msgedit.h"
 #include "screen.h"
-#include "roomsave.h"
 #include <sys/stat.h>
 
 /*  declarations of most of the 'global' variables */
@@ -1981,7 +1980,7 @@ void parse_mobile(FILE *mob_f, int nr)
       log("SYSERR: Bad 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
     } else {
       if (qty < 1) qty = 1;
-      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
+      loadout_append_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
     }
     /* look ahead to see if there is another 'L' */
     letter = fread_letter(mob_f);
@@ -2074,7 +2073,7 @@ void parse_mobile(FILE *mob_f, int nr)
       log("SYSERR: Bad post-trigger 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
     } else {
       if (qty < 1) qty = 1;
-      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
+      loadout_append_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
     }
     letter = fread_letter(mob_f);
   }
@@ -2646,6 +2645,11 @@ void equip_mob_from_loadout(struct char_data *mob)
   const struct mob_loadout *e = mob_proto[rnum].proto_loadout;
   if (!e) return;
 
+  struct obj_data *stack[16];
+  int i;
+  for (i = 0; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+    stack[i] = NULL;
+
   for (; e; e = e->next) {
     int qty = (e->quantity > 0) ? e->quantity : 1;
 
@@ -2657,46 +2661,73 @@ void equip_mob_from_loadout(struct char_data *mob)
         continue;
       }
 
-      /* Inventory-only request */
-      if (e->wear_pos < 0) {
-        obj_to_char(obj, mob);
-        continue;
-      }
+      if (e->wear_pos >= 0) {
+        for (i = 0; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+          stack[i] = NULL;
 
-      /* If the intended slot is free, place it there. We trust the saved slot. */
-      if (e->wear_pos >= 0 && e->wear_pos < NUM_WEARS && GET_EQ(mob, e->wear_pos) == NULL) {
+        /* If the intended slot is free, place it there. We trust the saved slot. */
+        if (e->wear_pos < NUM_WEARS && GET_EQ(mob, e->wear_pos) == NULL) {
 
 #ifdef STRICT_WEAR_CHECK
-        /* Optional strict flag check (may be mismatched in customized codebases). */
-        if (!invalid_align(mob, obj) /* example gate, add yours as needed */) {
-          equip_char(mob, obj, e->wear_pos);
-          continue;
-        }
-        /* If strict check fails, try alt or inventory below. */
-#else
-        equip_char(mob, obj, e->wear_pos);
-        continue;
-#endif
-      }
-
-      /* Try the mirrored slot for finger/neck/wrist pairs if intended is occupied. */
-      {
-        int alt = find_alt_slot_same_family(mob, e->wear_pos);
-        if (alt >= 0 && GET_EQ(mob, alt) == NULL) {
-#ifdef STRICT_WEAR_CHECK
-          if (!invalid_align(mob, obj)) {
-            equip_char(mob, obj, alt);
-            continue;
+          /* Optional strict flag check (may be mismatched in customized codebases). */
+          if (!invalid_align(mob, obj) /* example gate, add yours as needed */) {
+            equip_char(mob, obj, e->wear_pos);
+          } else {
+            obj_to_char(obj, mob);
           }
 #else
-          equip_char(mob, obj, alt);
-          continue;
+          equip_char(mob, obj, e->wear_pos);
 #endif
+        } else {
+          /* Try the mirrored slot for finger/neck/wrist pairs if intended is occupied. */
+          int alt = find_alt_slot_same_family(mob, e->wear_pos);
+          if (alt >= 0 && GET_EQ(mob, alt) == NULL) {
+#ifdef STRICT_WEAR_CHECK
+            if (!invalid_align(mob, obj)) {
+              equip_char(mob, obj, alt);
+            } else {
+              obj_to_char(obj, mob);
+            }
+#else
+            equip_char(mob, obj, alt);
+#endif
+          } else {
+            /* Couldn’t place it — keep in inventory. */
+            obj_to_char(obj, mob);
+          }
         }
+
+        if (obj_is_storage(obj) || GET_OBJ_TYPE(obj) == ITEM_FURNITURE)
+          stack[0] = obj;
+        continue;
       }
 
-      /* Couldn’t place it — keep in inventory. */
-      obj_to_char(obj, mob);
+      /* Inventory-only request */
+      if (e->wear_pos == -1) {
+        for (i = 0; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+          stack[i] = NULL;
+        obj_to_char(obj, mob);
+        if (obj_is_storage(obj) || GET_OBJ_TYPE(obj) == ITEM_FURNITURE)
+          stack[0] = obj;
+        continue;
+      }
+
+      /* Nested inventory: wear_pos = -2 (depth 1), -3 (depth 2), etc. */
+      {
+        int depth = -(e->wear_pos) - 1;
+        if (depth <= 0 ||
+            depth >= (int)(sizeof(stack) / sizeof(stack[0])) ||
+            !stack[depth - 1]) {
+          obj_to_char(obj, mob);
+          continue;
+        }
+        obj_to_obj(obj, stack[depth - 1]);
+        if (obj_is_storage(obj) || GET_OBJ_TYPE(obj) == ITEM_FURNITURE) {
+          stack[depth] = obj;
+          for (i = depth + 1; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+            stack[i] = NULL;
+        }
+      }
     }
   }
 }

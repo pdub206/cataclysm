@@ -408,33 +408,60 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
   char ddesc[MAX_STRING_LENGTH];
   char bdesc[MAX_STRING_LENGTH];
   char buf[MAX_STRING_LENGTH];
+  int has_bdesc = 0;
 
   ldesc[MAX_STRING_LENGTH - 1] = '\0';
   ddesc[MAX_STRING_LENGTH - 1] = '\0';
   bdesc[MAX_STRING_LENGTH - 1] = '\0';
   strip_cr(strncpy(ldesc, GET_LDESC(mob), MAX_STRING_LENGTH - 1));
   strip_cr(strncpy(ddesc, GET_DDESC(mob), MAX_STRING_LENGTH - 1));
-  if (GET_BDESC(mob))
+  if (GET_BDESC(mob)) {
     strip_cr(strncpy(bdesc, GET_BDESC(mob), MAX_STRING_LENGTH - 1));
-  else
+    {
+      const char *p;
+      for (p = bdesc; *p; p++) {
+        if (*p != ' ' && *p != '\t' && *p != '\r' && *p != '\n') {
+          has_bdesc = 1;
+          break;
+        }
+      }
+    }
+  } else
     bdesc[0] = '\0';
 
-  int n = snprintf(buf, MAX_STRING_LENGTH,
-                   "#%d\n"
-                   "%s%c\n"
-                   "%s%c\n"
-                   "%s%c\n"
-                   "%s%c\n"
-                   "%s%c\n"
-                   "B\n"
-                   "%s%c\n",
-                   mvnum,
-                   GET_NAME(mob), STRING_TERMINATOR,
-                   GET_KEYWORDS(mob), STRING_TERMINATOR,
-                   GET_SDESC(mob), STRING_TERMINATOR,
-                   ldesc, STRING_TERMINATOR,
-                   ddesc, STRING_TERMINATOR,
-                   bdesc, STRING_TERMINATOR);
+  int n;
+  if (has_bdesc) {
+    n = snprintf(buf, MAX_STRING_LENGTH,
+                 "#%d\n"
+                 "%s%c\n"
+                 "%s%c\n"
+                 "%s%c\n"
+                 "%s%c\n"
+                 "%s%c\n"
+                 "B\n"
+                 "%s%c\n",
+                 mvnum,
+                 GET_NAME(mob), STRING_TERMINATOR,
+                 GET_KEYWORDS(mob), STRING_TERMINATOR,
+                 GET_SDESC(mob), STRING_TERMINATOR,
+                 ldesc, STRING_TERMINATOR,
+                 ddesc, STRING_TERMINATOR,
+                 bdesc, STRING_TERMINATOR);
+  } else {
+    n = snprintf(buf, MAX_STRING_LENGTH,
+                 "#%d\n"
+                 "%s%c\n"
+                 "%s%c\n"
+                 "%s%c\n"
+                 "%s%c\n"
+                 "%s%c\n",
+                 mvnum,
+                 GET_NAME(mob), STRING_TERMINATOR,
+                 GET_KEYWORDS(mob), STRING_TERMINATOR,
+                 GET_SDESC(mob), STRING_TERMINATOR,
+                 ldesc, STRING_TERMINATOR,
+                 ddesc, STRING_TERMINATOR);
+  }
 
   if (n >= MAX_STRING_LENGTH) {
     mudlog(BRF, LVL_BUILDER, TRUE,

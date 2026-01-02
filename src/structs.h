@@ -1386,6 +1386,7 @@ struct recent_player
 /* NPC loadout helpers */
 void loadout_free_list(struct mob_loadout **head);
 void loadout_add_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty);
+void loadout_append_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty);
 struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src);
 
 /* Furniture defines for object values */

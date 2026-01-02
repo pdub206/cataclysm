@@ -29,7 +29,6 @@
 #include "shop.h"
 #include "quest.h"
 #include "modify.h"
-#include "roomsave.h"
 
 /* Local defined utility functions */
 /* do_group utility functions */

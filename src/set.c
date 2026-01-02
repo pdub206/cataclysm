@@ -7,6 +7,15 @@
 
 #include "conf.h"
 #include "sysdep.h"
+
+#include <stdlib.h>
+#include <dirent.h>
+#include <errno.h>
+#include <limits.h>
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 #include "structs.h"
 #include "utils.h"
 #include "comm.h"
@@ -23,6 +32,7 @@
 #include "improved-edit.h"
 #include "modify.h"
 #include "genobj.h"
+#include "genmob.h"
 #include "dg_scripts.h"
 #include "fight.h"
 
@@ -2551,4 +2561,987 @@ ACMD(do_osave)
 
   save_objects(znum);
   send_to_char(ch, "osave: object %d saved to disk.\r\n", vnum);
+}
+
+/* ====== Builder snapshot: save a staged mob's gear as its prototype loadout ====== */
+static void msave_loadout_append(struct mob_loadout **head,
+                                 struct mob_loadout **tail,
+                                 obj_vnum vnum, sh_int wear_pos,
+                                 int *eq_count, int *inv_count) {
+  struct mob_loadout *e;
+  CREATE(e, struct mob_loadout, 1);
+  e->vnum = vnum;
+  e->wear_pos = wear_pos;
+  e->quantity = 1;
+  e->next = NULL;
+
+  if (*tail)
+    (*tail)->next = e;
+  else
+    *head = e;
+  *tail = e;
+
+  if (wear_pos >= 0)
+    (*eq_count)++;
+  else
+    (*inv_count)++;
+}
+
+static void msave_capture_obj_tree(struct mob_loadout **head,
+                                   struct mob_loadout **tail,
+                                   struct obj_data *obj, sh_int base_wear_pos,
+                                   int depth, int *eq_count, int *inv_count) {
+  sh_int wear_pos;
+  struct obj_data *cont;
+
+  if (!obj || GET_OBJ_VNUM(obj) <= 0)
+    return;
+
+  if (depth <= 0)
+    wear_pos = base_wear_pos;
+  else
+    wear_pos = (sh_int)(-(depth + 1));
+
+  msave_loadout_append(head, tail, GET_OBJ_VNUM(obj), wear_pos,
+                       eq_count, inv_count);
+
+  for (cont = obj->contains; cont; cont = cont->next_content)
+    msave_capture_obj_tree(head, tail, cont, base_wear_pos, depth + 1,
+                           eq_count, inv_count);
+}
+
+ACMD(do_msave)
+{
+  char a1[MAX_INPUT_LENGTH], a2[MAX_INPUT_LENGTH];
+  char target[MAX_INPUT_LENGTH] = {0}, flags[MAX_INPUT_LENGTH] = {0};
+  struct char_data *vict = NULL, *tmp = NULL;
+  mob_rnum rnum;
+  int include_inv = 0;      /* -all */
+  int clear_first = 1;      /* default replace; -append flips this to 0 */
+  int equips_added = 0, inv_entries = 0;
+  int pos;
+  struct obj_data *o;
+  struct mob_loadout *lo_head = NULL;
+  struct mob_loadout *lo_tail = NULL;
+
+  two_arguments(argument, a1, a2);
+  if (*a1 && *a1 == '-') {
+    /* user wrote: msave -flags <mob> */
+    strcpy(flags, a1);
+    strcpy(target, a2);
+  } else {
+    /* user wrote: msave <mob> [-flags] */
+    strcpy(target, a1);
+    strcpy(flags, a2);
+  }
+
+  /* Parse flags (space-separated, any order) */
+  if (*flags) {
+    char buf[MAX_INPUT_LENGTH], *p = flags;
+    while (*p) {
+      p = one_argument(p, buf);
+      if (!*buf) break;
+      if (!str_cmp(buf, "-all")) include_inv = 1;
+      else if (!str_cmp(buf, "-append")) clear_first = 0;
+      else if (!str_cmp(buf, "-clear")) clear_first = 1;
+      else {
+        send_to_char(ch, "Unknown flag '%s'. Try -all, -append, or -clear.\r\n", buf);
+        return;
+      }
+    }
+  }
+
+  /* Find target mob in the room */
+  if (*target)
+    vict = get_char_vis(ch, target, NULL, FIND_CHAR_ROOM);
+  else {
+    /* No name: pick the first NPC only if exactly one exists */
+    for (tmp = world[IN_ROOM(ch)].people; tmp; tmp = tmp->next_in_room) {
+      if (IS_NPC(tmp)) {
+        if (vict) { vict = NULL; break; } /* more than one — force explicit name */
+        vict = tmp;
+      }
+    }
+  }
+
+  if (!vict || !IS_NPC(vict)) {
+    send_to_char(ch, "Target an NPC in this room: msave <mob> [-all] [-append|-clear]\r\n");
+    return;
+  }
+
+  /* Resolve prototype and permission to edit its zone */
+  rnum = GET_MOB_RNUM(vict);
+  if (rnum < 0) {
+    send_to_char(ch, "I can’t resolve that mob's prototype.\r\n");
+    return;
+  }
+
+#ifdef CAN_EDIT_ZONE
+  if (!can_edit_zone(ch, real_zone_by_thing(GET_MOB_VNUM(vict)))) {
+    send_to_char(ch, "You don’t have permission to modify that mob’s zone.\r\n");
+    return;
+  }
+#endif
+
+  /* Build the new loadout into the PROTOTYPE */
+  if (clear_first) {
+    loadout_free_list(&mob_proto[rnum].proto_loadout);
+    mob_proto[rnum].proto_loadout = NULL;
+  }
+
+  lo_head = mob_proto[rnum].proto_loadout;
+  lo_tail = lo_head;
+  while (lo_tail && lo_tail->next)
+    lo_tail = lo_tail->next;
+
+  /* Capture equipment: one entry per worn slot */
+  for (pos = 0; pos < NUM_WEARS; pos++) {
+    o = GET_EQ(vict, pos);
+    if (!o) continue;
+    if (GET_OBJ_VNUM(o) <= 0) continue;
+    msave_capture_obj_tree(&lo_head, &lo_tail, o, (sh_int)pos, 0,
+                           &equips_added, &inv_entries);
+  }
+
+  /* Capture inventory (with nesting) if requested */
+  if (include_inv) {
+    for (o = vict->carrying; o; o = o->next_content) {
+      if (GET_OBJ_VNUM(o) <= 0) continue;
+      msave_capture_obj_tree(&lo_head, &lo_tail, o, -1, 0,
+                             &equips_added, &inv_entries);
+    }
+  }
+
+  mob_proto[rnum].proto_loadout = lo_head;
+
+  /* Persist to disk: save the zone owning this mob vnum */
+  {
+    zone_rnum zr = real_zone_by_thing(GET_MOB_VNUM(vict));
+    if (zr == NOWHERE) {
+      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
+             "msave: could not resolve zone for mob %d", GET_MOB_VNUM(vict));
+      send_to_char(ch, "Saved in memory, but couldn’t resolve zone to write disk.\r\n");
+    } else {
+      save_mobiles(zr);
+      send_to_char(ch,
+        "Loadout saved for mob [%d]. Equipped: %d, Inventory lines: %d%s\r\n",
+        GET_MOB_VNUM(vict), equips_added, inv_entries, include_inv ? "" : " (use -all to include inventory)");
+      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
+             "msave: %s saved loadout for mob %d (eq=%d, inv=%d) in zone %d",
+             GET_NAME(ch), GET_MOB_VNUM(vict), equips_added, inv_entries,
+             zone_table[zr].number);
+    }
+  }
+
+}
+
+ACMD(do_rsave)
+{
+  room_rnum rnum;
+  zone_rnum znum;
+  int ok;
+
+  if (IS_NPC(ch)) {
+    send_to_char(ch, "Mobiles can’t use this.\r\n");
+    return;
+  }
+
+  /* IN_ROOM(ch) is already a room_rnum (index into world[]). Do NOT pass it to real_room(). */
+  rnum = IN_ROOM(ch);
+
+  if (rnum == NOWHERE || rnum < 0 || rnum > top_of_world) {
+    send_to_char(ch, "You are not in a valid room.\r\n");
+    return;
+  }
+
+  znum = world[rnum].zone;
+  if (znum < 0 || znum > top_of_zone_table) {
+    send_to_char(ch, "This room is not attached to a valid zone.\r\n");
+    return;
+  }
+
+  /* Optional: permission check */
+  if (!can_edit_zone(ch, znum)) {
+    send_to_char(ch, "You don’t have permission to modify zone %d.\r\n",
+                 zone_table[znum].number);
+    return;
+  }
+
+  /* Save the owning zone's .wld file so the room data persists */
+  ok = save_rooms(znum);
+  if (ok)
+    ok = RoomSave_now(rnum);
+
+  if (!ok) {
+    send_to_char(ch, "rsave: failed.\r\n");
+    mudlog(BRF, GET_LEVEL(ch), TRUE,
+           "RSAVE FAIL: %s room %d (rnum=%d) zone %d (znum=%d)",
+           GET_NAME(ch), GET_ROOM_VNUM(rnum), rnum,
+           zone_table[znum].number, znum);
+    return;
+  }
+
+  send_to_char(ch, "rsave: room %d saved to world file for zone %d.\r\n",
+               GET_ROOM_VNUM(rnum), zone_table[znum].number);
+
+  mudlog(CMP, GET_LEVEL(ch), TRUE,
+         "RSAVE OK: %s room %d (rnum=%d) -> world/wld/%d.wld",
+         GET_NAME(ch), GET_ROOM_VNUM(rnum), rnum, zone_table[znum].number);
+}
+
+/* Write saved rooms under lib/world/rsv/<vnum>.rsv (like wld/ zon/ obj/). */
+#ifndef ROOMSAVE_PREFIX
+#define ROOMSAVE_PREFIX  LIB_WORLD "rsv/"
+#endif
+#ifndef ROOMSAVE_EXT
+#define ROOMSAVE_EXT     ".rsv"
+#endif
+
+static unsigned char *roomsave_dirty = NULL;
+
+void RoomSave_init_dirty(void) {
+  free(roomsave_dirty);
+  roomsave_dirty = calloc((size_t)top_of_world + 1, 1);
+}
+
+void RoomSave_mark_dirty_room(room_rnum rnum) {
+  if (!roomsave_dirty) return;
+  if (rnum != NOWHERE && rnum >= 0 && rnum <= top_of_world)
+    roomsave_dirty[rnum] = 1;
+}
+
+/* Where does an object “live” (topmost location -> room)? */
+room_rnum RoomSave_room_of_obj(struct obj_data *o) {
+  if (!o) return NOWHERE;
+  while (o->in_obj) o = o->in_obj;
+  if (o->carried_by) return IN_ROOM(o->carried_by);
+  if (o->worn_by)    return IN_ROOM(o->worn_by);
+  return o->in_room;
+}
+
+/* --- helper: read a list of objects until '.' or 'E' and return the head --- */
+/* Context-aware implementation: stop_on_E = 1 for nested B..E, 0 for top-level. */
+static struct obj_data *roomsave_read_list_ctx(FILE *fl, int stop_on_E)
+{
+  char line[256];
+  struct obj_data *head = NULL, *tail = NULL;
+
+  while (fgets(line, sizeof(line), fl)) {
+    if (line[0] == '.') {
+      /* End of this list scope */
+      break;
+    }
+
+    if (stop_on_E && line[0] == 'E') {
+      /* End of nested (B..E) scope */
+      break;
+    }
+
+    /* For top-level reads (stop_on_E==0), or any non-'O', push back
+       so the outer #R reader can handle M/E/G/P or '.' */
+    if (line[0] != 'O') {
+      long back = -((long)strlen(line));
+      fseek(fl, back, SEEK_CUR);
+      break;
+    }
+
+    /* Parse object header: O vnum timer weight cost unused */
+    int vnum, timer, weight, cost, unused_cost;
+    if (sscanf(line, "O %d %d %d %d %d", &vnum, &timer, &weight, &cost, &unused_cost) != 5)
+      continue;
+
+    /* IMPORTANT: read by VNUM (VIRTUAL), not real index */
+    struct obj_data *obj = read_object((obj_vnum)vnum, VIRTUAL);
+    if (!obj) {
+      mudlog(NRM, LVL_IMMORT, TRUE, "RoomSave: read_object(vnum=%d) failed.", vnum);
+      /* Skip to next object/header or end-of-scope */
+      long backpos;
+      while (fgets(line, sizeof(line), fl)) {
+        if (line[0] == 'O' || line[0] == '.' || (stop_on_E && line[0] == 'E')) {
+          backpos = -((long)strlen(line));
+          fseek(fl, backpos, SEEK_CUR);
+          break;
+        }
+      }
+      continue;
+    }
+
+    /* Apply core scalars */
+    GET_OBJ_TIMER(obj)  = timer;
+    GET_OBJ_WEIGHT(obj) = weight;
+    GET_OBJ_COST(obj)   = cost;
+    GET_OBJ_COST_PER_DAY(obj)   = 0;
+
+    /* Clear array flags so missing slots don't keep proto bits */
+#ifdef EF_ARRAY_MAX
+# ifdef GET_OBJ_EXTRA_AR
+    for (int i = 0; i < EF_ARRAY_MAX; i++) GET_OBJ_EXTRA_AR(obj, i) = 0;
+# else
+    for (int i = 0; i < EF_ARRAY_MAX; i++) GET_OBJ_EXTRA(obj)[i] = 0;
+# endif
+#endif
+#ifdef TW_ARRAY_MAX
+    for (int i = 0; i < TW_ARRAY_MAX; i++) GET_OBJ_WEAR(obj)[i] = 0;
+#endif
+
+    /* Read per-object lines until next 'O' or '.' or 'E'(when nested) */
+    long backpos;
+    while (fgets(line, sizeof(line), fl)) {
+      if (line[0] == 'V') {
+        int idx, val;
+        if (sscanf(line, "V %d %d", &idx, &val) == 2) {
+#ifdef NUM_OBJ_VAL_POSITIONS
+          if (idx >= 0 && idx < NUM_OBJ_VAL_POSITIONS) GET_OBJ_VAL(obj, idx) = val;
+#else
+          if (idx >= 0 && idx < 6) GET_OBJ_VAL(obj, idx) = val;
+#endif
+        }
+        continue;
+      } else if (line[0] == 'X') { /* extra flags */
+        int idx, val;
+        if (sscanf(line, "X %d %d", &idx, &val) == 2) {
+#if defined(EF_ARRAY_MAX) && defined(GET_OBJ_EXTRA_AR)
+          if (idx >= 0 && idx < EF_ARRAY_MAX) GET_OBJ_EXTRA_AR(obj, idx) = val;
+#elif defined(EF_ARRAY_MAX)
+          if (idx >= 0 && idx < EF_ARRAY_MAX) GET_OBJ_EXTRA(obj)[idx] = val;
+#else
+          if (idx == 0) GET_OBJ_EXTRA(obj) = val;
+#endif
+        }
+        continue;
+      } else if (line[0] == 'W') { /* wear flags */
+        int idx, val;
+        if (sscanf(line, "W %d %d", &idx, &val) == 2) {
+#ifdef TW_ARRAY_MAX
+          if (idx >= 0 && idx < TW_ARRAY_MAX) GET_OBJ_WEAR(obj)[idx] = val;
+#else
+          if (idx == 0) GET_OBJ_WEAR(obj) = val;
+#endif
+        }
+        continue;
+      } else if (line[0] == 'B') {
+        /* Nested contents until matching 'E' */
+        struct obj_data *child_head = roomsave_read_list_ctx(fl, 1 /* stop_on_E */);
+
+        /* Detach each node before obj_to_obj(), otherwise we lose siblings */
+        for (struct obj_data *it = child_head, *next; it; it = next) {
+          next = it->next_content;  /* remember original sibling */
+          it->next_content = NULL;  /* detach from temp list */
+          obj_to_obj(it, obj);      /* push into container (LIFO) */
+        }
+        continue;
+      } else if (line[0] == 'O' || line[0] == '.' || (stop_on_E && line[0] == 'E')) {
+        /* Next object / end-of-scope: rewind one line for outer loop to see it */
+        backpos = -((long)strlen(line));
+        fseek(fl, backpos, SEEK_CUR);
+        break;
+      } else {
+        /* ignore unknown lines */
+        continue;
+      }
+    }
+
+    /* Append to this scope's list */
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      update_money_obj(obj);
+
+    obj->next_content = NULL;
+    if (!head) head = tail = obj;
+    else { tail->next_content = obj; tail = obj; }
+  }
+
+  return head;
+}
+
+/* Keep your existing one-arg API for callers: top-level semantics (stop_on_E = 0). */
+static struct obj_data *roomsave_read_list(FILE *fl)
+{
+  return roomsave_read_list_ctx(fl, 0);
+}
+
+/* ---------- Minimal line format ----------
+#R <vnum> <unix_time>
+O <vnum> <timer> <extra_flags> <wear_flags> <weight> <cost> <unused>
+V <i> <val[i]>    ; repeated for all value slots present on this obj
+B                 ; begin contents of this object (container)
+E                 ; end contents of this object
+.                 ; end of room
+------------------------------------------ */
+
+static void ensure_dir_exists(const char *path) {
+  if (mkdir(path, 0775) == -1 && errno != EEXIST) {
+    mudlog(CMP, LVL_IMMORT, TRUE, "SYSERR: roomsave mkdir(%s): %s", path, strerror(errno));
+  }
+}
+
+/* zone vnum for a given room rnum (e.g., 134 -> zone 1) */
+static int roomsave_zone_for_rnum(room_rnum rnum) {
+  if (rnum == NOWHERE || rnum < 0 || rnum > top_of_world) return 0;
+  zone_rnum znum = world[rnum].zone;
+  if (znum < 0 || znum > top_of_zone_table) return 0;
+  return zone_table[znum].number; /* e.g., 1 for rooms 100–199, 2 for 200–299, etc. */
+}
+
+/* lib/world/rsv/<zone>.rsv */
+static void roomsave_zone_filename(int zone_vnum, char *out, size_t outsz) {
+  snprintf(out, outsz, "%s%d%s", ROOMSAVE_PREFIX, zone_vnum, ROOMSAVE_EXT);
+}
+
+/* Write one object (and its recursive contents) */
+static void write_one_object(FILE *fl, struct obj_data *obj) {
+  int i;
+
+  /* Core scalars (flags printed separately per-slot) */
+  fprintf(fl, "O %d %d %d %d %d\n",
+          GET_OBJ_VNUM(obj),
+          GET_OBJ_TIMER(obj),
+          GET_OBJ_WEIGHT(obj),
+          GET_OBJ_COST(obj),
+          GET_OBJ_COST_PER_DAY(obj));
+
+/* Extra flags array */
+#if defined(EF_ARRAY_MAX) && defined(GET_OBJ_EXTRA_AR)
+  for (i = 0; i < EF_ARRAY_MAX; i++)
+    fprintf(fl, "X %d %d\n", i, GET_OBJ_EXTRA_AR(obj, i));
+#elif defined(EF_ARRAY_MAX)
+  for (i = 0; i < EF_ARRAY_MAX; i++)
+    fprintf(fl, "X %d %d\n", i, GET_OBJ_EXTRA(obj)[i]);
+#else
+  fprintf(fl, "X %d %d\n", 0, GET_OBJ_EXTRA(obj));
+#endif
+
+/* Wear flags array */
+#ifdef TW_ARRAY_MAX
+  for (i = 0; i < TW_ARRAY_MAX; i++)
+    fprintf(fl, "W %d %d\n", i, GET_OBJ_WEAR(obj)[i]);
+#else
+  fprintf(fl, "W %d %d\n", 0, GET_OBJ_WEAR(obj));
+#endif
+
+  /* Values[] (durability, liquids, charges, etc.) */
+#ifdef NUM_OBJ_VAL_POSITIONS
+  for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
+    fprintf(fl, "V %d %d\n", i, GET_OBJ_VAL(obj, i));
+#else
+  for (i = 0; i < 6; i++)
+    fprintf(fl, "V %d %d\n", i, GET_OBJ_VAL(obj, i));
+#endif
+
+  /* Contents (recursive) */
+  if (obj->contains) {
+    struct obj_data *cont;
+    fprintf(fl, "B\n");
+    for (cont = obj->contains; cont; cont = cont->next_content)
+      write_one_object(fl, cont);
+    fprintf(fl, "E\n");
+  }
+}
+
+/* Forward declaration for RoomSave_now*/
+static void RS_write_room_mobs(FILE *out, room_rnum rnum);
+
+/* Public: write the entire room’s contents */
+int RoomSave_now(room_rnum rnum) {
+  char path[PATH_MAX], tmp[PATH_MAX], line[512];
+  FILE *in = NULL, *out = NULL;
+  room_vnum rvnum;
+  int zvnum;
+
+  if (rnum == NOWHERE)
+    return 0;
+
+  rvnum = world[rnum].number;
+  zvnum = roomsave_zone_for_rnum(rnum);
+  if (zvnum < 0)
+    return 0;
+
+  ensure_dir_exists(ROOMSAVE_PREFIX);
+  roomsave_zone_filename(zvnum, path, sizeof(path));
+
+  {
+    int n = snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+    if (n < 0 || n >= (int)sizeof(tmp)) {
+      mudlog(NRM, LVL_IMMORT, TRUE,
+             "SYSERR: RoomSave: temp path too long for %s", path);
+      return 0;
+    }
+  }
+
+  if (!(out = fopen(tmp, "w"))) {
+    mudlog(NRM, LVL_IMMORT, TRUE,
+           "SYSERR: RoomSave: fopen(%s) failed: %s",
+           tmp, strerror(errno));
+    return 0;
+  }
+
+  if ((in = fopen(path, "r")) != NULL) {
+    while (fgets(line, sizeof(line), in)) {
+      if (strncmp(line, "#R ", 3) == 0) {
+        int file_rvnum;
+        long ts;
+        if (sscanf(line, "#R %d %ld", &file_rvnum, &ts) == 2) {
+          if (file_rvnum == (int)rvnum) {
+            /* Skip old block completely until and including '.' line */
+            while (fgets(line, sizeof(line), in)) {
+              if (line[0] == '.') {
+                /* consume it and break */
+                break;
+              }
+            }
+            continue; /* do NOT write skipped lines */
+          }
+        }
+      }
+      fputs(line, out); /* keep unrelated lines */
+    }
+    fclose(in);
+  }
+
+  /* Append new block */
+  fprintf(out, "#R %d %ld\n", rvnum, (long)time(0));
+
+  RS_write_room_mobs(out, rnum);
+
+  for (struct obj_data *obj = world[rnum].contents; obj; obj = obj->next_content)
+    write_one_object(out, obj);
+
+  /* Always terminate block */
+  fprintf(out, ".\n");
+
+  if (fclose(out) != 0) {
+    mudlog(NRM, LVL_IMMORT, TRUE,
+           "SYSERR: RoomSave: fclose(%s) failed: %s",
+           tmp, strerror(errno));
+    return 0;
+  }
+  if (rename(tmp, path) != 0) {
+    mudlog(NRM, LVL_IMMORT, TRUE,
+           "SYSERR: RoomSave: rename(%s -> %s) failed: %s",
+           tmp, path, strerror(errno));
+    return 0;
+  }
+
+  return 1;
+}
+
+/* --- M/E/G/P load helpers (mob restore) -------------------------------- */
+
+struct rs_load_ctx {
+  room_rnum rnum;
+  struct char_data *cur_mob;      /* last mob spawned by 'M' */
+  struct obj_data  *stack[16];    /* container stack by depth for 'P' */
+  int saw_inventory;             /* saw any inventory lines (G/P from inventory) */
+  int last_item_was_inventory;   /* last item source was inventory (G) */
+};
+
+static struct obj_data *RS_create_obj_by_vnum(obj_vnum ov) {
+  obj_rnum ornum;
+  if (ov <= 0) return NULL;
+  ornum = real_object(ov);
+  if (ornum == NOTHING) return NULL;
+  return read_object(ornum, REAL);
+}
+
+static struct char_data *RS_create_mob_by_vnum(mob_vnum mv) {
+  mob_rnum mrnum;
+  if (mv <= 0) return NULL;
+  mrnum = real_mobile(mv);
+  if (mrnum == NOBODY) return NULL;
+  return read_mobile(mrnum, REAL);
+}
+
+static void RS_apply_inventory_loadout(struct char_data *mob) {
+  mob_rnum rnum;
+  const struct mob_loadout *e;
+  struct obj_data *stack[16];
+  int i;
+
+  if (!mob || !IS_NPC(mob)) return;
+  rnum = GET_MOB_RNUM(mob);
+  if (rnum < 0) return;
+
+  for (i = 0; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+    stack[i] = NULL;
+
+  for (e = mob_proto[rnum].proto_loadout; e; e = e->next) {
+    int qty, n;
+    if (e->wear_pos >= 0)
+      continue;
+    qty = (e->quantity > 0) ? e->quantity : 1;
+    for (n = 0; n < qty; n++) {
+      struct obj_data *obj = RS_create_obj_by_vnum(e->vnum);
+      if (!obj) {
+        log("SYSERR: RS_apply_inventory_loadout: bad obj vnum %d on mob %d",
+            e->vnum, GET_MOB_VNUM(mob));
+        continue;
+      }
+      if (e->wear_pos == -1) {
+        for (i = 0; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+          stack[i] = NULL;
+        obj_to_char(obj, mob);
+        if (obj_is_storage(obj) || GET_OBJ_TYPE(obj) == ITEM_FURNITURE)
+          stack[0] = obj;
+        continue;
+      }
+
+      {
+        int depth = -(e->wear_pos) - 1;
+        if (depth <= 0 ||
+            depth >= (int)(sizeof(stack) / sizeof(stack[0])) ||
+            !stack[depth - 1]) {
+          obj_to_char(obj, mob);
+          continue;
+        }
+        obj_to_obj(obj, stack[depth - 1]);
+        if (obj_is_storage(obj) || GET_OBJ_TYPE(obj) == ITEM_FURNITURE) {
+          stack[depth] = obj;
+          for (i = depth + 1; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+            stack[i] = NULL;
+        }
+      }
+    }
+  }
+}
+
+static void RS_finalize_mob_loadout(struct rs_load_ctx *ctx) {
+  if (!ctx || !ctx->cur_mob)
+    return;
+  if (!ctx->saw_inventory)
+    RS_apply_inventory_loadout(ctx->cur_mob);
+}
+
+
+/* Reset the loader context before reading a new #R block */
+static void RS_ctx_clear(struct rs_load_ctx *ctx) {
+  if (!ctx)
+    return;
+
+  /* DO NOT reset ctx->rnum — each #R block sets this explicitly
+   * before parsing mobs or objects. Resetting it causes cross-room
+   * bleed (e.g., mobs from one room spawning in another).
+   */
+
+  ctx->cur_mob = NULL;
+  ctx->saw_inventory = 0;
+  ctx->last_item_was_inventory = 0;
+
+  /* Clear all container stack pointers */
+  for (int i = 0; i < 16; i++)
+    ctx->stack[i] = NULL;
+}
+
+/* Optional autosave hook (invoked by limits.c:point_update). */
+void RoomSave_autosave_tick(void) {
+  /* Iterate all rooms; only save flagged ones. */
+  for (room_rnum rnum = 0; rnum <= top_of_world; ++rnum) {
+    if (ROOM_FLAGGED(rnum, ROOM_SAVE))
+      RoomSave_now(rnum);
+  }
+}
+
+/* Forward decl so RS_parse_mob_line can use it without implicit declaration */
+static void RS_stack_clear(struct rs_load_ctx *ctx);
+
+/* Handle one line inside a #R block. Returns 1 if handled here. */
+static int RS_parse_mob_line(struct rs_load_ctx *ctx, char *line)
+{
+  if (!line) return 0;
+  while (*line == ' ' || *line == '\t') ++line;
+  if (!*line) return 0;
+
+  switch (line[0]) {
+    case 'M': {
+      mob_vnum mv;
+      if (sscanf(line+1, " %d", (int *)&mv) != 1) return 0;
+
+      RS_finalize_mob_loadout(ctx);
+      ctx->cur_mob = RS_create_mob_by_vnum(mv);
+      if (!ctx->cur_mob) return 1;
+
+      /* Place in the block's room */
+      char_to_room(ctx->cur_mob, ctx->rnum);
+
+      /* Safety: if anything put it elsewhere, force it back */
+      if (IN_ROOM(ctx->cur_mob) != ctx->rnum)
+        char_to_room(ctx->cur_mob, ctx->rnum);
+
+      RS_stack_clear(ctx); /* clear only container stack */
+      ctx->saw_inventory = 0;
+      ctx->last_item_was_inventory = 0;
+      return 1;
+    }
+
+    case 'E': { /* E <wear_pos> <obj_vnum> */
+      int pos; obj_vnum ov; struct obj_data *obj;
+      if (!ctx->cur_mob) return 1;       /* orphan -> ignore */
+      if (sscanf(line+1, " %d %d", &pos, (int *)&ov) != 2) return 0;
+      obj = RS_create_obj_by_vnum(ov);
+      if (!obj) return 1;
+
+      if (pos < 0 || pos >= NUM_WEARS) pos = WEAR_HOLD; /* clamp */
+      equip_char(ctx->cur_mob, obj, pos);
+
+      /* Reset ONLY container stack for following P-lines; keep cur_mob */
+      RS_stack_clear(ctx);
+      ctx->stack[0] = obj;
+      ctx->last_item_was_inventory = 0;
+      return 1;
+    }
+
+    case 'G': { /* G <obj_vnum> */
+      obj_vnum ov; struct obj_data *obj;
+      if (!ctx->cur_mob) return 1;       /* orphan -> ignore */
+      if (sscanf(line+1, " %d", (int *)&ov) != 1) return 0;
+      obj = RS_create_obj_by_vnum(ov);
+      if (!obj) return 1;
+
+      obj_to_char(obj, ctx->cur_mob);
+
+      RS_stack_clear(ctx);
+      ctx->stack[0] = obj;
+      ctx->saw_inventory = 1;
+      ctx->last_item_was_inventory = 1;
+      return 1;
+    }
+
+    case 'P': { /* P <depth> <obj_vnum> : put into last obj at (depth-1) */
+      int depth; obj_vnum ov; struct obj_data *parent, *obj;
+      if (sscanf(line+1, " %d %d", &depth, (int *)&ov) != 2) return 0;
+      if (depth <= 0 || depth >= (int)(sizeof(ctx->stack)/sizeof(ctx->stack[0])))
+        return 1;
+      parent = ctx->stack[depth-1];
+      if (!parent) return 1;
+
+      obj = RS_create_obj_by_vnum(ov);
+      if (!obj) return 1;
+      obj_to_obj(obj, parent);
+
+      ctx->stack[depth] = obj;
+      { int d; for (d = depth+1; d < (int)(sizeof(ctx->stack)/sizeof(ctx->stack[0])); ++d) ctx->stack[d] = NULL; }
+      if (ctx->last_item_was_inventory)
+        ctx->saw_inventory = 1;
+      return 1;
+    }
+
+    default:
+      return 0;
+  }
+}
+
+/* Forward decls for mob restore helpers */
+static void RS_stack_clear(struct rs_load_ctx *ctx);
+
+void RoomSave_boot(void)
+{
+  DIR *dirp;
+  struct dirent *dp;
+
+  ensure_dir_exists(ROOMSAVE_PREFIX);
+
+  dirp = opendir(ROOMSAVE_PREFIX);
+  if (!dirp) {
+    mudlog(NRM, LVL_IMMORT, TRUE,
+           "SYSERR: RoomSave_boot: cannot open %s", ROOMSAVE_PREFIX);
+    return;
+  }
+
+  log("RoomSave: scanning %s for *.rsv", ROOMSAVE_PREFIX);
+
+  while ((dp = readdir(dirp))) {
+    size_t n = strlen(dp->d_name);
+    if (n < 5) continue; /* skip . and .. */
+    if (strcmp(dp->d_name + n - 4, ROOMSAVE_EXT) != 0) continue;
+
+    {
+      char path[PATH_MAX];
+      int wn = snprintf(path, sizeof(path), "%s%s", ROOMSAVE_PREFIX, dp->d_name);
+      if (wn < 0 || wn >= (int)sizeof(path)) {
+        mudlog(NRM, LVL_IMMORT, TRUE,
+               "SYSERR: RoomSave_boot: path too long: %s%s",
+               ROOMSAVE_PREFIX, dp->d_name);
+        continue;
+      }
+
+      FILE *fl = fopen(path, "r");
+      if (!fl) {
+        mudlog(NRM, LVL_IMMORT, TRUE,
+               "SYSERR: RoomSave_boot: fopen(%s) failed: %s",
+               path, strerror(errno));
+        continue;
+      }
+
+      log("RoomSave: reading %s", path);
+
+      int blocks = 0;
+      int restored_objs_total = 0;
+      int restored_mobs_total = 0;
+
+      /* Outer loop: read every #R block in this .rsv file */
+      char line[512];
+      while (fgets(line, sizeof(line), fl)) {
+
+        /* Skip until a valid #R header */
+        if (strncmp(line, "#R ", 3) != 0)
+          continue;
+
+        /* Parse header line */
+        int rvnum; long ts;
+        if (sscanf(line, "#R %d %ld", &rvnum, &ts) != 2) {
+          mudlog(NRM, LVL_IMMORT, TRUE,
+                 "RoomSave: malformed #R header in %s: %s", path, line);
+          /* Skip malformed block */
+          while (fgets(line, sizeof(line), fl))
+            if (line[0] == '.') break;
+          continue;
+        }
+
+        blocks++;
+
+        /* Resolve the room for this block */
+        room_rnum rnum = real_room((room_vnum)rvnum);
+        if (rnum == NOWHERE) {
+          mudlog(NRM, LVL_IMMORT, FALSE,
+                 "RoomSave: unknown room vnum %d in %s (skipping)",
+                 rvnum, path);
+          /* Skip to next block */
+          while (fgets(line, sizeof(line), fl))
+            if (line[0] == '.') break;
+          continue;
+        }
+
+        /* Clear this room's ground contents before restoring */
+        while (world[rnum].contents)
+          extract_obj(world[rnum].contents);
+
+        /* Clear and set mob context for this block */
+        struct rs_load_ctx mctx;
+        RS_ctx_clear(&mctx);
+        mctx.rnum = rnum;
+
+        /* Per-block counts */
+        int count_objs = 0, count_mobs = 0;
+        char inner[512];
+
+        /* Inner loop: read this #R block until '.' */
+        while (fgets(inner, sizeof(inner), fl)) {
+
+          /* Trim spaces */
+          while (inner[0] == ' ' || inner[0] == '\t')
+            memmove(inner, inner + 1, strlen(inner));
+
+          /* Stop at end of block */
+          if (inner[0] == '.')
+            break;
+
+          /* Defensive: stop if another #R starts (malformed file) */
+          if (!strncmp(inner, "#R ", 3)) {
+            fseek(fl, -((long)strlen(inner)), SEEK_CUR);
+            break;
+          }
+
+          /* Handle object blocks */
+          if (inner[0] == 'O') {
+            long pos = ftell(fl);
+            fseek(fl, pos - strlen(inner), SEEK_SET);
+            struct obj_data *list = roomsave_read_list(fl);
+            for (struct obj_data *it = list, *next; it; it = next) {
+              next = it->next_content;
+              it->next_content = NULL;
+              obj_to_room(it, rnum);
+              count_objs++;
+            }
+            continue;
+          }
+
+          /* Handle mob & equipment/inventory */
+          if (RS_parse_mob_line(&mctx, inner)) {
+            if (inner[0] == 'M')
+              count_mobs++;
+            continue;
+          }
+
+          /* Unknown token: ignore gracefully */
+        }
+
+        RS_finalize_mob_loadout(&mctx);
+
+        restored_objs_total += count_objs;
+        restored_mobs_total += count_mobs;
+
+        if (count_mobs > 0)
+          log("RoomSave: room %d <- %d object(s) and %d mob(s)",
+              rvnum, count_objs, count_mobs);
+        else
+          log("RoomSave: room %d <- %d object(s)", rvnum, count_objs);
+      }
+
+      log("RoomSave: finished %s (blocks=%d, objects=%d, mobs=%d)",
+          path, blocks, restored_objs_total, restored_mobs_total);
+
+      fclose(fl);
+    }
+  }
+
+  closedir(dirp);
+}
+
+/* ======== MOB SAVE: write NPCs and their equipment/inventory ========== */
+
+/* Depth-aware writer for container contents under a parent object.
+ * Writes: P <depth> <obj_vnum>
+ * depth starts at 1 for direct children. */
+static void RS_write_P_chain(FILE *fp, struct obj_data *parent, int depth) {
+  struct obj_data *c;
+  for (c = parent->contains; c; c = c->next_content) {
+    obj_vnum cv = GET_OBJ_VNUM(c);
+    if (cv <= 0) continue;                          /* skip non-proto / invalid */
+    fprintf(fp, "P %d %d\n", depth, (int)cv);
+    if (c->contains)
+      RS_write_P_chain(fp, c, depth + 1);
+  }
+}
+
+/* Writes: E <wear_pos> <obj_vnum>  (then P-chain) */
+static void RS_write_mob_equipment(FILE *fp, struct char_data *mob) {
+  int w;
+  for (w = 0; w < NUM_WEARS; ++w) {
+    struct obj_data *eq = GET_EQ(mob, w);
+    if (!eq) continue;
+    if (GET_OBJ_VNUM(eq) <= 0) continue;
+    fprintf(fp, "E %d %d\n", w, (int)GET_OBJ_VNUM(eq));
+    if (eq->contains) RS_write_P_chain(fp, eq, 1);
+  }
+}
+
+/* Writes: G <obj_vnum> for inventory items (then P-chain) */
+static void RS_write_mob_inventory(FILE *fp, struct char_data *mob) {
+  struct obj_data *o;
+  for (o = mob->carrying; o; o = o->next_content) {
+    if (GET_OBJ_VNUM(o) <= 0) continue;
+    fprintf(fp, "G %d\n", (int)GET_OBJ_VNUM(o));
+    if (o->contains) RS_write_P_chain(fp, o, 1);
+  }
+}
+
+/* Top-level writer: for each NPC in room, emit:
+ *   M <mob_vnum>
+ *   [E ...]*
+ *   [G ...]*
+ * (Players are ignored.) */
+static void RS_write_room_mobs(FILE *out, room_rnum rnum) {
+  struct char_data *mob;
+  for (mob = world[rnum].people; mob; mob = mob->next_in_room) {
+    if (!IS_NPC(mob)) continue;
+    if (GET_MOB_VNUM(mob) <= 0) continue;
+    fprintf(out, "M %d\n", (int)GET_MOB_VNUM(mob));
+    RS_write_mob_equipment(out, mob);
+    RS_write_mob_inventory(out, mob);
+  }
+}
+
+/* Clear only the container stack, NOT cur_mob */
+static void RS_stack_clear(struct rs_load_ctx *ctx) {
+  int i;
+  for (i = 0; i < (int)(sizeof(ctx->stack)/sizeof(ctx->stack[0])); ++i)
+    ctx->stack[i] = NULL;
 }

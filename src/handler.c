@@ -24,7 +24,6 @@
 #include "fight.h"
 #include "quest.h"
 #include "mud_event.h"
-#include "roomsave.h"
 
 /* local file scope variables */
 static int extractions_pending = 0;

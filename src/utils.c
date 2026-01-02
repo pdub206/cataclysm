@@ -2151,6 +2151,24 @@ void loadout_add_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos
   *head = e;
 }
 
+void loadout_append_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty) {
+  struct mob_loadout *e = NULL;
+  struct mob_loadout *tail;
+  if (qty < 1) qty = 1;
+  CREATE(e, struct mob_loadout, 1);
+  e->vnum = vnum;
+  e->wear_pos = wear_pos;
+  e->quantity = qty;
+  e->next = NULL;
+  if (!*head) {
+    *head = e;
+    return;
+  }
+  for (tail = *head; tail->next; tail = tail->next)
+    ;
+  tail->next = e;
+}
+
 struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src) {
   struct mob_loadout *head = NULL, *tail = NULL;
   for (const struct mob_loadout *p = src; p; p = p->next) {

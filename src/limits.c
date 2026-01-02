@@ -23,7 +23,7 @@
 #include "fight.h"
 #include "screen.h"
 #include "mud_event.h"
-#include "roomsave.h"
+#include "set.h"
 #include <time.h>
 
 /* local file scope function prototypes */
@@ -484,8 +484,8 @@ void point_update(void)
   }
 
   /* ---- Room SAVE autosave (every 10 minutes; adjust the 600 as desired) ----
-   * Requires: #include "roomsave.h" at the top of this file.
-   * Saves all rooms flagged ROOM_SAVE via roomsave.c.
+   * Requires: #include "set.h" at the top of this file.
+   * Saves all rooms flagged ROOM_SAVE via set.c.
    */
   if (++roomsave_pulse >= (PASSES_PER_SEC * 600)) {
     roomsave_pulse = 0;
