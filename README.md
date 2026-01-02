@@ -17,7 +17,7 @@ Changes from stock tbaMUD 2025 to Cataclysm MUD v1.0.0-alpha:
 * Experience points and levels are removed in favor of skill based progression
 * Initial skills/spells based partly on tbaMUD code and 5e conversion (to be cleaned up in later release)
 * Expanded emoting system for roleplay
-* Permanent character death - aka. hardcore mode
+* Permanent character death
 * A hybrid "5e-like" system where:
  - [ ] Legacy THAC0 systems are removed in favor of the modern 5e system
  - [ ] Your skill level translates to a proficiency bonus on a per-skill level
@@ -65,6 +65,9 @@ Changes in v1.1.0-alpha:
  * Mounts added to help with long trips, and ability to use them as pack animals
  * Introduced AGENTS.md file to ensure code quality
  * Migration away from OLC with new commands "rcreate" and "rset" for builders to modify rooms
+ * Migration away from OLC with new commands "ocreate", "oset", and "osave" for builders to modify objects
+ * Migration away from OLC with new commands "mcreate" and "mset" for builders to modify NPC's
+ * Fixed issue with msave not saving items in containers on NPC's
 
 Features to be implemented in the next few releases:
 

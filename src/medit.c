@@ -31,7 +31,7 @@
 
 /* local functions */
 static void medit_setup_new(struct descriptor_data *d);
-static void init_mobile(struct char_data *mob);
+void init_mobile(struct char_data *mob);
 static void medit_save_to_disk(zone_vnum zone_num);
 static void medit_disp_positions(struct descriptor_data *d);
 static void medit_disp_sex(struct descriptor_data *d);
@@ -232,7 +232,7 @@ void medit_setup_existing(struct descriptor_data *d, int rmob_num)
 }
 
 /* Ideally, this function should be in db.c, but I'll put it here for portability. */
-static void init_mobile(struct char_data *mob)
+void init_mobile(struct char_data *mob)
 {
   int i;
   clear_char(mob);

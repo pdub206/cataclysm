@@ -2354,6 +2354,139 @@ static struct obj_data *find_obj_vnum_nearby(struct char_data *ch, obj_vnum vnum
   return NULL;
 }
 
+ACMD(do_mcreate)
+{
+  char arg[MAX_INPUT_LENGTH];
+  char buf[MAX_STRING_LENGTH];
+  char namebuf[MAX_NAME_LENGTH];
+  char timestr[64];
+  struct char_data *newmob;
+  struct char_data *mob;
+  mob_vnum vnum;
+  zone_rnum znum;
+  time_t ct;
+
+  if (IS_NPC(ch) || ch->desc == NULL) {
+    send_to_char(ch, "mcreate is only usable by connected players.\r\n");
+    return;
+  }
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch,
+      "Creates a new unfinished NPC which can be configured.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  mcreate <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  mcreate 1001\r\n");
+    return;
+  }
+
+  if (!is_number(arg)) {
+    send_to_char(ch,
+      "Creates a new unfinished NPC which can be configured.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  mcreate <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  mcreate 1001\r\n");
+    return;
+  }
+
+  vnum = atoi(arg);
+  if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+    send_to_char(ch, "That mobile VNUM can't exist.\r\n");
+    return;
+  }
+
+  znum = real_zone_by_thing(vnum);
+  if (znum == NOWHERE) {
+    send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+    return;
+  }
+
+  if (!can_edit_zone(ch, znum)) {
+    send_cannot_edit(ch, zone_table[znum].number);
+    return;
+  }
+
+  if (real_mobile(vnum) != NOBODY) {
+    mob = read_mobile(vnum, VIRTUAL);
+    if (mob == NULL) {
+      send_to_char(ch, "mcreate: failed to instantiate NPC %d.\r\n", vnum);
+      return;
+    }
+    char_to_room(mob, IN_ROOM(ch));
+    {
+      const char *keyword = GET_KEYWORDS(mob);
+      if (!keyword || !*keyword)
+        keyword = "npc";
+      if (!strn_cmp(keyword, "unfinished ", 11))
+        keyword += 11;
+      act("You form $t from clay.", FALSE, ch, (void *)keyword, 0, TO_CHAR);
+      act("$n forms $t from clay.", TRUE, ch, (void *)keyword, 0, TO_ROOM);
+    }
+    return;
+  }
+
+  CREATE(newmob, struct char_data, 1);
+  init_mobile(newmob);
+
+  GET_LEVEL(newmob) = 1;
+
+  GET_NAME(newmob) = strdup("An unfinished NPC");
+  GET_KEYWORDS(newmob) = strdup("unfinished npc");
+  strlcpy(namebuf, GET_NAME(ch), sizeof(namebuf));
+  snprintf(buf, sizeof(buf), "An unfinished NPC made by %.*s",
+           (int)sizeof(namebuf) - 1, namebuf);
+  GET_SDESC(newmob) = strdup(buf);
+  snprintf(buf, sizeof(buf), "An unfinished NPC made by %.*s is here.\r\n",
+           (int)sizeof(namebuf) - 1, namebuf);
+  GET_LDESC(newmob) = strdup(buf);
+  ct = time(0);
+  strftime(timestr, sizeof(timestr), "%c", localtime(&ct));
+  snprintf(buf, sizeof(buf),
+    "An unfinished NPC made by %.*s on %.*s\r\n",
+    (int)sizeof(namebuf) - 1, namebuf,
+    (int)sizeof(timestr) - 1, timestr);
+  GET_DDESC(newmob) = strdup(buf);
+  GET_BACKGROUND(newmob) = strdup("No background has been recorded.\r\n");
+
+  if (add_mobile(newmob, vnum) == NOBODY) {
+    free_mobile_strings(newmob);
+    free(newmob);
+    send_to_char(ch, "mcreate: failed to add NPC %d.\r\n", vnum);
+    return;
+  }
+
+  if (in_save_list(zone_table[znum].number, SL_MOB))
+    remove_from_save_list(zone_table[znum].number, SL_MOB);
+
+  free_mobile_strings(newmob);
+  free(newmob);
+
+  mob = read_mobile(vnum, VIRTUAL);
+  if (mob == NULL) {
+    send_to_char(ch, "mcreate: failed to instantiate NPC %d.\r\n", vnum);
+    return;
+  }
+
+  char_to_room(mob, IN_ROOM(ch));
+  {
+    const char *keyword = GET_KEYWORDS(mob);
+    if (!keyword || !*keyword)
+      keyword = "npc";
+    if (!strn_cmp(keyword, "unfinished ", 11))
+      keyword += 11;
+    act("You create an unfinished $t from clay.", FALSE, ch, (void *)keyword, 0, TO_CHAR);
+    act("$n forms an unfinished $t from clay.", TRUE, ch, (void *)keyword, 0, TO_ROOM);
+  }
+}
+
 ACMD(do_ocreate)
 {
   char arg[MAX_INPUT_LENGTH];
@@ -2403,11 +2536,6 @@ ACMD(do_ocreate)
     return;
   }
 
-  if (real_object(vnum) != NOTHING) {
-    send_to_char(ch, "Object %d already exists.\r\n", vnum);
-    return;
-  }
-
   znum = real_zone_by_thing(vnum);
   if (znum == NOWHERE) {
     send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
@@ -2416,6 +2544,25 @@ ACMD(do_ocreate)
 
   if (!can_edit_zone(ch, znum)) {
     send_cannot_edit(ch, zone_table[znum].number);
+    return;
+  }
+
+  if (real_object(vnum) != NOTHING) {
+    obj = read_object(vnum, VIRTUAL);
+    if (obj == NULL) {
+      send_to_char(ch, "ocreate: failed to instantiate object %d.\r\n", vnum);
+      return;
+    }
+    obj_to_char(obj, ch);
+    {
+      const char *sdesc = obj->short_description;
+      if (!sdesc || !*sdesc)
+        sdesc = obj->name;
+      if (!sdesc || !*sdesc)
+        sdesc = "object";
+      act("You form $t from clay.", FALSE, ch, (void *)sdesc, 0, TO_CHAR);
+      act("$n forms $t from clay.", TRUE, ch, (void *)sdesc, 0, TO_ROOM);
+    }
     return;
   }
 
@@ -2454,9 +2601,23 @@ ACMD(do_ocreate)
   }
 
   obj_to_char(obj, ch);
-  send_to_char(ch,
-    "Object %d created (temporary). Use osave to write it to disk.\r\n",
-    vnum);
+  {
+    const char *sdesc = obj->short_description;
+    if (!sdesc || !*sdesc)
+      sdesc = obj->name;
+    if (!sdesc || !*sdesc)
+      sdesc = "object";
+    if (!strn_cmp(sdesc, "an ", 3))
+      sdesc += 3;
+    else if (!strn_cmp(sdesc, "a ", 2))
+      sdesc += 2;
+    else if (!strn_cmp(sdesc, "the ", 4))
+      sdesc += 4;
+    if (!strn_cmp(sdesc, "unfinished ", 11))
+      sdesc += 11;
+    act("You create an unfinished $t from clay.", FALSE, ch, (void *)sdesc, 0, TO_CHAR);
+    act("$n forms an unfinished $t from clay.", TRUE, ch, (void *)sdesc, 0, TO_ROOM);
+  }
 }
 
 ACMD(do_osave)
