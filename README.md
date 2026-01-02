@@ -1,15 +1,10 @@
 ***Files for Cataclysm MUD.***
 
 Cataclysm MUD is a continuation of tbaMUD/CircleMUD, which is built on DIKU MUD.
-The code here is freeware to honor that tradition. Licensing and use should be based
-on what was outlined previously. Any new code added here is released under the same
-license.
+Due to licensing issues with tbaMUD, all licensing attributions should remain the
+same and not changed from the original, pre-LGPL license model.
 
-Due to the sensitive nature of topics found in this setting, all characters and
-players are 18+. The game world is derived from several inspirational sources,
-most notably the former Armageddon MUD.
-
-Roleplay is **highly** encouraged.
+TO be clear: **this is not an LGPL licensed fork**.
 
 Changes from stock tbaMUD 2025 to Cataclysm MUD v1.0.0-alpha:
 
