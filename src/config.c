@@ -39,13 +39,6 @@
 /* Can Scripts be attached to players? */
 int script_players = NO;
 
-/* pk_allowed sets the tone of the entire game.  If pk_allowed is set to NO,
- * then players will not be allowed to kill, summon, charm, or sleep other
- * players, as well as a variety of other "asshole player" protections. However,
- * if you decide you want to have an all-out knock-down drag-out PK Mud, just
- * set pk_allowed to YES - and anything goes. */
-int pk_allowed = NO;
-
 /* Is playerthieving allowed? */
 int pt_allowed = NO;
 

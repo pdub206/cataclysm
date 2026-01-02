@@ -29,9 +29,9 @@
 /* Global variables definitions used externally */
 /* Constant list for printing out who we sell to */
 const char *trade_letters[] = {
-        "Good",                 /* First, the alignment based ones */
-        "Evil",
-        "Neutral",
+        "RESERVED1",
+        "RESERVED2",
+        "RESERVED3",
         "Sorceror",           /* Then the class based ones */
         "Cleric",
         "Rogue",
@@ -119,13 +119,6 @@ static int is_ok_char(struct char_data *keeper, struct char_data *ch, int shop_n
   if (IS_GOD(ch))
     return (TRUE);
 
-  if ((IS_GOOD(ch) && NOTRADE_GOOD(shop_nr)) ||
-      (IS_EVIL(ch) && NOTRADE_EVIL(shop_nr)) ||
-      (IS_NEUTRAL(ch) && NOTRADE_NEUTRAL(shop_nr))) {
-    snprintf(buf, sizeof(buf), "%s %s", GET_NAME(ch), MSG_NO_SELL_ALIGN);
-    do_tell(keeper, buf, cmd_tell, 0);
-    return (FALSE);
-  }
   if (IS_NPC(ch))
     return (TRUE);
 
@@ -1361,7 +1354,7 @@ void assign_the_shopkeepers(void)
 
 static char *customer_string(int shop_nr, int detailed)
 {
-  int sindex = 0, flag = 1, nlen;
+  int sindex = TRADE_CLASS_START, flag = (1 << TRADE_CLASS_START), nlen;
   size_t len = 0;
   static char buf[256];
 
@@ -1433,7 +1426,7 @@ static void list_all_shops(struct char_data *ch)
 static void list_detailed_shop(struct char_data *ch, int shop_nr)
 {
   struct char_data *k;
-  int sindex, column, flag = 1, found = 0;
+  int sindex, column, flag = (1 << TRADE_CLASS_START), found = 0;
   /* char *ptrsave; */
 
   send_to_char(ch, "Vnum:       [%5d], Rnum: [%5d]\r\n", SHOP_NUM(shop_nr), shop_nr + 1);
@@ -1484,7 +1477,7 @@ static void list_detailed_shop(struct char_data *ch, int shop_nr)
   /* send_to_char(ch, "Customers:  %s\r\n", (ptrsave = customer_string(shop_nr, TRUE)) ? ptrsave : "None"); */
   send_to_char(ch, "Customers:  ");
   column = 12;  /* ^^^ strlen ^^^ */
-  for (sindex = 0; *trade_letters[sindex] != '\n'; sindex++) {
+  for (sindex = TRADE_CLASS_START; *trade_letters[sindex] != '\n'; sindex++) {
     char buf1[128];
     int linelen;
 

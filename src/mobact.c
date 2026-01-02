@@ -81,6 +81,7 @@ void mobile_activity(void)
        ((door = rand_number(0, 18)) < DIR_COUNT) && CAN_GO(ch, door) &&
        !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_NOMOB) &&
        !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_DEATH) &&
+       !RIDDEN_BY(ch) &&
        (!MOB_FLAGGED(ch, MOB_STAY_ZONE) ||
            (world[EXIT(ch, door)->to_room].zone == world[IN_ROOM(ch)].zone))) 
     {
@@ -99,10 +100,7 @@ void mobile_activity(void)
 	if (MOB_FLAGGED(ch, MOB_WIMPY) && AWAKE(vict))
 	  continue;
 
-	if (MOB_FLAGGED(ch, MOB_AGGRESSIVE  ) ||
-	   (MOB_FLAGGED(ch, MOB_AGGR_EVIL   ) && IS_EVIL(vict)) ||
-	   (MOB_FLAGGED(ch, MOB_AGGR_NEUTRAL) && IS_NEUTRAL(vict)) ||
-	   (MOB_FLAGGED(ch, MOB_AGGR_GOOD   ) && IS_GOOD(vict))) {
+	if (MOB_FLAGGED(ch, MOB_AGGRESSIVE)) {
 
           /* Can a master successfully control the charmed monster? */
           if (aggressive_mob_on_a_leash(ch, ch->master, vict))
@@ -267,4 +265,3 @@ static bool aggressive_mob_on_a_leash(struct char_data *slave, struct char_data 
   /* So sorry, now you're a player killer... Tsk tsk. */
   return (FALSE);
 }
-

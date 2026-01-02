@@ -41,6 +41,8 @@ static void look_at_target(struct char_data *ch, char *arg);
 static void look_in_direction(struct char_data *ch, int dir);
 static void look_in_obj(struct char_data *ch, char *arg);
 static void look_at_tables(struct char_data *ch);
+static bool look_can_spot_hidden(struct char_data *ch, struct char_data *tch, room_rnum room);
+static bool look_list_direction_chars(struct char_data *ch, room_rnum room);
 /* do_look, do_inventory utility functions */
 static void list_obj_to_char(struct obj_data *list, struct char_data *ch, int mode, int show);
 /* do_look, do_equipment, do_examine, do_inventory */
@@ -101,8 +103,11 @@ static void show_obj_to_char(struct obj_data *obj, struct char_data *ch, int mod
           found++;
       }
       if (found) {
-        send_to_char(ch, "You are %s upon %s.", GET_POS(ch) == POS_SITTING ? "sitting" :
-        "resting", obj->short_description);
+        const char *pos = (GET_POS(ch) == POS_STANDING ? "standing" :
+                          (GET_POS(ch) == POS_SITTING ? "sitting" :
+                          (GET_POS(ch) == POS_SLEEPING ? "sleeping" : "resting")));
+        const char *prep = (GET_POS(ch) == POS_STANDING || GET_POS(ch) == POS_SITTING) ? "at" : "upon";
+        send_to_char(ch, "You are %s %s %s.", pos, prep, obj->short_description);
         goto end;
       }
     }
@@ -233,9 +238,6 @@ static void show_obj_modifiers(struct obj_data *obj, struct char_data *ch)
 {
   if (OBJ_FLAGGED(obj, ITEM_INVISIBLE))
     send_to_char(ch, " (invisible)");
-
-  if (OBJ_FLAGGED(obj, ITEM_BLESS) && AFF_FLAGGED(ch, AFF_DETECT_ALIGN))
-    send_to_char(ch, " ..It glows blue!");
 
   if (OBJ_FLAGGED(obj, ITEM_MAGIC) && AFF_FLAGGED(ch, AFF_DETECT_MAGIC))
     send_to_char(ch, " ..It glows yellow!");
@@ -567,17 +569,62 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
               CCNRM(ch, C_NRM));
   }
 
-  /* NPCs with a full long description at default position: print that and bail. */
-  if (IS_NPC(i) && i->player.long_descr && GET_POS(i) == GET_DEFAULT_POS(i)) {
+  if (AFF_FLAGGED(i, AFF_MOUNTED) && MOUNT(i) &&
+      IN_ROOM(MOUNT(i)) == IN_ROOM(i) &&
+      MOB_FLAGGED(MOUNT(i), MOB_MOUNT)) {
+    const char *rdesc = get_char_sdesc(i);
+    const char *mdesc = get_char_sdesc(MOUNT(i));
+
+    if (rdesc && *rdesc)
+      send_to_char(ch, "%c%s", UPPER(*rdesc), rdesc + 1);
+    else
+      send_to_char(ch, "Someone");
+
+    if (mdesc && *mdesc)
+      send_to_char(ch, " is riding %s here.", mdesc);
+    else
+      send_to_char(ch, " is riding someone here.");
+
+    if (AFF_FLAGGED(i, AFF_INVISIBLE))
+      send_to_char(ch, " (invisible)");
+    if (AFF_FLAGGED(i, AFF_HIDE))
+      send_to_char(ch, " (hidden)");
+    if (!IS_NPC(i) && !i->desc)
+      send_to_char(ch, " (linkless)");
+    if (!IS_NPC(i) && PLR_FLAGGED(i, PLR_WRITING))
+      send_to_char(ch, " (writing)");
+    if (!IS_NPC(i) && PRF_FLAGGED(i, PRF_BUILDWALK))
+      send_to_char(ch, " (buildwalk)");
+    if (!IS_NPC(i) && PRF_FLAGGED(i, PRF_AFK))
+      send_to_char(ch, " (AFK)");
+
+    send_to_char(ch, "\r\n");
+
+    if (AFF_FLAGGED(i, AFF_SANCTUARY))
+      act("...$e glows with a bright light!", FALSE, i, 0, ch, TO_VICT);
+
+    return;
+  }
+
+  /* Custom ldesc overrides position-based output. */
+  if (i->char_specials.custom_ldesc && i->player.long_descr) {
     if (AFF_FLAGGED(i, AFF_INVISIBLE))
       send_to_char(ch, "*");
 
-    if (AFF_FLAGGED(ch, AFF_DETECT_ALIGN)) {
-      if (IS_EVIL(i))
-        send_to_char(ch, "(Red Aura) ");
-      else if (IS_GOOD(i))
-        send_to_char(ch, "(Blue Aura) ");
-    }
+    send_to_char(ch, "%s", i->player.long_descr);
+
+    if (AFF_FLAGGED(i, AFF_SANCTUARY))
+      act("...$e glows with a bright light!", FALSE, i, 0, ch, TO_VICT);
+    if (AFF_FLAGGED(i, AFF_BLIND) && GET_LEVEL(i) < LVL_IMMORT)
+      act("...$e is groping around blindly!", FALSE, i, 0, ch, TO_VICT);
+
+    return;
+  }
+
+  /* Characters with a full long description at default position: print that and bail. */
+  if (i->player.long_descr && GET_POS(i) == GET_DEFAULT_POS(i)) {
+    if (AFF_FLAGGED(i, AFF_INVISIBLE))
+      send_to_char(ch, "*");
 
     send_to_char(ch, "%s", i->player.long_descr);
 
@@ -618,9 +665,13 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
       send_to_char(ch, "%s", positions[(int) GET_POS(i)]);
     else {
       furniture = SITTING(i);
-      send_to_char(ch, " is %s upon %s.", (GET_POS(i) == POS_SLEEPING ?
-        "sleeping" : (GET_POS(i) == POS_RESTING ? "resting" : "sitting")),
-        OBJS(furniture, ch));
+      {
+        const char *pos = (GET_POS(i) == POS_STANDING ? "standing" :
+                          (GET_POS(i) == POS_SITTING ? "sitting" :
+                          (GET_POS(i) == POS_SLEEPING ? "sleeping" : "resting")));
+        const char *prep = (GET_POS(i) == POS_STANDING || GET_POS(i) == POS_SITTING) ? "at" : "upon";
+        send_to_char(ch, " is %s %s %s.", pos, prep, OBJS(furniture, ch));
+      }
     }
   } else {
     if (FIGHTING(i)) {
@@ -637,17 +688,113 @@ static void list_one_char(struct char_data *i, struct char_data *ch)
       send_to_char(ch, " is here struggling with thin air.");
   }
 
-  if (AFF_FLAGGED(ch, AFF_DETECT_ALIGN)) {
-    if (IS_EVIL(i))
-      send_to_char(ch, " (Red Aura)");
-    else if (IS_GOOD(i))
-      send_to_char(ch, " (Blue Aura)");
-  }
-
   send_to_char(ch, "\r\n");
 
   if (AFF_FLAGGED(i, AFF_SANCTUARY))
     act("...$e glows with a bright light!", FALSE, i, 0, ch, TO_VICT);
+}
+
+static void strip_trailing_crlf(char *str)
+{
+  size_t len;
+
+  if (!str)
+    return;
+
+  len = strlen(str);
+  while (len > 0 && (str[len - 1] == '\n' || str[len - 1] == '\r'))
+    str[--len] = '\0';
+}
+
+static void build_current_ldesc(const struct char_data *ch, char *out, size_t outsz)
+{
+  struct obj_data *furniture;
+  const char *positions[] = {
+    " is lying here, dead.",
+    " is lying here, mortally wounded.",
+    " is lying here, incapacitated.",
+    " is lying here, stunned.",
+    " is sleeping here.",
+    " is resting here.",
+    " is sitting here.",
+    " is here, fighting someone.",
+    " is standing here."
+  };
+  const char *sdesc;
+  char base[MAX_INPUT_LENGTH];
+
+  if (!out || outsz == 0)
+    return;
+
+  *out = '\0';
+
+  if (!ch) {
+    strlcpy(out, "Someone is here.", outsz);
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) &&
+      IN_ROOM(MOUNT(ch)) == IN_ROOM(ch) &&
+      MOB_FLAGGED(MOUNT(ch), MOB_MOUNT)) {
+    const char *rdesc = get_char_sdesc(ch);
+    const char *mdesc = get_char_sdesc(MOUNT(ch));
+
+    if (!rdesc || !*rdesc)
+      rdesc = "someone";
+    if (!mdesc || !*mdesc)
+      mdesc = "someone";
+
+    snprintf(out, outsz, "%c%s is riding %s here.",
+             UPPER(*rdesc), rdesc + 1, mdesc);
+    strip_trailing_crlf(out);
+    return;
+  }
+
+  if (ch->char_specials.custom_ldesc && ch->player.long_descr) {
+    strlcpy(out, ch->player.long_descr, outsz);
+    strip_trailing_crlf(out);
+    return;
+  }
+
+  if (ch->player.long_descr && GET_POS(ch) == GET_DEFAULT_POS(ch)) {
+    strlcpy(out, ch->player.long_descr, outsz);
+    strip_trailing_crlf(out);
+    return;
+  }
+
+  sdesc = get_char_sdesc(ch);
+  if (!sdesc || !*sdesc)
+    sdesc = "someone";
+
+  strlcpy(base, sdesc, sizeof(base));
+  if (*base)
+    base[0] = UPPER(*base);
+
+  if (GET_POS(ch) != POS_FIGHTING) {
+    if (!SITTING(ch)) {
+      snprintf(out, outsz, "%s%s", base, positions[(int) GET_POS(ch)]);
+    } else {
+      furniture = SITTING(ch);
+      {
+        const char *pos = (GET_POS(ch) == POS_STANDING ? "standing" :
+                          (GET_POS(ch) == POS_SITTING ? "sitting" :
+                          (GET_POS(ch) == POS_SLEEPING ? "sleeping" : "resting")));
+        const char *prep = (GET_POS(ch) == POS_STANDING || GET_POS(ch) == POS_SITTING) ? "at" : "upon";
+        snprintf(out, outsz, "%s is %s %s %s.", base, pos, prep, OBJS(furniture, ch));
+      }
+    }
+  } else {
+    if (FIGHTING(ch)) {
+      if (IN_ROOM(ch) == IN_ROOM(FIGHTING(ch)))
+        snprintf(out, outsz, "%s is here, fighting %s!", base, PERS(FIGHTING(ch), ch));
+      else
+        snprintf(out, outsz, "%s is here, fighting someone who has already left!", base);
+    } else {
+      snprintf(out, outsz, "%s is here, fighting someone who has already left!", base);
+    }
+  }
+
+  strip_trailing_crlf(out);
 }
 
 static void list_char_to_char(struct char_data *list, struct char_data *ch)
@@ -659,6 +806,9 @@ static void list_char_to_char(struct char_data *list, struct char_data *ch)
       /* hide npcs whose description starts with a '.' from non-holylighted people - Idea from Elaseth of TBA */
       if (!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT) &&
              IS_NPC(i) && i->player.long_descr && *i->player.long_descr == '.')
+        continue;
+      if (RIDDEN_BY(i) && IN_ROOM(RIDDEN_BY(i)) == IN_ROOM(i) &&
+          CAN_SEE(ch, RIDDEN_BY(i)))
         continue;
       send_to_char(ch, "%s", CCYEL(ch, C_NRM));
       if (CAN_SEE(ch, i))
@@ -809,18 +959,123 @@ void look_at_room(struct char_data *ch, int ignore_brief)
 
 static void look_in_direction(struct char_data *ch, int dir)
 {
-  if (EXIT(ch, dir)) {
-    if (EXIT(ch, dir)->general_description)
-      send_to_char(ch, "%s", EXIT(ch, dir)->general_description);
-    else
-      send_to_char(ch, "You see nothing special.\r\n");
+  static const char *range_labels[] = { "[near]", "[far]", "[very far]" };
+  room_rnum room = IN_ROOM(ch);
+  struct room_direction_data *start_exit = W_EXIT(room, dir);
+  const char *door_name = NULL;
+  int distance;
+  bool blocked = FALSE;
 
-    if (EXIT_FLAGGED(EXIT(ch, dir), EX_CLOSED) && EXIT(ch, dir)->keyword)
-      send_to_char(ch, "The %s is closed.\r\n", fname(EXIT(ch, dir)->keyword));
-    else if (EXIT_FLAGGED(EXIT(ch, dir), EX_ISDOOR) && EXIT(ch, dir)->keyword)
-      send_to_char(ch, "The %s is open.\r\n", fname(EXIT(ch, dir)->keyword));
-  } else
-    send_to_char(ch, "Nothing special there...\r\n");
+  if (start_exit && start_exit->to_room != NOWHERE &&
+      EXIT_FLAGGED(start_exit, EX_ISDOOR) &&
+      (!EXIT_FLAGGED(start_exit, EX_HIDDEN) || PRF_FLAGGED(ch, PRF_HOLYLIGHT))) {
+    door_name = start_exit->keyword ? fname(start_exit->keyword) : "door";
+    if (EXIT_FLAGGED(start_exit, EX_CLOSED)) {
+      send_to_char(ch, "You look to the %s and see the %s is closed.\r\n", dirs[dir], door_name);
+      return;
+    }
+    send_to_char(ch, "You look to the %s and see the %s is open:\r\n", dirs[dir], door_name);
+  } else {
+    send_to_char(ch, "You look to the %s and see:\r\n", dirs[dir]);
+  }
+
+  for (distance = 0; distance < 3; distance++) {
+    struct room_direction_data *exit = NULL;
+
+    if (!blocked) {
+      exit = W_EXIT(room, dir);
+
+      if (!exit || exit->to_room == NOWHERE)
+        blocked = TRUE;
+      else if (EXIT_FLAGGED(exit, EX_HIDDEN) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT))
+        blocked = TRUE;
+      else if (EXIT_FLAGGED(exit, EX_CLOSED))
+        blocked = TRUE;
+      else
+        room = exit->to_room;
+    }
+
+    if (blocked || !VALID_ROOM_RNUM(room)) {
+      if (distance == 0)
+        send_to_char(ch, "nothing\r\n");
+      break;
+    }
+
+    send_to_char(ch, "%s\r\n", range_labels[distance]);
+
+    if (!look_list_direction_chars(ch, room))
+      send_to_char(ch, "nothing\r\n");
+  }
+}
+
+static bool look_can_spot_hidden(struct char_data *ch, struct char_data *tch, room_rnum room)
+{
+  int total;
+
+  if (!ch || !tch)
+    return FALSE;
+  if (!AFF_FLAGGED(tch, AFF_HIDE))
+    return FALSE;
+  if (!GET_SKILL(ch, SKILL_PERCEPTION))
+    return FALSE;
+  if (AFF_FLAGGED(ch, AFF_BLIND))
+    return FALSE;
+  if (IS_DARK(room) && !CAN_SEE_IN_DARK(ch))
+    return FALSE;
+
+  total = roll_scan_perception(ch);
+
+  if (AFF_FLAGGED(ch, AFF_SCAN))
+    total += 5; /* Match scan bonus from other detection checks. */
+
+  if (GET_STEALTH_CHECK(tch) <= 0)
+    SET_STEALTH_CHECK(tch, 5);
+
+  return (total >= (GET_STEALTH_CHECK(tch) + 2));
+}
+
+static bool look_list_direction_chars(struct char_data *ch, room_rnum room)
+{
+  struct char_data *tch;
+  bool found = FALSE;
+
+  if (!VALID_ROOM_RNUM(room))
+    return FALSE;
+  if (IS_DARK(room) && !CAN_SEE_IN_DARK(ch))
+    return FALSE;
+
+  for (tch = world[room].people; tch; tch = tch->next_in_room) {
+    if (tch == ch)
+      continue;
+    if (!IS_NPC(ch) && !PRF_FLAGGED(ch, PRF_HOLYLIGHT) &&
+        IS_NPC(tch) && tch->player.long_descr && *tch->player.long_descr == '.')
+      continue;
+    if (RIDDEN_BY(tch) && IN_ROOM(RIDDEN_BY(tch)) == room &&
+        CAN_SEE(ch, RIDDEN_BY(tch)))
+      continue;
+
+    if (AFF_FLAGGED(tch, AFF_HIDE)) {
+      if (CAN_SEE(ch, tch) || look_can_spot_hidden(ch, tch, room)) {
+        char hidden_ldesc[MAX_STRING_LENGTH];
+        if (build_hidden_ldesc(tch, hidden_ldesc, sizeof(hidden_ldesc)))
+          send_to_char(ch, "%s", hidden_ldesc);
+        else
+          send_to_char(ch, "a shadowy figure\r\n");
+        found = TRUE;
+      }
+      continue;
+    }
+
+    if (CAN_SEE(ch, tch)) {
+      char ldesc[MAX_STRING_LENGTH];
+
+      build_current_ldesc(tch, ldesc, sizeof(ldesc));
+      send_to_char(ch, "%s\r\n", ldesc);
+      found = TRUE;
+    }
+  }
+
+  return found;
 }
 
 static void look_in_obj(struct char_data *ch, char *arg)
@@ -956,6 +1211,42 @@ static void look_at_target(struct char_data *ch, char *arg)
     if (ch != found_char) {
       if (CAN_SEE(found_char, ch))
     act("$n looks at you.", TRUE, ch, 0, found_char, TO_VICT);
+      act("$n looks at $N.", TRUE, ch, 0, found_char, TO_NOTVICT);
+    }
+    return;
+  }
+
+  if (!found_char) {
+    struct char_data *tch;
+    char tmp[MAX_INPUT_LENGTH];
+    char *name = tmp;
+    int matchnum;
+
+    strlcpy(tmp, arg, sizeof(tmp));
+    matchnum = get_number(&name);
+    if (matchnum > 0) {
+      for (tch = world[IN_ROOM(ch)].people; tch && matchnum; tch = tch->next_in_room) {
+        if (tch == ch)
+          continue;
+        if (!AFF_FLAGGED(tch, AFF_MOUNTED))
+          continue;
+        if (!CAN_SEE(ch, tch))
+          continue;
+        if (isname(name, (char *)get_char_sdesc(tch))) {
+          if (--matchnum == 0) {
+            found_char = tch;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (found_char != NULL) {
+    look_at_char(found_char, ch);
+    if (ch != found_char) {
+      if (CAN_SEE(found_char, ch))
+        act("$n looks at you.", TRUE, ch, 0, found_char, TO_VICT);
       act("$n looks at $N.", TRUE, ch, 0, found_char, TO_NOTVICT);
     }
     return;
@@ -1144,9 +1435,14 @@ ACMD(do_coins)
 
 ACMD(do_score)
 {
-  struct time_info_data playing_time;
+  time_t played_seconds;
+  int played_minutes;
+  int played_hours;
+  int played_days;
   struct ac_breakdown acb;
   bool ismob = IS_NPC(ch);
+  char ldesc[MAX_STRING_LENGTH];
+  const char *sdesc = get_char_sdesc(ch);
 
   compute_ac_breakdown(ch, &acb);
 
@@ -1154,11 +1450,22 @@ ACMD(do_score)
       "\r\n"
       "====================[ Score ]====================\r\n");
 
+  build_current_ldesc(ch, ldesc, sizeof(ldesc));
+  send_to_char(ch, "Name:  %s\r\n", GET_NAME(ch) ? GET_NAME(ch) : "someone");
+  send_to_char(ch, "Sdesc: %s\r\n", sdesc && *sdesc ? sdesc : "someone");
+  send_to_char(ch, "Ldesc: %s\r\n", *ldesc ? ldesc : "None");
+
+  send_to_char(ch, "Weight: %d   Height: %d\r\n",
+      GET_WEIGHT(ch), GET_HEIGHT(ch));
+
   send_to_char(ch,
-      "HP:   %d/%d   Mana: %d/%d   Move: %d/%d\r\n",
+      "HP:   %d/%d   Mana: %d/%d   Stamina: %d/%d\r\n",
       GET_HIT(ch), GET_MAX_HIT(ch),
       GET_MANA(ch), GET_MAX_MANA(ch),
-      GET_MOVE(ch), GET_MAX_MOVE(ch));
+      GET_STAMINA(ch), GET_MAX_STAMINA(ch));
+
+  send_to_char(ch, "Carrying Weight: %d/%d\r\n",
+               IS_CARRYING_W(ch), CAN_CARRY_W(ch));
 
   /* Abilities and 5e modifiers */
   send_to_char(ch,
@@ -1189,36 +1496,31 @@ ACMD(do_score)
   send_to_char(ch, "Stealth Disadvantage: %s\r\n",
              has_stealth_disadv(ch) ? "Yes" : "No");
 
-  send_to_char(ch, "You are %d years old.", GET_AGE(ch));
+  send_to_char(ch, "You are %d years old.", GET_ROLEPLAY_AGE(ch));
 
-  if (age(ch)->month == 0 && age(ch)->day == 0)
-    send_to_char(ch, "  It's your birthday today.\r\n");
-  else
-    send_to_char(ch, "\r\n");
+  send_to_char(ch, "\r\n");
 
   /* Only players have quest data */
-  if (!ismob) {
-    send_to_char(ch, "You have %d questpoints.\r\n", GET_QUESTPOINTS(ch));
-
-    if (GET_QUEST(ch) == NOTHING)
-      send_to_char(ch, "You are not on a quest at the moment.\r\n");
-    else {
-      send_to_char(ch, "Your current quest is: %s",
-                   QST_NAME(real_quest(GET_QUEST(ch))));
-      if (PRF_FLAGGED(ch, PRF_SHOWVNUMS))
-        send_to_char(ch, " [%d]\r\n", GET_QUEST(ch));
-      else
-        send_to_char(ch, "\r\n");
-    }
+  if (!ismob && GET_QUEST(ch) != NOTHING) {
+    send_to_char(ch, "Your current quest is: %s",
+                 QST_NAME(real_quest(GET_QUEST(ch))));
+    if (PRF_FLAGGED(ch, PRF_SHOWVNUMS))
+      send_to_char(ch, " [%d]\r\n", GET_QUEST(ch));
+    else
+      send_to_char(ch, "\r\n");
   }
 
   /* Only players have valid playtime data */
   if (!ismob) {
-    playing_time = *real_time_passed((time(0) - ch->player.time.logon) +
-                                     ch->player.time.played, 0);
-    send_to_char(ch, "You have been playing for %d day%s and %d hour%s.\r\n",
-       playing_time.day, playing_time.day == 1 ? "" : "s",
-       playing_time.hours, playing_time.hours == 1 ? "" : "s");
+    played_seconds = get_total_played_seconds(ch);
+    played_minutes = (played_seconds / SECS_PER_REAL_MIN) % 60;
+    played_hours = (played_seconds / SECS_PER_REAL_HOUR) % 24;
+    played_days = played_seconds / SECS_PER_REAL_DAY;
+    send_to_char(ch,
+                 "You have been playing for %d minute%s, %d hour%s, and %d day%s.\r\n",
+                 played_minutes, played_minutes == 1 ? "" : "s",
+                 played_hours, played_hours == 1 ? "" : "s",
+                 played_days, played_days == 1 ? "" : "s");
   }
 
   /* Position */
@@ -1246,7 +1548,7 @@ ACMD(do_score)
       send_to_char(ch, "You are sitting.\r\n");
     else {
       struct obj_data *furniture = SITTING(ch);
-      send_to_char(ch, "You are sitting upon %s.\r\n", furniture->short_description);
+      send_to_char(ch, "You are sitting at %s.\r\n", furniture->short_description);
     }
     break;
   case POS_FIGHTING:
@@ -1254,7 +1556,13 @@ ACMD(do_score)
                  FIGHTING(ch) ? PERS(FIGHTING(ch), ch) : "thin air");
     break;
   case POS_STANDING:
-    send_to_char(ch, "You are standing.\r\n");
+    if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) &&
+        IN_ROOM(MOUNT(ch)) == IN_ROOM(ch) &&
+        MOB_FLAGGED(MOUNT(ch), MOB_MOUNT)) {
+      send_to_char(ch, "You are riding %s.\r\n", get_char_sdesc(MOUNT(ch)));
+    } else {
+      send_to_char(ch, "You are standing.\r\n");
+    }
     break;
   default:
     send_to_char(ch, "You are floating.\r\n");
@@ -1589,8 +1897,6 @@ ACMD(do_who)
         continue;
       if (!CAN_SEE(ch, tch) || GET_LEVEL(tch) < low || GET_LEVEL(tch) > high)
         continue;
-      if (outlaws && !PLR_FLAGGED(tch, PLR_KILLER) && !PLR_FLAGGED(tch, PLR_THIEF))
-        continue;
       if (questwho && !PRF_FLAGGED(tch, PRF_QUEST))
         continue;
       if (localwho && world[IN_ROOM(ch)].zone != world[IN_ROOM(tch)].zone)
@@ -1634,8 +1940,6 @@ ACMD(do_who)
       if (*name_search && str_cmp(GET_NAME(tch), name_search))
         continue;
       if (!CAN_SEE(ch, tch) || GET_LEVEL(tch) < low || GET_LEVEL(tch) > high)
-        continue;
-      if (outlaws && !PLR_FLAGGED(tch, PLR_KILLER) && !PLR_FLAGGED(tch, PLR_THIEF))
         continue;
       if (questwho && !PRF_FLAGGED(tch, PRF_QUEST))
         continue;
@@ -1709,10 +2013,6 @@ ACMD(do_who)
           send_to_char(ch, " (noshout)");
         if (PRF_FLAGGED(tch, PRF_QUEST))
           send_to_char(ch, " (quest)");
-        if (PLR_FLAGGED(tch, PLR_THIEF))
-          send_to_char(ch, " (THIEF)");
-        if (PLR_FLAGGED(tch, PLR_KILLER))
-          send_to_char(ch, " (KILLER)");
         send_to_char(ch, "\r\n");
       }
     }
@@ -1819,9 +2119,6 @@ ACMD(do_users)
       if (*name_search && str_cmp(GET_NAME(tch), name_search))
         continue;
       if (!CAN_SEE(ch, tch) || GET_LEVEL(tch) < low || GET_LEVEL(tch) > high)
-        continue;
-      if (outlaws && !PLR_FLAGGED(tch, PLR_KILLER) &&
-      !PLR_FLAGGED(tch, PLR_THIEF))
         continue;
       if (showclass && !(showclass & (1 << GET_CLASS(tch))))
         continue;
@@ -2340,7 +2637,7 @@ ACMD(do_toggle)
     "          Brief: %-3s    "
     "     Summonable: %-3s\r\n"
 
-    "   Move Display: %-3s    "
+    "   Stamina Display: %-3s    "
     "        Compact: %-3s    "
     "          Quest: %-3s\r\n"
 
@@ -2369,7 +2666,7 @@ ACMD(do_toggle)
     ONOFF(PRF_FLAGGED(ch, PRF_BRIEF)),
     ONOFF(PRF_FLAGGED(ch, PRF_SUMMONABLE)),
 
-    ONOFF(PRF_FLAGGED(ch, PRF_DISPMOVE)),
+    ONOFF(PRF_FLAGGED(ch, PRF_DISPSTAMINA)),
     ONOFF(PRF_FLAGGED(ch, PRF_COMPACT)),
     ONOFF(PRF_FLAGGED(ch, PRF_QUEST)),
 

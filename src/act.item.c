@@ -920,6 +920,9 @@ void weight_change_object(struct obj_data *obj, int weight)
     obj_from_char(obj);
     GET_OBJ_WEIGHT(obj) += weight;
     obj_to_char(obj, tmp_ch);
+  } else if ((tmp_ch = obj->worn_by)) {
+    IS_CARRYING_W(tmp_ch) += weight;
+    GET_OBJ_WEIGHT(obj) += weight;
   } else if ((tmp_obj = obj->in_obj)) {
     obj_from_obj(obj);
     GET_OBJ_WEIGHT(obj) += weight;
@@ -2162,7 +2165,7 @@ ACMD(do_forage)
   prof_bonus = GET_PROFICIENCY(GET_SKILL(ch, SKILL_SURVIVAL));
   cost = MAX(1, 10 - prof_bonus);
 
-  if (!IS_NPC(ch) && GET_MOVE(ch) < cost) {
+  if (!IS_NPC(ch) && GET_STAMINA(ch) < cost) {
     send_to_char(ch, "You are too exhausted to forage.\r\n");
     return;
   }
@@ -2171,7 +2174,7 @@ ACMD(do_forage)
   WAIT_STATE(ch, delay_seconds * PASSES_PER_SEC);
 
   if (!IS_NPC(ch))
-    GET_MOVE(ch) = MAX(0, GET_MOVE(ch) - cost);
+    GET_STAMINA(ch) = MAX(0, GET_STAMINA(ch) - cost);
 
   total = roll_skill_check(ch, SKILL_SURVIVAL, 0, NULL);
 

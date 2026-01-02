@@ -56,45 +56,42 @@
 #define SPELL_CURE_CRITIC            15 /* Reserved Skill[] DO NOT CHANGE */
 #define SPELL_CURE_LIGHT             16 /* Reserved Skill[] DO NOT CHANGE */
 #define SPELL_CURSE                  17 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_DETECT_ALIGN           18 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_DETECT_INVIS           19 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_DETECT_MAGIC           20 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_DETECT_POISON          21 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_DISPEL_EVIL            22 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_EARTHQUAKE             23 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_ENCHANT_WEAPON         24 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_ENERGY_DRAIN           25 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_FIREBALL               26 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_HARM                   27 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_HEAL                   28 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_INVISIBLE              29 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_LIGHTNING_BOLT         30 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_LOCATE_OBJECT          31 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_MAGIC_MISSILE          32 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_POISON                 33 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_PROT_FROM_EVIL         34 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_REMOVE_CURSE           35 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_SANCTUARY              36 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_SHOCKING_GRASP         37 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_SLEEP                  38 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_STRENGTH               39 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_SUMMON                 40 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_VENTRILOQUATE          41 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_WORD_OF_RECALL         42 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_REMOVE_POISON          43 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_SENSE_LIFE             44 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_ANIMATE_DEAD           45 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_DISPEL_GOOD            46 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_GROUP_ARMOR            47 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_GROUP_HEAL             48 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_GROUP_RECALL           49 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_INFRAVISION            50 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_WATERWALK              51 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_IDENTIFY               52 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_FLY                    53 /* Reserved Skill[] DO NOT CHANGE */
-#define SPELL_DARKNESS               54
+#define SPELL_DETECT_INVIS           18 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_DETECT_MAGIC           19 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_DETECT_POISON          20 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_EARTHQUAKE             21 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_ENCHANT_WEAPON         22 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_ENERGY_DRAIN           23 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_FIREBALL               24 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_HARM                   25 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_HEAL                   26 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_INVISIBLE              27 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_LIGHTNING_BOLT         28 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_LOCATE_OBJECT          29 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_MAGIC_MISSILE          30 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_POISON                 31 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_PROT_FROM_EVIL         32 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_REMOVE_CURSE           33 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_SANCTUARY              34 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_SHOCKING_GRASP         35 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_SLEEP                  36 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_STRENGTH               37 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_SUMMON                 38 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_VENTRILOQUATE          39 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_WORD_OF_RECALL         40 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_REMOVE_POISON          41 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_SENSE_LIFE             42 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_ANIMATE_DEAD           43 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_GROUP_ARMOR            44 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_GROUP_HEAL             45 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_GROUP_RECALL           46 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_INFRAVISION            47 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_WATERWALK              48 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_IDENTIFY               49 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_FLY                    50 /* Reserved Skill[] DO NOT CHANGE */
+#define SPELL_DARKNESS               51
 /** Total Number of defined spells */
-#define NUM_SPELLS                   54
+#define NUM_SPELLS                   51
 
 /* Insert new spells here, up to MAX_SPELLS */
 #define MAX_SPELLS		    130
@@ -136,7 +133,7 @@
 
 /* New skills may be added here up to MAX_SKILLS (200) */
 
-/* NON-PLAYER AND OBJECT SPELLS AND SKILLS: The practice levels for the spells
+/* NON-PLAYER AND OBJECT SPELLS AND SKILLS: The skill levels for the spells
  * and skills below are _not_ recorded in the players file; therefore, the
  * intended use is for spells and skills associated with objects (such as
  * SPELL_IDENTIFY used with scrolls of identify) or non-players (such as NPC

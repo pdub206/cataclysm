@@ -15,6 +15,7 @@
 int delete_mobile(mob_rnum);
 int copy_mobile(struct char_data *to, struct char_data *from);
 int add_mobile(struct char_data *, mob_vnum);
+void init_mobile(struct char_data *mob);
 int copy_mob_strings(struct char_data *to, struct char_data *from);
 int free_mob_strings(struct char_data *);
 int free_mobile(struct char_data *mob);

@@ -23,13 +23,14 @@ int parse_class(char arg);
 void roll_real_abils(struct char_data *ch);
 bool has_save_proficiency(int class_num, int ability);
 void grant_class_skills(struct char_data *ch, bool reset);
+void init_class_skill_caps(void);
+int class_skill_max(int chclass, int skillnum);
 
 /* Global variables */
 
 extern const char *class_abbrevs[];
 extern const char *pc_class_types[];
 extern const char *class_menu;
-extern int prac_params[][NUM_CLASSES];
 extern struct guild_info_type guild_info[];
 
 #endif /* _CLASS_H_*/

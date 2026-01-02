@@ -189,8 +189,8 @@ const char *position_types[] = {
  * @pre Must be in the same order as the defines.
  * Must end array with a single newline. */
 const char *player_bits[] = {
-  "KILLER",
-  "THIEF",
+  "UNUSED0",
+  "UNUSED1",
   "FROZEN",
   "DONTSET",
   "WRITING",
@@ -228,9 +228,9 @@ const char *action_bits[] = {
   "AGGR",
   "STAY-ZONE",
   "WIMPY",
-  "AGGR_EVIL",
-  "AGGR_GOOD",
-  "AGGR_NEUTRAL",
+  "RESERVED",
+  "RESERVED",
+  "RESERVED",
   "MEMORY",
   "HELPER",
   "NO_CHARM",
@@ -240,6 +240,7 @@ const char *action_bits[] = {
   "NO_BLIND",
   "NO_KILL",
   "DEAD",    /* You should never see this. */
+  "MOUNT",
   "\n"
 };
 
@@ -253,7 +254,7 @@ const char *preference_bits[] = {
   "NO_TELL",
   "D_HP",
   "D_MANA",
-  "D_MOVE",
+  "D_STAMINA",
   "AUTOEX",
   "NO_HASS",
   "QUEST",
@@ -289,7 +290,6 @@ const char *affected_bits[] =
   "\0", /* DO NOT REMOVE!! */
   "BLIND",
   "INVIS",
-  "DET-ALIGN",
   "DET-INVIS",
   "DET-MAGIC",
   "SENSE-LIFE",
@@ -299,8 +299,8 @@ const char *affected_bits[] =
   "CURSE",
   "INFRA",
   "POISON",
-  "PROT-EVIL",
-  "PROT-GOOD",
+  "RESERVED",
+  "RESERVED",
   "SLEEP",
   "NO_TRACK",
   "FLY",
@@ -311,6 +311,7 @@ const char *affected_bits[] =
   "CHARM",
   "BANDAGED",
   "LISTEN",
+  "MOUNTED",
   "\n"
 };
 
@@ -326,7 +327,9 @@ const char *connected_types[] = {
   "Get new PW",
   "Confirm new PW",
   "Select sex",
+  "Select species",
   "Select class",
+  "Short description",
   "Reading MOTD",
   "Main Menu",
   "Get descript.",
@@ -350,7 +353,18 @@ const char *connected_types[] = {
   "Preference edit",
   "IBT edit",
   "Message edit",
-  "Protocol Detection",
+  "Background/Protocol",
+  "Connect menu",
+  "Get account",
+  "Confirm account",
+  "Account password",
+  "New account PW",
+  "Confirm account PW",
+  "Account email",
+  "Account menu",
+  "Account list",
+  "Stat preference",
+  "Select age",
   "\n"
 };
 
@@ -472,17 +486,6 @@ const char *extra_bits[] = {
   "MAGIC",
   "NO_DROP",
   "BLESS",
-  "ANTI_GOOD",
-  "ANTI_EVIL",
-  "ANTI_NEUTRAL",
-  "ANTI_SORCEROR",
-  "ANTI_CLERIC",
-  "ANTI_ROGUE",
-  "ANTI_FIGHTER",
-  "ANTI_BARBARIAN",
-  "ANTI_RANGER",
-  "ANTI_BARD",
-  "ANTI_DRUID",
   "NO_SELL",
   "QUEST_ITEM",
   "HOOD_UP",
@@ -511,7 +514,7 @@ const char *apply_types[] = {
   "CHAR_HEIGHT",
   "MAXMANA",
   "MAXHIT",
-  "MAXMOVE",
+  "MAXSTAMINA",
   "COINS",
   "EXP",
   "ARMOR",

@@ -21,6 +21,7 @@
 #include "house.h"
 #include "constants.h"
 #include "oasis.h"
+#include "species.h"
 #include "dg_scripts.h"
 #include "dg_event.h"
 #include "act.h"
@@ -30,6 +31,7 @@
 #include "genolc.h"
 #include "genobj.h" /* for free_object_strings */
 #include "config.h" /* for the default config values. */
+#include "class.h"
 #include "fight.h"
 #include "modify.h"
 #include "shop.h"
@@ -38,7 +40,6 @@
 #include "mud_event.h"
 #include "msgedit.h"
 #include "screen.h"
-#include "roomsave.h"
 #include <sys/stat.h>
 
 /*  declarations of most of the 'global' variables */
@@ -748,6 +749,7 @@ void boot_db(void)
 
   log("Assigning spell and skill levels.");
   init_spell_levels();
+  init_class_skill_caps();
 
   log("Sorting command list and spells.");
   sort_commands();
@@ -1600,10 +1602,10 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
   GET_MAX_HIT(mob_proto + i) = 0;
   GET_HIT(mob_proto + i) = t[1];
   GET_MANA(mob_proto + i) = t[2];
-  GET_MOVE(mob_proto + i) = t[3];
+  GET_STAMINA(mob_proto + i) = t[3];
 
   GET_MAX_MANA(mob_proto + i) = 10;
-  GET_MAX_MOVE(mob_proto + i) = 50;
+  GET_MAX_STAMINA(mob_proto + i) = 50;
 
   if (!get_line(mob_f, line)) {
     log("SYSERR: Format error in last line of mob #%d\n"
@@ -1622,6 +1624,7 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr)
   GET_SEX(mob_proto + i) = t[2];
 
   GET_CLASS(mob_proto + i) = CLASS_UNDEFINED;
+  GET_SPECIES(mob_proto + i) = SPECIES_UNDEFINED;
   GET_WEIGHT(mob_proto + i) = 200;
   GET_HEIGHT(mob_proto + i) = 198;
 
@@ -1704,6 +1707,14 @@ static void interpret_espec(const char *keyword, const char *value, int i, int n
   CASE("Class") {
     RANGE(CLASS_UNDEFINED, NUM_CLASSES - 1);
     mob_proto[i].player.chclass = num_arg;
+  }
+  CASE("Species") {
+    RANGE(SPECIES_UNDEFINED, NUM_SPECIES - 1);
+    mob_proto[i].player.species = num_arg;
+  }
+  CASE("Age") {
+    RANGE(MIN_CHAR_AGE, MAX_CHAR_AGE);
+    mob_proto[i].player.roleplay_age = num_arg;
   }
 
   /* --- 5e-style Saving Throws --- */
@@ -1890,13 +1901,6 @@ void parse_mobile(FILE *mob_f, int nr)
     REMOVE_BIT_AR(AFF_FLAGS(mob_proto + i), AFF_CHARM);
     REMOVE_BIT_AR(AFF_FLAGS(mob_proto + i), AFF_POISON);
     REMOVE_BIT_AR(AFF_FLAGS(mob_proto + i), AFF_SLEEP);
-    if (MOB_FLAGGED(mob_proto + i, MOB_AGGRESSIVE) && MOB_FLAGGED(mob_proto + i, MOB_AGGR_GOOD))
-      REMOVE_BIT_AR(MOB_FLAGS(mob_proto + i), MOB_AGGR_GOOD);
-    if (MOB_FLAGGED(mob_proto + i, MOB_AGGRESSIVE) && MOB_FLAGGED(mob_proto + i, MOB_AGGR_NEUTRAL))
-      REMOVE_BIT_AR(MOB_FLAGS(mob_proto + i), MOB_AGGR_NEUTRAL);
-    if (MOB_FLAGGED(mob_proto + i, MOB_AGGRESSIVE) && MOB_FLAGGED(mob_proto + i, MOB_AGGR_EVIL))
-      REMOVE_BIT_AR(MOB_FLAGS(mob_proto + i), MOB_AGGR_EVIL);
-
     check_bitvector_names(AFF_FLAGS(mob_proto + i)[0], affected_bits_count, buf2, "mobile affect");
 
     /* This is necessary, since if we have conventional world files, &letter is
@@ -1955,6 +1959,13 @@ void parse_mobile(FILE *mob_f, int nr)
     exit(1);
   }
 
+  if (mob_proto[i].player.time.birth == 0)
+    mob_proto[i].player.time.birth = time(0);
+  if (mob_proto[i].player.roleplay_age == 0)
+    mob_proto[i].player.roleplay_age = MIN_CHAR_AGE;
+  if (mob_proto[i].player.roleplay_age_year == 0)
+    mob_proto[i].player.roleplay_age_year = time_info.year;
+
   letter = fread_letter(mob_f);
   while (letter == 'L') {
     int wpos = -1, vnum = -1, qty = 1;
@@ -1969,7 +1980,7 @@ void parse_mobile(FILE *mob_f, int nr)
       log("SYSERR: Bad 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
     } else {
       if (qty < 1) qty = 1;
-      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
+      loadout_append_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
     }
     /* look ahead to see if there is another 'L' */
     letter = fread_letter(mob_f);
@@ -2062,7 +2073,7 @@ void parse_mobile(FILE *mob_f, int nr)
       log("SYSERR: Bad post-trigger 'L' line in mob #%d: '%s' (need <wear_pos> <obj_vnum> [qty]).", nr, line);
     } else {
       if (qty < 1) qty = 1;
-      loadout_add_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
+      loadout_append_entry(&mob_proto[i].proto_loadout, vnum, (int)wpos, qty);
     }
     letter = fread_letter(mob_f);
   }
@@ -2634,6 +2645,11 @@ void equip_mob_from_loadout(struct char_data *mob)
   const struct mob_loadout *e = mob_proto[rnum].proto_loadout;
   if (!e) return;
 
+  struct obj_data *stack[16];
+  int i;
+  for (i = 0; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+    stack[i] = NULL;
+
   for (; e; e = e->next) {
     int qty = (e->quantity > 0) ? e->quantity : 1;
 
@@ -2645,46 +2661,73 @@ void equip_mob_from_loadout(struct char_data *mob)
         continue;
       }
 
-      /* Inventory-only request */
-      if (e->wear_pos < 0) {
-        obj_to_char(obj, mob);
-        continue;
-      }
+      if (e->wear_pos >= 0) {
+        for (i = 0; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+          stack[i] = NULL;
 
-      /* If the intended slot is free, place it there. We trust the saved slot. */
-      if (e->wear_pos >= 0 && e->wear_pos < NUM_WEARS && GET_EQ(mob, e->wear_pos) == NULL) {
+        /* If the intended slot is free, place it there. We trust the saved slot. */
+        if (e->wear_pos < NUM_WEARS && GET_EQ(mob, e->wear_pos) == NULL) {
 
 #ifdef STRICT_WEAR_CHECK
-        /* Optional strict flag check (may be mismatched in customized codebases). */
-        if (!invalid_align(mob, obj) /* example gate, add yours as needed */) {
-          equip_char(mob, obj, e->wear_pos);
-          continue;
-        }
-        /* If strict check fails, try alt or inventory below. */
-#else
-        equip_char(mob, obj, e->wear_pos);
-        continue;
-#endif
-      }
-
-      /* Try the mirrored slot for finger/neck/wrist pairs if intended is occupied. */
-      {
-        int alt = find_alt_slot_same_family(mob, e->wear_pos);
-        if (alt >= 0 && GET_EQ(mob, alt) == NULL) {
-#ifdef STRICT_WEAR_CHECK
-          if (!invalid_align(mob, obj)) {
-            equip_char(mob, obj, alt);
-            continue;
+          /* Optional strict flag check (may be mismatched in customized codebases). */
+          if (!invalid_align(mob, obj) /* example gate, add yours as needed */) {
+            equip_char(mob, obj, e->wear_pos);
+          } else {
+            obj_to_char(obj, mob);
           }
 #else
-          equip_char(mob, obj, alt);
-          continue;
+          equip_char(mob, obj, e->wear_pos);
 #endif
+        } else {
+          /* Try the mirrored slot for finger/neck/wrist pairs if intended is occupied. */
+          int alt = find_alt_slot_same_family(mob, e->wear_pos);
+          if (alt >= 0 && GET_EQ(mob, alt) == NULL) {
+#ifdef STRICT_WEAR_CHECK
+            if (!invalid_align(mob, obj)) {
+              equip_char(mob, obj, alt);
+            } else {
+              obj_to_char(obj, mob);
+            }
+#else
+            equip_char(mob, obj, alt);
+#endif
+          } else {
+            /* Couldn’t place it — keep in inventory. */
+            obj_to_char(obj, mob);
+          }
         }
+
+        if (obj_is_storage(obj) || GET_OBJ_TYPE(obj) == ITEM_FURNITURE)
+          stack[0] = obj;
+        continue;
       }
 
-      /* Couldn’t place it — keep in inventory. */
-      obj_to_char(obj, mob);
+      /* Inventory-only request */
+      if (e->wear_pos == -1) {
+        for (i = 0; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+          stack[i] = NULL;
+        obj_to_char(obj, mob);
+        if (obj_is_storage(obj) || GET_OBJ_TYPE(obj) == ITEM_FURNITURE)
+          stack[0] = obj;
+        continue;
+      }
+
+      /* Nested inventory: wear_pos = -2 (depth 1), -3 (depth 2), etc. */
+      {
+        int depth = -(e->wear_pos) - 1;
+        if (depth <= 0 ||
+            depth >= (int)(sizeof(stack) / sizeof(stack[0])) ||
+            !stack[depth - 1]) {
+          obj_to_char(obj, mob);
+          continue;
+        }
+        obj_to_obj(obj, stack[depth - 1]);
+        if (obj_is_storage(obj) || GET_OBJ_TYPE(obj) == ITEM_FURNITURE) {
+          stack[depth] = obj;
+          for (i = depth + 1; i < (int)(sizeof(stack) / sizeof(stack[0])); i++)
+            stack[i] = NULL;
+        }
+      }
     }
   }
 }
@@ -2729,15 +2772,28 @@ struct char_data *read_mobile(mob_vnum nr, int type) /* and mob_rnum */
   
   if (!mob->points.max_hit) {
     mob->points.max_hit = dice(mob->points.hit, mob->points.mana) +
-      mob->points.move;
+      mob->points.stamina;
   } else
     mob->points.max_hit = rand_number(mob->points.hit, mob->points.mana);
 
+  {
+    int base_hit = 0;
+    int base_mana = 0;
+    int base_stamina = 0;
+
+    if (get_species_base_points(GET_SPECIES(mob), &base_hit, &base_mana, &base_stamina)) {
+      mob->points.max_hit += base_hit;
+      mob->points.max_mana += base_mana;
+      mob->points.max_stamina += base_stamina;
+    }
+  }
+
   mob->points.hit = mob->points.max_hit;
   mob->points.mana = mob->points.max_mana;
-  mob->points.move = mob->points.max_move;
+  mob->points.stamina = mob->points.max_stamina;
 
-  mob->player.time.birth = time(0);
+  if (mob->player.time.birth == 0)
+    mob->player.time.birth = time(0);
   mob->player.time.played = 0;
   mob->player.time.logon = time(0);
 
@@ -2793,6 +2849,9 @@ struct obj_data *read_object(obj_vnum nr, int type) /* and obj_rnum */
 
   copy_proto_script(&obj_proto[i], obj, OBJ_TRIGGER);
   assign_triggers(obj, OBJ_TRIGGER);
+
+  if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+    update_money_obj(obj);
 
   return (obj);
 }
@@ -3747,8 +3806,8 @@ void reset_char(struct char_data *ch)
 
   if (GET_HIT(ch) <= 0)
     GET_HIT(ch) = 1;
-  if (GET_MOVE(ch) <= 0)
-    GET_MOVE(ch) = 1;
+  if (GET_STAMINA(ch) <= 0)
+    GET_STAMINA(ch) = 1;
   if (GET_MANA(ch) <= 0)
     GET_MANA(ch) = 1;
 
@@ -3764,6 +3823,7 @@ void clear_char(struct char_data *ch)
   GET_PFILEPOS(ch) = -1;
   GET_MOB_RNUM(ch) = NOBODY;
   GET_CLASS(ch) = CLASS_UNDEFINED;
+  GET_SPECIES(ch) = SPECIES_UNDEFINED;
   GET_WAS_IN(ch) = NOWHERE;
   GET_POS(ch) = POS_STANDING;
   ch->mob_specials.default_pos = POS_STANDING;
@@ -3802,12 +3862,12 @@ void init_char(struct char_data *ch)
     GET_EXP(ch) = 7000000;
 
     /* The implementor never goes through do_start(). */
-    GET_MAX_HIT(ch) = 500;
-    GET_MAX_MANA(ch) = 100;
-    GET_MAX_MOVE(ch) = 82;
+    GET_MAX_HIT(ch) = 999;
+    GET_MAX_MANA(ch) = 999;
+    GET_MAX_STAMINA(ch) = 999;
     GET_HIT(ch) = GET_MAX_HIT(ch);
     GET_MANA(ch) = GET_MAX_MANA(ch);
-    GET_MOVE(ch) = GET_MAX_MOVE(ch);
+    GET_STAMINA(ch) = GET_MAX_STAMINA(ch);
   }
 
   ch->player.short_descr = NULL;
@@ -3819,7 +3879,12 @@ void init_char(struct char_data *ch)
   ch->player_specials->saved.completed_quests = NULL;
   GET_QUEST(ch) = NOTHING;
 
-  ch->player.time.birth = time(0);
+  if (ch->player.time.birth == 0)
+    ch->player.time.birth = time(0);
+  if (GET_ROLEPLAY_AGE(ch) == 0)
+    GET_ROLEPLAY_AGE(ch) = MIN_CHAR_AGE;
+  if (GET_ROLEPLAY_AGE_YEAR(ch) == 0)
+    GET_ROLEPLAY_AGE_YEAR(ch) = time_info.year;
   ch->player.time.logon = time(0);
   ch->player.time.played = 0;
 
@@ -3880,7 +3945,7 @@ void init_char(struct char_data *ch)
     } 
   SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPHP);  
   SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
-  SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+  SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
 }
 
 /* returns the real number of the room with given virtual number */
@@ -4128,7 +4193,6 @@ static void load_default_config( void )
   /* This function is called only once, at boot-time. We assume config_info is
    * empty. -Welcor */
   /* Game play options. */
-  CONFIG_PK_ALLOWED 	        = pk_allowed;
   CONFIG_PT_ALLOWED             = pt_allowed;
   CONFIG_LEVEL_CAN_SHOUT 	    = level_can_shout;
   CONFIG_TUNNEL_SIZE 	        = tunnel_size;
@@ -4388,9 +4452,7 @@ void load_config( void )
         break;
 
       case 'p':
-        if (!str_cmp(tag, "pk_allowed"))
-          CONFIG_PK_ALLOWED = num;
-        else if (!str_cmp(tag, "protocol_negotiation"))
+        if (!str_cmp(tag, "protocol_negotiation"))
           CONFIG_PROTOCOL_NEGOTIATION = num;
         else if (!str_cmp(tag, "pt_allowed"))
           CONFIG_PT_ALLOWED = num;

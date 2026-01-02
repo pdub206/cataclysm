@@ -39,8 +39,8 @@ struct char_point_data_plrtoascii {
    sh_int max_mana;     /* Max mana for PC/NPC			   */
    sh_int hit;
    sh_int max_hit;      /* Max hit for PC/NPC                      */
-   sh_int move;
-   sh_int max_move;     /* Max move for PC/NPC                     */
+   sh_int stamina;
+   sh_int max_stamina;  /* Max stamina for PC/NPC                  */
 
    sh_int armor;        /* Internal -100..100, external -10..10 AC */
    int	coins;          /* Money carried                           */
@@ -59,7 +59,7 @@ struct char_point_data_plrtoascii {
  * in player_special_data.
  */
 struct char_special_data_saved_plrtoascii {
-   int	alignment;		/* +-1000 for alignments                */
+   int	alignment;
    long	idnum;			/* player's idnum; -1 for mobiles	*/
    long /*bitvector_t*/ act;	/* act flag for NPC's; player flag for PC's */
 
@@ -70,7 +70,7 @@ struct char_special_data_saved_plrtoascii {
 
 struct player_special_data_saved_plrtoascii {
    byte skills[MAX_SKILLS+1];	/* array of skills plus skill 0		*/
-   byte PADDING0;		/* used to be spells_to_learn		*/
+   byte legacy0;		/* legacy unused byte			*/
    bool talks[MAX_TONGUE];	/* PC s Tongues 0 for NPC		*/
    int	wimp_level;		/* Below this # of hit points, flee!	*/
    byte freeze_level;		/* Level of god who froze char, if any	*/
@@ -89,7 +89,7 @@ struct player_special_data_saved_plrtoascii {
    ubyte spare3;
    ubyte spare4;
    ubyte page_length;
-   int spells_to_learn;		/* How many can you learn yet this level*/
+   int spare5;
    int olc_zone;
    int spare8;
    int spare9;
@@ -212,8 +212,6 @@ void convert(char *filename)
 
 /* char_special_data_saved */
     csds = &(player.char_specials_saved);
-    if (csds->alignment != PFDEF_ALIGNMENT)
-      fprintf(outfile, "Alin: %d\n", csds->alignment);
     fprintf(outfile, "Id  : %d\n", (int)csds->idnum);
     if (csds->act != PFDEF_PLRFLAGS)
       fprintf(outfile, "Act : %d\n", (int)csds->act);
@@ -263,8 +261,6 @@ void convert(char *filename)
     if (psds->conditions[2] && player.level < LVL_IMMORT &&
 	psds->conditions[DRUNK] != PFDEF_DRUNK)
       fprintf(outfile, "Drnk: %d\n", (int)psds->conditions[2]);
-    if (psds->spells_to_learn != PFDEF_PRACTICES)
-      fprintf(outfile, "Lern: %d\n", (int)psds->spells_to_learn);
 
 /* char_ability_data */
     cad = &(player.abilities);
@@ -287,8 +283,8 @@ void convert(char *filename)
       fprintf(outfile, "Hit : %d/%d\n", cpd->hit, cpd->max_hit);
     if (cpd->mana != PFDEF_MANA || cpd->max_mana != PFDEF_MAXMANA)
       fprintf(outfile, "Mana: %d/%d\n", cpd->mana, cpd->max_mana);
-    if (cpd->move != PFDEF_MOVE || cpd->max_move != PFDEF_MAXMOVE)
-      fprintf(outfile, "Move: %d/%d\n", cpd->move, cpd->max_move);
+    if (cpd->stamina != PFDEF_STAMINA || cpd->max_stamina != PFDEF_MAXSTAMINA)
+      fprintf(outfile, "Stam: %d/%d\n", cpd->stamina, cpd->max_stamina);
     if (cpd->armor != PFDEF_AC)
       fprintf(outfile, "Ac  : %d\n", cpd->armor);
     if (cpd->coins != PFDEF_COINS)

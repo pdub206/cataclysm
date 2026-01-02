@@ -19,6 +19,7 @@
 #define _ACT_H_
 
 #include "utils.h" /* for the ACMD macro */
+#include "set.h"
 
 #ifndef MAX_EMOTE_TOKENS
 #define MAX_EMOTE_TOKENS 16
@@ -175,12 +176,18 @@ ACMD(do_gen_door);
 /* Functions without subcommands */
 ACMD(do_enter);
 ACMD(do_follow);
+ACMD(do_hitch);
 ACMD(do_leave);
+ACMD(do_mount);
 ACMD(do_move);
+ACMD(do_pack);
 ACMD(do_rest);
+ACMD(do_dismount);
 ACMD(do_sit);
 ACMD(do_sleep);
 ACMD(do_stand);
+ACMD(do_unhitch);
+ACMD(do_unpack);
 ACMD(do_unfollow);
 ACMD(do_wake);
 /* Global variables from act.movement.c */
@@ -257,6 +264,8 @@ ACMD(do_group);
 ACMD(do_hide);
 ACMD(do_listen);
 ACMD(do_not_here);
+ACMD(do_change);
+ACMD(do_reroll);
 ACMD(do_report);
 ACMD(do_save);
 ACMD(do_skills);
@@ -342,7 +351,7 @@ ACMD(do_wizutil);
 #define SCMD_THAW     4
 #define SCMD_UNAFFECT 5
 /* Functions without subcommands */
-ACMD(do_acaudit);
+ACMD(do_audit);
 ACMD(do_advance);
 ACMD(do_at);
 ACMD(do_checkloadstatus);

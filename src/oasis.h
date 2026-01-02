@@ -269,39 +269,41 @@ extern const char *nrm, *grn, *cyn, *yel;
 #define MEDIT_SKILL_MENU                11
 #define MEDIT_SKILL_EDIT                12
 #define MEDIT_CLASS_MENU                13
+#define MEDIT_SPECIES_MENU              14
 
 /* Numerical responses. */
-#define MEDIT_NUMERICAL_RESPONSE	       14
-#define MEDIT_SEX			                15
-#define MEDIT_NUM_HP_DICE		          16
-#define MEDIT_SIZE_HP_DICE		          17
-#define MEDIT_ADD_HP			             18
-#define MEDIT_POS			                19
-#define MEDIT_DEFAULT_POS		          20
-#define MEDIT_ATTACK			             21
-#define MEDIT_LEVEL			             22
-#define MEDIT_ALIGNMENT			          23
-#define MEDIT_DELETE                    24
-#define MEDIT_COPY                      25
-#define MEDIT_STR                       26
-#define MEDIT_INT                       27
-#define MEDIT_WIS                       28
-#define MEDIT_DEX                       29
-#define MEDIT_CON                       30
-#define MEDIT_CHA                       31
-#define MEDIT_SAVE_STR                  32
-#define MEDIT_SAVE_DEX                  33
-#define MEDIT_SAVE_CON                  34
-#define MEDIT_SAVE_INT                  35
-#define MEDIT_SAVE_WIS                  36
-#define MEDIT_SAVE_CHA                  37
-#define MEDIT_SKILL_VALUE               38
+#define MEDIT_NUMERICAL_RESPONSE	       15
+#define MEDIT_SEX			                16
+#define MEDIT_AGE                         44
+#define MEDIT_NUM_HP_DICE		          17
+#define MEDIT_SIZE_HP_DICE		          18
+#define MEDIT_ADD_HP			             19
+#define MEDIT_POS			                20
+#define MEDIT_DEFAULT_POS		          21
+#define MEDIT_ATTACK			             22
+#define MEDIT_LEVEL			             23
+#define MEDIT_ALIGNMENT			          24
+#define MEDIT_DELETE                    25
+#define MEDIT_COPY                      26
+#define MEDIT_STR                       27
+#define MEDIT_INT                       28
+#define MEDIT_WIS                       29
+#define MEDIT_DEX                       30
+#define MEDIT_CON                       31
+#define MEDIT_CHA                       32
+#define MEDIT_SAVE_STR                  33
+#define MEDIT_SAVE_DEX                  34
+#define MEDIT_SAVE_CON                  35
+#define MEDIT_SAVE_INT                  36
+#define MEDIT_SAVE_WIS                  37
+#define MEDIT_SAVE_CHA                  38
+#define MEDIT_SKILL_VALUE               39
 
 /* Skinning yield editor */
-#define MEDIT_SKIN_MENU                 39
-#define MEDIT_SKIN_ADD_VNUM             40
-#define MEDIT_SKIN_ADD_DC               41
-#define MEDIT_SKIN_DELETE               42
+#define MEDIT_SKIN_MENU                 40
+#define MEDIT_SKIN_ADD_VNUM             41
+#define MEDIT_SKIN_ADD_DC               42
+#define MEDIT_SKIN_DELETE               43
 
 /* Submodes of SEDIT connectedness. */
 #define SEDIT_MAIN_MENU              	0

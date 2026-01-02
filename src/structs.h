@@ -164,6 +164,38 @@
 /** Total number of available PC Classes */
 #define NUM_CLASSES	      8
 
+/* Species */
+#define SPECIES_UNDEFINED (-1) /**< Species undefined */
+#define SPECIES_HUMAN      0
+#define SPECIES_CITY_ELF   1
+#define SPECIES_DESERT_ELF 2
+#define SPECIES_HALF_ELF   3
+#define SPECIES_DWARF      4
+#define SPECIES_MUL        5
+#define SPECIES_HALF_GIANT 6
+#define SPECIES_MANTIS     7
+#define SPECIES_GITH       8
+#define SPECIES_AARAKOCRA  9
+#define SPECIES_DRAY       10
+#define SPECIES_KENKU      11
+#define SPECIES_JOZHAL     12
+#define SPECIES_PTERRAN    13
+#define SPECIES_TAREK      14
+#define SPECIES_APRIG      15
+#define SPECIES_CARRU      16
+#define SPECIES_CRODLU     17
+#define SPECIES_ERDLU      18
+#define SPECIES_INIX       19
+#define SPECIES_JHAKAR     20
+#define SPECIES_KANK       21
+#define SPECIES_MEKILLOT   22
+#define SPECIES_WORM       23
+#define SPECIES_RENK       24
+#define SPECIES_RAT        25
+#define SPECIES_UNDEAD     26
+#define SPECIES_DRAGON     27
+#define NUM_SPECIES        28
+
 /* NPC classes (currently unused - feel free to implement!) */
 #define CLASS_OTHER       0    /**< NPC Class Other (or undefined) */
 #define CLASS_UNDEAD      1    /**< NPC Class Undead */
@@ -193,8 +225,8 @@
 #define NUM_POSITIONS   9
 
 /* Player flags: used by char_data.char_specials.act */
-#define PLR_KILLER        0   /**< Player is a player-killer */
-#define PLR_THIEF         1   /**< Player is a player-thief */
+#define PLR_UNUSED0       0   /**< Reserved (unused) */
+#define PLR_UNUSED1       1   /**< Reserved (unused) */
 #define PLR_FROZEN        2   /**< Player is frozen */
 #define PLR_DONTSET       3   /**< Don't EVER set (ISNPC bit, set by mud) */
 #define PLR_WRITING       4   /**< Player writing (board/mail/olc) */
@@ -223,9 +255,9 @@
 #define MOB_AGGRESSIVE      5   /**< Mob auto-attacks everybody nearby */
 #define MOB_STAY_ZONE       6   /**< Mob shouldn't wander out of zone */
 #define MOB_WIMPY           7   /**< Mob flees if severely injured */
-#define MOB_AGGR_EVIL       8   /**< Auto-attack any evil PC's */
-#define MOB_AGGR_GOOD       9   /**< Auto-attack any good PC's */
-#define MOB_AGGR_NEUTRAL   10   /**< Auto-attack any neutral PC's */
+#define MOB_AGGR_RESERVED1  8   /**< Reserved (unused) */
+#define MOB_AGGR_RESERVED2  9   /**< Reserved (unused) */
+#define MOB_AGGR_RESERVED3 10   /**< Reserved (unused) */
 #define MOB_MEMORY         11   /**< remember attackers if attacked */
 #define MOB_HELPER         12   /**< attack PCs fighting other NPCs */
 #define MOB_NOCHARM        13   /**< Mob can't be charmed */
@@ -235,8 +267,9 @@
 #define MOB_NOBLIND        17   /**< Mob can't be blinded */
 #define MOB_NOKILL         18   /**< Mob can't be attacked */
 #define MOB_NOTDEADYET     19   /**< (R) Mob being extracted */
+#define MOB_MOUNT          20   /**< Mob can be mounted */
 
-#define NUM_MOB_FLAGS      19
+#define NUM_MOB_FLAGS      21
 
 /* Preference flags: used by char_data.player_specials.pref */
 #define PRF_BRIEF         0   /**< Room descs won't normally be shown */
@@ -245,7 +278,7 @@
 #define PRF_NOTELL        3   /**< Can't receive tells */
 #define PRF_DISPHP        4   /**< Display hit points in prompt */
 #define PRF_DISPMANA      5   /**< Display mana points in prompt */
-#define PRF_DISPMOVE      6   /**< Display move points in prompt */
+#define PRF_DISPSTAMINA   6   /**< Display stamina points in prompt */
 #define PRF_AUTOEXIT      7   /**< Display exits in a room */
 #define PRF_NOHASSLE      8   /**< Aggr mobs won't attack */
 #define PRF_QUEST         9   /**< On quest */
@@ -279,28 +312,28 @@
 #define AFF_DONTUSE         0   /**< DON'T USE! This allows 0 to mean "no bits set" in the database */
 #define AFF_BLIND           1   /**< (R) Char is blind */
 #define AFF_INVISIBLE       2   /**< Char is invisible */
-#define AFF_DETECT_ALIGN    3   /**< Char is sensitive to align */
-#define AFF_DETECT_INVIS    4   /**< Char can see invis chars */
-#define AFF_DETECT_MAGIC    5   /**< Char is sensitive to magic */
-#define AFF_SENSE_LIFE      6   /**< Char can sense hidden life */
-#define AFF_WATERWALK       7   /**< Char can walk on water */
-#define AFF_SANCTUARY       8   /**< Char protected by sanct */
-#define AFF_UNUSED          9   /**< (R) Char is grouped */
-#define AFF_CURSE          10   /**< Char is cursed */
-#define AFF_INFRAVISION    11   /**< Char can see in dark */
-#define AFF_POISON         12   /**< (R) Char is poisoned */
-#define AFF_PROTECT_EVIL   13   /**< Char protected from evil */
-#define AFF_PROTECT_GOOD   14   /**< Char protected from good */
-#define AFF_SLEEP          15   /**< (R) Char magically asleep */
-#define AFF_NOTRACK        16   /**< Char can't be tracked */
-#define AFF_FLYING         17   /**< Char is flying */
-#define AFF_SCUBA          18   /**< Room for future expansion */
-#define AFF_SNEAK          19   /**< Char can move quietly */
-#define AFF_HIDE           20   /**< Char is hidden */
-#define AFF_SCAN           21   /**< Actively scanning for hidden threats */
-#define AFF_CHARM          22   /**< Char is charmed */
-#define AFF_BANDAGED       23   /**< Character was bandaged recently */
-#define AFF_LISTEN         24   /**< Actively eavesdropping */
+#define AFF_DETECT_INVIS    3   /**< Char can see invis chars */
+#define AFF_DETECT_MAGIC    4   /**< Char is sensitive to magic */
+#define AFF_SENSE_LIFE      5   /**< Char can sense hidden life */
+#define AFF_WATERWALK       6   /**< Char can walk on water */
+#define AFF_SANCTUARY       7   /**< Char protected by sanct */
+#define AFF_UNUSED          8   /**< (R) Char is grouped */
+#define AFF_CURSE           9   /**< Char is cursed */
+#define AFF_INFRAVISION    10   /**< Char can see in dark */
+#define AFF_POISON         11   /**< (R) Char is poisoned */
+#define AFF_RESERVED13     12   /**< Reserved (unused) */
+#define AFF_RESERVED14     13   /**< Reserved (unused) */
+#define AFF_SLEEP          14   /**< (R) Char magically asleep */
+#define AFF_NOTRACK        15   /**< Char can't be tracked */
+#define AFF_FLYING         16   /**< Char is flying */
+#define AFF_SCUBA          17   /**< Room for future expansion */
+#define AFF_SNEAK          18   /**< Char can move quietly */
+#define AFF_HIDE           19   /**< Char is hidden */
+#define AFF_SCAN           20   /**< Actively scanning for hidden threats */
+#define AFF_CHARM          21   /**< Char is charmed */
+#define AFF_BANDAGED       22   /**< Character was bandaged recently */
+#define AFF_LISTEN         23   /**< Actively eavesdropping */
+#define AFF_MOUNTED        24   /**< Riding a mount */
 /** Total number of affect flags */
 #define NUM_AFF_FLAGS   25
 
@@ -313,42 +346,45 @@
 #define CON_NEWPASSWD     5 /**< New character, create password */
 #define CON_CNFPASSWD     6 /**< New character, confirm password */
 #define CON_QSEX          7 /**< Choose character sex */
-#define CON_QCLASS        8 /**< Choose character class */
-#define CON_QSHORTDESC    9 /**< Enter a new character short description prompt */
-#define CON_RMOTD        10 /**< Reading the message of the day */
-#define CON_MENU         11 /**< At the main menu */
-#define CON_PLR_DESC     12 /**< Enter a new character description prompt */
-#define CON_CHPWD_GETOLD 13 /**< Changing passwd: Get old		*/
-#define CON_CHPWD_GETNEW 14 /**< Changing passwd: Get new */
-#define CON_CHPWD_VRFY   15 /**< Changing passwd: Verify new password */
-#define CON_DELCNF1      16 /**< Character Delete: Confirmation 1		*/
-#define CON_DELCNF2      17 /**< Character Delete: Confirmation 2		*/
-#define CON_DISCONNECT   18 /**< In-game link loss (leave character)	*/
-#define CON_OEDIT        19 /**< OLC mode - object editor		*/
-#define CON_REDIT        20 /**< OLC mode - room editor		*/
-#define CON_ZEDIT        21 /**< OLC mode - zone info editor		*/
-#define CON_MEDIT        22 /**< OLC mode - mobile editor		*/
-#define CON_SEDIT        23 /**< OLC mode - shop editor		*/
-#define CON_TEDIT        24 /**< OLC mode - text editor		*/
-#define CON_CEDIT        25 /**< OLC mode - conf editor		*/
-#define CON_AEDIT        26 /**< OLC mode - social (action) edit      */
-#define CON_TRIGEDIT     27 /**< OLC mode - trigger edit              */
-#define CON_HEDIT        28 /**< OLC mode - help edit */
-#define CON_QEDIT        29 /**< OLC mode - quest edit */
-#define CON_PREFEDIT     30 /**< OLC mode - preference edit */
-#define CON_IBTEDIT      31 /**< OLC mode - idea/bug/typo edit */
-#define CON_MSGEDIT      32 /**< OLC mode - message editor */
-#define CON_PLR_BACKGROUND 33 /**< Entering a new character background */
-#define CON_GET_PROTOCOL 33 /**< Used at log-in while attempting to get protocols > */
-#define CON_GET_CONNECT  34 /**< Login connect/disconnect menu */
-#define CON_GET_ACCOUNT  35 /**< Login with account name */
-#define CON_ACCOUNT_CNFRM 36 /**< New account, confirm name */
-#define CON_ACCOUNT_PASSWORD 37 /**< Login with account password */
-#define CON_ACCOUNT_NEWPASSWD 38 /**< New account, create password */
-#define CON_ACCOUNT_CNFPASSWD 39 /**< New account, confirm password */
-#define CON_ACCOUNT_EMAIL 40 /**< New account, optional email */
-#define CON_ACCOUNT_MENU  41 /**< Account main menu */
-#define CON_ACCOUNT_LIST  42 /**< Viewing account character list */
+#define CON_QSPECIES      8 /**< Choose character species */
+#define CON_QCLASS        9 /**< Choose character class */
+#define CON_QSTAT_PREF   44 /**< Choose character stat preference order */
+#define CON_QAGE         45 /**< Choose character age */
+#define CON_QSHORTDESC   10 /**< Enter a new character short description prompt */
+#define CON_RMOTD        11 /**< Reading the message of the day */
+#define CON_MENU         12 /**< At the main menu */
+#define CON_PLR_DESC     13 /**< Enter a new character description prompt */
+#define CON_CHPWD_GETOLD 14 /**< Changing passwd: Get old		*/
+#define CON_CHPWD_GETNEW 15 /**< Changing passwd: Get new */
+#define CON_CHPWD_VRFY   16 /**< Changing passwd: Verify new password */
+#define CON_DELCNF1      17 /**< Character Delete: Confirmation 1		*/
+#define CON_DELCNF2      18 /**< Character Delete: Confirmation 2		*/
+#define CON_DISCONNECT   19 /**< In-game link loss (leave character)	*/
+#define CON_OEDIT        20 /**< OLC mode - object editor		*/
+#define CON_REDIT        21 /**< OLC mode - room editor		*/
+#define CON_ZEDIT        22 /**< OLC mode - zone info editor		*/
+#define CON_MEDIT        23 /**< OLC mode - mobile editor		*/
+#define CON_SEDIT        24 /**< OLC mode - shop editor		*/
+#define CON_TEDIT        25 /**< OLC mode - text editor		*/
+#define CON_CEDIT        26 /**< OLC mode - conf editor		*/
+#define CON_AEDIT        27 /**< OLC mode - social (action) edit      */
+#define CON_TRIGEDIT     28 /**< OLC mode - trigger edit              */
+#define CON_HEDIT        29 /**< OLC mode - help edit */
+#define CON_QEDIT        30 /**< OLC mode - quest edit */
+#define CON_PREFEDIT     31 /**< OLC mode - preference edit */
+#define CON_IBTEDIT      32 /**< OLC mode - idea/bug/typo edit */
+#define CON_MSGEDIT      33 /**< OLC mode - message editor */
+#define CON_PLR_BACKGROUND 34 /**< Entering a new character background */
+#define CON_GET_PROTOCOL 34 /**< Used at log-in while attempting to get protocols > */
+#define CON_GET_CONNECT  35 /**< Login connect/disconnect menu */
+#define CON_GET_ACCOUNT  36 /**< Login with account name */
+#define CON_ACCOUNT_CNFRM 37 /**< New account, confirm name */
+#define CON_ACCOUNT_PASSWORD 38 /**< Login with account password */
+#define CON_ACCOUNT_NEWPASSWD 39 /**< New account, create password */
+#define CON_ACCOUNT_CNFPASSWD 40 /**< New account, confirm password */
+#define CON_ACCOUNT_EMAIL 41 /**< New account, optional email */
+#define CON_ACCOUNT_MENU  42 /**< Account main menu */
+#define CON_ACCOUNT_LIST  43 /**< Viewing account character list */
 
 /* OLC States range - used by IS_IN_OLC and IS_PLAYING */
 #define FIRST_OLC_STATE CON_OEDIT     /**< The first CON_ state that is an OLC */
@@ -439,23 +475,12 @@
 #define ITEM_MAGIC             6   /**< Item is magical */
 #define ITEM_NODROP            7   /**< Item is cursed: can't drop */
 #define ITEM_BLESS             8   /**< Item is blessed */
-#define ITEM_ANTI_GOOD         9   /**< Not usable by good people	*/
-#define ITEM_ANTI_EVIL        10   /**< Not usable by evil people	*/
-#define ITEM_ANTI_NEUTRAL     11   /**< Not usable by neutral people */
-#define ITEM_ANTI_SORCEROR    12   /**< Not usable by sorcerors */
-#define ITEM_ANTI_CLERIC      13   /**< Not usable by clerics */
-#define ITEM_ANTI_ROGUE	      14   /**< Not usable by rogues */
-#define ITEM_ANTI_FIGHTER     15   /**< Not usable by fighters */
-#define ITEM_ANTI_BARBARIAN   16   /**< Not usable by barbarians */
-#define ITEM_ANTI_RANGER      17   /**< Not usable by rangers */
-#define ITEM_ANTI_BARD        18   /**< Not usable by bards */
-#define ITEM_ANTI_DRUID       19   /**< Not usable by druids */
-#define ITEM_NOSELL           20   /**< Shopkeepers won't touch it */
-#define ITEM_QUEST            21   /**< Item is a quest item         */
-#define ITEM_HOOD_UP          22   /**< WORN item hood is currently up */
-#define ITEM_SKINNED          23   /* Item/corpse can be skinned */
+#define ITEM_NOSELL            9   /**< Shopkeepers won't touch it */
+#define ITEM_QUEST            10   /**< Item is a quest item         */
+#define ITEM_HOOD_UP          11   /**< WORN item hood is currently up */
+#define ITEM_SKINNED          12   /* Item/corpse can be skinned */
 /** Total number of item flags */
-#define NUM_ITEM_FLAGS        24
+#define NUM_ITEM_FLAGS        13
 
 /* Modifier constants used with obj affects ('A' fields) */
 #define APPLY_NONE              0	/**< No effect			*/
@@ -472,7 +497,7 @@
 #define APPLY_CHAR_HEIGHT      11	/**< Apply to height		*/
 #define APPLY_MANA             12	/**< Apply to max mana		*/
 #define APPLY_HIT              13	/**< Apply to max hit points	*/
-#define APPLY_MOVE             14	/**< Apply to max move points	*/
+#define APPLY_STAMINA          14	/**< Apply to max stamina points	*/
 #define APPLY_COINS             15	/**< Reserved			*/
 #define APPLY_EXP              16	/**< Reserved			*/
 #define APPLY_AC               17	/**< Apply to Armor Class		*/
@@ -872,7 +897,7 @@ struct time_info_data
 /** Player specific time information. */
 struct time_data
 {
-  time_t birth; /**< Represents the PCs birthday, used to calculate age. */
+  time_t birth; /**< Anchor for calculating mechanical age from played time. */
   time_t logon; /**< Time of the last logon, used to calculate time played */
   int played;   /**< This is the total accumulated time played in secs */
 };
@@ -907,8 +932,11 @@ struct char_player_data
   char *background;              /**< PC / NPC background / history text */
   byte sex;                      /**< PC / NPC sex */
   byte chclass;                  /**< PC / NPC class */
+  byte species;                  /**< PC / NPC species */
   byte level;                    /**< PC / NPC level */
-  struct time_data time;         /**< PC AGE in days */
+  struct time_data time;         /**< Playtime tracking */
+  int roleplay_age;              /**< Roleplay age in years */
+  int roleplay_age_year;         /**< Last mud year roleplay age was updated */
   ubyte weight;                  /**< PC / NPC weight */
   ubyte height;                  /**< PC / NPC height */
 };
@@ -945,8 +973,8 @@ struct char_point_data
   sh_int max_mana; /**< Max mana level */
   sh_int hit;      /**< Curent hit point, or health, level */
   sh_int max_hit;  /**< Max hit point, or health, level */
-  sh_int move;     /**< Current move point, or stamina, level */
-  sh_int max_move; /**< Max move point, or stamina, level */
+  sh_int stamina;     /**< Current stamina level */
+  sh_int max_stamina; /**< Max stamina level */
 
   /** Current armor class. Internal use goes from -100 (totally armored) to
    * 100 (totally naked). Externally expressed as -10 (totally armored) to
@@ -978,6 +1006,9 @@ struct char_special_data
   struct char_data *fighting;  /**< Target of fight; else NULL */
   struct char_data *hunting;   /**< Target of NPC hunt; else NULL */
   struct obj_data *furniture;  /**< Object being sat on/in; else NULL */
+  struct char_data *mount;     /**< Mount being ridden; else NULL */
+  struct char_data *rider;     /**< Rider, if being mounted; else NULL */
+  struct char_data *hitched_to; /**< Person this mount is hitched to; else NULL */
   struct char_data *next_in_furniture; /**< Next person sitting, else NULL */
 
   byte position; /**< Standing, fighting, sleeping, etc. */
@@ -986,6 +1017,7 @@ struct char_special_data
   byte carry_items; /**< Number of items carried */
   int timer;        /**< Timer for update */
   int stealth_check;  /* last rolled Stealth value for Hide; 0 = not hiding/opposed */
+  bool custom_ldesc;  /* temporary ldesc override from change command */
 
   struct char_special_data_saved saved; /**< Constants saved for PCs. */
 };
@@ -1013,6 +1045,9 @@ struct player_special_data_saved
   int    quest_counter;         /**< Count of targets left to get  */
   time_t   lastmotd;            /**< Last time player read motd */
   time_t   lastnews;            /**< Last time player read news */
+  bool reroll_used;             /**< Has the PC used their one-time reroll */
+  time_t reroll_expires;        /**< When the reroll review period ends */
+  struct char_ability_data reroll_old_abils; /**< Original stats before reroll */
   time_t next_skill_gain[MAX_SKILLS+1];  /* indexed by skill/spell number */
 };
 
@@ -1128,6 +1163,10 @@ struct char_data
   struct group_data *group;      /**< Character's Group */
 
   long pref; /**< unique session id */
+
+  bool stat_pref_use; /**< Use stat preference ordering when rolling abilities */
+  ubyte stat_pref_count; /**< Number of preferred stats entered */
+  ubyte stat_pref_order[NUM_ABILITIES]; /**< Ability order preferences */
   
   struct list_data * events;
 };
@@ -1347,6 +1386,7 @@ struct recent_player
 /* NPC loadout helpers */
 void loadout_free_list(struct mob_loadout **head);
 void loadout_add_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty);
+void loadout_append_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty);
 struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src);
 
 /* Furniture defines for object values */
@@ -1387,7 +1427,6 @@ struct forage_entry {
  * variables. */
 struct game_data
 {
-  int pk_allowed; /**< Is player killing allowed?    */
   int pt_allowed; /**< Is player thieving allowed?   */
   int level_can_shout; /**< Level player must be to shout.   */
   int tunnel_size; /**< Number of people allowed in a tunnel.*/

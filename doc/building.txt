@@ -226,7 +226,7 @@ sell objects to players.
 
 A single zone typically contains up to than 100 rooms, 100 monster definitions 
 and 100 object definitions, but a large region can be subdivided into several 
-zones at the author’s discretion. For example, the City of Midgaard is divided 
+zones at the author’s discretion. For example, a large city can be divided 
 into two zones, one for the main city and one for the southern residential area. 
 In addition to this, with the new zone system describing top and bottom rooms 
 of a zone, zones can contain very few rooms and indeed can overlap with other 
@@ -242,7 +242,7 @@ independent, so there can be both a room number 3001 and an object number
 refers to each entity by its Vnum and never by name. Vnums are normally not 
 seen by players. Each zone itself also has a Vnum. A common convention is to 
 number the zone with the Vnums of its component rooms, divided by 100. For 
-example, Midgaard is zone 30, consisting of rooms 3000 to 3099. Mobile and 
+example, the main city is zone 30, consisting of rooms 3000 to 3099. Mobile and 
 object numbering follows the same convention. 
 
 The author of the zone can define aspects of each room such as the terrain type, 
@@ -632,7 +632,7 @@ The format of a mobile is:
 ~ 
 <detailed description> 
 ~ 
-<mob flags> <affect flags> <alignment> <type flag>
+<mob flags> <affect flags> <reserved> <type flag>
 {type-specific information; see below for details} 
 
 Virtual Number This number is critical; it is the identity of the mobile within
@@ -687,9 +687,9 @@ L) NPC Flags : ISNPC
                its hit points.  If the WIMPY bit is set in conjunction with
                any of the forms of the AGGRESSIVE bit, the mob will only
                attack mobs that are unconscious (sleeping or incapacitated).
-9) AGGR_EVIL   Mob will attack players that are evil-aligned.
-10) AGGR_GOOD  Mob will attack players that are good-aligned.
-11) AGGR_NEU   Mob will attack players that are neutrally aligned.
+9) RESERVED    Not used.
+10) RESERVED   Not used.
+11) RESERVED   Not used.
 12) MEMORY     Mob will remember players that initiate attacks on it, and will
                attack that player if it ever runs into him again.
 13) HELPER     The mob will attack any player it sees in the room that is
@@ -710,7 +710,7 @@ following values:
 M) AFF Flags : NOBITS
 1)  BLIND          Mob is blind.
 2)  INVIS          Mob is invisible.
-3)  DET-ALIGN      NOT USED.
+3)  RESERVED       NOT USED.
 4)  DET-INVIS      Mob can see invisible characters and objects.
 5)  DET-MAGIC      Mob is sensitive to magical presence.
 6)  SENSE-LIFE     Mob can sense hidden life.
@@ -721,22 +721,16 @@ M) AFF Flags : NOBITS
 10) CURSE          Mob is cursed.
 11) INFRA          Mob can see in dark.
 12) POISON         Reserved for internal use.  Do not set.
-13) PROT-EVIL      Mob is protected from evil characters.
-14) PROT-GOOD      Mob is protected from good characters.
+13) RESERVED       NOT USED.
+14) RESERVED       NOT USED.
 15) SLEEP          Reserved for internal use.  Do not set.
 16) NO_TRACK       Mob cannot be tracked.
-17) UNUSED         Unused (room for future expansion).
-18) UNUSED         Unused (room for future expansion).
+17) FLY            Mob is flying.
+18) SCUBA          Mob can breathe underwater.
 19) SNEAK          Mob can move quietly without room being informed.
 20) HIDE           Mob is hidden; can only be seen with sense life.
-21) UNUSED         Unused (room for future expansion).
+21) SCAN           Actively scanning for hidden threats.
 22) CHARM          Reserved for internal use.  Do not set.
-
-Alignment A number from -1000 to 1000 representing the mob’s initial alignment. 
-
--1000.....-350 Evil 
- -349......349 Neutral 
-  350.....1000 Good 
 
 Type Flag This flag is a single letter which indicates what type of mobile is 
 currently being defined, and controls what information tbaMUD expects to find 
@@ -748,7 +742,7 @@ Standard tbaMUD supports two types of mobiles: S (for Simple), and E (for Enhanc
 4.2 Type S Mobiles 
 For type S mobs, the type-specific information should be in the following format: 
 
-<mob flags> <affect flags> <alignment> S
+<mob flags> <affect flags> <reserved> S
 <level> <thaco> <armor class> <hitpoints> <damage>
 <coins> <experience points> 
 <load position> <default position> <sex> 
@@ -840,13 +834,13 @@ A beastly fido is mucking through the garbage looking for food here.
    The fido is a small dog that has a foul smell and pieces of rotted meat
 hanging around his teeth.  
 ~
-65738 0 0 0 65536 0 0 0 -200 S
+65738 0 0 0 65536 0 0 0 0 S
 1 20 9 0d0+10 1d2+0
 10 100
 8 8 1
 
-This is mobile vnum 3062. The Fido has mob and affect flags set and has an 
-initial alignment of -200. After the S flag we see that the Fido is level 1, 
+This is mobile vnum 3062. The Fido has mob and affect flags set and has a 
+reserved value of 0. After the S flag we see that the Fido is level 1, 
 has a THAC0 of 20, an Armor Class of 9, 0d0+10 hit points (10 hitpoints), and
 will do 1d2 hit points of bare hand damage per round. The Fido has 10 coins 
 and 100 experience points, has a load position and default position of 
@@ -865,7 +859,7 @@ literal letter Emust then come after all E-specs to signal the end of the mob.
 
 The format of an E mobile is as follows: 
 
-<mob flags> <affect flags> <alignment> E
+<mob flags> <affect flags> <reserved> E
 <level> <hitroll> <armor class> <hitpoints> <damage>
 <coins> <experience points> 
 <load position> <default position> <sex> 
@@ -886,7 +880,7 @@ A beastly fido is mucking through the garbage looking for food here.
    The fido is a small dog that has a foul smell and pieces of rotted meat
 hanging around his teeth.  
 ~
-65738 0 0 0 65536 0 0 0 -200 E
+65738 0 0 0 65536 0 0 0 0 E
 1 20 9 0d0+10 1d2+0
 10 100
 8 8 1
@@ -1033,14 +1027,10 @@ but has no substantive effect otherwise. The flags have the following values:
 7)   MAGIC           Item has a magical aura and cannot be enchanted.
 8)   NODROP          Item is cursed and cannot be removed or dropped.
 9)   BLESS           Item is blessed (cosmetic).
-10)  ANTI_GOOD       Item cannot be used by good-aligned characters.
-11)  ANTI_EVIL       Item cannot be used by evil-aligned characters.
-12)  ANTI_NEUTRAL    Item cannot be used by neutral align characters.
-13)  ANTI_MAGIC_USER Item cannot be used by the Mage class.
-14)  ANTI_CLERIC     Item cannot be used by the Cleric class.
-15)  ANTI_THIEF      Item cannot be used by the Thief class.
-16)  ANTI_WARRIOR    Item cannot be used by the Warrior class.
-17)  NOSELL          Shopkeepers will not buy or sell the item.
+10)  NOSELL          Shopkeepers will not buy or sell the item.
+11)  QUEST_ITEM      Shopkeepers will only accept questpoints for this item.
+12)  HOOD_UP         WORN item hood is currently up.
+13)  SKINNED         Item/corpse can be skinned.
 
 Wear Bitvector A bitvector (see section 2.4 on ‘Using Bitvectors’) with 
 the following values: 
@@ -1311,7 +1301,7 @@ terminated by the literal letter S.
 
 Virtual Number An arbitrary number used to identify the zone. Zone numbers are
 traditionally the room numbers of the zone divided by 100; for example, 
-Midgaard, which consists of rooms 3000 through 3099, is zone 30. 
+The main city, which consists of rooms 3000 through 3099, is zone 30. 
 
 Zone Name A label given to the zone so that it can be identified in system 
 logs. 
@@ -1444,7 +1434,7 @@ Zone File Example
 A sample zone file annotated with comments follows. 
 
 #30 * This is zone number 30 
-Northern Midgaard Main City~ * The name of the zone 
+Northern Main City~ * The name of the zone 
 3099 15 2 * Top of zone is room #3099; it resets every 15 minutes.
 * * Resets regardless of people.
 * 
@@ -1611,16 +1601,16 @@ monty-haul campaigns.
 Shop Keeper Mobile Number Virtual number of the shopkeeper mobile. 
 
 With Who Bitvector A bitvector (see section 2.4 on ‘Using Bitvectors’) used to 
-designate certain alignments or classes that the shop will not trade with, with
+designate certain classes that the shop will not trade with, with
 the following values: 
 
 E) No Trade With  : NOBITS
-   Designates certain alignments or classes that the shop will not trade with:
+   Designates certain classes that the shop will not trade with:
  
- 1) Good                    2) Evil                   
- 3) Neutral                 4) Magic User             
- 5) Cleric                  6) Thief                  
- 7) Warrior                
+ 1) Sorceror               2) Cleric                 
+ 3) Rogue                  4) Fighter                
+ 5) Barbarian              6) Ranger                 
+ 7) Bard                   8) Druid                  
 
 Shop Room 1...Shop Room n The virtual numbers the mobile must be in for the 
 shop to be effective. (So transferred shopkeepers can’t sell in the desert). 
@@ -1737,15 +1727,16 @@ Shop Keeper Mobile Number Virtual number of the shopkeeper mobile.
 
 With Who Bitvector 
 A bitvector (see section ‘Using Bitvectors’) used to designate certain 
-alignments or classes that the shop will not trade with, with the following 
+classes that the shop will not trade with, with the following 
 values: 
-1 a NOGOOD Keeper won’t trade with positively-aligned players. 
-2 b NOEVIL Keeper won’t trade with evilly-aligned players. 
-4 c NONEUTRAL Keeper won’t trade with neutrally-aligned players. 
-8 d NOMAGIC_USER Keeper won’t trade with the Mage class. 
+8 d NOSORCEROR Keeper won’t trade with the Sorceror class. 
 16 e NOCLERIC Keeper won’t trade with the Cleric class. 
-32 f NOTHIEF Keeper won’t trade with the Thief class. 
-64 g NOWARRIOR Keeper won’t trade with the Warrior class. 
+32 f NOROGUE Keeper won’t trade with the Rogue class. 
+64 g NOFIGHTER Keeper won’t trade with the Fighter class. 
+128 h NOBARBARIAN Keeper won’t trade with the Barbarian class. 
+256 i NORANGER Keeper won’t trade with the Ranger class. 
+512 j NOBARD Keeper won’t trade with the Bard class. 
+1024 k NODRUID Keeper won’t trade with the Druid class. 
 
 Shop Room Number 
 The virtual number the mobile must be in for the shop to be effective. (So 
@@ -1823,7 +1814,7 @@ interactions you want it to perform. See the help files in game for details.
 8.2 Trigger File Example
 
 #100
-Obj Command 100 - portal to Midgaard~
+Obj Command 100 - portal to the capital~
 1 c 7
 en~
 if %cmd.mudcommand% == enter && %arg% /= portal
@@ -1848,18 +1839,18 @@ particular MUD. Check with your implementor for details.
  7) charm person          8) chill touch           9) clone                
 10) color spray          11) control weather      12) create food          
 13) create water         14) cure blind           15) cure critic          
-16) cure light           17) curse                18) detect alignment     
+16) cure light           17) curse                18) reserved             
 19) detect invisibility  20) detect magic         21) detect poison        
-22) dispel evil          23) earthquake           24) enchant weapon       
+22) reserved             23) earthquake           24) enchant weapon       
 25) energy drain         26) fireball             27) harm                 
 28) heal                 29) invisibility         30) lightning bolt       
 31) locate object        32) magic missile        33) poison               
-34) protection from evil 35) remove curse         36) sanctuary            
+34) reserved             35) remove curse         36) sanctuary            
 37) shocking grasp       38) sleep                39) strength             
-40) summon               41) !UNUSED!             42) word of recall       
+40) summon               41) !RESERVED!           42) word of recall       
 43) remove poison        44) sense life           45) animate dead         
-46) dispel good          47) group armor          48) group heal           
-49) !UNUSED!             50) infravision          51) waterwalk            
+46) reserved             47) group armor          48) group heal           
+49) !RESERVED!           50) infravision          51) waterwalk            
 
 B Item Values for Drink Containers 
 

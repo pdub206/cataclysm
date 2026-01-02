@@ -795,9 +795,6 @@ void mag_assign_spells(void) {
   spello(SPELL_DARKNESS, "darkness", 30, 5, 4, POS_STANDING,
   TAR_IGNORE, FALSE, MAG_ROOMS, NULL);
 
-  spello(SPELL_DETECT_ALIGN, "detect alignment", 20, 10, 2, POS_STANDING,
-  TAR_CHAR_ROOM | TAR_SELF_ONLY, FALSE, MAG_AFFECTS, "You feel less aware.");
-
   spello(SPELL_DETECT_INVIS, "detect invisibility", 20, 10, 2, POS_STANDING,
   TAR_CHAR_ROOM | TAR_SELF_ONLY, FALSE, MAG_AFFECTS,
       "Your eyes stop tingling.");
@@ -809,12 +806,6 @@ void mag_assign_spells(void) {
   spello(SPELL_DETECT_POISON, "detect poison", 15, 5, 1, POS_STANDING,
   TAR_CHAR_ROOM | TAR_OBJ_INV | TAR_OBJ_ROOM, FALSE, MAG_MANUAL,
       "The detect poison wears off.");
-
-  spello(SPELL_DISPEL_EVIL, "dispel evil", 40, 25, 3, POS_FIGHTING,
-  TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE, NULL);
-
-  spello(SPELL_DISPEL_GOOD, "dispel good", 40, 25, 3, POS_FIGHTING,
-  TAR_CHAR_ROOM | TAR_FIGHT_VICT, TRUE, MAG_DAMAGE, NULL);
 
   spello(SPELL_EARTHQUAKE, "earthquake", 40, 25, 3, POS_FIGHTING,
   TAR_IGNORE, TRUE, MAG_AREAS, NULL);

@@ -29,12 +29,49 @@
 #include "shop.h"
 #include "quest.h"
 #include "modify.h"
-#include "roomsave.h"
 
 /* Local defined utility functions */
 /* do_group utility functions */
 static void print_group(struct char_data *ch);
 static void display_group_list(struct char_data * ch);
+
+static bool change_has_emote_tokens(const char *text)
+{
+  for (; text && *text; text++) {
+    switch (*text) {
+      case '~': case '!': case '%': case '^':
+      case '#': case '&': case '=': case '+':
+      case '@':
+        return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+static bool change_ends_with_punct(const char *text)
+{
+  size_t len = text ? strlen(text) : 0;
+  if (len == 0)
+    return FALSE;
+  return (text[len - 1] == '.' || text[len - 1] == '!' || text[len - 1] == '?');
+}
+
+static void change_trim_trailing_spaces(char *text)
+{
+  size_t len = text ? strlen(text) : 0;
+  while (len > 0 && isspace((unsigned char)text[len - 1])) {
+    text[len - 1] = '\0';
+    len--;
+  }
+}
+
+#define REROLL_REVIEW_SECONDS (2 * SECS_PER_REAL_HOUR)
+
+static void reroll_clear_saved(struct char_data *ch)
+{
+  GET_REROLL_EXPIRES(ch) = 0;
+  memset(&GET_REROLL_OLD_ABILS(ch), 0, sizeof(struct char_ability_data));
+}
 
 ACMD(do_quit)
 {
@@ -180,6 +217,168 @@ ACMD(do_save)
   send_to_char(ch, "Saving %s.\r\n", GET_NAME(ch));
   save_char(ch);
   Crash_crashsave(ch);
+}
+
+ACMD(do_change)
+{
+  char option[MAX_INPUT_LENGTH];
+  char suffix[MAX_INPUT_LENGTH];
+  char base_buf[MAX_INPUT_LENGTH];
+  char ldesc[MAX_STRING_LENGTH];
+  char *rest = argument;
+  const char *base;
+
+  rest = one_argument(rest, option);
+  if (!*option) {
+    send_to_char(ch, "Usage: change ldesc <string>\r\n");
+    return;
+  }
+
+  if (!is_abbrev(option, "ldesc")) {
+    send_to_char(ch, "Unknown change option. Available: ldesc\r\n");
+    return;
+  }
+
+  skip_spaces(&rest);
+  if (!*rest) {
+    send_to_char(ch, "Usage: change ldesc <string>\r\n");
+    return;
+  }
+
+  if (change_has_emote_tokens(rest)) {
+    send_to_char(ch, "You can't use emote tokens in your ldesc.\r\n");
+    return;
+  }
+
+  strlcpy(suffix, rest, sizeof(suffix));
+  change_trim_trailing_spaces(suffix);
+  if (!*suffix) {
+    send_to_char(ch, "Usage: change ldesc <string>\r\n");
+    return;
+  }
+
+  if (!change_ends_with_punct(suffix))
+    strlcat(suffix, ".", sizeof(suffix));
+
+  base = (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch)) ? GET_SHORT_DESC(ch) : GET_NAME(ch);
+  if (!base || !*base)
+    base = "someone";
+
+  strlcpy(base_buf, base, sizeof(base_buf));
+  if (*base_buf)
+    base_buf[0] = UPPER(*base_buf);
+
+  snprintf(ldesc, sizeof(ldesc), "%s %s\r\n", base_buf, suffix);
+
+  if (ch->player.long_descr) {
+    if (!IS_NPC(ch) || GET_MOB_RNUM(ch) == NOBODY ||
+        ch->player.long_descr != mob_proto[GET_MOB_RNUM(ch)].player.long_descr) {
+      free(ch->player.long_descr);
+    }
+  }
+  ch->player.long_descr = strdup(ldesc);
+  ch->char_specials.custom_ldesc = TRUE;
+
+  send_to_char(ch, "Long description updated.\r\n");
+}
+
+ACMD(do_reroll)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct char_data *vict;
+  time_t now;
+  time_t remaining;
+  bool expired = FALSE;
+
+  one_argument(argument, arg);
+
+  if (IS_NPC(ch)) {
+    send_to_char(ch, "You can't reroll stats.\r\n");
+    return;
+  }
+
+  now = time(0);
+  if (GET_REROLL_EXPIRES(ch) > 0 && now >= GET_REROLL_EXPIRES(ch)) {
+    reroll_clear_saved(ch);
+    save_char(ch);
+    expired = TRUE;
+  }
+
+  if (*arg && is_abbrev(arg, "undo")) {
+    if (!GET_REROLL_USED(ch)) {
+      send_to_char(ch, "You haven't rerolled yet.\r\n");
+      return;
+    }
+    if (GET_REROLL_EXPIRES(ch) <= 0 || expired) {
+      send_to_char(ch, "You no longer have a reroll pending; your stats are permanent.\r\n");
+      return;
+    }
+
+    ch->real_abils = GET_REROLL_OLD_ABILS(ch);
+    affect_total(ch);
+    reroll_clear_saved(ch);
+    save_char(ch);
+
+    send_to_char(ch, "Your original stats have been restored. You cannot reroll again.\r\n");
+    send_to_char(ch, "Stats: Str %d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+                 GET_STR(ch), GET_INT(ch), GET_WIS(ch),
+                 GET_DEX(ch), GET_CON(ch), GET_CHA(ch));
+    return;
+  }
+
+  if (*arg && GET_LEVEL(ch) >= LVL_GRGOD) {
+    if (!(vict = get_char_vis(ch, arg, NULL, FIND_CHAR_WORLD)))
+      send_to_char(ch, "There is no such player.\r\n");
+    else if (IS_NPC(vict))
+      send_to_char(ch, "You can't do that to a mob!\r\n");
+    else {
+      roll_real_abils(vict);
+      affect_total(vict);
+      send_to_char(ch, "Rerolled...\r\n");
+      log("(GC) %s has rerolled %s.", GET_NAME(ch), GET_NAME(vict));
+      send_to_char(ch, "New stats: Str %d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+                   GET_STR(vict), GET_INT(vict), GET_WIS(vict),
+                   GET_DEX(vict), GET_CON(vict), GET_CHA(vict));
+      save_char(vict);
+    }
+    return;
+  }
+
+  if (*arg) {
+    send_to_char(ch, "Usage: reroll | reroll undo\r\n");
+    return;
+  }
+
+  if (GET_REROLL_USED(ch)) {
+    if (GET_REROLL_EXPIRES(ch) > 0 && now < GET_REROLL_EXPIRES(ch)) {
+      remaining = GET_REROLL_EXPIRES(ch) - now;
+      int hours = remaining / SECS_PER_REAL_HOUR;
+      int mins = (remaining % SECS_PER_REAL_HOUR) / SECS_PER_REAL_MIN;
+
+      if (hours > 0)
+        send_to_char(ch, "You have already rerolled. You can 'reroll undo' within %d hour%s %d minute%s.\r\n",
+                     hours, hours == 1 ? "" : "s", mins, mins == 1 ? "" : "s");
+      else
+        send_to_char(ch, "You have already rerolled. You can 'reroll undo' within %d minute%s.\r\n",
+                     mins, mins == 1 ? "" : "s");
+    } else {
+      send_to_char(ch, "You have already rerolled and cannot reroll again.\r\n");
+    }
+    return;
+  }
+
+  GET_REROLL_OLD_ABILS(ch) = ch->real_abils;
+  roll_real_abils(ch);
+  affect_total(ch);
+  GET_REROLL_USED(ch) = TRUE;
+  GET_REROLL_EXPIRES(ch) = now + REROLL_REVIEW_SECONDS;
+  save_char(ch);
+
+  send_to_char(ch, "Your stats have been rerolled. You have 2 hours to review them.\r\n");
+  send_to_char(ch, "New stats: Str %d, Int %d, Wis %d, Dex %d, Con %d, Cha %d\r\n",
+               GET_STR(ch), GET_INT(ch), GET_WIS(ch),
+               GET_DEX(ch), GET_CON(ch), GET_CHA(ch));
+  send_to_char(ch, "Use 'reroll undo' to restore your original stats before the timer expires.\r\n");
 }
 
 /* Generic function for commands which are normally overridden by special
@@ -557,7 +756,7 @@ ACMD(do_sneak)
   if (total < dc) {
     gain_skill(ch, "stealth", FALSE);
     WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-    GET_MOVE(ch) -= 10;
+    GET_STAMINA(ch) -= 10;
     return;
   }
 
@@ -576,7 +775,7 @@ ACMD(do_sneak)
   SET_STEALTH_CHECK(ch, MAX(GET_STEALTH_CHECK(ch), total));
 
   gain_skill(ch, "stealth", TRUE);
-  GET_MOVE(ch) -= 10;
+  GET_STAMINA(ch) -= 10;
 }
 
 ACMD(do_hide)
@@ -612,7 +811,7 @@ ACMD(do_hide)
     /* Failure */
     gain_skill(ch, "stealth", FALSE);
     WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-    GET_MOVE(ch) -= 10;
+    GET_STAMINA(ch) -= 10;
     return;
   }
 
@@ -623,7 +822,7 @@ ACMD(do_hide)
   send_to_char(ch, "You hide yourself as best you can.\r\n");
   gain_skill(ch, "stealth", TRUE);
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-  GET_MOVE(ch) -= 10;
+  GET_STAMINA(ch) -= 10;
 }
 
 static void remember_scan_target(struct char_data *ch, struct char_data *tch)
@@ -886,7 +1085,11 @@ bool perform_scan_sweep(struct char_data *ch)
       continue;
 
     if (total >= scan_target_dc(tch)) {
-      send_to_char(ch, "A shadowy figure.\r\n");
+      char hidden_ldesc[MAX_STRING_LENGTH];
+      if (build_hidden_ldesc(tch, hidden_ldesc, sizeof(hidden_ldesc)))
+        send_to_char(ch, "%s", hidden_ldesc);
+      else
+        send_to_char(ch, "A shadowy figure.\r\n");
       remember_scan_target(ch, tch);
       found_any = TRUE;
     } else {
@@ -929,7 +1132,7 @@ ACMD(do_scan)
   act("$n studies $s surroundings with a wary gaze.", TRUE, ch, 0, 0, TO_ROOM);
 
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-  GET_MOVE(ch) -= 10;
+  GET_STAMINA(ch) -= 10;
 }
 
 ACMD(do_listen)
@@ -959,7 +1162,7 @@ ACMD(do_listen)
   send_to_char(ch, "You focus entirely on every whisper and distant sound.\r\n");
 
   WAIT_STATE(ch, PULSE_VIOLENCE / 2);
-  GET_MOVE(ch) -= 10;
+  GET_STAMINA(ch) -= 10;
 }
 
 ACMD(do_palm)
@@ -1307,7 +1510,7 @@ static void print_group(struct char_data *ch)
 	    GROUP_LEADER(GROUP(ch)) == k ? CBGRN(ch, C_NRM) : CCGRN(ch, C_NRM),
 	    GET_HIT(k), GET_MAX_HIT(k),
 	    GET_MANA(k), GET_MAX_MANA(k),
-	    GET_MOVE(k), GET_MAX_MOVE(k),
+	    GET_STAMINA(k), GET_MAX_STAMINA(k),
 	    CCNRM(ch, C_NRM));
 }
 
@@ -1464,7 +1667,7 @@ ACMD(do_report)
 	  GET_NAME(ch),
 	  GET_HIT(ch), GET_MAX_HIT(ch),
 	  GET_MANA(ch), GET_MAX_MANA(ch),
-	  GET_MOVE(ch), GET_MAX_MOVE(ch));
+	  GET_STAMINA(ch), GET_MAX_STAMINA(ch));
 }
 
 ACMD(do_split)
@@ -1600,7 +1803,7 @@ ACMD(do_display)
   skip_spaces(&argument);
 
   if (!*argument) {
-    send_to_char(ch, "Usage: prompt { { H | M | V } | all | auto | none }\r\n");
+    send_to_char(ch, "Usage: prompt { { H | M | S } | all | auto | none }\r\n");
     return;
   }
 
@@ -1613,15 +1816,15 @@ ACMD(do_display)
   if (!str_cmp(argument, "on") || !str_cmp(argument, "all")) {
     SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPHP);
     SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
-    SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+    SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
   } else if (!str_cmp(argument, "off") || !str_cmp(argument, "none")) {
     REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPHP);
     REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
-    REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+    REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
   } else {
     REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPHP);
     REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
-    REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+    REMOVE_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
 
     for (i = 0; i < strlen(argument); i++) {
       switch (LOWER(argument[i])) {
@@ -1631,11 +1834,12 @@ ACMD(do_display)
       case 'm':
         SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMANA);
 	break;
+      case 's':
       case 'v':
-        SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPMOVE);
+        SET_BIT_AR(PRF_FLAGS(ch), PRF_DISPSTAMINA);
 	break;
       default:
-	send_to_char(ch, "Usage: prompt { { H | M | V } | all | auto | none }\r\n");
+	send_to_char(ch, "Usage: prompt { { H | M | S } | all | auto | none }\r\n");
 	return;
       }
     }

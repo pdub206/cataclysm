@@ -13,6 +13,7 @@
 #include "comm.h"
 #include "spells.h"
 #include "class.h"
+#include "species.h"
 #include "db.h"
 #include "shop.h"
 #include "genolc.h"
@@ -30,7 +31,7 @@
 
 /* local functions */
 static void medit_setup_new(struct descriptor_data *d);
-static void init_mobile(struct char_data *mob);
+void init_mobile(struct char_data *mob);
 static void medit_save_to_disk(zone_vnum zone_num);
 static void medit_disp_positions(struct descriptor_data *d);
 static void medit_disp_sex(struct descriptor_data *d);
@@ -41,6 +42,9 @@ static void medit_disp_mob_flags(struct descriptor_data *d);
 static void medit_disp_aff_flags(struct descriptor_data *d);
 static void medit_disp_menu(struct descriptor_data *d);
 static void medit_disp_class_menu(struct descriptor_data *d);
+static void medit_disp_species_menu(struct descriptor_data *d);
+static int roll_stat_for_cap(int cap);
+static int autoroll_species_stat(struct char_data *mob, int ability);
 
 /*  utility functions */
 ACMD(do_oasis_medit)
@@ -228,15 +232,18 @@ void medit_setup_existing(struct descriptor_data *d, int rmob_num)
 }
 
 /* Ideally, this function should be in db.c, but I'll put it here for portability. */
-static void init_mobile(struct char_data *mob)
+void init_mobile(struct char_data *mob)
 {
   int i;
   clear_char(mob);
 
   GET_HIT(mob) = GET_MANA(mob) = 1;
-  GET_MAX_MANA(mob) = GET_MAX_MOVE(mob) = 100;
+  GET_MAX_MANA(mob) = GET_MAX_STAMINA(mob) = 100;
   GET_WEIGHT(mob) = 200;
   GET_HEIGHT(mob) = 198;
+  mob->player.time.birth = time(0);
+  mob->player.roleplay_age = MIN_CHAR_AGE;
+  mob->player.roleplay_age_year = time_info.year;
 
   /* Only assign defaults if the individual stat is unset (zero) */
   if (!mob->real_abils.str)   mob->real_abils.str   = 11;
@@ -419,19 +426,20 @@ static void medit_disp_menu(struct descriptor_data *d)
 {
   struct char_data *mob;
   char flags[MAX_STRING_LENGTH], flag2[MAX_STRING_LENGTH];
-  const char *background, *classname;
+  const char *classname, *speciesname;
 
   mob = OLC_MOB(d);
   get_char_colors(d->character);
   clear_screen(d);
-  background = GET_BACKGROUND(mob) ? GET_BACKGROUND(mob) : "<None>\r\n";
   classname = HAS_VALID_CLASS(mob) ? pc_class_types[GET_CLASS(mob)] : "Unassigned";
+  speciesname = HAS_VALID_SPECIES(mob) ? species_types[GET_SPECIES(mob)] : "Unassigned";
 
   write_to_output(d,
     "-- Mob Number:  [%s%d%s]\r\n"
     "%s1%s) Name: %s%s\r\n"
     "%s2%s) Keywords: %s%s\r\n"
     "%s3%s) Sex: %s%-7.7s%s\r\n"
+    "%sG%s) Age: %s%d%s\r\n"
     "%s4%s) S-Desc: %s%s\r\n"
     "%s5%s) L-Desc:-\r\n%s%s\r\n"
     "%s6%s) D-Desc:-\r\n%s%s\r\n",
@@ -440,6 +448,7 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  grn, nrm, yel, GET_NAME(mob),
 	  grn, nrm, yel, GET_KEYWORDS(mob),
 	  grn, nrm, yel, genders[(int)GET_SEX(mob)], nrm,
+	  grn, nrm, yel, GET_ROLEPLAY_AGE(mob), nrm,
 	  grn, nrm, yel, GET_SDESC(mob),
 	  grn, nrm, yel, GET_LDESC(mob),
 	  grn, nrm, yel, GET_DDESC(mob)
@@ -452,12 +461,13 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  "%s8%s) Default   : %s%s\r\n"
 	  "%s9%s) Attack    : %s%s\r\n"
     "%sD%s) Class     : %s%s\r\n"
+    "%sE%s) Species   : %s%s\r\n"
 	  "%sK%s) Skinning Menu...\r\n"
     "%s0%s) Stats Menu...\r\n"
 	  "%s-%s) Skills Menu...\r\n"
 	  "%sA%s) NPC Flags : %s%s\r\n"
 	  "%sB%s) AFF Flags : %s%s\r\n"
-    "%sC%s) Background:-\r\n%s%s\r\n"
+    "%sC%s) Background...\r\n"
 	  "%sS%s) Script    : %s%s\r\n"
 	  "%sW%s) Copy mob\r\n"
 	  "%sX%s) Delete mob\r\n"
@@ -468,12 +478,13 @@ static void medit_disp_menu(struct descriptor_data *d)
 	  grn, nrm, yel, position_types[(int)GET_DEFAULT_POS(mob)],
 	  grn, nrm, yel, attack_hit_text[(int)GET_ATTACK(mob)].singular,
     grn, nrm, yel, classname,
+    grn, nrm, yel, speciesname,
 	  grn, nrm,
 	  grn, nrm,
 	  grn, nrm,
 	  grn, nrm, cyn, flags,
 	  grn, nrm, cyn, flag2,
-          grn, nrm, yel, background,
+	  grn, nrm,
 	  grn, nrm, cyn, OLC_SCRIPT(d) ?"Set.":"Not Set.",
           grn, nrm,
 	  grn, nrm,
@@ -523,6 +534,46 @@ static void medit_disp_class_menu(struct descriptor_data *d)
   OLC_MODE(d) = MEDIT_CLASS_MENU;
 }
 
+static void medit_disp_species_menu(struct descriptor_data *d)
+{
+  struct char_data *mob = OLC_MOB(d);
+  const char *current = HAS_VALID_SPECIES(mob) ? species_types[GET_SPECIES(mob)] : "Unassigned";
+
+  get_char_colors(d->character);
+  clear_screen(d);
+
+  write_to_output(d,
+    "-- Mob Number:  %s[%s%d%s]%s\r\n"
+    "Species selection for %s%s%s\r\n\r\n",
+    cyn, yel, OLC_NUM(d), cyn, nrm,
+    yel, GET_SDESC(mob), nrm);
+
+  for (int i = 0; i < NUM_SPECIES; i++) {
+    bool selected = HAS_VALID_SPECIES(mob) && (GET_SPECIES(mob) == i);
+    write_to_output(d, "%s%2d%s) %s%-12s%s%s\r\n",
+                    cyn, i + 1, nrm,
+                    selected ? grn : yel,
+                    species_types[i],
+                    nrm,
+                    selected ? " (current)" : "");
+  }
+
+  write_to_output(d, "%s%2d%s) %sUnassigned%s%s\r\n",
+                  cyn, NUM_SPECIES + 1, nrm,
+                  !HAS_VALID_SPECIES(mob) ? grn : yel,
+                  nrm,
+                  !HAS_VALID_SPECIES(mob) ? " (current)" : "");
+
+  write_to_output(d,
+    "\r\nCurrent choice: %s%s%s\r\n"
+    "%s0%s) Return to main menu\r\n"
+    "Enter choice : ",
+    cyn, current, nrm,
+    cyn, nrm);
+
+  OLC_MODE(d) = MEDIT_SPECIES_MENU;
+}
+
 /* Display main menu. */
 static void medit_disp_stats_menu(struct descriptor_data *d)
 {
@@ -534,32 +585,28 @@ static void medit_disp_stats_menu(struct descriptor_data *d)
   clear_screen(d);
 
   /* Color codes have to be used here, for count_color_codes to work */
-  sprintf(buf, "(range \ty%d\tn to \ty%d\tn)", GET_HIT(mob) + GET_MOVE(mob),
-          (GET_HIT(mob) * GET_MANA(mob)) + GET_MOVE(mob));
+  sprintf(buf, "(range \ty%d\tn to \ty%d\tn)", GET_HIT(mob) + GET_STAMINA(mob),
+          (GET_HIT(mob) * GET_MANA(mob)) + GET_STAMINA(mob));
 
   /* Top section - standard stats */
   write_to_output(d,
   "-- Mob Number:  %s[%s%d%s]%s\r\n"
-  "(%s1%s) Level:       %s[%s%4d%s]%s\r\n"
-  "(%s2%s) %sAuto Set Stats (based on level)%s\r\n\r\n"
+  "(%s1%s) %sAuto Set Stats (species range)%s\r\n\r\n"
   "Hit Points  (xdy+z):\r\n"
-  "(%s3%s) HP NumDice:  %s[%s%5d%s]%s\r\n"
-  "(%s4%s) HP SizeDice: %s[%s%5d%s]%s\r\n"
-  "(%s5%s) HP Addition: %s[%s%5d%s]%s\r\n"
-  "(%s8%s) Alignment:   %s[%s%5d%s]%s\r\n\r\n",
+  "(%s2%s) HP NumDice:  %s[%s%5d%s]%s\r\n"
+  "(%s3%s) HP SizeDice: %s[%s%5d%s]%s\r\n"
+  "(%s4%s) HP Addition: %s[%s%5d%s]%s\r\n\r\n",
       cyn, yel, OLC_NUM(d), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_LEVEL(mob), cyn, nrm,
       cyn, nrm, cyn, nrm,
       cyn, nrm, cyn, yel, GET_HIT(mob), cyn, nrm,
       cyn, nrm, cyn, yel, GET_MANA(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_MOVE(mob), cyn, nrm,
-      cyn, nrm, cyn, yel, GET_ALIGNMENT(mob), cyn, nrm
+      cyn, nrm, cyn, yel, GET_STAMINA(mob), cyn, nrm
       );
 
   if (CONFIG_MEDIT_ADVANCED) {
     /* Bottom section - non-standard stats, togglable in cedit */
     write_to_output(d,
-    "%sAttributes                 Saving Throws\r\n"
+    "%sAttributes                 Saving Throw bonus\r\n"
     "(%sF%s) Str: %s[%s%3d%s]%s             (%sR%s) Save STR  %s[%s%3d%s]%s\r\n"
     "(%sG%s) Dex: %s[%s%3d%s]%s             (%sS%s) Save DEX  %s[%s%3d%s]%s\r\n"
     "(%sH%s) Con: %s[%s%3d%s]%s             (%sT%s) Save CON  %s[%s%3d%s]%s\r\n"
@@ -722,6 +769,11 @@ void medit_parse(struct descriptor_data *d, char *arg)
       OLC_MODE(d) = MEDIT_SEX;
       medit_disp_sex(d);
       return;
+    case 'g':
+    case 'G':
+      OLC_MODE(d) = MEDIT_AGE;
+      write_to_output(d, "Enter age (%d-%d): ", MIN_CHAR_AGE, MAX_CHAR_AGE);
+      return;
     case '4':
       OLC_MODE(d) = MEDIT_S_DESC;
       i--;
@@ -756,6 +808,10 @@ void medit_parse(struct descriptor_data *d, char *arg)
     case 'd':
     case 'D':
       medit_disp_class_menu(d);
+      return;
+    case 'e':
+    case 'E':
+      medit_disp_species_menu(d);
       return;
     case '0':
       OLC_MODE(d) = MEDIT_STATS_MENU;
@@ -914,29 +970,21 @@ void medit_parse(struct descriptor_data *d, char *arg)
     case 'Q':
       medit_disp_menu(d);
       return;
-    case '1':  /* Edit level */
-      OLC_MODE(d) = MEDIT_LEVEL;
-      i++;
-      break;
-    case '2':  /* Autoroll stats */
+    case '1':  /* Autoroll stats */
       medit_autoroll_stats(d);
       medit_disp_stats_menu(d);
       OLC_VAL(d) = TRUE;
       return;
-    case '3':
+    case '2':
       OLC_MODE(d) = MEDIT_NUM_HP_DICE;
       i++;
       break;
-    case '4':
+    case '3':
       OLC_MODE(d) = MEDIT_SIZE_HP_DICE;
       i++;
       break;
-    case '5':
+    case '4':
       OLC_MODE(d) = MEDIT_ADD_HP;
-      i++;
-      break;
-    case '8':
-      OLC_MODE(d) = MEDIT_ALIGNMENT;
       i++;
       break;
     case 'f':
@@ -1165,6 +1213,30 @@ void medit_parse(struct descriptor_data *d, char *arg)
     medit_disp_menu(d);
     return;
 
+  case MEDIT_SPECIES_MENU:
+    i = atoi(arg);
+    if (i == 0) {
+      medit_disp_menu(d);
+      return;
+    }
+    if (i == NUM_SPECIES + 1) {
+      GET_SPECIES(OLC_MOB(d)) = SPECIES_UNDEFINED;
+      OLC_VAL(d) = TRUE;
+      write_to_output(d, "Species cleared.\r\n");
+      medit_disp_menu(d);
+      return;
+    }
+    if (i < 1 || i > NUM_SPECIES + 1) {
+      write_to_output(d, "Invalid choice!\r\n");
+      medit_disp_species_menu(d);
+      return;
+    }
+    GET_SPECIES(OLC_MOB(d)) = i - 1;
+    OLC_VAL(d) = TRUE;
+    write_to_output(d, "Species set to %s.\r\n", species_types[GET_SPECIES(OLC_MOB(d))]);
+    medit_disp_menu(d);
+    return;
+
   case OLC_SCRIPT_EDIT:
     if (dg_script_edit_parse(d, arg)) return;
     break;
@@ -1246,6 +1318,19 @@ void medit_parse(struct descriptor_data *d, char *arg)
     GET_SEX(OLC_MOB(d)) = LIMIT(i - 1, 0, NUM_GENDERS - 1);
     break;
 
+  case MEDIT_AGE:
+    if (i < MIN_CHAR_AGE || i > MAX_CHAR_AGE) {
+      write_to_output(d, "Age must be between %d and %d.\r\n",
+                      MIN_CHAR_AGE, MAX_CHAR_AGE);
+      write_to_output(d, "Enter age (%d-%d): ", MIN_CHAR_AGE, MAX_CHAR_AGE);
+      return;
+    }
+    GET_ROLEPLAY_AGE(OLC_MOB(d)) = i;
+    GET_ROLEPLAY_AGE_YEAR(OLC_MOB(d)) = time_info.year;
+    OLC_VAL(d) = TRUE;
+    medit_disp_menu(d);
+    return;
+
   case MEDIT_NUM_HP_DICE:
     GET_HIT(OLC_MOB(d)) = LIMIT(i, 0, 30);
     OLC_VAL(d) = TRUE;
@@ -1259,7 +1344,7 @@ void medit_parse(struct descriptor_data *d, char *arg)
     return;
 
   case MEDIT_ADD_HP:
-    GET_MOVE(OLC_MOB(d)) = LIMIT(i, 0, 30000);
+    GET_STAMINA(OLC_MOB(d)) = LIMIT(i, 0, 30000);
     OLC_VAL(d) = TRUE;
     medit_disp_stats_menu(d);
     return;
@@ -1413,25 +1498,83 @@ void medit_string_cleanup(struct descriptor_data *d, int terminator)
   }
 }
 
+static int roll_stat_for_cap(int cap)
+{
+  int total = 0;
+  int dice_d4 = 0;
+  int remainder = 0;
+
+  if (cap <= 0)
+    return 0;
+
+  dice_d4 = cap / 4;
+  remainder = cap % 4;
+
+  if (dice_d4 > 0)
+    total += dice(dice_d4, 4);
+  if (remainder > 0)
+    total += dice(1, remainder);
+
+  return total;
+}
+
+static int autoroll_species_stat(struct char_data *mob, int ability)
+{
+  int min = 0;
+  int cap = 0;
+  int mod = 0;
+  int roll_cap;
+  int total;
+
+  if (HAS_VALID_SPECIES(mob)) {
+    int species = GET_SPECIES(mob);
+    int species_min = species_ability_min(species, ability);
+    int species_cap = species_ability_cap(species, ability);
+
+    if (species_min > 0)
+      min = species_min;
+    if (species_cap > 0)
+      cap = species_cap;
+
+    mod = species_ability_mod(species, ability);
+  }
+
+  if (cap > 0 && min > cap)
+    min = cap;
+
+  roll_cap = (cap > 0) ? (cap - mod) : (18 - mod);
+  if (roll_cap < 1)
+    roll_cap = 1;
+
+  total = roll_stat_for_cap(roll_cap) + mod;
+
+  if (cap > 0 && total > cap)
+    total = cap;
+  if (min > 0 && total < min)
+    total = min;
+
+  return total;
+}
+
 void medit_autoroll_stats(struct descriptor_data *d)
 {
-  int mob_lev;
+  int mob_lev = GET_LEVEL(OLC_MOB(d));
 
-  mob_lev = 1;
-  GET_LEVEL(OLC_MOB(d)) = 1;
+  if (mob_lev < 1)
+    mob_lev = 1;
 
-  GET_MOVE(OLC_MOB(d))    = mob_lev * 10;        /* hit point bonus (mobs don't use movement points) */
+  GET_STAMINA(OLC_MOB(d))    = mob_lev * 10;        /* hit point bonus (mobs don't use stamina points) */
   GET_HIT(OLC_MOB(d))     = mob_lev / 5;         /* number of hitpoint dice */
   GET_MANA(OLC_MOB(d))    = mob_lev / 5;         /* size of hitpoint dice   */
 
   /* 'Advanced' stats are only rolled if advanced options are enabled */
   if (CONFIG_MEDIT_ADVANCED) {
-    GET_STR(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18); /* 2/3 level in range 11 to 18 */
-    GET_INT(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
-    GET_WIS(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
-    GET_DEX(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
-    GET_CON(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
-    GET_CHA(OLC_MOB(d)) = LIMIT((mob_lev * 2) / 3, 11, 18);
+    GET_STR(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_STR);
+    GET_INT(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_INT);
+    GET_WIS(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_WIS);
+    GET_DEX(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_DEX);
+    GET_CON(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_CON);
+    GET_CHA(OLC_MOB(d)) = autoroll_species_stat(OLC_MOB(d), ABIL_CHA);
 
     /* New ability-based saving throws: all default to 1/4 of mob level */
     GET_SAVE(OLC_MOB(d), ABIL_STR) = mob_lev / 4;

@@ -25,7 +25,7 @@
 
 #define LOAD_HIT	0
 #define LOAD_MANA	1
-#define LOAD_MOVE	2
+#define LOAD_STAMINA	2
 #define LOAD_STRENGTH	3
 
 #define PT_PNAME(i) (player_table[(i)].name)
@@ -222,6 +222,20 @@ char *get_name_by_id(long id)
   return (NULL);
 }
 
+static void update_roleplay_age(struct char_data *ch)
+{
+  if (GET_ROLEPLAY_AGE(ch) == 0)
+    GET_ROLEPLAY_AGE(ch) = MIN_CHAR_AGE;
+
+  if (GET_ROLEPLAY_AGE_YEAR(ch) == 0)
+    GET_ROLEPLAY_AGE_YEAR(ch) = time_info.year;
+
+  if (time_info.year > GET_ROLEPLAY_AGE_YEAR(ch)) {
+    GET_ROLEPLAY_AGE(ch) += (time_info.year - GET_ROLEPLAY_AGE_YEAR(ch));
+    GET_ROLEPLAY_AGE_YEAR(ch) = time_info.year;
+  }
+}
+
 /* Stuff related to the save/load player system. */
 /* New load_char reads ASCII Player Files. Load a char, TRUE if loaded, FALSE
  * if not. */
@@ -232,6 +246,7 @@ int load_char(const char *name, struct char_data *ch)
   char filename[40];
   char buf[128], buf2[128], line[MAX_INPUT_LENGTH + 1], tag[6];
   char f1[128], f2[128], f3[128], f4[128];
+  bool loaded_stamina = FALSE;
   trig_data *t = NULL;
   trig_rnum t_rnum = NOTHING;
 
@@ -255,10 +270,12 @@ int load_char(const char *name, struct char_data *ch)
         ch->player_specials->saved.skills[i] = 0;
     GET_SEX(ch) = PFDEF_SEX;
     GET_CLASS(ch) = PFDEF_CLASS;
+    GET_SPECIES(ch) = PFDEF_SPECIES;
     GET_LEVEL(ch) = PFDEF_LEVEL;
     GET_HEIGHT(ch) = PFDEF_HEIGHT;
     GET_WEIGHT(ch) = PFDEF_WEIGHT;
-    GET_ALIGNMENT(ch) = PFDEF_ALIGNMENT;
+    GET_ROLEPLAY_AGE(ch) = 0;
+    GET_ROLEPLAY_AGE_YEAR(ch) = 0;
     for (i = 0; i < NUM_OF_SAVING_THROWS; i++)
       GET_SAVE(ch, i) = PFDEF_SAVETHROW;
     GET_LOADROOM(ch) = PFDEF_LOADROOM;
@@ -283,8 +300,8 @@ int load_char(const char *name, struct char_data *ch)
     GET_MAX_HIT(ch) = PFDEF_MAXHIT;
     GET_MANA(ch) = PFDEF_MANA;
     GET_MAX_MANA(ch) = PFDEF_MAXMANA;
-    GET_MOVE(ch) = PFDEF_MOVE;
-    GET_MAX_MOVE(ch) = PFDEF_MAXMOVE;
+    GET_STAMINA(ch) = PFDEF_STAMINA;
+    GET_MAX_STAMINA(ch) = PFDEF_MAXSTAMINA;
     GET_OLC_ZONE(ch) = PFDEF_OLC;
     GET_PAGE_LENGTH(ch) = PFDEF_PAGELENGTH;
     GET_SCREEN_WIDTH(ch) = PFDEF_SCREENWIDTH;
@@ -297,6 +314,9 @@ int load_char(const char *name, struct char_data *ch)
     GET_NUM_QUESTS(ch) = PFDEF_COMPQUESTS;
     GET_LAST_MOTD(ch) = PFDEF_LASTMOTD;
     GET_LAST_NEWS(ch) = PFDEF_LASTNEWS;
+    GET_REROLL_USED(ch) = PFDEF_REROLL_USED;
+    GET_REROLL_EXPIRES(ch) = PFDEF_REROLL_EXPIRES;
+    memset(&GET_REROLL_OLD_ABILS(ch), 0, sizeof(struct char_ability_data));
     if (GET_ACCOUNT(ch)) {
       free(GET_ACCOUNT(ch));
       GET_ACCOUNT(ch) = NULL;
@@ -315,6 +335,8 @@ int load_char(const char *name, struct char_data *ch)
       switch (*tag) {
       case 'A':
         if (!strcmp(tag, "Ac  "))	GET_AC(ch)		= atoi(line);
+	else if (!strcmp(tag, "AgYr"))	GET_ROLEPLAY_AGE_YEAR(ch) = atoi(line);
+	else if (!strcmp(tag, "Age "))	GET_ROLEPLAY_AGE(ch)	= LIMIT(atoi(line), MIN_CHAR_AGE, MAX_CHAR_AGE);
 	else if (!strcmp(tag, "Acct")) {
           if (GET_ACCOUNT(ch))
             free(GET_ACCOUNT(ch));
@@ -338,7 +360,6 @@ int load_char(const char *name, struct char_data *ch)
           AFF_FLAGS(ch)[0] = asciiflag_conv(line);
 	}
 	if (!strcmp(tag, "Affs")) 	load_affects(fl, ch);
-        else if (!strcmp(tag, "Alin"))	GET_ALIGNMENT(ch)	= atoi(line);
 	else if (!strcmp(tag, "Alis"))	read_aliases_ascii(fl, ch, atoi(line));
 	break;
 
@@ -396,7 +417,7 @@ int load_char(const char *name, struct char_data *ch)
 
       case 'M':
 	     if (!strcmp(tag, "Mana"))	load_HMVS(ch, line, LOAD_MANA);
-	else if (!strcmp(tag, "Move"))	load_HMVS(ch, line, LOAD_MOVE);
+	else if (!strcmp(tag, "Move") && !loaded_stamina)	load_HMVS(ch, line, LOAD_STAMINA);
 	break;
 
       case 'N':
@@ -434,10 +455,34 @@ int load_char(const char *name, struct char_data *ch)
 
       case 'R':
 	     if (!strcmp(tag, "Room"))	GET_LOADROOM(ch)	= atoi(line);
+        else if (!strcmp(tag, "RrUs")) GET_REROLL_USED(ch)   = atoi(line);
+        else if (!strcmp(tag, "RrTm")) GET_REROLL_EXPIRES(ch) = (time_t)atol(line);
+        else if (!strcmp(tag, "RrAb")) {
+          int rstr, rint, rwis, rdex, rcon, rcha;
+
+          if (sscanf(line, "%d %d %d %d %d %d", &rstr, &rint, &rwis, &rdex, &rcon, &rcha) == 6) {
+            GET_REROLL_OLD_ABILS(ch).str = rstr;
+            GET_REROLL_OLD_ABILS(ch).intel = rint;
+            GET_REROLL_OLD_ABILS(ch).wis = rwis;
+            GET_REROLL_OLD_ABILS(ch).dex = rdex;
+            GET_REROLL_OLD_ABILS(ch).con = rcon;
+            GET_REROLL_OLD_ABILS(ch).cha = rcha;
+          }
+        }
 	break;
 
       case 'S':
-	     if (!strcmp(tag, "Sex "))	GET_SEX(ch)		= atoi(line);
+	     if (!strcmp(tag, "Spec")) {
+        int val = atoi(line);
+        if (val < SPECIES_UNDEFINED || val >= NUM_SPECIES)
+          val = SPECIES_UNDEFINED;
+        GET_SPECIES(ch) = val;
+      }
+  else if (!strcmp(tag, "Stam")) {
+    load_HMVS(ch, line, LOAD_STAMINA);
+    loaded_stamina = TRUE;
+  }
+	else if (!strcmp(tag, "Sex "))	GET_SEX(ch)		= atoi(line);
   else if (!strcmp(tag, "Sdsc")) {
     /* Clear any existing sdesc to avoid leaks */
     if (GET_SHORT_DESC(ch))
@@ -503,7 +548,13 @@ int load_char(const char *name, struct char_data *ch)
     }
   }
 
+  update_roleplay_age(ch);
+  ch->player.time.birth = time(0) - get_total_played_seconds(ch);
   affect_total(ch);
+  MOUNT(ch) = NULL;
+  RIDDEN_BY(ch) = NULL;
+  HITCHED_TO(ch) = NULL;
+  REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_MOUNTED);
 
   /* initialization for imms */
   if (GET_LEVEL(ch) >= LVL_IMMORT) {
@@ -551,6 +602,9 @@ void save_char(struct char_data * ch)
       ch->player.time.logon = time(0);
     }
   }
+
+  update_roleplay_age(ch);
+  ch->player.time.birth = time(0) - get_total_played_seconds(ch);
 
   if (!get_filename(filename, sizeof(filename), PLR_FILE, GET_NAME(ch)))
     return;
@@ -614,10 +668,13 @@ void save_char(struct char_data * ch)
   if (POOFOUT(ch))				fprintf(fl, "PfOt: %s\n", POOFOUT(ch));
   if (GET_SEX(ch)	     != PFDEF_SEX)	fprintf(fl, "Sex : %d\n", GET_SEX(ch));
   if (GET_CLASS(ch)	   != PFDEF_CLASS)	fprintf(fl, "Clas: %d\n", GET_CLASS(ch));
+  if (GET_SPECIES(ch)  != PFDEF_SPECIES)	fprintf(fl, "Spec: %d\n", GET_SPECIES(ch));
   if (GET_LEVEL(ch)	   != PFDEF_LEVEL)	fprintf(fl, "Levl: %d\n", GET_LEVEL(ch));
 
   fprintf(fl, "Id  : %ld\n", GET_IDNUM(ch));
   fprintf(fl, "Brth: %ld\n", (long)ch->player.time.birth);
+  fprintf(fl, "Age : %d\n", GET_ROLEPLAY_AGE(ch));
+  fprintf(fl, "AgYr: %d\n", GET_ROLEPLAY_AGE_YEAR(ch));
   fprintf(fl, "Plyd: %d\n",  ch->player.time.played);
   fprintf(fl, "Last: %ld\n", (long)ch->player.time.logon);
 
@@ -625,11 +682,22 @@ void save_char(struct char_data * ch)
     fprintf(fl, "Lmot: %d\n", (int)GET_LAST_MOTD(ch));
   if (GET_LAST_NEWS(ch) != PFDEF_LASTNEWS)
     fprintf(fl, "Lnew: %d\n", (int)GET_LAST_NEWS(ch));
+  if (GET_REROLL_USED(ch) != PFDEF_REROLL_USED)
+    fprintf(fl, "RrUs: %d\n", (int)GET_REROLL_USED(ch));
+  if (GET_REROLL_EXPIRES(ch) != PFDEF_REROLL_EXPIRES) {
+    fprintf(fl, "RrTm: %ld\n", (long)GET_REROLL_EXPIRES(ch));
+    fprintf(fl, "RrAb: %d %d %d %d %d %d\n",
+            GET_REROLL_OLD_ABILS(ch).str,
+            GET_REROLL_OLD_ABILS(ch).intel,
+            GET_REROLL_OLD_ABILS(ch).wis,
+            GET_REROLL_OLD_ABILS(ch).dex,
+            GET_REROLL_OLD_ABILS(ch).con,
+            GET_REROLL_OLD_ABILS(ch).cha);
+  }
 
   if (GET_HOST(ch))				fprintf(fl, "Host: %s\n", GET_HOST(ch));
   if (GET_HEIGHT(ch)	   != PFDEF_HEIGHT)	fprintf(fl, "Hite: %d\n", GET_HEIGHT(ch));
   if (GET_WEIGHT(ch)	   != PFDEF_WEIGHT)	fprintf(fl, "Wate: %d\n", GET_WEIGHT(ch));
-  if (GET_ALIGNMENT(ch)  != PFDEF_ALIGNMENT)	fprintf(fl, "Alin: %d\n", GET_ALIGNMENT(ch));
 
 
   sprintascii(bits,  PLR_FLAGS(ch)[0]);
@@ -669,7 +737,7 @@ void save_char(struct char_data * ch)
 
   if (GET_HIT(ch)	   != PFDEF_HIT  || GET_MAX_HIT(ch)  != PFDEF_MAXHIT)  fprintf(fl, "Hit : %d/%d\n", GET_HIT(ch),  GET_MAX_HIT(ch));
   if (GET_MANA(ch)	   != PFDEF_MANA || GET_MAX_MANA(ch) != PFDEF_MAXMANA) fprintf(fl, "Mana: %d/%d\n", GET_MANA(ch), GET_MAX_MANA(ch));
-  if (GET_MOVE(ch)	   != PFDEF_MOVE || GET_MAX_MOVE(ch) != PFDEF_MAXMOVE) fprintf(fl, "Move: %d/%d\n", GET_MOVE(ch), GET_MAX_MOVE(ch));
+  if (GET_STAMINA(ch)	   != PFDEF_STAMINA || GET_MAX_STAMINA(ch) != PFDEF_MAXSTAMINA) fprintf(fl, "Stam: %d/%d\n", GET_STAMINA(ch), GET_MAX_STAMINA(ch));
 
   if (GET_STR(ch)	   != PFDEF_STR)  fprintf(fl, "Str : %d\n", GET_STR(ch));
   if (GET_INT(ch)	   != PFDEF_INT)	fprintf(fl, "Int : %d\n", GET_INT(ch));
@@ -946,9 +1014,9 @@ static void load_HMVS(struct char_data *ch, const char *line, int mode)
     GET_MAX_MANA(ch) = num2;
     break;
 
-  case LOAD_MOVE:
-    GET_MOVE(ch) = num;
-    GET_MAX_MOVE(ch) = num2;
+  case LOAD_STAMINA:
+    GET_STAMINA(ch) = num;
+    GET_MAX_STAMINA(ch) = num2;
     break;
 
   case LOAD_STRENGTH:

@@ -315,27 +315,35 @@ Situational: cover (+2/+5), spells (Shield, Haste, etc.)
 
 See Also: SCORE
 #0
-ACAUDIT ARMOR-AUDIT AUDIT-ARMOR IMMORTAL
+AUDIT ARMOR AUDIT-ARMOR AUDIT AC AUDIT-AC ACAUDIT AUDIT MELEE AUDIT-MELEE IMMORTAL
 
-   Summary: Imm-only tool that scans all ITEM\_ARMOR prototypes and reports
-per-piece fields against slot caps. Use this to catch outliers and quickly
-rebalance items to the Light/Medium/Heavy targets.
+   Summary: Imm-only tool that scans armor and weapons for invalid config.
 
 Usage:
-acaudit
+audit armor|melee
 
-What it does:
+What auditing armor does:
 
 Scans prototypes for armor slots (head, body, legs, arms, hands, feet) and
 prints one line per item:
-\[#VNUM] <name> slot=<slot>  ac=\<piece\_ac>  bulk=<bulk>  mag=+<magic>  flags=<mask>
+[#VNUM] <name> sl=<slot> ac=<piece_ac> b=<bulk> m=<magic> sd=<0/1> str=<req>
 
 Markers:
 
-OVER  : value exceeds the slot’s hard cap (e.g., piece AC > slot max, or
-magic > slot max)
-WARN  : value outside 0..3 (invalid for piece AC, bulk, or magic)
-(STEALTHDISADV): flag is set (the piece imposes Stealth Disadvantage)
+R!    : value exceeds the slot’s hard cap (e.g., piece AC > slot max, or
+        magic > slot max)
+Y?    : value outside 0..3 (invalid for piece AC, bulk, or magic)
+sd=1  : piece imposes Stealth Disadvantage
+
+What auditing melee weapons does:
+
+Scans melee weapon prototypes and reports attack type, damage (1d4/1d6/1d8/
+1d10/1d12), and weight.
+
+Melee markers:
+
+R!    : attack type is missing/invalid or damage is not 1d4/1d6/1d8/1d10/1d12
+Y?    : weight is 0 or less
 
 Notes:
 
@@ -356,7 +364,7 @@ Medium : AC \~14–18
 Heavy  : AC \~16–20
 
 See Also: ARMOR PIECES, BULK, SHIELDS, MAGIC CAPS, SCORE, OEDIT ARMOR
-#32
+#2
 ACRONYMS TERMINOLOGY VOCABULARY
 
 Here are some common terms used in building, and TBA zone:
@@ -472,7 +480,7 @@ set one of these:
 P)  Perm Affects: @cNOBITS@n
 1)  BLIND      DO NOT USE.
 2)  INVIS      The wearer becomes invisible.
-3)  DET-ALIGN  The wearer detects alignments.
+3)  RESERVED   DO NOT USE.
 4)  DET-INVIS  The wearer sees invisible objects and players.
 5)  DET-MAGIC  The wearer sees a magic flag on magical objects.
 6)  SENSE-LIFE The wearer sees hidden mobs/players.
@@ -482,15 +490,15 @@ P)  Perm Affects: @cNOBITS@n
 10) CURSE      DO NOT USE.
 11) INFRA      The wearer sees in the dark.
 12) POISON     The wearer is poisoned.
-13) PROT-EVIL  The wearer is protected from evil.
-14) PROT-GOOD  The wearer is protected from good.
+13) RESERVED   DO NOT USE.
+14) RESERVED   DO NOT USE.
 15) SLEEP      DO NOT USE.
 16) NO_TRACK   DO NOT USE.
 17) FLYING     The wearer can travel through room sector type IN FLIGHT.
 18) SCUBA      The wearer can travel through room sector type UNDERWATER.
 19) SNEAK      DO NOT USE.
 20) HIDE       DO NOT USE.
-21) UNUSED     DO NOT USE.
+21) SCAN       Actively scanning for hidden threats.
 22) CHARM      DO NOT USE.
 
 #2
@@ -570,45 +578,6 @@ I would type "all 13" to list everything in zone 13. I use this to check what
 people have done with their zone.
 
 See also: ^, RUMBLE-ALIASES
-#0
-ALIGNMENT GOOD NEUTRAL EVIL %ACTOR.ALIGN% %ALIGN% %ALIGNMENT% 
-
-   Different characters and mobs have different alignments depending upon their
-way of life. Because of this, they may be aggressive or friendly depending on 
-the mix. Some objects cannot be used by certain alignments. For mobs alignment 
-ranges from:
-
- -1000 to -350  Evil
-  -350 to  350  Neutral
-   350 to 1000  Good
-
-See also: ALIGNMENTS
-#2
-ALIGNMENTS
-
-   Many good areas stick to a defined level range, such as 10-20 or 25-30. Do 
-not try and make your new area cover the entire range of levels.  Every area
-should have its moment in the sun. Conversely, it would be nice if there were
-something really unique and challenging to do at every stage in a characters
-history. Your area might be the most successful if you can gear it for a range
-of levels that people believe is otherwise boring or neglected.
-   You should always try to match your mobiles to the area and the players you
-want to play there. For example, you should make the mobs in the area a 
-similar level to the players you want to play there since a level X warrior
-should be able to kill a level X mobile if the warrior is at full health. Also,
-the quality of objects or mobiles should be matched with their level.
-   Will your area be mostly good, neutral, or evil.  If it is mostly good or
-mostly evil, is it strongly good or evil or just weakly aligned?  In any case
-try not to make your area completely homogenous (equal). In neutral
-communities there is going to be some evil and good elements, and likewise with
-other communities. To some extent this goes along with the question about zone
-level, consider what seem to be "gaps" among the zones in the world as far as
-good or evil aligned areas for a particular level range, and try to fill those
-needs. Everyone's first tendency is to make extremists--The ultimate evil hell
-area, or the blindingly good paladin fortress. Keep in mind that there are
-many layers in between, and these are often more interesting.    
-
-See also: ALIGN
 #2
 ANIMATE-DEAD
 
@@ -930,9 +899,8 @@ Backstab is a way to sneak up on a person and attempt to place your dagger
 in his back, at exactly the point where it does most damage.  A successful
 backstab gives a damage multiplier, depending on your level:
 
-The chance of successfully backstabbing a person depends on how well you
-have practiced backstab at your guild.  You can always backstab sleeping
-people.
+The chance of successfully backstabbing a person depends on your backstab
+skill. You can always backstab sleeping people.
 
 #0
 BALANCE BALANCING
@@ -1007,7 +975,7 @@ BASH
 
 Fighters only.
 
-The success of a bash depends upon how many times you have practiced. To bash
+The success of a bash depends on your bash skill. To bash
 someone is to attempt to 'knock' that person over.  If you succeed, you will
 inflict minor damage, and cause the victim to fall on its rear.  The victim
 will be unable to issue any commands for 2 rounds of violence.  If you miss
@@ -1647,9 +1615,8 @@ Excluding the subfield () returns the value. Adding a subfield adjusts it.
 @uField@n            - @uvariable returns:@n
 
 cha/con/dex/int - Checks the stat. @RHELP TRIG-STAT@n. Subfield adjusts. 
-str/stradd/wis()  () is a subfield and allows a change to the variable.
+str/wis()        () is a subfield and allows a change to the variable.
 alias           - The list of aliases of the mob or the player name. 
-align()         - The actor's alignment @RHELP ALIGN@n. Subfield adjusts.
 affect()        - Checks the actor for the affect. @RHELP AFFECT@n 
 armor           - Checks the actor's armor class.
 canbeseen       - Checks if the the mob can see the actor. @RHELP CANBESEEN@n
@@ -1677,14 +1644,15 @@ mana()          - The current mana points of the actor. Subfield adjusts.
 master          - The master of the actor (as an id), or an empty return.
 maxhitp()       - The maximum hit points of the actor. Subfield adjusts.
 maxmana()       - The maximum mana points of the actor. Subfield adjusts.
-maxmove()       - The maximum movement points of the actor. Subfield adjusts.
-move()          - The movement points of the actor. Subfield adjusts.
+maxstamina()    - The maximum stamina points of the actor. Subfield adjusts.
+stamina()       - The stamina points of the actor. Subfield adjusts.
+maxmove()       - Alias for maxstamina().
+move()          - Alias for stamina().
 name            - The actor's name (the short description for mobs).
 next_in_room    - The next mob/player in the room as a variable (id) nice to 
                   use for loops, or an empty return @RTSTAT 23@n
 pos()           - %actor.pos% returns position. Subfield modifies. Sleeping,
                   resting, sitting, fighting, standing. @RTSTAT 1399, 20997@n     
-prac()          - The actor's number of practices. Subfield adjusts.
 pref()          - Checks if actor has PRF flag enabled. @RTSTAT 1210@n
 quest           - Returns the current quest (or 0 if there's no current quest).
 questdone(#)    - Returns TRUE (1) if the quest vnum (#) has been completed. 
@@ -1697,8 +1665,6 @@ saving_breath() - The actors saving throw for breath weapons. Subfield adjusts.
 saving_spell()  - The actors saving throw for spells. Subfield adjusts.
 sex             - The actor's sex, as a string: MALE, FEMALE, or NEUTRAL.
 skill()         - The percentage of learnedness in the skill subfield.
-skillset("" #)  - Set the actors practiced level any skill or spell (1-100).
-                  %actor.skillset("magic missile" 95)%.
 thirst()        - The actor's thirst. Subfield sets, -1 is off.
 title()         - The actor's title. Subfield sets. Not used for mobs.
 varexists()     - Returns 1 if global variable in subfield exists, 0 if not.
@@ -1749,7 +1715,7 @@ Checking load info for the beastly fido...
   [ 3012] Main Street (15 Max.)
 
 > checkload t 100
-Checking load info for the object trigger 'Portal to Midgaard - 100':
+Checking load info for the object trigger 'Portal to the Capital - 100':
 (obj) [  100] the portal
 
 See also:  LINKS, RLIST, OLIST, MLIST, SLIST
@@ -1845,11 +1811,11 @@ Clerics have an ancient belief in not carrying sharp weapons.  Hence, they can
 only wield bludgeoning weapons.  This class gives you the wisdom of peace,
 blessing and healing, though it is possible to learn more violent spells.
 
-You can improve your spells by using the practice command.
+You can improve your spells by using them.
 
 See @RHELP SPELLS@n for a list of spells available.
 
-See also: PRACTICE, SPELLS
+See also: SPELLS
 #0
 CLSOLC
 
@@ -2366,18 +2332,6 @@ detach obj sword 1300   - You guessed it - same as above.
 detach sword all        - detach all triggers from the sword.
 
 See also: ATTACH, TRIG-DETACH, TRIG-ATTACH, OLC, TRIGEDIT, TSTAT, STAT, ROOMFLAGS
-#2
-DETECT-ALIGNMENT
-
-Usage       : cast 'detect alignment'
-Accumulative: Yes (Duration)
-Duration    : 12 hours + level
-Level       : Cleric level 4.
-
-Allows the caster to detect the alignment of those around them.
-Evil will show as a red aura, good in a blue aura.
-
-See also: "DETECT INVISIBILITY"
 #0
 DETECT-INVISIBILITY
 
@@ -2530,48 +2484,16 @@ when done type /fi to format with indent.
 
 See also: TEXT-EDITOR
 
-#2
-DISPEL-EVIL
-
-Usage       : cast 'dispel evil' <victim>
-Accumulative: -
-Duration    : Instantaneous
-Level       : Cleric level 14.
-Save        : Special
-
-This spell will only affect evil creatures.  An evil person of level
-equal or less than caster will suffer 100 damage points.
-
-If the victim is higher level than caster, the spell will inflict
-(caster_level)d4 damage points, saving throw versus half damage.
-
-See also: DISPEL-GOOD
-#0
-DISPEL-GOOD
-
-Usage       : cast 'dispel good' <victim>
-Accumulative: -
-Duration    : Instantaneous
-Level       : Cleric level 14.
-Save        : Special
-
-This spell will only affect good creatures.  A good person of level
-equal or less than caster will suffer 100 damage points.
-
-If the victim is higher level than caster, the spell will inflict
-(caster_level)d4 damage points, saving throw versus half damage.
-
-See also: DISPEL-EVIL
 #0
 DISPLAYS PROMPTS HIT-PNT-DISPLAY
 
-Usage: prompt < H | M | V | all | auto | off >
+Usage: prompt < H | M | S | all | auto | off >
 
-Modify your prompt to show your hit points, mana, and/or movement points.
+Modify your prompt to show your hit points, mana, and/or stamina points.
 
-  > prompt hv       Display hit points and movement points.
+  > prompt hs       Display hit points and stamina points.
   > prompt off      Return to no prompt.
-  > prompt all      Display hit, mana, and movement points.
+  > prompt all      Display hit, mana, and stamina points.
 
   > prompt auto     A separate toggle that will only display your selected 
                     prompt if the values drop below 30% of max.
@@ -2825,30 +2747,23 @@ of CircleMUD expect it first).
 i.e. a shot of whisky should have the keyword: whisky shot whisky
      a cup of slime mold juice keyword should be: juice cup slime juice
 
-3: SYSERR: Mob #5 both Aggressive and Aggressive_to_Alignment.
-
-   Another harmless error. If your mob is aggressive there is no need to also
-make it aggressive to certain alignments since AGGR means it will attack any
-player it can see. Choose to make it aggressive to an alignment or aggressive 
-to all.
- 
-4: SYSERR: Object # (oedit-s-desc) has out of range level #.
+3: SYSERR: Object # (oedit-s-desc) has out of range level #.
 
    A simple one. Limit spell levels to the levels available, on TBA that would 
 be 1-30.
 
-5: SYSERR: Object # (oedit-s-desc) has negative weight (-2147483644).
+4: SYSERR: Object # (oedit-s-desc) has negative weight (-2147483644).
    SYSERR: Object # (oedit-s-desc) has out of range level #2147483647.
 
    These are really annoying. This happens when you use numbers larger than 
 necessary. This will actually crash many older versions of CircleMUD. Just do
 not do it. Use realistic numbers.
 
-6: SYSERR: Object # (oedit-s-desc) uses 'UNDEFINED' spell #.
+5: SYSERR: Object # (oedit-s-desc) uses 'UNDEFINED' spell #.
 
    There is no spell zero. Either select a spell or put -1 for none. 
 
-7: SYSERR: Object # (oedit-s-desc) contains (5) more than maximum (3).
+6: SYSERR: Object # (oedit-s-desc) contains (5) more than maximum (3).
 
    When making a drink container you will set how much it initially contains 
 on creation and the max it can hold if a player were to fill it. Common sense 
@@ -2930,7 +2845,7 @@ Objects      : 42
 Triggers     : 129 
 Theme        : Its purpose, hack & slash, quest, rescue princess, kill ogre...
 Completion   : When do you expect to finish it, how is the progress going?
-Notes        : Such things as zone alignment, economy, quests, special mobs and
+Notes        : Such things as zone economy, quests, special mobs and
        objs, and anything else I should know about your zone. What 
        makes it unique?
 
@@ -2985,8 +2900,8 @@ right. Parenthesis can be used to create priority.
 |    |                       | (if actor age is not equal to 1)
 | <  | less than             | if %actor.dex% < 16 
 |    |                       | (if actor dexterity is less than 16)
-| >  | greater than          | if %actor.align% > 349 
-|    |                       | (if actor alignment is greater than 349)
+| >  | greater than          | if %actor.level% > 30 
+|    |                       | (if actor level is greater than 30)
 | <= | less than or equal    | if %actor.exp% <= 2 
 |    |                       | (if actor experience is less than or equal to 1)
 | >= | greater than or equal | if %actor.mana% >= 1 
@@ -4033,7 +3948,7 @@ INFORMATION
    The following commands deal with information - for more info, @RHELP KEYWORD@n 
 
 RULES POLICY                         - The rules of the game.
-SCORE AFFECTS COINS TOGGLE PRACTICE  - Info about yourself and your settings.
+SCORE AFFECTS COINS TOGGLE           - Info about yourself and your settings.
 HELP INFO NEWS MOTD IMOTD            - Info about the game, recent changes.
 WHO WHERE CONSIDER FLAGS TITLE       - Info on other players.
 TIME DATE                            - Info on time.
@@ -4534,7 +4449,7 @@ OBJECT STANDARDS:
 |Age                           |   10   |   -10   |
 |Weight                        |   50   |    1    |
 |Cost                          |  1000  |    1    |
-|Hitpoints, Mana, Movement     |   50   |   -50   |
+|Hitpoints, Mana, Stamina      |   50   |   -50   |
 |Coins                          |   Do not use.    |
 |Experience                    |   Do not use.    |
 |Armor Class Values            |   10   |   -10   |
@@ -4773,11 +4688,11 @@ MAGIC-USER WIZARD MAGE
 This is the class of powerful and violent magic, but the magic user do not
 control the nature, and can therefore not bless and such.
 
-You can improve your spells by using the practice command.
+You can improve your spells by using them.
 
 See @RHELP SPELLS@n for a list of spells available.
 
-See also: PRACTICE, SPELLS
+See also: SPELLS
 #0
 MAKEUID UID UNIQUE
 
@@ -4852,7 +4767,7 @@ MEDIT-AFF-FLAGS AFFECTIONS AFFECTS
 M) AFF Flags : @cNOBITS@n
 1)  BLIND          Mob is blind.
 2)  INVIS          Mob is invisible.
-3)  DET-ALIGN      NOT USED.
+3)  RESERVED       NOT USED.
 4)  DET-INVIS      Mob can see invisible characters and objects.
 5)  DET-MAGIC      Mob is sensitive to magical presence.
 6)  SENSE-LIFE     Mob can sense hidden life.
@@ -4863,15 +4778,15 @@ M) AFF Flags : @cNOBITS@n
 10) CURSE          Mob is cursed.
 11) INFRA          Mob can see in dark.
 12) POISON         Reserved for internal use.  Do not set.
-13) PROT-EVIL      Mob is protected from evil characters.
-14) PROT-GOOD      Mob is protected from good characters.
+13) RESERVED       NOT USED.
+14) RESERVED       NOT USED.
 15) SLEEP          Reserved for internal use.  Do not set.
 16) NO_TRACK       Mob cannot be tracked.
 17) FLY            Mob is flying.
 18) SCUBA          Mob can breathe underwater.
 19) SNEAK          Mob can move quietly without room being informed.
 20) HIDE           Mob is hidden; can only be seen with sense life.
-21) UNUSED         Unused (room for future expansion).
+21) SCAN           Actively scanning for hidden threats.
 22) CHARM          Reserved for internal use.  Do not set.
  
 See also: INVIS, MEDIT-NPC-FLAGS, DG_AFFECT, TRIG-AFFECT
@@ -4903,20 +4818,9 @@ should be one of the following numbers:
  5) bludgeon
 
 #2
-MEDIT-EXPERIENCE MEDIT-XP MEDIT-ALIGNMENT
+MEDIT-EXPERIENCE MEDIT-XP
 
-(B) Exp Points:  [    115600]  (E) Alignment: [ 1000]
-
-Alignment
-A number from -1000 to 1000 representing the mobs initial alignment.
- 
-Evil     -1000  to  -350 
-Neutral  -349   to   349 
-Good      350   to  1000
- 
-The alignment of a mobile is determined entirely by you, depending on
-the type of area you are creating. The alignment can be from -1000 
-(extremely evil) to +1000 (divinely good).
+(B) Exp Points:  [    115600]
 
    Experience is simply the number of experience points the mobile is born 
 with. This is not the exact number of experience points the player will get
@@ -5019,7 +4923,7 @@ X) Delete Mob                                      @RHELP MEDIT-DELETE@n
 Q) Quit
 Enter choice :
 #2
-MEDIT-NPC-FLAGS MEDIT-FLAGS SPEC STAYZONE AGGRESSIVE AGGR_GOOD AGGR_NEU AGGR_EVIL STAY-ZONE STAY_ZONE SCAVENGER NPCFLAGS NPC-FLAGS MOBFLAGS MOB-FLAGS SENTINEL AWARE NOCHARM MOB-NPC NPC_FLAGS HELPER
+MEDIT-NPC-FLAGS MEDIT-FLAGS SPEC STAYZONE AGGRESSIVE STAY-ZONE STAY_ZONE SCAVENGER NPCFLAGS NPC-FLAGS MOBFLAGS MOB-FLAGS SENTINEL AWARE NOCHARM MOB-NPC NPC_FLAGS HELPER
  
 NPC stands for non-player-character (mob)
  
@@ -5042,9 +4946,9 @@ L) NPC Flags : @cISNPC@n
                its hit points.  If the WIMPY bit is set in conjunction with
                any of the forms of the AGGRESSIVE bit, the mob will only
                attack mobs that are unconscious (sleeping or incapacitated).
-8) AGGR_EVIL   Mob will attack players that are evil-aligned.
-9) AGGR_GOOD   Mob will attack players that are good-aligned.
-10) AGGR_NEU   Mob will attack players that are neutrally aligned.
+8) RESERVED    Not used.
+9) RESERVED    Not used.
+10) RESERVED   Not used.
 11) MEMORY     Mob will remember players that initiate attacks on it, and will
                attack that player if it ever runs into him again.
 12) HELPER     The mob will attack any player it sees in the room that is
@@ -5332,7 +5236,7 @@ MOBILE-FORMATS MOB-FORMATS MOB-FILES
 ~ 
 <detailed description> 
 ~ 
-<mob flags> <affect flags> <alignment> <type flag>
+<mob flags> <affect flags> <reserved> <type flag>
 <level> <thaco> <armor class> <hitpoints> <damage>
 <coins> <experience points> 
 <load position> <default position> <sex> 
@@ -5382,11 +5286,11 @@ Message List:
 0 ) [5  ] 1, burning hands        30) [314] 2, Unknown           
 1 ) [6  ] 1, call lightning       31) [399] 2, Unknown           
 2 ) [8  ] 1, chill touch          32) [33 ] 1, poison            
-3 ) [10 ] 1, color spray          33) [202] 1, !UNUSED!          
-4 ) [22 ] 1, dispel evil          34) [203] 1, !UNUSED!          
-5 ) [23 ] 1, earthquake           35) [204] 1, !UNUSED!          
-6 ) [25 ] 1, energy drain         36) [205] 1, !UNUSED!          
-7 ) [26 ] 1, fireball             37) [206] 1, !UNUSED!      
+3 ) [10 ] 1, color spray          33) [202] 1, !RESERVED!        
+4 ) [22 ] 1, dispel               34) [203] 1, !RESERVED!        
+5 ) [23 ] 1, earthquake           35) [204] 1, !RESERVED!        
+6 ) [25 ] 1, energy drain         36) [205] 1, !RESERVED!        
+7 ) [26 ] 1, fireball             37) [206] 1, !RESERVED!        
 =========================================
 MSG #, SKILL NUMBER, NUMBER OF ENTRIES, NAME (if applicable)
 0 )    [5  ]         1,                 burning hands
@@ -5451,7 +5355,7 @@ Usage: murder [target]
 
 Kill command to hit another player.  To avoid accidental flagging (i.e.
 trying to type kiss Nia but accidentally typing kill Nia).
-See also: FLAGS
+See also: SKILLS
 
 #0
 MUTE SQUELCH
@@ -5461,12 +5365,13 @@ Usage: mute <player>
    MUTE is used to prevent a player from using global communication channels.
 It is a toggle that can be turned on and off by the same command. 
 
-See also: FLAGS
+See also: SKILLS
 #2
-MV MOVEPOINTS MOVE-POINTS MOVEMENTPOINTS MOVEMENT-POINTS
+STAMINA STAMINA-POINTS STAMINAPOINTS MV MOVEPOINTS MOVE-POINTS MOVEMENTPOINTS MOVEMENT-POINTS
 
-   Depending on the type of terrain your character will tire from too much
-traveling and require some rest to continue.
+   Stamina points measure how tired you are. Depending on the type of terrain,
+your character will tire from too much traveling and require some rest to
+continue.
 
 See also: MANA, HITPOINTS
 #0
@@ -5828,7 +5733,7 @@ applies. Suggested object standards are displayed at the end of each apply
 12)  CHAR_HEIGHT        Apply to height. 
 13)  MAXMANA            Apply to MAX mana points. 
 14)  MAXHIT             Apply to MAX hit points.
-15)  MAXMOVE            Apply to MAX movement points.
+15)  MAXSTAMINA         Apply to MAX stamina points.
 16)  COINS               Unimplemented.  Do not use.
 17)  EXP                Unimplemented.  Do not use.
 18)  ARMOR              Apply to armor class (AC). negative is better.
@@ -5894,36 +5799,17 @@ OEDIT-EXTRA-FLAGS OEDIT-FLAGS OBJECT-FLAGS OBJECTFLAGS GLOW HUM NODROP NO_DROP O
  
 1)   GLOW            Item is glowing (cosmetic).
 2)   HUM             Item is humming (cosmetic).
+3)   UNUSED          Reserved (unused).
 4)   NODONATE        Item cannot be donated.
 5)   NOINVIS         Item cannot be made invisible.
 6)   INVISIBLE       Item is invisible.
 7)   MAGIC           Item has a magical aura and cannot be enchanted.
 8)   NODROP          Item is cursed and cannot be removed or dropped.
 9)   BLESS           Item is blessed (cosmetic).
-10)  ANTI_GOOD       Item cannot be used by good-aligned characters.
-11)  ANTI_EVIL       Item cannot be used by evil-aligned characters.
-12)  ANTI_NEUTRAL    Item cannot be used by neutral align characters.
-13)  ANTI_MAGIC_USER Item cannot be used by the Mage class.
-14)  ANTI_CLERIC     Item cannot be used by the Cleric class.
-15)  ANTI_THIEF      Item cannot be used by the Thief class.
-16)  ANTI_WARRIOR    Item cannot be used by the Warrior class.
-17)  NOSELL          Shopkeepers will not buy or sell the item.
-18)  QUEST_ITEM      Shopkeepers will only accept questpoints for this item.
-
-   Always try to promote role-playing. The last thing you should do is have 
-Thieves running around wearing dangly bracelets making noise, Clerics and Mages
-wearing large suits of armor and Warriors wearing delicate clothing. None of 
-that makes sense! So, use your head a little while creating equipment. If the 
-equipment gives addition hitpoints then it should probably be made of metal and
-should be geared for Warrior types. We do not need Mages out there with bonus 
-hitpoints on all their eq. 
-   Class and Race restrictions are very important. Be sure to know what your 
-MUD uses for both and build for them. For example, a Minotaur would not wear 
-a regular helmet on his head. Minotaurs take pride in their horns, so their
-horns must be showing. Minotaurs also have hooves for feet. It would be tough 
-for most to wear regular boots. Use some common sense when creating your 
-equipment. Think about each object you create. Think about who you are creating
-it for. 
+10)  NOSELL          Shopkeepers will not buy or sell the item.
+11)  QUEST_ITEM      Shopkeepers will only accept questpoints for this item.
+12)  HOOD_UP         WORN item hood is currently up.
+13)  SKINNED         Item/corpse can be skinned.
 #2
 OEDIT-ITEM-NUMBER OEDIT-NUMBER
 
@@ -6515,7 +6401,7 @@ this method is that if you accidentally wipe out your work on the MUD you will
 have a ready backup. Be careful cutting and pasting to the MUD; if you send too
 much text at once you will be disconnected.
 
-See also: WORK, CARTOGRAPHY, LOCATION, THEME, PLOT, SIZE, ALIGN, BIAS
+See also: WORK, CARTOGRAPHY, LOCATION, THEME, PLOT, SIZE, BIAS
 #2
 PLAYER-SHOPS PLAYER-OWNED-SHOPS
 
@@ -6728,22 +6614,6 @@ game and will have to be redone. This is typical of people who are power
 hungry and are building for themselves and not for others. That is not a
 sign of a good builder (see @RHELP BUILDER@n).
 
-#2
-PRACTICE PRACTISE TRAINING GUILDS GUILDMASTERS PRACTICING EXPERIENCES 
-
-Usage: practice [skill or spell name]
-
-Practice is the way you improve your spells and skills.  You can only do
-so in a guild, where a guildmaster can help you train.  You learn new skills
-as you gain levels. A guildmaster can be found throughout the realms and will
-charge you for your training. 
-
-If you type practice anywhere other than with a guildmaster, you will get a 
-list of all of the spells and skills you know and your level of proficiency at
-each.
-
-See also: SPELLS, SKILLS, LEVELS
-#0
 PRAISE REVIEWS RATINGS
 
 Review Submitted By: Detta 
@@ -7020,7 +6890,7 @@ NO_SHOUT   - Player can not see shouts.
 NO_TELL    - Player can not see tells.
 D_HP       - Player can see their HP.
 D_MANA     - Player can see their MANA.
-D_MOVE     - Player can see their MOVE.
+D_STAMINA  - Player can see their Stamina.
 AUTOEX     - Player can see exits.
 NO_HASS    - Builder is safe from aggressive mobs, triggers will not work.  
 QUEST      - Player is on a quest.
@@ -7094,7 +6964,7 @@ what it takes to properly plan out your first zone. It is extremely important
 that you put some forethought into what you will be creating. Remember, zones
 are built for others to play. Be sure to make it something a player will enjoy.
 A zone proposal consists of an informal MUDmail to your Head Builder. It should
-contain: the location, level, alignment, theme, plot, size, and any other 
+contain: the location, level, theme, plot, size, and any other 
 important notes about the zone. Detailed descriptions and help files are 
 available in the hallways starting from room 14 and 15.
 
@@ -7104,15 +6974,6 @@ deadlines, so take the time to give your zone character.
 Required Reading: @RHELP PLANNING, HELP STYLISTICS@n
 
 See also: EXAMPLE-PROPOSAL
-#2
-PROTECTION-FROM-EVIL PROT-EVIL 
-
-Usage       : cast 'protection from evil' [self]
-Accumulative: Yes (Duration)
-Duration    : 24 hours
-Level       : Cleric level 8.
-
-The meaning of this spell is not yet fully defined.
 #0
 PURGE DESTROY UNLOAD DELETE-MOBILE DISINTEGRATE DECOMPOSE CLEANUP 
 
@@ -7186,7 +7047,7 @@ large dragon steak.  These are normally acquired from the large green dragons
 up on Wyrm Mountain.  My normal source got eaten last week, and I have a large 
 order to fill.  I need these within 24 hours
 
-Thanks, Bob the Butcher, Midgaard
+Thanks, Bob the Butcher, the capital
 The questmaster sighs.
 The questmaster says "A tricky quest, but it'll cost you 5qp to back out now"
 #2
@@ -7766,10 +7627,10 @@ and VNUM have the same first few numbers.
 REDIT-SECTOR-TYPE SECTORS SECTOR-TYPE TERRAIN-TYPE FIELDS FORESTS REDIT-SECTOR-FLAGS SCUBA UNDERWATER
 
 4) Sector type : @cInside@n
-   This defines movement point, light, and boat requirements.
+   This defines stamina point, light, and boat requirements.
 The following terrains may be selected (only one):
 
-                                                       Movement Points
+                                                       Stamina Points
  1)  Inside           Indoors (no light required)             1 
  2)  City             The streets of a city.                  1
  3)  Field            An open field.                          2
@@ -7929,7 +7790,7 @@ ever seen. I have never seen anyone put so much work into a zone. Kudos to Justo
 I am saving this because I would like everyone to use Justo's work as an 
 outstanding example of how a builder should develop and plan a full zone.
  
- * * * * Midgaard Mail System * * * *
+ * * * * City Mail System * * * *
 Date: Sun Oct 13 10:33:59 2002
   To: rumble
 From: justo
@@ -7977,7 +7838,15 @@ From: justo
 #2
 REROLL
 
-Usage: reroll <player>
+Usage: reroll
+       reroll undo
+
+Reroll lets you roll a new set of stats once. Your original stats are saved
+for 2 hours; during that window you may use 'reroll undo' to restore them.
+After the review period or after using reroll undo, your stats are permanent
+and you cannot reroll again.
+
+Immortals: reroll <player> rerolls that player's stats.
 
 REROLL gives a player new stats (i.e., Str, Int, Wis, Dex, Con, and Cha)
 
@@ -8004,7 +7873,7 @@ RESTORE REVIVE
 
 Usage: restore <player | mobile | all>
 
-   RESTORE restores a player or mobile to full hit, mana, and movement points.
+   RESTORE restores a player or mobile to full hit, mana, and stamina points.
 Restore all will restore all players in the game. If used on immortals, it 
 also sets all skill levels to 100%.
 
@@ -8133,7 +8002,7 @@ SCORE
    Summary: Score provides useful information about your character that you
 would find on a traditional tabletop character sheet. Examples:
 
-HP, Mana, and Movement points
+HP, Mana, and Stamina points
 Strength, Dexterity, Constituion, Intelligence, Wisdom, and Charisma scores
 Armor Class with breakdown
 Stealth Disadvantage
@@ -8403,12 +8272,12 @@ Enter choice :
 SEDIT-TRADE
 
 E) No Trade With  : @cNOBITS@n
-   Designates certain alignments or classes that the shop will not trade with:
+   Designates certain classes that the shop will not trade with:
  
- 1) Good                    2) Evil                   
- 3) Neutral                 4) Magic User             
- 5) Cleric                  6) Thief                  
- 7) Warrior                
+ 1) Sorceror               2) Cleric                 
+ 3) Rogue                  4) Fighter                
+ 5) Barbarian              6) Ranger                 
+ 7) Bard                   8) Druid                  
 
 Currently will not trade with: @cNOBITS@n
 Enter choice (-1 for none):
@@ -8514,14 +8383,13 @@ hunger              Imm    BOTH  MISC
 int                 Imm    BOTH  NUMBER
 invis               God    PC    NUMBER
 invstart            Imm    PC    BINARY
-killer              God    PC    BINARY
 level               GrGod  BOTH  NUMBER
 loadroom            Imm    PC    MISC  
 mana                Imm    BOTH  NUMBER
 maxhit              Imm    BOTH  NUMBER
 maxmana             Imm    BOTH  NUMBER
-maxmove             Imm    BOTH  NUMBER
-move                Imm    BOTH  NUMBER
+maxstam             Imm    BOTH  NUMBER
+stam                Imm    BOTH  NUMBER
 name                Imm    PC    MISC  
 nodelete            God    PC    BINARY
 nohassle            God    PC    BINARY
@@ -8531,7 +8399,6 @@ olc                 GrGod  PC    MISC
 password            GrGod  PC    MISC  
 poofin              Imm    PC    MISC  
 poofout             Imm    PC    MISC  
-practices           God    PC    NUMBER
 quest               God    PC    BINARY
 questhistory        God    PC    NUMBER
 questpoints         God    PC    NUMBER
@@ -8541,8 +8408,6 @@ sex                 God    BOTH  MISC
 showvnums           Imm    PC    BINARY
 siteok              God    PC    BINARY
 str                 Imm    BOTH  NUMBER
-stradd              Imm    BOTH  NUMBER
-thief               God    PC    BINARY
 thirst              Imm    BOTH  MISC  
 title               God    PC    MISC  
 variable            GrGod  PC    MISC  
@@ -8711,11 +8576,11 @@ The following room flags can be selected:
 16) *          - DO NOT USE. Breadth-first search mark used by track and hunt.
 17) WORLDMAP   - DO NOT USE. World Map style maps.
 
-Never set UNUSED or DO NOT USE bits, if you find them anywhere. If you 
+Never set RESERVED or DO NOT USE bits, if you find them anywhere. If you 
 do not know what a flag does, DO NOT SET IT!
 
 This requires repeating since it is so often ignored:
-   @YIf a flag says UNUSED; DO NOT SET IT. If you do not know what it does; DO NOT SET IT!@n
+   @YIf a flag says RESERVED; DO NOT SET IT. If you do not know what it does; DO NOT SET IT!@n
 
 See Also: TOGGLE
 #2
@@ -8952,7 +8817,7 @@ SPECIALS SPEC-PROC SPECIAL-PROCEDURES SPECPROC SPEC_PROC
 mobs, and objects. They are written by coders and are normally not created
 by builders. If you have something you wish to assign a special procedure to
 talk it over with a coder. The most common special procedures include:
-Postmasters, banks, guildmasters, pet shops, and boards. If your zone requires 
+Postmasters, banks, pet shops, and boards. If your zone requires 
 any of the above mudmail your coder after your zone is complete.
    Most of the things possible through special procedures can now be done
 through trigedit. 
@@ -8960,12 +8825,6 @@ through trigedit.
 To create a postmaster make a mob, set one of the keywords as "postmaster," set
 the NPC flag SPEC, and load it to the room via zedit. Then have your coder add
 to spec_assign.c:110:  ASSIGNMOB(#, postmaster); NOTE: # = the mob/obj vnum.
-
-To create a guildmaster make a mob, set one of the keywords as "guildmaster," 
-set the NPC flag SPEC, and load it to the room via zedit. Then have your coder 
-add to spec_assign.c:69:  ASSIGNMOB(#, guild); A player can practice at any
-guildmaster, it is the guildguards that usually limit who can access what
-guildmaster. @RTSTAT 133@n
 
 To create a bank make an object, set it to type OTHER, add keyword "bank" and
 load it to the room via zedit. Then have your coder add to spec_assign.c:
@@ -8981,7 +8840,7 @@ In all cases special procedures need to be added in by a coder. Once your zone
 is complete mudmail your coder for the additions you want including type and
 mob or object vnum. 
 
-See also: POSTMASTER, PETSHOPS, BANKS, GUILDMASTER, BOARDS
+See also: POSTMASTER, PETSHOPS, BANKS, BOARDS
 #2
 SPELLS
 
@@ -8990,18 +8849,18 @@ SPELLS
  7) charm person          8) chill touch           9) clone                
 10) color spray          11) control weather      12) create food          
 13) create water         14) cure blind           15) cure critic          
-16) cure light           17) curse                18) detect alignment     
+16) cure light           17) curse                18) reserved             
 19) detect invisibility  20) detect magic         21) detect poison        
-22) dispel evil          23) earthquake           24) enchant weapon       
+22) reserved             23) earthquake           24) enchant weapon       
 25) energy drain         26) fireball             27) harm                 
 28) heal                 29) invisibility         30) lightning bolt       
 31) locate object        32) magic missile        33) poison               
-34) protection from evil 35) remove curse         36) sanctuary            
+34) reserved             35) remove curse         36) sanctuary            
 37) shocking grasp       38) sleep                39) strength             
-40) summon               41) !UNUSED!             42) word of recall       
+40) summon               41) !RESERVED!           42) word of recall       
 43) remove poison        44) sense life           45) animate dead         
-46) dispel good          47) group armor          48) group heal           
-49) !UNUSED!             50) infravision          51) waterwalk            
+46) reserved             47) group armor          48) group heal           
+49) !RESERVED!           50) infravision          51) waterwalk            
 52) identify
 
 #2
@@ -9014,13 +8873,13 @@ SPELLS MAGICS SPELLBOOKS TOMBS SPELL-LEVELS SPELLS-STOCK SPELLLIST
 | Detect Magic         2   |   Create Food           2   |
 | Chill Touch          3   |   Create Water          2   |
 | Infravision          3   |   Detect Poison         3   |
-| Invisibility         4   |   Detect Alignment      4   |
+| Invisibility         4   |   Reserved              4   |
 | Armor                4   |   Cure Blind            4   |
 | Burning Hands        5   |   Bless                 5   |
 | Locate Object        6   |   Detect Invisibility   6   |
 | Strength             6   |   Blindness             6   |
 | Shocking Grasp       7   |   Infravision           7   |
-| Sleep                8   |   Protection from Evil  8   |
+| Sleep                8   |   Reserved              8   |
 | Lightning Bolt       9   |   Poison                8   |
 | Blindness            9   |   Group Armor           9   |
 | Detect Poison       10   |   Cure Crit             9   |
@@ -9030,8 +8889,8 @@ SPELLS MAGICS SPELLBOOKS TOMBS SPELL-LEVELS SPELLS-STOCK SPELLLIST
 | Poison              14   |   Word of Recall       12   |
 | Fireball            15   |   Earthquake           12   |
 | Charm               16   |   Darkness             13   |
-| Identify            20   |   Dispel Evil          14   |
-| Enchant Weapon      26   |   Dispel Good          14   |
+| Identify            20   |   Reserved             14   |
+| Enchant Weapon      26   |   Reserved             14   |
 | Clone               30   |   Sanctuary            15   |
 |                          |   Call Lightning       15   |
 |                          |   Heal                 16   |
@@ -9192,7 +9051,7 @@ A list is below:
 Wisdom       - How wise you are. Helps in combat, and when regaining mana.
 Constitution - How healthy and robust you are. Determines how many hit points
                you gain per level, and how well you heal.
-Dexterity    - How agile you are. How many movement points you gain per level, 
+Dexterity    - How agile you are. How many stamina points you gain per level, 
                and how well you dodge attacks, pick locks, and kick without 
                falling over.
 Charisma     - How personable your character is. This can affect shop prices
@@ -9224,9 +9083,8 @@ Thief Only.
 
 Usage: steal <item> [target]
 
-Use steal to steal coins or items from people.  The chance of not getting
-caught depends on how well you have practiced steal, and if the person
-is asleep.
+Use steal to steal coins or items from people. The chance of not getting
+caught depends on your steal skill and whether the person is asleep.
 
 Examples:
 
@@ -9281,11 +9139,11 @@ This is a listing of stock areas.
 186 Newbie Zone                 -- Maynard of StrangeMUD
 25  The High Tower of Magic     -- Skylar of SillyMUD*
 26  The High Tower Of Magic     -- Skylar of SillyMUD*
-30  Northern Midgaard Main City -- DikuMUD 
-31  Southern Part of Midgaard   -- DikuMUD
+30  Northern Main City          -- DikuMUD 
+31  Southern Main City          -- DikuMUD
 33  The Three Of Swords         -- C.A.W.
 35  Miden'Nir                   -- Copper II, modified by VampLestat of MercMUD*
-36  The Chessboard of Midgaard  -- Exxon of SillyMUD
+36  The Chessboard of the City  -- Exxon of SillyMUD
 40  Mines of Moria              -- Redferne of DikuMUD* 
 41  Mines of Moria              -- Redferne of DikuMUD*
 50  The Great Eastern Desert    -- Rorschach
@@ -9970,7 +9828,7 @@ redit 34800
 q
 y
 See Also: TBA-STAFF, TBA-ZONES
-#32
+#2
 TBA-ADVERTISING
 
 Mud Created: 2000 
@@ -10059,7 +9917,7 @@ The teleporter is used to transfer players between zones.  Accessible zones
 are listed under HELP ZONES by being CAPITALIZED.  For example to teleport to:
   74 Newbie GRAVEyard                   -- Jojen                       3- 5
 type: teleport grave
-   The teleporter may also be used to recall back to Midgaard at any time.
+   The teleporter may also be used to recall back to the capital at any time.
 
 Uncapitalized zones are linked through a capitalized zone.
 
@@ -10254,13 +10112,13 @@ Thieves are known to have very special qualities, that no other class offers.
 Their specialty tends to be in the darker, sneakier art.  Many of these
 qualities can come in handy in many situations, such as picking locks.
 
-You can improve you skills by using the practice command.
+You can improve your skills by using them.
 
 Skills available to thieves: sneak, hide, steal, backstab, pick lock, track
 
 See the help on each skill for more information.
 
-See also: PRACTICE, FLAGS
+See also: FLAGS
 #0
 TILDES ~
 
@@ -10345,7 +10203,7 @@ time you change it. Level IMP toggle includes:
        NoHassle: ON           Holylight: ON           ShowVnums: ON 
          Syslog: normal
 Hit Pnt Display: OFF              Brief: OFF         Summonable: OFF
-   Move Display: OFF            Compact: ON               Quest: OFF
+   Stamina Display: OFF            Compact: ON               Quest: OFF
    Mana Display: OFF             NoTell: OFF           NoRepeat: OFF
       AutoExits: OFF            NoShout: OFF              Wimpy: OFF
        AutoLoot: ON           AutoSplit: ON
@@ -10366,7 +10224,7 @@ argument. When a toggle is set, it will be saved in that state until the next
 time you change it. 
 
 Hit Pnt Display: OFF              Brief: OFF         Summonable: OFF
-   Move Display: OFF            Compact: ON               Quest: OFF
+   Stamina Display: OFF            Compact: ON               Quest: OFF
    Mana Display: OFF             NoTell: OFF           NoRepeat: OFF
       AutoExits: OFF            NoShout: OFF              Wimpy: OFF
        AutoLoot: ON           AutoSplit: ON
@@ -10592,7 +10450,7 @@ Trig Usage: %actor.<stat>(<#>)%
             %actor.str(18) sets it to 18
 
 Checks the actor's stat. A number in the subfield sets.
-Stats include: cha, con, dex, int, str, stradd (only if str is 18).
+Stats include: cha, con, dex, int, str, wis.
 
 See also: STATS
 #2
@@ -12444,11 +12302,11 @@ them better at hand-to-hand-combat, as they possess skills of violence and
 fighting unequaled by the members of any other class.  However, they lack the
 ability to use magic of any sort.
 
-You can improve your skills by using the practice command.
+You can improve your skills by using them.
 
 Skills available to warriors: kick, rescue, track, bash
 
-See also: PRACTICE
+See also: FLAGS
 #0
 WATERWALK WATWALK 
 
@@ -12672,7 +12530,7 @@ ban          copyover     freeze       hcontrol     reroll       skillset
 thaw         unban        wizupdate    
 
 Level 32 (God):
-acaudit      advance      aedit        checkload    dc           file
+audit        advance      aedit        checkload    dc           file
 force        gecho        hedit        helpcheck    hsedit       last
 links        mcopy        mute         notitle      ocopy        pardon
 plist        qecho        rcopy        restore      scopy        send
@@ -12716,7 +12574,7 @@ Examples:
 >; @              - shows all gods that are on and visible to you.
                   - also shows if the gods who are visible to you are writing.
 >;#<level> <text> - sends text to everyone <level> and above.
-                  - ;#32 only God and above will see this.
+                  - ;#2 only God and above will see this.
 
 See also: NOWIZ
 #2
@@ -13314,12 +13172,12 @@ rumble@*tbamud.com
   26 High Tower Of Magic II             -- Skylar                      1-30
   27 MEMLIN Caves                       -- Detta                      17-25
   28 MUDSCHOOL                          -- Welcor                      1- 3
-  30 Northern MIDGAARD                  -- DikuMUD                     1-33
-  31 Southern MIDGAARD                  -- DikuMUD                     1-33
-  32 MIDGAARD                           -- DikuMUD                     1-33
+  30 Northern MAIN CITY                 -- DikuMUD                     1-33
+  31 Southern MAIN CITY                 -- DikuMUD                     1-33
+  32 MAIN CITY                          -- DikuMUD                     1-33
   33 Three Of Swords                    -- C.A.W.                      5-30
   35 Miden'Nir                          -- Copper II                   4-10
-  36 Chessboard of Midgaard             -- Exxon                       6-30
+  36 Chessboard of the City             -- Exxon                       6-30
   37 CAPITAL Sewer System               -- Welcor                      3- 7
   38 CAPITAL Sewer System II            -- Welcor                      7-14
   39 HAVEN                              -- Nivan                       3-14
@@ -13388,7 +13246,7 @@ rumble@*tbamud.com
  239 South PASS                         -- Crysanthia                 16-21
  240 Dun MAURA                          -- Rumble                      7-10
  241 Starship ENTERPRISE                -- Crazyman                   26-30
- 242 NEW Midgaard                       -- Crazyman                    3- 7
+ 242 NEW Main City                      -- Crazyman                    3- 7
  243 Snowy VALLEY                       -- Crazyman                    7-10
  244 Cooland PRISON                     -- Crazyman                      30
  245 The NETHER                         -- Kaan                          20
@@ -13588,5 +13446,90 @@ Amos sees:
 
 Gesturing to your empty mug, the bald, pudgy man waves you over with his right
 hand, pointing to an empty seat at his table.
+#0
+OVALS
+
+   Ovals are object value slots (0-7). Use OSET ADD OVAL <position|name> <value>
+to set them. Positions are 0-based.
+
+LIGHT:
+  2 - hours_left
+
+SCROLL:
+  0 - spell_level
+  1 - spell1
+  2 - spell2
+  3 - spell3
+
+POTION:
+  0 - spell_level
+  1 - spell1
+  2 - spell2
+  3 - spell3
+
+WAND:
+  0 - level
+  1 - max_charges
+  2 - remaining_charges
+  3 - spell
+
+STAFF:
+  0 - level
+  1 - max_charges
+  2 - remaining_charges
+  3 - spell
+
+WEAPON:
+  0 - dice_num
+  1 - dice_size
+  2 - weapon_type
+  3 - message_type
+
+ARMOR:
+  0 - piece_ac
+  1 - bulk
+  2 - magic_bonus
+  3 - stealth_disadv
+  4 - durability
+  5 - str_requirement
+
+CONTAINER:
+  0 - capacity
+  1 - flags
+  2 - key_vnum
+  3 - corpse
+
+WORN:
+  0 - closable
+  1 - hooded
+  2 - is_closed
+  3 - capacity
+  4 - hood_raised
+
+LIQ CONTAINER:
+  0 - capacity
+  1 - contains
+  2 - liquid_type
+  3 - poisoned
+
+FOUNTAIN:
+  0 - capacity
+  1 - contains
+  2 - liquid_type
+  3 - poisoned
+
+FOOD:
+  0 - bites_capacity
+  1 - bites_left
+  2 - hours_full_per_bite
+  3 - poisoned
+
+COINS:
+  0 - coins
+
+FURNITURE:
+  0 - max_seats
+  1 - current_occupants
+  2 - allowed_pos
 #0
 $~

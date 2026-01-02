@@ -44,6 +44,13 @@ static bool validate_furniture_use(struct char_data *ch, struct obj_data *furnit
                                    bool already_there);
 static void attach_char_to_furniture(struct char_data *ch, struct obj_data *furniture);
 static const char *position_gerund(int pos);
+static void clear_mount_state(struct char_data *ch);
+static bool mount_skill_check(struct char_data *ch, int dc);
+static bool resolve_mounted_move(struct char_data *ch, struct char_data **mount);
+static int count_hitched_mounts(struct char_data *ch);
+static int max_hitched_mounts(struct char_data *ch);
+static struct char_data *first_hitched_mount_in_room(struct char_data *ch);
+static struct char_data *find_hitched_mount_for_pack(struct char_data *ch, struct obj_data *obj);
 
 
 /* simple function to determine if char can walk on water */
@@ -263,6 +270,138 @@ static const char *position_gerund(int pos)
     return "using";
   }
 }
+
+static void clear_mount_state(struct char_data *ch)
+{
+  struct char_data *mount;
+
+  if (!ch)
+    return;
+
+  mount = MOUNT(ch);
+  if (mount && RIDDEN_BY(mount) == ch) {
+    int rider_weight = GET_WEIGHT(ch) + IS_CARRYING_W(ch);
+    IS_CARRYING_W(mount) = MAX(0, IS_CARRYING_W(mount) - rider_weight);
+    RIDDEN_BY(mount) = NULL;
+  }
+  MOUNT(ch) = NULL;
+  REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_MOUNTED);
+}
+
+static bool mount_skill_check(struct char_data *ch, int dc)
+{
+  int total = roll_skill_check(ch, SKILL_ANIMAL_HANDLING, 0, NULL);
+  bool success = (total >= dc);
+
+  gain_skill(ch, "animal handling", success);
+  return success;
+}
+
+static bool resolve_mounted_move(struct char_data *ch, struct char_data **mount)
+{
+  struct char_data *mount_ch;
+
+  if (!AFF_FLAGGED(ch, AFF_MOUNTED))
+    return FALSE;
+
+  mount_ch = MOUNT(ch);
+  if (!mount_ch || IN_ROOM(mount_ch) != IN_ROOM(ch)) {
+    clear_mount_state(ch);
+    send_to_char(ch, "You aren't mounted on anything.\r\n");
+    return FALSE;
+  }
+
+  if (!mount_skill_check(ch, 5)) {
+    send_to_char(ch, "%s refuses to move.\r\n", get_char_sdesc(mount_ch));
+    act("$n tries to urge $N forward, but $N refuses to move.",
+        TRUE, ch, 0, mount_ch, TO_ROOM);
+    return FALSE;
+  }
+
+  if (!mount_skill_check(ch, 3)) {
+    int dam = dice(1, 8);
+
+    send_to_char(ch, "You are thrown from %s!\r\n", get_char_sdesc(mount_ch));
+    act("$n is thrown from $N!", TRUE, ch, 0, mount_ch, TO_ROOM);
+    clear_mount_state(ch);
+    GET_POS(ch) = POS_RESTING;
+    WAIT_STATE(ch, PULSE_VIOLENCE);
+    damage(ch, ch, dam, TYPE_SUFFERING);
+    return FALSE;
+  }
+
+  if (mount)
+    *mount = mount_ch;
+  return TRUE;
+}
+
+static int count_hitched_mounts(struct char_data *ch)
+{
+  struct follow_type *follow;
+  int count = 0;
+
+  if (!ch)
+    return 0;
+
+  for (follow = ch->followers; follow; follow = follow->next) {
+    if (HITCHED_TO(follow->follower) == ch &&
+        MOB_FLAGGED(follow->follower, MOB_MOUNT))
+      count++;
+  }
+
+  return count;
+}
+
+static int max_hitched_mounts(struct char_data *ch)
+{
+  int skill = GET_SKILL(ch, SKILL_ANIMAL_HANDLING);
+
+  if (skill > 59)
+    return 2;
+  return 1;
+}
+
+static struct char_data *first_hitched_mount_in_room(struct char_data *ch)
+{
+  struct follow_type *follow;
+
+  if (!ch)
+    return NULL;
+
+  for (follow = ch->followers; follow; follow = follow->next) {
+    if (HITCHED_TO(follow->follower) == ch &&
+        MOB_FLAGGED(follow->follower, MOB_MOUNT) &&
+        IN_ROOM(follow->follower) == IN_ROOM(ch))
+      return follow->follower;
+  }
+
+  return NULL;
+}
+
+static struct char_data *find_hitched_mount_for_pack(struct char_data *ch, struct obj_data *obj)
+{
+  struct follow_type *follow;
+
+  if (!ch || !obj)
+    return NULL;
+
+  for (follow = ch->followers; follow; follow = follow->next) {
+    struct char_data *mount = follow->follower;
+
+    if (HITCHED_TO(mount) != ch || !MOB_FLAGGED(mount, MOB_MOUNT))
+      continue;
+    if (IN_ROOM(mount) != IN_ROOM(ch))
+      continue;
+    if ((IS_CARRYING_N(mount) + 1) > CAN_CARRY_N(mount))
+      continue;
+    if ((IS_CARRYING_W(mount) + GET_OBJ_WEIGHT(obj)) > CAN_CARRY_W(mount))
+      continue;
+
+    return mount;
+  }
+
+  return NULL;
+}
 /** Move a PC/NPC character from their current location to a new location. This
  * is the standard movement locomotion function that all normal walking
  * movement by characters should be sent through. This function also defines
@@ -290,9 +429,12 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   room_rnum was_in = IN_ROOM(ch);
   /* ... and the room the character will move into. */
   room_rnum going_to = EXIT(ch, dir)->to_room;
-  /* How many movement points are required to travel from was_in to going_to.
+  /* How many stamina points are required to travel from was_in to going_to.
    * We redefine this later when we need it. */
   int need_movement = 0;
+  /* Character whose stamina is used for movement (mounts override). */
+  struct char_data *stamina_ch = ch;
+  bool mounted_move = FALSE;
   /* Contains the "leave" message to display to the was_in room. */
   char leave_message[SMALL_BUFSIZE];
   /*---------------------------------------------------------------------*/
@@ -400,16 +542,24 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   }
 
   /* All checks passed, nothing will prevent movement now other than lack of
-   * move points. */
-  /* move points needed is avg. move loss for src and destination sect type */
+   * stamina points. */
+  /* stamina points needed is avg. move loss for src and destination sect type */
   need_movement = (movement_loss[SECT(was_in)] +
 		   movement_loss[SECT(going_to)]) / 2;
 
   /* Move Point Requirement Check */
-  if (GET_MOVE(ch) < need_movement && !IS_NPC(ch))
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) && IN_ROOM(MOUNT(ch)) == was_in)
+  {
+    stamina_ch = MOUNT(ch);
+    mounted_move = TRUE;
+  }
+
+  if (GET_STAMINA(stamina_ch) < need_movement && (mounted_move || !IS_NPC(ch)))
   {
     if (need_specials_check && ch->master)
       send_to_char(ch, "You are too exhausted to follow.\r\n");
+    else if (mounted_move)
+      send_to_char(ch, "Your mount is too exhausted.\r\n");
     else
       send_to_char(ch, "You are too exhausted.\r\n");
 
@@ -423,8 +573,8 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /* Begin: the leave operation. */
   /*---------------------------------------------------------------------*/
   /* If applicable, subtract movement cost. */
-  if (GET_LEVEL(ch) < LVL_IMMORT && !IS_NPC(ch))
-    GET_MOVE(ch) -= need_movement;
+  if (GET_LEVEL(ch) < LVL_IMMORT && (mounted_move || !IS_NPC(ch)))
+    GET_STAMINA(stamina_ch) -= need_movement;
 
   /* Generate the leave message and display to others in the was_in room. */
   if (AFF_FLAGGED(ch, AFF_SNEAK)) {
@@ -492,6 +642,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
 
   /* Only here is the move successful *and* complete. Return success for
    * calling functions to handle post move operations. */
+  clear_custom_ldesc(ch);
   return (1);
 }
 
@@ -499,6 +650,7 @@ int perform_move(struct char_data *ch, int dir, int need_specials_check)
 {
   room_rnum was_in;
   struct follow_type *k, *next;
+  struct char_data *mount = NULL;
 
   if (ch == NULL || dir < 0 || dir >= NUM_OF_DIRS || FIGHTING(ch))
     return (0);
@@ -512,12 +664,21 @@ int perform_move(struct char_data *ch, int dir, int need_specials_check)
     else
       send_to_char(ch, "It seems to be closed.\r\n");
   } else {
-    if (!ch->followers)
-      return (do_simple_move(ch, dir, need_specials_check));
-
     was_in = IN_ROOM(ch);
+    if (AFF_FLAGGED(ch, AFF_MOUNTED) &&
+        !resolve_mounted_move(ch, &mount))
+      return (0);
+
     if (!do_simple_move(ch, dir, need_specials_check))
       return (0);
+
+    if (mount && IN_ROOM(mount) == was_in) {
+      char_from_room(mount);
+      char_to_room(mount, IN_ROOM(ch));
+    }
+
+    if (!ch->followers)
+      return (1);
 
     for (k = ch->followers; k; k = next) {
       next = k->next;
@@ -936,9 +1097,68 @@ ACMD(do_stand)
 {
   char token[MAX_INPUT_LENGTH];
   struct obj_data *furniture = NULL, *current_furniture = SITTING(ch);
+  struct char_data *mount = NULL;
+  char arg[MAX_INPUT_LENGTH];
   bool has_target = FALSE, used_number = FALSE;
   int ordinal = 0;
   int orig_pos = GET_POS(ch);
+
+  if (*argument) {
+    one_argument(argument, arg);
+    if (*arg && !is_abbrev(arg, "at"))
+      mount = get_char_vis(ch, arg, NULL, FIND_CHAR_ROOM);
+    if (mount && MOB_FLAGGED(mount, MOB_MOUNT) && HITCHED_TO(mount) != ch) {
+      act("You don't have $N hitched.", FALSE, ch, 0, mount, TO_CHAR);
+      return;
+    }
+    if (mount && HITCHED_TO(mount) == ch && MOB_FLAGGED(mount, MOB_MOUNT)) {
+      if (FIGHTING(mount)) {
+        act("$N is fighting right now.", FALSE, ch, 0, mount, TO_CHAR);
+        return;
+      }
+      if (GET_POS(mount) == POS_RESTING) {
+        act("You get $N to stand up.", FALSE, ch, 0, mount, TO_CHAR);
+        act("$n gets $N to stand up.", TRUE, ch, 0, mount, TO_ROOM);
+        GET_POS(mount) = POS_STANDING;
+        clear_custom_ldesc(mount);
+        return;
+      }
+      if (GET_POS(mount) == POS_SLEEPING) {
+        act("$N has to wake up first.", FALSE, ch, 0, mount, TO_CHAR);
+        return;
+      }
+      act("$N is already standing.", FALSE, ch, 0, mount, TO_CHAR);
+      return;
+    }
+  }
+
+  if (!*argument && AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch)) {
+    mount = MOUNT(ch);
+    if (IN_ROOM(mount) != IN_ROOM(ch) || RIDDEN_BY(mount) != ch) {
+      clear_mount_state(ch);
+      send_to_char(ch, "You aren't mounted on anything.\r\n");
+      return;
+    }
+    if (FIGHTING(mount)) {
+      send_to_char(ch, "Your mount is fighting right now.\r\n");
+      return;
+    }
+    if (GET_POS(mount) != POS_SLEEPING) {
+      act("You get $N to rest and dismount.", FALSE, ch, 0, mount, TO_CHAR);
+      act("$n gets $N to rest and dismounts.", TRUE, ch, 0, mount, TO_ROOM);
+      GET_POS(mount) = POS_RESTING;
+      clear_custom_ldesc(mount);
+    } else {
+      act("$N is already asleep.", FALSE, ch, 0, mount, TO_CHAR);
+    }
+    clear_mount_state(ch);
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You must dismount first.\r\n");
+    return;
+  }
 
   if (*argument) {
     if (!extract_furniture_token(ch, argument, token, sizeof(token), "Stand"))
@@ -1000,6 +1220,7 @@ ACMD(do_stand)
     act(self_msg, TRUE, ch, furniture, 0, TO_CHAR);
     act(room_msg, TRUE, ch, furniture, 0, TO_ROOM);
     GET_POS(ch) = FIGHTING(ch) ? POS_FIGHTING : POS_STANDING;
+    clear_custom_ldesc(ch);
     return;
   }
 
@@ -1020,6 +1241,7 @@ ACMD(do_stand)
     char_from_furniture(ch);
     /* Will be standing after a successful bash and may still be fighting. */
     GET_POS(ch) = FIGHTING(ch) ? POS_FIGHTING : POS_STANDING;
+    clear_custom_ldesc(ch);
     break;
 
   case POS_RESTING:
@@ -1033,6 +1255,7 @@ ACMD(do_stand)
     GET_POS(ch) = POS_STANDING;
     /* Were they sitting in something. */
     char_from_furniture(ch);
+    clear_custom_ldesc(ch);
     break;
 
   case POS_SLEEPING:
@@ -1050,6 +1273,7 @@ ACMD(do_stand)
     else
       act("$n stops floating around, and puts $s feet on the ground.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_STANDING;
+    clear_custom_ldesc(ch);
     break;
   }
 }
@@ -1061,6 +1285,11 @@ ACMD(do_sit)
   bool has_target = FALSE, used_number = FALSE;
   int ordinal = 0;
   int orig_pos = GET_POS(ch);
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You must dismount first.\r\n");
+    return;
+  }
 
   if (*argument) {
     if (!extract_furniture_token(ch, argument, token, sizeof(token), "Sit"))
@@ -1122,6 +1351,7 @@ ACMD(do_sit)
     act(self_msg, TRUE, ch, furniture, 0, TO_CHAR);
     act(room_msg, TRUE, ch, furniture, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
+    clear_custom_ldesc(ch);
     return;
   }
 
@@ -1130,6 +1360,7 @@ ACMD(do_sit)
     send_to_char(ch, "You sit down.\r\n");
     act("$n sits down.", FALSE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
+    clear_custom_ldesc(ch);
     break;
   case POS_SITTING:
     send_to_char(ch, "You're sitting already.\r\n");
@@ -1141,6 +1372,7 @@ ACMD(do_sit)
     else
       act("$n stops resting and sits up.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
+    clear_custom_ldesc(ch);
     break;
   case POS_SLEEPING:
     send_to_char(ch, "You have to wake up first.\r\n");
@@ -1155,6 +1387,7 @@ ACMD(do_sit)
     else
       act("$n stops floating around, and sits down.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SITTING;
+    clear_custom_ldesc(ch);
     break;
   }
 }
@@ -1163,8 +1396,68 @@ ACMD(do_rest)
 {
   char token[MAX_INPUT_LENGTH];
   struct obj_data *furniture = NULL, *current_furniture = SITTING(ch);
+  struct char_data *mount = NULL;
+  char arg[MAX_INPUT_LENGTH];
   bool has_target = FALSE, used_number = FALSE;
   int ordinal = 0;
+
+  if (*argument) {
+    one_argument(argument, arg);
+    if (*arg && !is_abbrev(arg, "at"))
+      mount = get_char_vis(ch, arg, NULL, FIND_CHAR_ROOM);
+    if (mount && MOB_FLAGGED(mount, MOB_MOUNT) && HITCHED_TO(mount) != ch) {
+      act("You don't have $N hitched.", FALSE, ch, 0, mount, TO_CHAR);
+      return;
+    }
+    if (mount && HITCHED_TO(mount) == ch && MOB_FLAGGED(mount, MOB_MOUNT)) {
+      if (FIGHTING(mount)) {
+        act("$N is fighting right now.", FALSE, ch, 0, mount, TO_CHAR);
+        return;
+      }
+      if (GET_POS(mount) == POS_RESTING) {
+        act("$N is already resting.", FALSE, ch, 0, mount, TO_CHAR);
+        return;
+      }
+      if (GET_POS(mount) == POS_SLEEPING) {
+        act("$N is already asleep.", FALSE, ch, 0, mount, TO_CHAR);
+        return;
+      }
+      act("You pull on $N's reins, forcing it to rest.", FALSE, ch, 0, mount, TO_CHAR);
+      act("$n pulls on $N's reins, forcing it to rest.", TRUE, ch, 0, mount, TO_ROOM);
+      GET_POS(mount) = POS_RESTING;
+      clear_custom_ldesc(mount);
+      return;
+    }
+  }
+
+  if (!*argument && AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch)) {
+    mount = MOUNT(ch);
+    if (IN_ROOM(mount) != IN_ROOM(ch) || RIDDEN_BY(mount) != ch) {
+      clear_mount_state(ch);
+      send_to_char(ch, "You aren't mounted on anything.\r\n");
+      return;
+    }
+    if (FIGHTING(mount)) {
+      send_to_char(ch, "Your mount is fighting right now.\r\n");
+      return;
+    }
+    if (GET_POS(mount) == POS_SLEEPING) {
+      act("$N is already asleep.", FALSE, ch, 0, mount, TO_CHAR);
+      clear_mount_state(ch);
+      return;
+    }
+    act("You pull on $N's reins, forcing it to rest.", FALSE, ch, 0, mount, TO_CHAR);
+    act("$n pulls on $N's reins, forcing it to rest and dismounts.", TRUE, ch, 0, mount, TO_ROOM);
+    GET_POS(mount) = POS_RESTING;
+    clear_custom_ldesc(mount);
+    clear_mount_state(ch);
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You must dismount first.\r\n");
+    return;
+  }
 
   if (*argument) {
     if (!extract_furniture_token(ch, argument, token, sizeof(token), "Rest"))
@@ -1227,6 +1520,7 @@ ACMD(do_rest)
     act(self_msg, TRUE, ch, furniture, 0, TO_CHAR);
     act(room_msg, TRUE, ch, furniture, 0, TO_ROOM);
     GET_POS(ch) = POS_RESTING;
+    clear_custom_ldesc(ch);
     return;
   }
 
@@ -1240,6 +1534,7 @@ ACMD(do_rest)
       act("$n sits down and rests.", TRUE, ch, 0, 0, TO_ROOM);
     }
     GET_POS(ch) = POS_RESTING;
+    clear_custom_ldesc(ch);
     break;
 
   case POS_SITTING:
@@ -1258,6 +1553,7 @@ ACMD(do_rest)
       act("$n rests.", TRUE, ch, 0, 0, TO_ROOM);
     }
     GET_POS(ch) = POS_RESTING;
+    clear_custom_ldesc(ch);
     break;
 
   case POS_RESTING:
@@ -1279,6 +1575,7 @@ ACMD(do_rest)
     else
       act("$n stops floating around, and rests.", FALSE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_RESTING;
+    clear_custom_ldesc(ch);
     break;
   }
 }
@@ -1289,6 +1586,11 @@ ACMD(do_sleep)
   struct obj_data *furniture = NULL, *current_furniture = SITTING(ch);
   bool has_target = FALSE, used_number = FALSE;
   int ordinal = 0;
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You must dismount first.\r\n");
+    return;
+  }
 
   if (*argument) {
     if (!extract_furniture_token(ch, argument, token, sizeof(token), "Sleep"))
@@ -1332,6 +1634,7 @@ ACMD(do_sleep)
     act("You go to sleep on $p.", TRUE, ch, furniture, 0, TO_CHAR);
     act("$n lies down and falls asleep on $p.", TRUE, ch, furniture, 0, TO_ROOM);
     GET_POS(ch) = POS_SLEEPING;
+    clear_custom_ldesc(ch);
     return;
   }
 
@@ -1354,6 +1657,7 @@ ACMD(do_sleep)
       act("$n lies down and falls asleep.", TRUE, ch, 0, 0, TO_ROOM);
     }
     GET_POS(ch) = POS_SLEEPING;
+    clear_custom_ldesc(ch);
     break;
 
   case POS_SLEEPING:
@@ -1371,6 +1675,7 @@ ACMD(do_sleep)
     else
       act("$n stops floating around, and lies down to sleep.", TRUE, ch, 0, 0, TO_ROOM);
     GET_POS(ch) = POS_SLEEPING;
+    clear_custom_ldesc(ch);
     break;
   }
 }
@@ -1466,6 +1771,285 @@ ACMD(do_follow)
       add_follower(ch, leader);
     }
   }
+}
+
+ACMD(do_mount)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct char_data *mount;
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch, "Mount what?\r\n");
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED)) {
+    send_to_char(ch, "You are already mounted.\r\n");
+    return;
+  }
+
+  if (!(mount = get_char_vis(ch, arg, NULL, FIND_CHAR_ROOM))) {
+    send_to_char(ch, "%s", CONFIG_NOPERSON);
+    return;
+  }
+
+  if (mount == ch) {
+    send_to_char(ch, "You can't mount yourself.\r\n");
+    return;
+  }
+
+  if (!IS_NPC(mount) || !MOB_FLAGGED(mount, MOB_MOUNT)) {
+    send_to_char(ch, "You can't mount %s!\r\n", get_char_sdesc(mount));
+    return;
+  }
+
+  if (HITCHED_TO(mount) && HITCHED_TO(mount) != ch) {
+    act("$N is already hitched to someone else.", FALSE, ch, 0, mount, TO_CHAR);
+    return;
+  }
+
+  if (RIDDEN_BY(mount)) {
+    act("$N is already being ridden.", FALSE, ch, 0, mount, TO_CHAR);
+    return;
+  }
+
+  if ((GET_WEIGHT(ch) + IS_CARRYING_W(ch) + IS_CARRYING_W(mount)) > CAN_CARRY_W(mount)) {
+    act("$N can't carry that much weight.", FALSE, ch, 0, mount, TO_CHAR);
+    return;
+  }
+
+  SET_BIT_AR(AFF_FLAGS(ch), AFF_MOUNTED);
+  MOUNT(ch) = mount;
+  RIDDEN_BY(mount) = ch;
+  IS_CARRYING_W(mount) += GET_WEIGHT(ch) + IS_CARRYING_W(ch);
+
+  act("You mount $N.", FALSE, ch, 0, mount, TO_CHAR);
+  act("$n mounts $N.", TRUE, ch, 0, mount, TO_ROOM);
+}
+
+ACMD(do_dismount)
+{
+  struct char_data *mount = MOUNT(ch);
+
+  if (!AFF_FLAGGED(ch, AFF_MOUNTED) || !mount) {
+    clear_mount_state(ch);
+    send_to_char(ch, "You aren't mounted on anything.\r\n");
+    return;
+  }
+
+  act("You dismount $N.", FALSE, ch, 0, mount, TO_CHAR);
+  act("$n dismounts $N.", TRUE, ch, 0, mount, TO_ROOM);
+  clear_mount_state(ch);
+}
+
+ACMD(do_hitch)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct char_data *mount;
+  int max_hitched;
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch, "Hitch what?\r\n");
+    return;
+  }
+
+  if (!(mount = get_char_vis(ch, arg, NULL, FIND_CHAR_ROOM))) {
+    send_to_char(ch, "%s", CONFIG_NOPERSON);
+    return;
+  }
+
+  if (mount == ch) {
+    send_to_char(ch, "You can't hitch yourself.\r\n");
+    return;
+  }
+
+  if (!IS_NPC(mount) || !MOB_FLAGGED(mount, MOB_MOUNT)) {
+    send_to_char(ch, "You can't hitch %s!\r\n", get_char_sdesc(mount));
+    return;
+  }
+
+  if (RIDDEN_BY(mount) && RIDDEN_BY(mount) != ch) {
+    act("$N is already being ridden.", FALSE, ch, 0, mount, TO_CHAR);
+    return;
+  }
+
+  if (HITCHED_TO(mount) == ch) {
+    act("$N is already hitched to you.", FALSE, ch, 0, mount, TO_CHAR);
+    return;
+  }
+
+  if (HITCHED_TO(mount) && HITCHED_TO(mount) != ch) {
+    act("$N is already hitched to someone else.", FALSE, ch, 0, mount, TO_CHAR);
+    return;
+  }
+
+  if (mount->master && mount->master != ch) {
+    act("$N is already following someone else.", FALSE, ch, 0, mount, TO_CHAR);
+    return;
+  }
+
+  max_hitched = max_hitched_mounts(ch);
+  if (count_hitched_mounts(ch) >= max_hitched) {
+    send_to_char(ch, "You can't hitch any more mounts.\r\n");
+    return;
+  }
+
+  if (!mount->master)
+    add_follower(mount, ch);
+
+  HITCHED_TO(mount) = ch;
+  act("You hitch $N to you.", FALSE, ch, 0, mount, TO_CHAR);
+  act("$n hitches $N to $m.", TRUE, ch, 0, mount, TO_ROOM);
+}
+
+ACMD(do_unhitch)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct char_data *mount;
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch, "Unhitch what?\r\n");
+    return;
+  }
+
+  if (!(mount = get_char_vis(ch, arg, NULL, FIND_CHAR_ROOM))) {
+    send_to_char(ch, "%s", CONFIG_NOPERSON);
+    return;
+  }
+
+  if (HITCHED_TO(mount) != ch || !MOB_FLAGGED(mount, MOB_MOUNT)) {
+    act("You don't have $N hitched.", FALSE, ch, 0, mount, TO_CHAR);
+    return;
+  }
+
+  if (mount->master == ch)
+    stop_follower(mount);
+  else
+    HITCHED_TO(mount) = NULL;
+
+  act("You unhitch $N.", FALSE, ch, 0, mount, TO_CHAR);
+  act("$n unhitches $N.", TRUE, ch, 0, mount, TO_ROOM);
+}
+
+ACMD(do_pack)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct char_data *mount;
+  struct obj_data *obj;
+  struct follow_type *follow;
+  bool found_mount = FALSE;
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    for (follow = ch->followers; follow; follow = follow->next) {
+      bool found_item = FALSE;
+
+      mount = follow->follower;
+      if (HITCHED_TO(mount) != ch || !MOB_FLAGGED(mount, MOB_MOUNT))
+        continue;
+      if (IN_ROOM(mount) != IN_ROOM(ch))
+        continue;
+
+      found_mount = TRUE;
+      send_to_char(ch, "Packed on %s:\r\n", get_char_sdesc(mount));
+
+      for (obj = mount->carrying; obj; obj = obj->next_content) {
+        if (GET_OBJ_TYPE(obj) != ITEM_CONTAINER)
+          continue;
+        if (!CAN_SEE_OBJ(ch, obj))
+          continue;
+        send_to_char(ch, "  %s\r\n", obj->short_description ? obj->short_description : "something");
+        found_item = TRUE;
+      }
+
+      if (!found_item)
+        send_to_char(ch, "  Nothing.\r\n");
+    }
+
+    if (!found_mount)
+      send_to_char(ch, "You don't have any mounts hitched.\r\n");
+    return;
+  }
+
+  if (!(obj = get_obj_in_list_vis(ch, arg, NULL, ch->carrying))) {
+    send_to_char(ch, "You don't seem to have that.\r\n");
+    return;
+  }
+
+  if (GET_OBJ_TYPE(obj) != ITEM_CONTAINER) {
+    send_to_char(ch, "You can only pack containers onto a mount.\r\n");
+    return;
+  }
+
+  mount = find_hitched_mount_for_pack(ch, obj);
+  if (!mount) {
+    if (!first_hitched_mount_in_room(ch))
+      send_to_char(ch, "You don't have any mounts hitched here.\r\n");
+    else
+      send_to_char(ch, "Your mount can't carry that much.\r\n");
+    return;
+  }
+
+  obj_from_char(obj);
+  obj_to_char(obj, mount);
+
+  act("You pack $p onto $N.", FALSE, ch, obj, mount, TO_CHAR);
+  act("$n packs $p onto $N.", TRUE, ch, obj, mount, TO_ROOM);
+}
+
+ACMD(do_unpack)
+{
+  char arg[MAX_INPUT_LENGTH];
+  struct char_data *mount;
+  struct obj_data *obj;
+  struct follow_type *follow;
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch, "Unpack what?\r\n");
+    return;
+  }
+
+  for (follow = ch->followers; follow; follow = follow->next) {
+    mount = follow->follower;
+
+    if (HITCHED_TO(mount) != ch || !MOB_FLAGGED(mount, MOB_MOUNT))
+      continue;
+    if (IN_ROOM(mount) != IN_ROOM(ch))
+      continue;
+
+    obj = get_obj_in_list_vis(ch, arg, NULL, mount->carrying);
+    if (!obj)
+      continue;
+    if (GET_OBJ_TYPE(obj) != ITEM_CONTAINER)
+      continue;
+
+    if (IS_CARRYING_N(ch) >= CAN_CARRY_N(ch)) {
+      send_to_char(ch, "You can't carry any more items.\r\n");
+      return;
+    }
+    if ((IS_CARRYING_W(ch) + GET_OBJ_WEIGHT(obj)) > CAN_CARRY_W(ch)) {
+      send_to_char(ch, "You can't carry that much weight.\r\n");
+      return;
+    }
+
+    obj_from_char(obj);
+    obj_to_char(obj, ch);
+
+    act("You unpack $p from $N.", FALSE, ch, obj, mount, TO_CHAR);
+    act("$n unpacks $p from $N.", TRUE, ch, obj, mount, TO_ROOM);
+    return;
+  }
+
+  send_to_char(ch, "You don't have that packed on a hitched mount.\r\n");
 }
 
 ACMD(do_unfollow)

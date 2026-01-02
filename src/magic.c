@@ -189,6 +189,7 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
 		     int spellnum, int savetype)
 {
   int dam = 0;
+  int save_dc;
 
   if (victim == NULL || ch == NULL)
     return (0);
@@ -234,28 +235,6 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
     break;
 
     /* Mostly clerics */
-  case SPELL_DISPEL_EVIL:
-    dam = dice(6, 8) + 6;
-    if (IS_EVIL(ch)) {
-      victim = ch;
-      dam = GET_HIT(ch) - 1;
-    } else if (IS_GOOD(victim)) {
-      act("The gods protect $N.", FALSE, ch, 0, victim, TO_CHAR);
-      return (0);
-    }
-    break;
-  case SPELL_DISPEL_GOOD:
-    dam = dice(6, 8) + 6;
-    if (IS_GOOD(ch)) {
-      victim = ch;
-      dam = GET_HIT(ch) - 1;
-    } else if (IS_EVIL(victim)) {
-      act("The gods protect $N.", FALSE, ch, 0, victim, TO_CHAR);
-      return (0);
-    }
-    break;
-
-
   case SPELL_CALL_LIGHTNING:
     dam = dice(7, 8) + 7;
     break;
@@ -279,8 +258,12 @@ int mag_damage(int level, struct char_data *ch, struct char_data *victim,
   } /* switch(spellnum) */
 
 
+  save_dc = compute_save_dc(ch, level, spellnum);
+  if (!IS_NPC(ch) && GET_REAL_LEVEL(ch) >= LVL_IMMORT)
+    save_dc = 1000;
+
   /* divide damage by two if victim makes his saving throw */
-  if (mag_savingthrow(victim, savetype, compute_save_dc(ch, level, spellnum)))
+  if (mag_savingthrow(victim, savetype, save_dc))
     dam /= 2;
 
   /* and finally, inflict the damage */
@@ -307,6 +290,8 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     return;
 
   save_dc = compute_save_dc(ch, level, spellnum);
+  if (!IS_NPC(ch) && GET_REAL_LEVEL(ch) >= LVL_IMMORT)
+    save_dc = 1000;
 
   for (i = 0; i < MAX_SPELL_AFFECTS; i++) {
     new_affect(&(af[i]));
@@ -391,13 +376,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     to_vict = "You feel very uncomfortable.";
     break;
 
-  case SPELL_DETECT_ALIGN:
-    af[0].duration = 12 + level;
-    SET_BIT_AR(af[0].bitvector, AFF_DETECT_ALIGN);
-    accum_duration = TRUE;
-    to_vict = "Your eyes tingle.";
-    break;
-
   case SPELL_DETECT_INVIS:
     af[0].duration = 12 + level;
     SET_BIT_AR(af[0].bitvector, AFF_DETECT_INVIS);
@@ -454,13 +432,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     to_room = "$n gets violently ill!";
     break;
 
-  case SPELL_PROT_FROM_EVIL:
-    af[0].duration = 24;
-    SET_BIT_AR(af[0].bitvector, AFF_PROTECT_EVIL);
-    accum_duration = TRUE;
-    to_vict = "You feel invulnerable!";
-    break;
-
   case SPELL_SANCTUARY:
     af[0].duration = 4;
     SET_BIT_AR(af[0].bitvector, AFF_SANCTUARY);
@@ -470,8 +441,6 @@ void mag_affects(int level, struct char_data *ch, struct char_data *victim,
     break;
 
   case SPELL_SLEEP:
-    if (!CONFIG_PK_ALLOWED && !IS_NPC(ch) && !IS_NPC(victim))
-      return;
     if (MOB_FLAGGED(victim, MOB_NOSLEEP))
       return;
     if (mag_savingthrow(victim, ABIL_WIS, save_dc))
@@ -645,8 +614,6 @@ void mag_areas(int level, struct char_data *ch, int spellnum, int savetype)
       continue;
     if (!IS_NPC(tch) && GET_LEVEL(tch) >= LVL_IMMORT)
       continue;
-    if (!CONFIG_PK_ALLOWED && !IS_NPC(ch) && !IS_NPC(tch))
-      continue;
     if (!IS_NPC(ch) && IS_NPC(tch) && AFF_FLAGGED(tch, AFF_CHARM))
       continue;
     if (!IS_NPC(tch) && spell_info[spellnum].violent && GROUP(tch) && GROUP(ch) && GROUP(ch) == GROUP(tch))
@@ -816,7 +783,7 @@ void mag_points(int level, struct char_data *ch, struct char_data *victim,
     break;
   }
   GET_HIT(victim) = MIN(GET_MAX_HIT(victim), GET_HIT(victim) + healing);
-  GET_MOVE(victim) = MIN(GET_MAX_MOVE(victim), GET_MOVE(victim) + move);
+  GET_STAMINA(victim) = MIN(GET_MAX_STAMINA(victim), GET_STAMINA(victim) + move);
   update_pos(victim);
 }
 

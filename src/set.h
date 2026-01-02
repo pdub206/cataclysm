@@ -1,20 +1,23 @@
 /**
-* @file roomsave.h
-* Core structures used within the core mud code.
-*
-* An addition to the core tbaMUD source code distribution, which is a derivative
-* of, and continuation of, CircleMUD.
-*
-* All rights reserved.  See license for complete information.
-* Copyright (C) 1993, 94 by the Trustees of the Johns Hopkins University
-* CircleMUD is based on DikuMUD, Copyright (C) 1990, 1991.
+* @file set.h
+* Builder room/object creation and utility headers.
+* 
+* This set of code was not originally part of the circlemud distribution.
 */
-#ifndef ROOMSAVE_H_
-#define ROOMSAVE_H_
 
-#include "conf.h"
-#include "sysdep.h"
+#ifndef SET_H
+#define SET_H
+
 #include "structs.h"
+
+ACMD(do_rset);
+ACMD(do_rcreate);
+ACMD(do_ocreate);
+ACMD(do_mcreate);
+ACMD(do_oset);
+ACMD(do_osave);
+ACMD(do_msave);
+ACMD(do_rsave);
 
 /* Boot-time loader: scans ROOMSAVE_DIR and restores contents into rooms. */
 void RoomSave_boot(void);
@@ -32,4 +35,4 @@ void RoomSave_mark_dirty_room(room_rnum rnum);
 /* For container edits: find the room an object ultimately lives in */
 room_rnum RoomSave_room_of_obj(struct obj_data *obj);
 
-#endif /* ROOMSAVE_H_ */
+#endif

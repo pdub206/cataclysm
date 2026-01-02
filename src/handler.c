@@ -24,7 +24,6 @@
 #include "fight.h"
 #include "quest.h"
 #include "mud_event.h"
-#include "roomsave.h"
 
 /* local file scope variables */
 static int extractions_pending = 0;
@@ -148,7 +147,7 @@ static void aff_apply_modify(struct char_data *ch, byte loc, sbyte mod, char *ms
   case APPLY_CHAR_HEIGHT:  GET_HEIGHT(ch) += mod; break;
   case APPLY_MANA:         GET_MAX_MANA(ch) += mod; break;
   case APPLY_HIT:          GET_MAX_HIT(ch) += mod; break;
-  case APPLY_MOVE:         GET_MAX_MOVE(ch) += mod; break;
+  case APPLY_STAMINA:         GET_MAX_STAMINA(ch) += mod; break;
   case APPLY_COINS:         break;
   case APPLY_EXP:          break;
 
@@ -446,6 +445,8 @@ void obj_to_char(struct obj_data *object, struct char_data *ch)
       RoomSave_mark_dirty_room(__rs_room);
     IS_CARRYING_W(ch) += GET_OBJ_WEIGHT(object);
     IS_CARRYING_N(ch)++;
+    if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) && RIDDEN_BY(MOUNT(ch)) == ch)
+      IS_CARRYING_W(MOUNT(ch)) += GET_OBJ_WEIGHT(object);
 
     autoquest_trigger_check(ch, NULL, object, AQ_OBJ_FIND);
 
@@ -487,6 +488,11 @@ void obj_from_char(struct obj_data *object)
 
   IS_CARRYING_W(object->carried_by) -= GET_OBJ_WEIGHT(object);
   IS_CARRYING_N(object->carried_by)--;
+  if (AFF_FLAGGED(object->carried_by, AFF_MOUNTED) &&
+      MOUNT(object->carried_by) &&
+      RIDDEN_BY(MOUNT(object->carried_by)) == object->carried_by)
+    IS_CARRYING_W(MOUNT(object->carried_by)) =
+      MAX(0, IS_CARRYING_W(MOUNT(object->carried_by)) - GET_OBJ_WEIGHT(object));
   object->carried_by = NULL;
   object->next_content = NULL;
   if (__rs_room != NOWHERE)
@@ -525,17 +531,6 @@ static int apply_ac(struct char_data *ch, int eq_pos)
   return (factor * GET_OBJ_VAL(GET_EQ(ch, eq_pos), 0));
 }
 
-int invalid_align(struct char_data *ch, struct obj_data *obj)
-{
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_EVIL) && IS_EVIL(ch))
-    return TRUE;
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_GOOD) && IS_GOOD(ch))
-    return TRUE;
-  if (OBJ_FLAGGED(obj, ITEM_ANTI_NEUTRAL) && IS_NEUTRAL(ch))
-    return TRUE;
-  return FALSE;
-}
-
 void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
 {
   int j;
@@ -558,7 +553,7 @@ void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
     log("SYSERR: EQUIP: Obj is in_room when equip.");
     return;
   }
-  if (invalid_align(ch, obj) || invalid_class(ch, obj)) {
+  if (invalid_class(ch, obj)) {
     act("You are zapped by $p and instantly let go of it.", FALSE, ch, obj, 0, TO_CHAR);
     act("$n is zapped by $p and instantly lets go of it.", FALSE, ch, obj, 0, TO_ROOM);
     /* Changed to drop in inventory instead of the ground. */
@@ -569,6 +564,9 @@ void equip_char(struct char_data *ch, struct obj_data *obj, int pos)
   GET_EQ(ch, pos) = obj;
   obj->worn_by = ch;
   obj->worn_on = pos;
+  IS_CARRYING_W(ch) += GET_OBJ_WEIGHT(obj);
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) && RIDDEN_BY(MOUNT(ch)) == ch)
+    IS_CARRYING_W(MOUNT(ch)) += GET_OBJ_WEIGHT(obj);
 
   if (GET_OBJ_TYPE(obj) == ITEM_ARMOR)
     GET_AC(ch) -= apply_ac(ch, pos);
@@ -601,6 +599,10 @@ struct obj_data *unequip_char(struct char_data *ch, int pos)
   obj = GET_EQ(ch, pos);
   obj->worn_by = NULL;
   obj->worn_on = -1;
+  IS_CARRYING_W(ch) -= GET_OBJ_WEIGHT(obj);
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) && MOUNT(ch) && RIDDEN_BY(MOUNT(ch)) == ch)
+    IS_CARRYING_W(MOUNT(ch)) =
+      MAX(0, IS_CARRYING_W(MOUNT(ch)) - GET_OBJ_WEIGHT(obj));
 
   if (GET_OBJ_TYPE(obj) == ITEM_ARMOR)
     GET_AC(ch) += apply_ac(ch, pos);
@@ -798,6 +800,8 @@ void obj_to_obj(struct obj_data *obj, struct obj_data *obj_to)
     GET_OBJ_WEIGHT(tmp_obj) += GET_OBJ_WEIGHT(obj);
     if (tmp_obj->carried_by)
       IS_CARRYING_W(tmp_obj->carried_by) += GET_OBJ_WEIGHT(obj);
+    else if (tmp_obj->worn_by)
+      IS_CARRYING_W(tmp_obj->worn_by) += GET_OBJ_WEIGHT(obj);
   }
 }
 
@@ -831,6 +835,8 @@ void obj_from_obj(struct obj_data *obj)
     GET_OBJ_WEIGHT(temp) -= GET_OBJ_WEIGHT(obj);
     if (temp->carried_by)
       IS_CARRYING_W(temp->carried_by) -= GET_OBJ_WEIGHT(obj);
+    else if (temp->worn_by)
+      IS_CARRYING_W(temp->worn_by) -= GET_OBJ_WEIGHT(obj);
   }
   obj->in_obj = NULL;
   obj->next_content = NULL;
@@ -990,6 +996,13 @@ void extract_char_final(struct char_data *ch)
           STATE(d) = CON_CLOSE;
       }
       if (GET_POS(ch) == POS_DEAD) {
+        int pfilepos = GET_PFILEPOS(ch);
+
+        if (pfilepos < 0)
+          pfilepos = get_ptable_by_name(GET_NAME(ch));
+        if (pfilepos >= 0)
+          SET_BIT(player_table[pfilepos].flags, PINDEX_DELETED);
+
         STATE(ch->desc) = CON_ACCOUNT_MENU;
         send_account_menu(ch->desc);
         ch->desc->character = NULL;
@@ -999,6 +1012,25 @@ void extract_char_final(struct char_data *ch)
         send_account_menu(ch->desc);
       }
     }
+  }
+
+  if (AFF_FLAGGED(ch, AFF_MOUNTED) || MOUNT(ch)) {
+    struct char_data *mount = MOUNT(ch);
+    if (mount && RIDDEN_BY(mount) == ch) {
+      int rider_weight = GET_WEIGHT(ch) + IS_CARRYING_W(ch);
+      IS_CARRYING_W(mount) = MAX(0, IS_CARRYING_W(mount) - rider_weight);
+      RIDDEN_BY(mount) = NULL;
+    }
+    MOUNT(ch) = NULL;
+    REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_MOUNTED);
+  }
+  if (RIDDEN_BY(ch)) {
+    struct char_data *rider = RIDDEN_BY(ch);
+    if (rider && MOUNT(rider) == ch) {
+      MOUNT(rider) = NULL;
+      REMOVE_BIT_AR(AFF_FLAGS(rider), AFF_MOUNTED);
+    }
+    RIDDEN_BY(ch) = NULL;
   }
 
   /* On with the character's assets... */
@@ -1456,7 +1488,7 @@ int get_obj_pos_in_equip_vis(struct char_data *ch, char *arg, int *number, struc
 
 static int money_weight(int amount)
 {
-  const int coins_per_weight = 10;
+  const int coins_per_weight = 30;
 
   if (amount <= 0)
     return 0;

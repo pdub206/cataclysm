@@ -629,7 +629,7 @@ static int export_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
       AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3],
       GET_ALIGNMENT(mob),
       GET_LEVEL(mob), GET_HIT(mob),
-      GET_MANA(mob), GET_MOVE(mob));
+      GET_MANA(mob), GET_STAMINA(mob));
 
   fprintf(fd, 	"%d %d %d\n",
 		GET_POS(mob), GET_DEFAULT_POS(mob), GET_SEX(mob)

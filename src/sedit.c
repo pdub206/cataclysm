@@ -31,6 +31,7 @@ static void sedit_shop_flags_menu(struct descriptor_data *d);
 static void sedit_no_trade_menu(struct descriptor_data *d);
 static void sedit_types_menu(struct descriptor_data *d);
 static void sedit_disp_menu(struct descriptor_data *d);
+static void format_notrade_classes(bitvector_t flags, char *out, size_t outsz);
 
 
 void sedit_save_internally(struct descriptor_data *d)
@@ -42,6 +43,34 @@ void sedit_save_internally(struct descriptor_data *d)
 static void sedit_save_to_disk(int num)
 {
   save_shops(num);
+}
+
+static void format_notrade_classes(bitvector_t flags, char *out, size_t outsz)
+{
+  size_t len = 0;
+  int i, found = 0;
+
+  if (!out || outsz == 0)
+    return;
+
+  out[0] = '\0';
+
+  for (i = TRADE_CLASS_START; i < NUM_TRADERS; i++) {
+    if (IS_SET(flags, 1 << i)) {
+      int n = snprintf(out + len, outsz - len, "%s%s", found ? " " : "", trade_letters[i]);
+
+      if (n < 0 || (size_t)n >= outsz - len) {
+        out[outsz - 1] = '\0';
+        return;
+      }
+
+      len += (size_t)n;
+      found = 1;
+    }
+  }
+
+  if (!found)
+    strlcpy(out, "NOBITS", outsz);
 }
 
 /* utility functions */
@@ -346,11 +375,12 @@ static void sedit_no_trade_menu(struct descriptor_data *d)
 
   get_char_colors(d->character);
   clear_screen(d);
-  for (i = 0; i < NUM_TRADERS; i++) {
-    write_to_output(d, "%s%2d%s) %-20.20s   %s", grn, i + 1, nrm, trade_letters[i],
+  for (i = 0; i < NUM_TRADE_CLASSES; i++) {
+    write_to_output(d, "%s%2d%s) %-20.20s   %s", grn, i + 1, nrm,
+                    trade_letters[TRADE_CLASS_START + i],
 		!(++count % 2) ? "\r\n" : "");
   }
-  sprintbit(S_NOTRADE(OLC_SHOP(d)), trade_letters, bits, sizeof(bits));
+  format_notrade_classes(S_NOTRADE(OLC_SHOP(d)), bits, sizeof(bits));
   write_to_output(d, "\r\nCurrently won't trade with: %s%s%s\r\n"
 	  "Enter choice : ", cyn, bits, nrm);
   OLC_MODE(d) = SEDIT_NOTRADE;
@@ -382,7 +412,7 @@ static void sedit_disp_menu(struct descriptor_data *d)
   get_char_colors(d->character);
 
   clear_screen(d);
-  sprintbit(S_NOTRADE(shop), trade_letters, buf1, sizeof(buf1));
+  format_notrade_classes(S_NOTRADE(shop), buf1, sizeof(buf1));
   sprintbit(S_BITVECTOR(shop), shop_bits, buf2, sizeof(buf2));
   write_to_output(d,
 	  "-- Shop Number : [%s%d%s]\r\n"
@@ -756,8 +786,8 @@ void sedit_parse(struct descriptor_data *d, char *arg)
     }
     break;
   case SEDIT_NOTRADE:
-    if ((i = LIMIT(atoi(arg), 0, NUM_TRADERS)) > 0) {
-      TOGGLE_BIT(S_NOTRADE(OLC_SHOP(d)), 1 << (i - 1));
+    if ((i = LIMIT(atoi(arg), 0, NUM_TRADE_CLASSES)) > 0) {
+      TOGGLE_BIT(S_NOTRADE(OLC_SHOP(d)), 1 << (TRADE_CLASS_START + i - 1));
       sedit_no_trade_menu(d);
       return;
     }

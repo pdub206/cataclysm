@@ -57,7 +57,6 @@ static struct char_data *next_combat_list = NULL;
 static void perform_group_gain(struct char_data *ch, int base, struct char_data *victim);
 static void dam_message(int dam, struct char_data *ch, struct char_data *victim, int w_type);
 static void make_corpse(struct char_data *ch);
-static void change_alignment(struct char_data *ch, struct char_data *victim);
 static void group_gain(struct char_data *ch, struct char_data *victim);
 static void solo_gain(struct char_data *ch, struct char_data *victim);
 /** @todo refactor this function name */
@@ -72,8 +71,8 @@ static int roll_damage(struct char_data *ch, struct char_data *victim,
   int dam = 0;
 
   if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON) {
-    int ndice = GET_OBJ_VAL(wielded, 1); /* #dice */
-    int sdice = GET_OBJ_VAL(wielded, 2); /* sides */
+    int ndice = GET_OBJ_VAL(wielded, 0); /* #dice */
+    int sdice = GET_OBJ_VAL(wielded, 1); /* sides */
     dam = dice(ndice, sdice);
     dam += GET_ABILITY_MOD(GET_STR(ch));     /* STR adds to weapon damage */
   } else {
@@ -92,7 +91,7 @@ static int weapon_family_skill_num(struct char_data *ch, struct obj_data *wielde
   if (!wielded || GET_OBJ_TYPE(wielded) != ITEM_WEAPON)
     return SKILL_UNARMED;
 
-  /* NOTE: w_type here is TYPE_HIT + GET_OBJ_VAL(wielded, 3) or mob attack type + TYPE_HIT.
+  /* NOTE: w_type here is TYPE_HIT + GET_OBJ_VAL(wielded, 2) or mob attack type + TYPE_HIT.
      Adjust the cases below to match your game's TYPE_* values. */
   switch (w_type) {
     /* --- Piercing family --- */
@@ -176,20 +175,6 @@ void update_pos(struct char_data *victim)
     GET_POS(victim) = POS_STUNNED;
 }
 
-void check_killer(struct char_data *ch, struct char_data *vict)
-{
-  if (PLR_FLAGGED(vict, PLR_KILLER) || PLR_FLAGGED(vict, PLR_THIEF))
-    return;
-  if (PLR_FLAGGED(ch, PLR_KILLER) || IS_NPC(ch) || IS_NPC(vict) || ch == vict)
-    return;
-
-  SET_BIT_AR(PLR_FLAGS(ch), PLR_KILLER);
-  send_to_char(ch, "If you want to be a PLAYER KILLER, so be it...\r\n");
-  mudlog(BRF, MAX(LVL_IMMORT, MAX(GET_INVIS_LEV(ch), GET_INVIS_LEV(vict))), 
-    TRUE, "PC Killer bit set on %s for initiating attack on %s at %s.",
-    GET_NAME(ch), GET_NAME(vict), world[IN_ROOM(vict)].name);
-}
-
 /* start one char fighting another (yes, it is horrible, I know... )  */
 void set_fighting(struct char_data *ch, struct char_data *vict)
 {
@@ -210,8 +195,6 @@ void set_fighting(struct char_data *ch, struct char_data *vict)
   FIGHTING(ch) = vict;
   GET_POS(ch) = POS_FIGHTING;
 
-  if (!CONFIG_PK_ALLOWED)
-    check_killer(ch, vict);
 }
 
 /* remove a char from the list of fighting chars */
@@ -297,14 +280,6 @@ static void make_corpse(struct char_data *ch)
   obj_to_room(corpse, IN_ROOM(ch));
 }
 
-/* When ch kills victim */
-static void change_alignment(struct char_data *ch, struct char_data *victim)
-{
-  /* new alignment change algorithm: if you kill a monster with alignment A,
-   * you move 1/16th of the way to having alignment -A.  Simple and fast. */
-  GET_ALIGNMENT(ch) += (-GET_ALIGNMENT(victim) - GET_ALIGNMENT(ch)) / 16;
-}
-
 void death_cry(struct char_data *ch)
 {
   int door;
@@ -363,8 +338,6 @@ struct char_data *i;
 void die(struct char_data * ch, struct char_data * killer)
 {
   if (!IS_NPC(ch)) {
-    REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_KILLER);
-    REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_THIEF);
   }
   raw_kill(ch, killer);
 }
@@ -372,11 +345,9 @@ void die(struct char_data * ch, struct char_data * killer)
 static void perform_group_gain(struct char_data *ch, int base,
 			     struct char_data *victim)
 {
-  int share;
-
-  share = MIN(CONFIG_MAX_EXP_GAIN, MAX(1, base));
-
-  change_alignment(ch, victim);
+  (void)ch;
+  (void)base;
+  (void)victim;
 }
 
 static void group_gain(struct char_data *ch, struct char_data *victim)
@@ -418,8 +389,6 @@ static void solo_gain(struct char_data *ch, struct char_data *victim)
     exp += MAX(0, (exp * MIN(8, (GET_LEVEL(victim) - GET_LEVEL(ch)))) / 8);
 
   exp = MAX(exp, 1);
-
-  change_alignment(ch, victim);
 }
 
 static char *replace_string(const char *str, const char *weapon_singular, const char *weapon_plural)
@@ -634,6 +603,7 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
   char local_buf[256];
   struct char_data *tmp_char;
   struct obj_data *corpse_obj;
+  int prev_hit = 0;
 
   if (GET_POS(victim) <= POS_DEAD) {
     /* This is "normal"-ish now with delayed extraction. -gg 3/15/2001 */
@@ -659,8 +629,8 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
     return (0);
   }
 
-  /* You can't damage an immortal! */
-  if (!IS_NPC(victim) && ((GET_LEVEL(victim) >= LVL_IMMORT) && PRF_FLAGGED(victim, PRF_NOHASSLE)))
+  /* Immortals cannot be damaged. */
+  if (!IS_NPC(victim) && GET_REAL_LEVEL(victim) >= LVL_IMMORT)
     dam = 0;
 
   dam = damage_mtrigger(ch, victim, dam, attacktype);
@@ -694,14 +664,9 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
     dam /= 2;
 
   /* Check for PK if this is not a PK MUD */
-  if (!CONFIG_PK_ALLOWED) {
-    check_killer(ch, victim);
-    if (PLR_FLAGGED(ch, PLR_KILLER) && (ch != victim))
-      dam = 0;
-  }
-
   /* Set the maximum damage per round and subtract the hit points */
   dam = MAX(MIN(dam, 100), 0);
+  prev_hit = GET_HIT(victim);
   GET_HIT(victim) -= dam;
 
   update_pos(victim);
@@ -826,22 +791,69 @@ int damage(struct char_data *ch, struct char_data *victim, int dam, int attackty
 void hit(struct char_data *ch, struct char_data *victim, int type)
 {
   struct obj_data *wielded = GET_EQ(ch, WEAR_WIELD);
+  bool wielded_weapon = (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON);
   struct obj_data *shield  = GET_EQ(victim, WEAR_SHIELD);
   int w_type, d20, attack_mod = 0, target_ac, dam = 0;
   bool hit_success = FALSE;
+  bool attacker_immortal, victim_immortal;
+  bool attacker_is_player, victim_is_player;
+  int unarmed_die_size = 0;
+  int unarmed_prof_bonus = 0;
+  int unarmed_str_mod = 0;
 
   /* Basic sanity */
   if (!ch || !victim) return;
 
+  attacker_is_player = (ch->desc != NULL);
+  victim_is_player = (victim->desc != NULL);
+
+  attacker_immortal = (attacker_is_player &&
+      (GET_REAL_LEVEL(ch) >= LVL_IMMORT || PRF_FLAGGED(ch, PRF_NOHASSLE)));
+  victim_immortal = (victim_is_player &&
+      (GET_REAL_LEVEL(victim) >= LVL_IMMORT || PRF_FLAGGED(victim, PRF_NOHASSLE)));
+
   /* Determine attack message type exactly like stock code */
-  if (wielded && GET_OBJ_TYPE(wielded) == ITEM_WEAPON)
-    w_type = GET_OBJ_VAL(wielded, 3) + TYPE_HIT;
+  if (wielded_weapon)
+    w_type = GET_OBJ_VAL(wielded, 2) + TYPE_HIT;
   else {
     if (IS_NPC(ch) && ch->mob_specials.attack_type != 0)
       w_type = ch->mob_specials.attack_type + TYPE_HIT;
     else
       w_type = TYPE_HIT;
   } /* matches stock message mapping */
+
+  if (victim_immortal) {
+    damage(ch, victim, 0, w_type);
+    return;
+  }
+
+  if (attacker_immortal) {
+    if (wielded_weapon) {
+      int ndice = GET_OBJ_VAL(wielded, 0);
+      int sdice = GET_OBJ_VAL(wielded, 1);
+      dam = (ndice * sdice) + GET_ABILITY_MOD(GET_STR(ch));
+    } else {
+      int prof_bonus = (!IS_NPC(ch)) ? GET_PROFICIENCY(GET_SKILL(ch, SKILL_UNARMED)) : 0;
+      int str_mod = GET_ABILITY_MOD(GET_STR(ch));
+      int die_size;
+
+      switch (prof_bonus) {
+        case 0:  die_size = 4; break;  /* untrained */
+        case 1:  die_size = 6; break;  /* trained */
+        case 2:  die_size = 8; break;  /* expert */
+        default: die_size = 10; break; /* master or above */
+      }
+
+      if (IS_NPC(ch) && prof_bonus <= 0) {
+        prof_bonus = MIN(6, (GET_LEVEL(ch) / 4));
+      }
+
+      dam = die_size + str_mod + prof_bonus;
+    }
+
+    damage(ch, victim, dam, w_type);
+    return;
+  }
 
   /* Roll d20 */
   d20 = rand_number(1, 20);
@@ -859,7 +871,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
       attack_mod += GET_PROFICIENCY(GET_SKILL(ch, skillnum));
 
     /* --- UNARMED ATTACK HANDLING --- */
-    if (!wielded) {
+    if (!wielded_weapon) {
       int prof_bonus = (!IS_NPC(ch)) ? GET_PROFICIENCY(GET_SKILL(ch, SKILL_UNARMED)) : 0;
       int str_mod = GET_ABILITY_MOD(GET_STR(ch));
       int die_size;
@@ -871,6 +883,7 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
         case 2:  die_size = 8; break;  /* expert */
         default: die_size = 10; break; /* master or above */
       }
+      unarmed_die_size = die_size;
 
       /* NPC fallback scaling */
       if (IS_NPC(ch) && prof_bonus <= 0) {
@@ -879,9 +892,11 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
 
       /* base damage roll for unarmed attacks */
       dam = dice(1, die_size) + str_mod + prof_bonus;
+      unarmed_prof_bonus = prof_bonus;
+      unarmed_str_mod = str_mod;
 
       /* mark attack type for damage() messaging */
-      w_type = SKILL_UNARMED + TYPE_HIT;
+      w_type = TYPE_HIT;
     }
 
     /* Weapon magic (cap +3) */
@@ -901,8 +916,9 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
     /* Ascending AC target */
     target_ac = compute_armor_class_asc(victim);
 
-    /* Nat 1/20, then normal resolution */
-    if (d20 == 1)       hit_success = FALSE;
+    /* Nat 1/20, then normal resolution (immortals always hit). */
+    if (attacker_immortal) hit_success = TRUE;
+    else if (d20 == 1)       hit_success = FALSE;
     else if (d20 == 20) hit_success = TRUE;
     else                hit_success = ((d20 + attack_mod) >= target_ac);
 
@@ -912,13 +928,22 @@ void hit(struct char_data *ch, struct char_data *victim, int type)
        * If we are unarmed, dam was already rolled above.
        * If wielding a weapon, roll normally.
        */
-      if (wielded)
+      if (wielded_weapon)
         dam = roll_damage(ch, victim, wielded, w_type);
+      if (attacker_immortal) {
+        if (wielded_weapon) {
+          int ndice = GET_OBJ_VAL(wielded, 0);
+          int sdice = GET_OBJ_VAL(wielded, 1);
+          dam = (ndice * sdice) + GET_ABILITY_MOD(GET_STR(ch));
+        } else if (unarmed_die_size > 0) {
+          dam = unarmed_die_size + unarmed_str_mod + unarmed_prof_bonus;
+        }
+      }
 
       /* --- SHIELD BLOCK CHECK ---
        * Only happens if an attack actually lands.
        */
-      if (shield) {
+      if (shield && !attacker_immortal) {
         int def_prof = (!IS_NPC(victim)) ? GET_PROFICIENCY(GET_SKILL(victim, SKILL_SHIELD_USE)) : 0;
         int block_chance = def_prof * 10;   /* 0–60% total chance to block an attack */
 

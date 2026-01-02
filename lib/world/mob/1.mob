@@ -9,19 +9,12 @@ has a thick, haggard looking brown beard that is flecked with dust and sand.
 His eyes have a bluish-tint to them with a small amount of green.  One might
 call his stature bulky, as he has quite a bit of muscle.
 ~
-B
-
-
-
-
-
-~
 6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
 8 8 1
 Str: 16
 Class: 3
-SaveStr: 3
+Species: 0
 Skill 132 5
 Skill 134 5
 Skill 137 5
@@ -33,17 +26,17 @@ Skill 145 5
 Skill 146 5
 Skill 147 5
 E
-L 17 127 1
-L 16 117 1
-L 15 117 1
-L 11 111 1
-L 10 107 1
-L 9 124 1
-L 8 115 1
-L 7 108 1
-L 6 110 1
-L 5 131 1
 L 3 118 1
+L 5 131 1
+L 6 110 1
+L 7 108 1
+L 8 115 1
+L 9 124 1
+L 10 107 1
+L 11 111 1
+L 15 117 1
+L 16 117 1
+L 17 127 1
 #101
 Sally~
 slim lanky human soldier guard~
@@ -56,26 +49,24 @@ Her arms and legs are lanky, seeming to be longer than normal.  A ponytail of
 dark hair has been pulled back behind her head, intensifying the sharpness of
 her nose.
 ~
-B
-
-
-
-
-
-~
 6218 0 0 0 0 0 0 0 0 E
 1 3d20+40
 8 8 2
+Class: 3
+Species: 0
 Skill 132 5
 Skill 134 5
 Skill 137 5
+Skill 140 5
 Skill 141 5
 Skill 142 5
 Skill 143 5
 Skill 144 5
 Skill 145 5
 Skill 146 5
-Skill 147 5
+Skill 152 5
+Skill 156 5
+Skill 163 5
 E
 L 3 118 1
 L 5 131 1
@@ -100,19 +91,12 @@ Pale blue eyes look bloodshot, and bluish-purple bags hang under them.  His
 hands are marred with minor cuts and scars from years of working in service to
 others.
 ~
-B
-
-
-
-
-
-~
 10 0 0 0 0 0 0 0 0 E
 1 3d12+60
 8 8 1
 E
-L 9 112 1
 L 14 113 1
+L 9 112 1
 #103
 Lanky~
 woman lanky scarred~
@@ -125,13 +109,6 @@ dehydration.  Tanned dark from the harsh rays of the sun, her upper torso is
 covered in scars from a lifetime of labor.  Unkempt brown hair covers her head,
 descending to just above her shoulders.  Her eyes are a light blue color and
 appear slightly bloodshot.
-~
-B
-
-
-
-
-
 ~
 10 0 0 0 0 0 0 0 0 E
 1 3d8+60
@@ -161,17 +138,56 @@ appear thick and ready to propel the animal if it feels threatened.
 B
 
 
+
+
+
+
+
+
+
+
+
+
 It's a rat.
 ~
 8 0 0 0 0 0 0 0 0 E
 1 0d0+10
 8 8 2
-Str: 6
-Dex: 10
-Int: 4
-Wis: 4
-Con: 6
+Str: 3
+Dex: 7
+Int: 3
+Wis: 8
+Con: 8
 Cha: 3
+Species: 25
+Age: 42
+AtkT 4
+E
+#105
+Kank~
+kank sandy brown~
+a sandy brown kank~
+A sandy brown kank is here, clacking its pincers.
+~
+It looks unfinished.
+~
+B
+
+
+
+
+No background has been recorded.
+~
+1048584 0 0 0 0 0 0 0 0 E
+1 0d0+10
+8 8 0
+Str: 18
+Dex: 5
+Int: 3
+Wis: 7
+Con: 18
+Cha: 3
+Species: 21
 AtkT 4
 E
 $

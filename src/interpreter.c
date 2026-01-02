@@ -27,6 +27,7 @@
 #include "act.h" /* ACMDs located within the act*.c files */
 #include "ban.h"
 #include "class.h"
+#include "species.h"
 #include "graph.h"
 #include "hedit.h"
 #include "house.h"
@@ -47,6 +48,11 @@ static int _parse_name(char *arg, char *name);
 static bool perform_new_char_dupe_check(struct descriptor_data *d);
 /* sort_commands utility */
 static int sort_commands_helper(const void *a, const void *b);
+static void show_species_menu(struct descriptor_data *d);
+static bool is_creation_state(int state);
+static void show_stat_pref_prompt(struct descriptor_data *d);
+static int ability_from_pref_arg(const char *arg);
+static bool parse_stat_preference(char *input, ubyte *order, ubyte *count);
 
 /* globals defined here, used here and elsewhere */
 int *cmd_sort_info = NULL;
@@ -81,7 +87,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "sw"       , "sw"      , POS_STANDING, do_move     , 0, SCMD_SW },
   
   /* now, the main list */
-  { "acaudit"  , "acaudi"  , POS_DEAD    , do_acaudit  , LVL_IMMORT, 0 },
+  { "audit"    , "aud"     , POS_DEAD    , do_audit    , LVL_IMMORT, 0 },
   { "at"       , "at"      , POS_DEAD    , do_at       , LVL_IMMORT, 0 },
   { "advance"  , "adv"     , POS_DEAD    , do_advance  , LVL_GRGOD, 0 },
   { "aedit"    , "aed"     , POS_DEAD    , do_oasis_aedit, LVL_GOD, 0 },
@@ -112,6 +118,7 @@ cpp_extern const struct command_info cmd_info[] = {
 
   { "cast"     , "c"       , POS_SITTING , do_cast     , 1, 0 },
   { "cedit"    , "cedit"   , POS_DEAD    , do_oasis_cedit, LVL_IMPL, 0 },
+  { "change"   , "chang"   , POS_SLEEPING , do_change   , 0, 0 },
   { "changelog", "cha"     , POS_DEAD    , do_changelog, LVL_IMPL, 0 },
   { "check"    , "ch"      , POS_STANDING, do_not_here , 1, 0 },
   { "checkload", "checkl"  , POS_DEAD    , do_checkloadstatus, LVL_GOD, 0 },
@@ -130,6 +137,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "detach"   , "detach"  , POS_DEAD    , do_detach   , LVL_BUILDER, 0 },
   { "diagnose" , "diag"    , POS_RESTING , do_diagnose , 0, 0 },
   { "dig"      , "dig"     , POS_DEAD    , do_dig      , LVL_BUILDER, 0 },
+  { "dismount" , "dism"    , POS_STANDING, do_dismount , 0, 0 },
   { "display"  , "disp"    , POS_DEAD    , do_display  , 0, 0 },
   { "drink"    , "dri"     , POS_RESTING , do_drink    , 0, SCMD_DRINK },
   { "drop"     , "dro"     , POS_RESTING , do_drop     , 0, SCMD_DROP },
@@ -173,6 +181,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "hold"     , "hold"    , POS_RESTING , do_grab     , 1, 0 },
   { "holylight", "holy"    , POS_DEAD    , do_gen_tog  , LVL_IMMORT, SCMD_HOLYLIGHT },
   { "house"    , "house"   , POS_RESTING , do_house    , 0, 0 },
+  { "hitch"    , "hitc"    , POS_STANDING, do_hitch    , 0, 0 },
 
   { "inventory", "i"       , POS_DEAD    , do_inventory, 0, 0 },
   { "idea"     , "ide"      , POS_DEAD    , do_ibt      , 0, SCMD_IDEA },
@@ -191,6 +200,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "last"     , "last"    , POS_DEAD    , do_last     , LVL_GOD, 0 },
   { "leave"    , "lea"     , POS_STANDING, do_leave    , 0, 0 },
   { "list"     , "lis"     , POS_STANDING, do_not_here , 0, 0 },
+  { "mount"    , "mou"     , POS_STANDING, do_mount    , 0, 0 },
   { "listen"   , "lisn"    , POS_RESTING , do_listen   , 0, 0 },
   { "links"    , "lin"     , POS_STANDING, do_links    , LVL_GOD, 0 },
   { "lock"     , "loc"     , POS_SITTING , do_gen_door , 0, SCMD_LOCK },
@@ -202,6 +212,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "medit"    , "med"     , POS_DEAD    , do_oasis_medit, LVL_BUILDER, 0 },
   { "mlist"    , "mlist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_MLIST },
   { "mcopy"    , "mcopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_MEDIT },
+  { "mcreate"  , "mcreate" , POS_DEAD    , do_mcreate  , LVL_BUILDER, 0 },
   { "msave"    , "msav"    , POS_DEAD    , do_msave,     LVL_BUILDER, 0 },
   { "msgedit"  , "msgedit" , POS_DEAD    , do_msgedit,   LVL_GOD, 0 },
   { "mute"     , "mute"    , POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_MUTE },
@@ -219,11 +230,14 @@ cpp_extern const struct command_info cmd_info[] = {
   { "olc"      , "olc"     , POS_DEAD    , do_show_save_list, LVL_BUILDER, 0 },
   { "olist"    , "olist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_OLIST },
   { "oedit"    , "oedit"   , POS_DEAD    , do_oasis_oedit, LVL_BUILDER, 0 },
+  { "ocreate"  , "ocreate" , POS_DEAD    , do_ocreate  , LVL_BUILDER, 0 },
   { "ooc"      , "oo"      , POS_RESTING , do_ooc      , 0, 0 },
+  { "osave"    , "osave"   , POS_DEAD    , do_osave    , LVL_BUILDER, 0 },
   { "oset"     , "oset"    , POS_DEAD    , do_oset,        LVL_BUILDER, 0 },  
   { "ocopy"    , "ocopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_OEDIT },
 
   { "put"      , "p"       , POS_RESTING , do_put      , 0, 0 },
+  { "pack"     , "pac"     , POS_RESTING , do_pack     , 0, 0 },
   { "peace"    , "pe"      , POS_DEAD    , do_peace    , LVL_BUILDER, 0 },
   { "pemote"   , "pem"     , POS_SLEEPING, do_pemote   , 0, SCMD_PEMOTE },
   { "phemote"  , "phem"    , POS_SLEEPING, do_phemote  , 0, SCMD_PHEMOTE },
@@ -257,11 +271,13 @@ cpp_extern const struct command_info cmd_info[] = {
   { "recent"   , "recent"  , POS_DEAD    , do_recent   , LVL_IMMORT, 0 },
   { "remove"   , "rem"     , POS_RESTING , do_remove   , 0, 0 },
   { "report"   , "repo"    , POS_RESTING , do_report   , 0, 0 },
-  { "reroll"   , "rero"    , POS_DEAD    , do_wizutil  , LVL_GRGOD, SCMD_REROLL },
+  { "reroll"   , "rero"    , POS_DEAD    , do_reroll   , 0, 0 },
   { "rescue"   , "resc"    , POS_FIGHTING, do_rescue   , 1, 0 },
   { "restore"  , "resto"   , POS_DEAD    , do_restore  , LVL_GOD, 0 },
   { "return"   , "retu"    , POS_DEAD    , do_return   , 0, 0 },
   { "redit"    , "redit"   , POS_DEAD    , do_oasis_redit, LVL_BUILDER, 0 },
+  { "rcreate"  , "rcreate" , POS_DEAD    , do_rcreate  , LVL_BUILDER, 0 },
+  { "rset"     , "rset"    , POS_DEAD    , do_rset     , LVL_BUILDER, 0 },
   { "rlist"    , "rlist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_RLIST },
   { "rcopy"    , "rcopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_REDIT },
   { "roomflags", "roomflags", POS_DEAD   , do_gen_tog  , LVL_IMMORT, SCMD_SHOWVNUMS },
@@ -320,7 +336,9 @@ cpp_extern const struct command_info cmd_info[] = {
   { "unlock"   , "unlock"  , POS_SITTING , do_gen_door , 0, SCMD_UNLOCK },
   { "unban"    , "unban"   , POS_DEAD    , do_unban    , LVL_GRGOD, 0 },
   { "unaffect" , "unaffect", POS_DEAD    , do_wizutil  , LVL_GOD, SCMD_UNAFFECT },
+  { "unhitch"  , "unh"     , POS_STANDING, do_unhitch  , 0, 0 },
   { "unfollow" , "unf"     , POS_RESTING , do_unfollow , 0, 0 },
+  { "unpack"   , "unpa"    , POS_RESTING , do_unpack   , 0, 0 },
   { "uptime"   , "uptime"  , POS_DEAD    , do_date     , LVL_GOD, SCMD_UPTIME },
   { "use"      , "use"     , POS_SITTING , do_use      , 1, SCMD_USE },
   { "users"    , "users"   , POS_DEAD    , do_users    , LVL_GOD, 0 },
@@ -477,8 +495,6 @@ void command_interpreter(struct char_data *ch, char *argument)
   char *line;
   char arg[MAX_INPUT_LENGTH];
 
-  REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
-
   /* just drop to next line for hitting CR */
   skip_spaces(&argument);
   if (!*argument)
@@ -493,6 +509,9 @@ void command_interpreter(struct char_data *ch, char *argument)
     line = argument + 1;
   } else
     line = any_one_arg(argument, arg);
+
+  if (!is_abbrev(arg, "change"))
+    REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_HIDE);
 
   /* Since all command triggers check for valid_dg_target before acting, the levelcheck
    * here has been removed. Otherwise, find the command. */
@@ -1268,7 +1287,7 @@ static bool perform_new_char_dupe_check(struct descriptor_data *d)
     /* Do the player names match? */
     if (!strcmp(GET_NAME(k->character), GET_NAME(d->character))) {
       /* Check the other character is still in creation? */
-      if ((STATE(k) > CON_PLAYING) && (STATE(k) < CON_QCLASS)) {
+      if (is_creation_state(STATE(k))) {
         /* Boot the older one */
         k->character->desc = NULL;
         k->character = NULL;
@@ -1301,6 +1320,125 @@ static bool perform_new_char_dupe_check(struct descriptor_data *d)
     }
   }
   return (found);
+}
+
+static void show_species_menu(struct descriptor_data *d)
+{
+  int count = pc_species_count();
+
+  write_to_output(d, "Select a species:\r\n");
+  for (int i = 0; i < count; i++) {
+    int species = pc_species_list[i];
+    write_to_output(d, " %2d) %s\r\n", i + 1, species_types[species]);
+  }
+  write_to_output(d, "Species: ");
+}
+
+static void show_age_prompt(struct descriptor_data *d)
+{
+  write_to_output(d, "Age (%d-%d): ", MIN_CHAR_AGE, MAX_CHAR_AGE);
+}
+
+static bool is_creation_state(int state)
+{
+  switch (state) {
+    case CON_GET_NAME:
+    case CON_NAME_CNFRM:
+    case CON_PASSWORD:
+    case CON_NEWPASSWD:
+    case CON_CNFPASSWD:
+    case CON_QSEX:
+    case CON_QSPECIES:
+    case CON_QCLASS:
+    case CON_QAGE:
+    case CON_QSTAT_PREF:
+    case CON_QSHORTDESC:
+    case CON_PLR_DESC:
+    case CON_PLR_BACKGROUND:
+      return TRUE;
+    default:
+      return FALSE;
+  }
+}
+
+static void show_stat_pref_prompt(struct descriptor_data *d)
+{
+  write_to_output(d,
+    "\r\nEnter your stat preference, with the first stat being your preferred highest,\r\n"
+    "followed by the others in descending order.\r\n"
+    "If you list fewer than six, those listed get the highest rolls; the rest are FIFO.\r\n"
+    "Example: strength dexterity constitution intelligence wisdom charisma\r\n"
+    "   or:  str dex con int wis cha\r\n"
+    "Press Enter to skip (first-in, first-out).\r\n"
+    "Stat preference: ");
+}
+
+static int ability_from_pref_arg(const char *arg)
+{
+  if (!arg || !*arg)
+    return -1;
+  if (!str_cmp(arg, "str") || is_abbrev(arg, "strength"))
+    return ABIL_STR;
+  if (!str_cmp(arg, "dex") || is_abbrev(arg, "dexterity"))
+    return ABIL_DEX;
+  if (!str_cmp(arg, "con") || is_abbrev(arg, "constitution"))
+    return ABIL_CON;
+  if (!str_cmp(arg, "int") || is_abbrev(arg, "intelligence"))
+    return ABIL_INT;
+  if (!str_cmp(arg, "wis") || is_abbrev(arg, "wisdom"))
+    return ABIL_WIS;
+  if (!str_cmp(arg, "cha") || is_abbrev(arg, "charisma"))
+    return ABIL_CHA;
+  return -1;
+}
+
+static bool parse_stat_preference(char *input, ubyte *order, ubyte *count)
+{
+  char arg[MAX_INPUT_LENGTH];
+  bool seen[NUM_ABILITIES] = { FALSE };
+
+  if (!order || !count)
+    return FALSE;
+
+  *count = 0;
+  skip_spaces(&input);
+  if (!*input)
+    return TRUE;
+
+  if (!str_cmp(input, "none") || !str_cmp(input, "no") || !str_cmp(input, "skip"))
+    return TRUE;
+
+  while (*input) {
+    size_t len;
+    int ability;
+
+    input = one_argument(input, arg);
+    if (!*arg)
+      break;
+
+    len = strlen(arg);
+    while (len > 0 && (arg[len - 1] == ',' || arg[len - 1] == '.')) {
+      arg[len - 1] = '\0';
+      len--;
+    }
+
+    if (!*arg)
+      continue;
+
+    ability = ability_from_pref_arg(arg);
+    if (ability < 0 || ability >= NUM_ABILITIES)
+      return FALSE;
+    if (seen[ability])
+      return FALSE;
+    if (*count >= NUM_ABILITIES)
+      return FALSE;
+
+    order[*count] = (ubyte)ability;
+    (*count)++;
+    seen[ability] = TRUE;
+  }
+
+  return TRUE;
 }
 
 /* load the player, put them in the right room - used by copyover_recover too */
@@ -1869,9 +2007,25 @@ void nanny(struct descriptor_data *d, char *arg)
       return;
     }
 
-    write_to_output(d, "%s\r\nClass: ", class_menu);
-    STATE(d) = CON_QCLASS;
+    show_species_menu(d);
+    STATE(d) = CON_QSPECIES;
     break;
+
+case CON_QSPECIES: {
+  int choice = atoi(arg);
+  int species = species_from_pc_choice(choice);
+
+  if (species == SPECIES_UNDEFINED) {
+    write_to_output(d, "\r\nThat's not a species.\r\n");
+    show_species_menu(d);
+    return;
+  }
+
+  GET_SPECIES(d->character) = species;
+  write_to_output(d, "%s\r\nClass: ", class_menu);
+  STATE(d) = CON_QCLASS;
+  break;
+}
 
 case CON_QCLASS:
   load_result = parse_class(*arg);
@@ -1880,6 +2034,51 @@ case CON_QCLASS:
     return;
   } else {
     GET_CLASS(d->character) = load_result;
+  }
+
+  show_age_prompt(d);
+  STATE(d) = CON_QAGE;
+  return;
+
+case CON_QAGE: {
+  if (!is_number(arg)) {
+    write_to_output(d, "\r\nPlease enter a number between %d and %d.\r\n",
+                    MIN_CHAR_AGE, MAX_CHAR_AGE);
+    show_age_prompt(d);
+    return;
+  }
+
+  int age_years = atoi(arg);
+  if (age_years < MIN_CHAR_AGE || age_years > MAX_CHAR_AGE) {
+    write_to_output(d, "\r\nAge must be between %d and %d.\r\n",
+                    MIN_CHAR_AGE, MAX_CHAR_AGE);
+    show_age_prompt(d);
+    return;
+  }
+
+  GET_ROLEPLAY_AGE(d->character) = age_years;
+  GET_ROLEPLAY_AGE_YEAR(d->character) = time_info.year;
+
+  show_stat_pref_prompt(d);
+  STATE(d) = CON_QSTAT_PREF;
+  return;
+}
+
+case CON_QSTAT_PREF: {
+  ubyte order[NUM_ABILITIES];
+  ubyte count = 0;
+
+  if (!parse_stat_preference(arg, order, &count)) {
+    write_to_output(d,
+      "\r\nInvalid stat list. Please enter a valid order, or press Enter to skip.\r\n");
+    show_stat_pref_prompt(d);
+    return;
+  }
+
+  d->character->stat_pref_use = TRUE;
+  d->character->stat_pref_count = count;
+  for (int i = 0; i < NUM_ABILITIES; i++) {
+    d->character->stat_pref_order[i] = (i < count) ? order[i] : 0;
   }
 
   /* Create player entry and initialize character now so file exists */
@@ -1928,6 +2127,7 @@ case CON_QCLASS:
 
   STATE(d) = CON_QSHORTDESC;
   return;
+}
 
   case CON_QSHORTDESC: {
       skip_spaces(&arg);

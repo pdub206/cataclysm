@@ -813,7 +813,7 @@ equips it to the character for the specified location. unequip_char() does the
 opposite; it removes the object from the character’s equipment list and returns it 
 as a free-floating object. The object being unequipped must be placed elsewhere or 
 destroyed. Note that some objects may not be equipped by characters of certain 
-classes and/or alignments. 
+classes. 
 
 void obj_to_char (struct obj_data *object, struct char_data *ch) 
 
@@ -1418,18 +1418,9 @@ search for CLASS_UNDEFINEDand add a new CLASS_xxxdefinition for your class name
 with the next available number. Remember to bump the value of NUM_CLASSES, just 
 below, by 1. 
 
-Then search structs.hfor "Extra object flags" so you can add an "ITEM_ANTI_xxx" 
-flag for your new class. As before, use the next available number in the sequence 
-for ITEM_xxx flags. 
-
-The "ITEM_xxx" extra flags have a corresponding text description in constants.c, so 
-search it for "ITEM_x (extra bits)". Add a string giving a short name for the new 
-ITEM_ANTI_xxx flag, in the appropriate order, before the "\n" entry near the 
-bottom. 
-
-The shops have a similar "don’t trade" setup, so search shop.hfor "TRADE_NOGOOD" 
+The shops have a similar "don’t trade" setup, so search shop.h for "TRADE_NOSORCEROR" 
 to add a new TRADE_NOxxx item to the list for the class to be added. Below that 
-(near "NOTRADE_GOOD"), a line will need to be added for each new class so the ’no 
+(near "NOTRADE_SORCEROR"), a line will need to be added for each new class so the ’no 
 trade’ status of a shop can be tested for the class. 
 
 With the definitions in shop.h, the shop code in shop.c can then be modified to 
@@ -1559,7 +1550,7 @@ foreground colors.
 Basic special procedures have largely been replaced by trigedit. Thus shifting the 
 workload from the coder to the builder to add life and creativity into their zones. 
 While it is easier, and less time consuming, to make triggers than special 
-procedures they are still used for such functions as banks and guildmasters.
+procedures they are still used for such functions as banks.
 
 Using special procedures, your virtual world is not just a bunch of monsters, 
 objects and rooms, reduced to a number of statistics. Just like good descriptions 
@@ -1570,7 +1561,7 @@ Several special procedures are provided with stock tbaMUD which you can use to
 create your own and get used to the mechanics of special procedures. These special 
 procedures can be found in castle.c and spec_procs.c. They range from very simple 
 procedures, like puff (pulsed special procedure) or bank (command-driven special 
-procedure), to very complex procedures like the guild master. 
+procedure), to very complex procedures. 
 
 In this chapter, FALSE refers to the value 0 and TRUE to any non-zero value. 
 

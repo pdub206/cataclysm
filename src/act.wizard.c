@@ -26,16 +26,17 @@
 #include "act.h"
 #include "genzon.h" /* for real_zone_by_thing */
 #include "class.h"
+#include "species.h"
 #include "genmob.h"
 #include "genolc.h"
 #include "genobj.h"
+#include "genshp.h"
 #include "fight.h"
 #include "house.h"
 #include "modify.h"
 #include "quest.h"
 #include "ban.h"
 #include "screen.h"
-#include "roomsave.h"
 
 /* local utility functions with file scope */
 static int perform_set(struct char_data *ch, struct char_data *vict, int mode, char *val_arg);
@@ -43,6 +44,7 @@ static void perform_immort_invis(struct char_data *ch, int level);
 static void do_stat_room(struct char_data *ch, struct room_data *rm);
 static void do_stat_object(struct char_data *ch, struct obj_data *j);
 static void do_stat_character(struct char_data *ch, struct char_data *k);
+static void do_stat_shop(struct char_data *ch, shop_rnum shop_nr);
 static void stop_snooping(struct char_data *ch);
 static struct obj_data *find_inventory_coin(struct char_data *ch);
 static void remove_other_coins_from_list(struct obj_data *list, struct obj_data *keep);
@@ -66,7 +68,12 @@ static const char *stat_border_line(void);
 static void stat_table_border(struct char_data *ch);
 static void stat_table_row(struct char_data *ch, const char *label, const char *value);
 static void stat_table_row_fmt(struct char_data *ch, const char *label, const char *fmt, ...) __attribute__((format(printf,3,4)));
+static void stat_table_border_buf(char *buf, size_t buf_size, size_t *len);
+static void stat_table_row_buf(char *buf, size_t buf_size, size_t *len, const char *label, const char *value);
+static void stat_table_row_fmt_buf(char *buf, size_t buf_size, size_t *len, const char *label, const char *fmt, ...) __attribute__((format(printf,5,6)));
 static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fmt, ...) __attribute__((format(printf,4,5)));
+static void stat_append_list_item(char *buf, size_t buf_size, size_t *len, size_t *line_len, const char *item);
+static void stat_format_notrade_classes(bitvector_t flags, char *out, size_t outsz);
 static void stat_format_script_triggers(struct script_data *sc, char *buf, size_t buf_size);
 static void stat_format_script_globals(struct script_data *sc, char *buf, size_t buf_size);
 static void stat_format_script_memory(struct script_memory *mem, char *buf, size_t buf_size);
@@ -208,6 +215,60 @@ static void stat_table_row_fmt(struct char_data *ch, const char *label, const ch
   stat_table_row(ch, label, buf);
 }
 
+static void stat_table_border_buf(char *buf, size_t buf_size, size_t *len)
+{
+  stat_appendf(buf, buf_size, len, "%s", stat_border_line());
+}
+
+static void stat_table_row_buf(char *buf, size_t buf_size, size_t *len, const char *label, const char *value)
+{
+  const char *text = (value && *value) ? value : "<None>";
+  bool printed = FALSE;
+
+  while (*text) {
+    while (*text == '\r' || *text == '\n')
+      text++;
+    if (!*text)
+      break;
+
+    char chunk[STAT_VALUE_WIDTH + 1];
+    const char *next = stat_next_chunk(text, chunk, STAT_VALUE_WIDTH);
+
+    if (!*chunk) {
+      text = next;
+      continue;
+    }
+
+    stat_appendf(buf, buf_size, len, "| %-*s | %-*s |\r\n",
+      STAT_LABEL_WIDTH,
+      printed || !label ? "" : label,
+      STAT_VALUE_WIDTH,
+      chunk);
+
+    printed = TRUE;
+    text = next;
+  }
+
+  if (!printed)
+    stat_appendf(buf, buf_size, len, "| %-*s | %-*s |\r\n",
+      STAT_LABEL_WIDTH,
+      label ? label : "",
+      STAT_VALUE_WIDTH,
+      (value && *value) ? value : "<None>");
+}
+
+static void stat_table_row_fmt_buf(char *buf, size_t buf_size, size_t *len, const char *label, const char *fmt, ...)
+{
+  char row[MAX_STRING_LENGTH];
+  va_list args;
+
+  va_start(args, fmt);
+  vsnprintf(row, sizeof(row), fmt, args);
+  va_end(args);
+
+  stat_table_row_buf(buf, buf_size, len, label, row);
+}
+
 static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fmt, ...)
 {
   if (*len >= buf_size)
@@ -225,6 +286,52 @@ static void stat_appendf(char *buf, size_t buf_size, size_t *len, const char *fm
     *len = buf_size - 1;
   else
     *len += wrote;
+}
+
+static void stat_append_list_item(char *buf, size_t buf_size, size_t *len, size_t *line_len, const char *item)
+{
+  size_t item_len = strlen(item);
+
+  if (*line_len && *line_len + 2 + item_len > STAT_VALUE_WIDTH) {
+    stat_appendf(buf, buf_size, len, "\n");
+    *line_len = 0;
+  }
+
+  if (*line_len) {
+    stat_appendf(buf, buf_size, len, ", ");
+    *line_len += 2;
+  }
+
+  stat_appendf(buf, buf_size, len, "%s", item);
+  *line_len += item_len;
+}
+
+static void stat_format_notrade_classes(bitvector_t flags, char *out, size_t outsz)
+{
+  size_t len = 0;
+  int i, found = 0;
+
+  if (!out || outsz == 0)
+    return;
+
+  out[0] = '\0';
+
+  for (i = TRADE_CLASS_START; i < NUM_TRADERS; i++) {
+    if (IS_SET(flags, 1 << i)) {
+      int n = snprintf(out + len, outsz - len, "%s%s", found ? " " : "", trade_letters[i]);
+
+      if (n < 0 || (size_t)n >= outsz - len) {
+        out[outsz - 1] = '\0';
+        return;
+      }
+
+      len += (size_t)n;
+      found = 1;
+    }
+  }
+
+  if (!found)
+    strlcpy(out, "NOBITS", outsz);
 }
 
 static void stat_format_script_triggers(struct script_data *sc, char *buf, size_t buf_size)
@@ -1792,8 +1899,7 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
       zone_table[world[IN_ROOM(k)].zone].number);
 
   if (!IS_NPC(k)) {
-    char created[64], logon[64], olc[64] = "";
-    strftime(created, sizeof(created), "%b %d %Y", localtime(&(k->player.time.birth)));
+    char logon[64], olc[64] = "";
     strftime(logon, sizeof(logon), "%b %d %Y", localtime(&(k->player.time.logon)));
 
     if (GET_LEVEL(k) >= LVL_BUILDER) {
@@ -1809,35 +1915,43 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
         snprintf(olc, sizeof(olc), ", OLC %d", GET_OLC_ZONE(k));
     }
 
-    stat_table_row_fmt(ch, "Account", "Created %s, Last %s%s",
-      created, logon, olc);
-    stat_table_row_fmt(ch, "Age/Play", "Age %d, Played %dh %dm",
-      age(k)->year,
-      k->player.time.played / 3600,
-      (k->player.time.played % 3600) / 60);
+    stat_table_row_fmt(ch, "Account", "Last %s%s",
+      logon, olc);
+    {
+      time_t played_seconds = get_total_played_seconds(k);
+      int played_minutes = (played_seconds / SECS_PER_REAL_MIN) % 60;
+      int played_hours = (played_seconds / SECS_PER_REAL_HOUR) % 24;
+      int played_days = played_seconds / SECS_PER_REAL_DAY;
+      stat_table_row_fmt(ch, "Age/Playtime", "Age %d, %dd %dh %dm",
+        GET_ROLEPLAY_AGE(k), played_days, played_hours, played_minutes);
+    }
   }
 
   stat_table_row_fmt(ch, "Class", "%s", CLASS_NAME(k));
+  stat_table_row_fmt(ch, "Species", "%s", get_species_name(GET_SPECIES(k)));
 
   stat_table_row_fmt(ch, "Attributes",
     "Str %d Int %d Wis %d Dex %d Con %d Cha %d",
     GET_STR(k), GET_INT(k), GET_WIS(k),
     GET_DEX(k), GET_CON(k), GET_CHA(k));
 
+  stat_table_row_fmt(ch, "Size", "Weight %d, Height %d",
+    GET_WEIGHT(k), GET_HEIGHT(k));
+
   stat_table_row_fmt(ch, "Saving Throws",
-    "Str %+d (%+d) Dex %+d (%+d) Con %+d (%+d) Int %+d (%+d) Wis %+d (%+d) Cha %+d (%+d)",
-    get_save_mod(k, ABIL_STR), GET_SAVE(k, ABIL_STR),
-    get_save_mod(k, ABIL_DEX), GET_SAVE(k, ABIL_DEX),
-    get_save_mod(k, ABIL_CON), GET_SAVE(k, ABIL_CON),
-    get_save_mod(k, ABIL_INT), GET_SAVE(k, ABIL_INT),
-    get_save_mod(k, ABIL_WIS), GET_SAVE(k, ABIL_WIS),
-    get_save_mod(k, ABIL_CHA), GET_SAVE(k, ABIL_CHA));
+    "Str %+d Dex %+d Con %+d Int %+d Wis %+d Cha %+d",
+    get_save_mod(k, ABIL_STR),
+    get_save_mod(k, ABIL_DEX),
+    get_save_mod(k, ABIL_CON),
+    get_save_mod(k, ABIL_INT),
+    get_save_mod(k, ABIL_WIS),
+    get_save_mod(k, ABIL_CHA));
 
   stat_table_row_fmt(ch, "Vitals",
-    "HP %d/%d (+%d) | Mana %d/%d (+%d) | Move %d/%d (+%d)",
+    "HP %d/%d (+%d) | Mana %d/%d (+%d) | Stamina %d/%d (+%d)",
     GET_HIT(k), GET_MAX_HIT(k), hit_gain(k),
     GET_MANA(k), GET_MAX_MANA(k), mana_gain(k),
-    GET_MOVE(k), GET_MAX_MOVE(k), move_gain(k));
+    GET_STAMINA(k), GET_MAX_STAMINA(k), move_gain(k));
 
   stat_table_row_fmt(ch, "Currency", "Coins %d, Bank %d (Total %d)",
     GET_COINS(k), GET_BANK_COINS(k), GET_COINS(k) + GET_BANK_COINS(k));
@@ -1933,6 +2047,125 @@ static void do_stat_character(struct char_data *ch, struct char_data *k)
   stat_table_border(ch);
 }
 
+static void do_stat_shop(struct char_data *ch, shop_rnum shop_nr)
+{
+  char entry[MAX_STRING_LENGTH];
+  char list[MAX_STRING_LENGTH];
+  char buf[MAX_STRING_LENGTH];
+  char bits[MAX_STRING_LENGTH];
+  char *out;
+  size_t out_size = MAX_STRING_LENGTH * 4;
+  size_t len = 0;
+  size_t line_len = 0;
+  size_t list_len = 0;
+  int i;
+
+  CREATE(out, char, out_size);
+  out[0] = '\0';
+
+  stat_table_border_buf(out, out_size, &len);
+  stat_table_row_fmt_buf(out, out_size, &len, "Identifiers", "VNum #%d (RNum %d)",
+    SHOP_NUM(shop_nr), shop_nr);
+
+  if (SHOP_KEEPER(shop_nr) == NOBODY) {
+    strlcpy(buf, "None", sizeof(buf));
+  } else {
+    snprintf(buf, sizeof(buf), "[%d] %s",
+      mob_index[SHOP_KEEPER(shop_nr)].vnum,
+      mob_proto[SHOP_KEEPER(shop_nr)].player.short_descr ?
+        mob_proto[SHOP_KEEPER(shop_nr)].player.short_descr : "<None>");
+  }
+  stat_table_row_buf(out, out_size, &len, "Keeper", buf);
+
+  stat_table_row_fmt_buf(out, out_size, &len, "Open/Close",
+    "Open1 %d Close1 %d, Open2 %d Close2 %d",
+    SHOP_OPEN1(shop_nr), SHOP_CLOSE1(shop_nr),
+    SHOP_OPEN2(shop_nr), SHOP_CLOSE2(shop_nr));
+
+  stat_table_row_fmt_buf(out, out_size, &len, "Rates",
+    "Sell %1.2f, Buy %1.2f",
+    SHOP_BUYPROFIT(shop_nr), SHOP_SELLPROFIT(shop_nr));
+
+  list[0] = '\0';
+  line_len = 0;
+  list_len = 0;
+  for (i = 0; SHOP_ROOM(shop_nr, i) != NOWHERE; i++) {
+    room_rnum rnum = real_room(SHOP_ROOM(shop_nr, i));
+    if (rnum != NOWHERE)
+      snprintf(entry, sizeof(entry), "#%d %s",
+        GET_ROOM_VNUM(rnum), world[rnum].name);
+    else
+      snprintf(entry, sizeof(entry), "<UNKNOWN> (#%d)", SHOP_ROOM(shop_nr, i));
+    stat_append_list_item(list, sizeof(list), &list_len, &line_len, entry);
+  }
+  if (!list_len)
+    strlcpy(list, "None", sizeof(list));
+  stat_table_row_buf(out, out_size, &len, "Rooms", list);
+
+  list[0] = '\0';
+  list_len = 0;
+  line_len = 0;
+  for (i = 0; SHOP_PRODUCT(shop_nr, i) != NOTHING; i++) {
+    obj_rnum rnum = SHOP_PRODUCT(shop_nr, i);
+    if (rnum != NOTHING && rnum >= 0 && rnum <= top_of_objt) {
+      snprintf(entry, sizeof(entry), "%s (#%d)",
+        obj_proto[rnum].short_description ? obj_proto[rnum].short_description : "<None>",
+        obj_index[rnum].vnum);
+    } else
+      snprintf(entry, sizeof(entry), "<UNKNOWN>");
+    stat_append_list_item(list, sizeof(list), &list_len, &line_len, entry);
+  }
+  if (!list_len)
+    strlcpy(list, "None", sizeof(list));
+  stat_table_row_buf(out, out_size, &len, "Products", list);
+
+  list[0] = '\0';
+  list_len = 0;
+  line_len = 0;
+  for (i = 0; SHOP_BUYTYPE(shop_nr, i) != NOTHING; i++) {
+    const char *keyword = SHOP_BUYWORD(shop_nr, i) ? SHOP_BUYWORD(shop_nr, i) : "all";
+    if (SHOP_BUYTYPE(shop_nr, i) >= 0 && SHOP_BUYTYPE(shop_nr, i) < NUM_ITEM_TYPES) {
+      snprintf(entry, sizeof(entry), "%s (#%d) [%s]",
+        item_types[SHOP_BUYTYPE(shop_nr, i)], SHOP_BUYTYPE(shop_nr, i), keyword);
+    } else
+      snprintf(entry, sizeof(entry), "Unknown (#%d) [%s]", SHOP_BUYTYPE(shop_nr, i), keyword);
+    stat_append_list_item(list, sizeof(list), &list_len, &line_len, entry);
+  }
+  if (!list_len)
+    strlcpy(list, "None", sizeof(list));
+  stat_table_row_buf(out, out_size, &len, "Accept Types", list);
+
+  stat_format_notrade_classes(SHOP_TRADE_WITH(shop_nr), buf, sizeof(buf));
+  stat_table_row_buf(out, out_size, &len, "No Trade With", buf);
+
+  sprintbit(SHOP_BITVECTOR(shop_nr), shop_bits, bits, sizeof(bits));
+  stat_table_row_buf(out, out_size, &len, "Shop Flags", bits);
+
+  stat_table_row_buf(out, out_size, &len, "Keeper No Item",
+    shop_index[shop_nr].no_such_item1 ? shop_index[shop_nr].no_such_item1 : "None");
+  stat_table_row_buf(out, out_size, &len, "Player No Item",
+    shop_index[shop_nr].no_such_item2 ? shop_index[shop_nr].no_such_item2 : "None");
+  stat_table_row_buf(out, out_size, &len, "Keeper No Cash",
+    shop_index[shop_nr].missing_cash1 ? shop_index[shop_nr].missing_cash1 : "None");
+  stat_table_row_buf(out, out_size, &len, "Player No Cash",
+    shop_index[shop_nr].missing_cash2 ? shop_index[shop_nr].missing_cash2 : "None");
+  stat_table_row_buf(out, out_size, &len, "Keeper No Buy",
+    shop_index[shop_nr].do_not_buy ? shop_index[shop_nr].do_not_buy : "None");
+  stat_table_row_buf(out, out_size, &len, "Buy Success",
+    shop_index[shop_nr].message_buy ? shop_index[shop_nr].message_buy : "None");
+  stat_table_row_buf(out, out_size, &len, "Sell Success",
+    shop_index[shop_nr].message_sell ? shop_index[shop_nr].message_sell : "None");
+
+  stat_table_border_buf(out, out_size, &len);
+
+  if (ch->desc)
+    page_string(ch->desc, out, TRUE);
+  else
+    send_to_char(ch, "%s", out);
+
+  free(out);
+}
+
 ACMD(do_stat)
 {
   char buf1[MAX_INPUT_LENGTH], buf2[MAX_INPUT_LENGTH];
@@ -2006,6 +2239,33 @@ ACMD(do_stat)
       else
 	send_to_char(ch, "No such object around.\r\n");
     }
+  } else if (is_abbrev(buf1, "shop")) {
+    shop_rnum shop_nr = NOWHERE;
+    if (!*buf2) {
+      int found = FALSE;
+      room_vnum rvnum = GET_ROOM_VNUM(IN_ROOM(ch));
+      for (shop_nr = 0; shop_nr <= top_shop; shop_nr++) {
+        for (int j = 0; SHOP_ROOM(shop_nr, j) != NOWHERE; j++) {
+          if (SHOP_ROOM(shop_nr, j) == rvnum) {
+            found = TRUE;
+            break;
+          }
+        }
+        if (found)
+          break;
+      }
+      if (!found) {
+        send_to_char(ch, "This isn't a shop.\r\n");
+        return;
+      }
+    } else {
+      shop_nr = real_shop(atoi(buf2));
+      if (shop_nr == NOWHERE) {
+        send_to_char(ch, "That is not a valid shop.\r\n");
+        return;
+      }
+    }
+    do_stat_shop(ch, shop_nr);
   } else if (is_abbrev(buf1, "zone")) {
     if (!*buf2) {
       print_zone(ch, zone_table[world[IN_ROOM(ch)].zone].number);
@@ -2540,7 +2800,7 @@ ACMD(do_restore)
 
       GET_HIT(vict)  = GET_MAX_HIT(vict);
       GET_MANA(vict) = GET_MAX_MANA(vict);
-      GET_MOVE(vict) = GET_MAX_MOVE(vict);
+      GET_STAMINA(vict) = GET_MAX_STAMINA(vict);
 
       update_pos(vict);
       send_to_char(ch, "%s has been fully healed.\r\n", GET_NAME(vict));
@@ -2556,7 +2816,7 @@ ACMD(do_restore)
 
     GET_HIT(vict) = GET_MAX_HIT(vict);
     GET_MANA(vict) = GET_MAX_MANA(vict);
-    GET_MOVE(vict) = GET_MAX_MOVE(vict);
+    GET_STAMINA(vict) = GET_MAX_STAMINA(vict);
 
     if (!IS_NPC(vict) && GET_LEVEL(ch) >= LVL_GRGOD) {
       if (GET_LEVEL(vict) >= LVL_IMMORT)
@@ -3302,16 +3562,8 @@ ACMD(do_wizutil)
 	      GET_DEX(vict), GET_CON(vict), GET_CHA(vict));
       break;
     case SCMD_PARDON:
-      if (!PLR_FLAGGED(vict, PLR_THIEF) && !PLR_FLAGGED(vict, PLR_KILLER)) {
-	send_to_char(ch, "Your victim is not flagged.\r\n");
-	return;
-      }
-      REMOVE_BIT_AR(PLR_FLAGS(vict), PLR_THIEF);
-      REMOVE_BIT_AR(PLR_FLAGS(vict), PLR_KILLER);
-      send_to_char(ch, "Pardoned.\r\n");
-      send_to_char(vict, "You have been pardoned by the Gods!\r\n");
-      mudlog(BRF, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) %s pardoned by %s", GET_NAME(vict), GET_NAME(ch));
-      break;
+      send_to_char(ch, "Criminal flags are currently disabled.\r\n");
+      return;
     case SCMD_MUTE:
       result = PLR_TOG_CHK(vict, PLR_NOSHOUT);
       mudlog(BRF, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "(GC) Mute %s for %s by %s.",
@@ -3567,9 +3819,8 @@ ACMD(do_show)
 
     send_to_char(ch, "Player: %-12s (%s) [%2d %s]\r\n", GET_NAME(vict),
       genders[(int) GET_SEX(vict)], GET_LEVEL(vict), CLASS_ABBR(vict));
-    send_to_char(ch, "Coins: %-8d  Bal: %-8d Exp: %-8d  Align: %-5d\r\n",
-      GET_COINS(vict), GET_BANK_COINS(vict), GET_EXP(vict),
-      GET_ALIGNMENT(vict));
+    send_to_char(ch, "Coins: %-8d  Bal: %-8d Exp: %-8d\r\n",
+      GET_COINS(vict), GET_BANK_COINS(vict), GET_EXP(vict));
     send_to_char(ch, "Started: %-25.25s  Last: %-25.25s\r\n", buf1, buf2);
     send_to_char(ch, "Played: %dh %dm\r\n",
       (int) (vict->player.time.played / 3600),
@@ -3764,9 +4015,8 @@ static struct set_struct {
    { "ac",		LVL_BUILDER, 	BOTH, 	NUMBER },  /* 0  */
    { "afk",             LVL_BUILDER,	PC,	BINARY },  /* 1  */
    { "age",		LVL_GOD,	BOTH,	NUMBER },
-   { "align",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "bank",		LVL_BUILDER, 	PC, 	NUMBER },
-   { "brief",		LVL_GOD, 	PC, 	BINARY },  /* 5  */
+   { "brief",		LVL_GOD, 	PC, 	BINARY },  /* 4  */
    { "cha",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "class",		LVL_BUILDER, 	BOTH, 	MISC },
    { "color",		LVL_GOD, 	PC, 	BINARY },
@@ -3775,46 +4025,45 @@ static struct set_struct {
    { "dex", 		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "drunk",		LVL_BUILDER, 	BOTH, 	MISC },
    { "exp", 		LVL_GOD, 	BOTH, 	NUMBER },
-   { "frozen",		LVL_GRGOD, 	PC,	BINARY },  /* 15 */
+   { "frozen",		LVL_GRGOD, 	PC,	BINARY },  /* 13 */
    { "coins",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "height",		LVL_BUILDER,	BOTH,	NUMBER },
    { "hitpoints",       LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "hunger",		LVL_BUILDER, 	BOTH, 	MISC },    /* 20 */
+   { "hunger",		LVL_BUILDER, 	BOTH, 	MISC },    /* 17 */
    { "int", 		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "invis",		LVL_GOD, 	PC, 	NUMBER },
    { "invstart",        LVL_BUILDER,	PC, 	BINARY },
-   { "killer",		LVL_GOD, 	PC, 	BINARY },
-   { "level",		LVL_GRGOD, 	BOTH, 	NUMBER },  /* 25 */
+   { "level",		LVL_GRGOD, 	BOTH, 	NUMBER },  /* 21 */
    { "loadroom",	LVL_BUILDER, 	PC, 	MISC },
    { "mana",		LVL_BUILDER, 	BOTH, 	NUMBER },
    { "maxhit",	        LVL_BUILDER, 	BOTH, 	NUMBER },
    { "maxmana",       	LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "maxmove",		LVL_BUILDER, 	BOTH, 	NUMBER },  /* 30 */
-   { "move",		LVL_BUILDER, 	BOTH, 	NUMBER },
+   { "maxstam",		LVL_BUILDER, 	BOTH, 	NUMBER },  /* 26 */
    { "name",	LVL_IMMORT, 	PC, 	MISC },
    { "nodelete",	LVL_GOD, 	PC, 	BINARY },
    { "nohassle",	LVL_GOD, 	PC, 	BINARY },
-   { "nosummon",	LVL_BUILDER,	PC,	BINARY },  /* 35 */
+   { "nosummon",	LVL_BUILDER,	PC,	BINARY },
    { "nowizlist", 	LVL_GRGOD, 	PC, 	BINARY },
    { "olc",		LVL_GRGOD,	PC,	MISC },
    { "password",	LVL_GRGOD,	PC,	MISC },
    { "poofin",		LVL_IMMORT,	PC,	MISC },
-   { "poofout",         LVL_IMMORT,	PC,	MISC },   /* 40 */
+   { "poofout",         LVL_IMMORT,	PC,	MISC },
    { "quest",		LVL_GOD, 	PC, 	BINARY },
    { "room",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "screenwidth", LVL_GOD,  PC,   NUMBER },
+   { "screenwidth", LVL_GOD,  PC,   NUMBER }, /* 38 */
    { "sex", 		LVL_GOD, 	BOTH, 	MISC },
-   { "showvnums",  LVL_BUILDER,  PC, BINARY }, /* 45 */
+   { "showvnums",  LVL_BUILDER,  PC, BINARY },
    { "siteok",   LVL_GOD,  PC,   BINARY },
    { "skill",   LVL_GOD,  BOTH,   NUMBER },
+   { "stam",		LVL_BUILDER, 	BOTH, 	NUMBER },  /* 43 */
    { "str",		LVL_BUILDER, 	BOTH, 	NUMBER },
-   { "thief",		LVL_GOD, 	PC, 	BINARY }, 
-   { "thirst",		LVL_BUILDER, 	BOTH, 	MISC }, /* 50 */
+   { "thirst",		LVL_BUILDER, 	BOTH, 	MISC },
    { "variable",        LVL_GRGOD,	PC,	MISC },
    { "weight",		LVL_BUILDER,	BOTH,	NUMBER },
    { "wis", 		LVL_BUILDER, 	BOTH, 	NUMBER }, 
-   { "questpoints",     LVL_GOD,        PC,     NUMBER }, 
-   { "questhistory",    LVL_GOD,        PC,   NUMBER }, /* 55 */
+   { "questpoints",     LVL_GOD,        PC,     NUMBER },  /* 49 */
+   { "questhistory",    LVL_GOD,        PC,   NUMBER },
+   { "species",         LVL_BUILDER,    BOTH, MISC },
    { "\n", 0, BOTH, MISC }
   };
 
@@ -3871,22 +4120,16 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         send_to_char(ch, "Ages 2 to 200 accepted.\r\n");
         return (0);
       }
-      /* NOTE: May not display the exact age specified due to the integer
-       * division used elsewhere in the code.  Seems to only happen for
-       * some values below the starting age (17) anyway. -gg 5/27/98 */
-      vict->player.time.birth = time(0) - ((value - 17) * SECS_PER_MUD_YEAR);
+      GET_ROLEPLAY_AGE(vict) = LIMIT(value, MIN_CHAR_AGE, MAX_CHAR_AGE);
+      GET_ROLEPLAY_AGE_YEAR(vict) = time_info.year;
       break;
-    case 3: /* align */
-      GET_ALIGNMENT(vict) = RANGE(-1000, 1000);
-      affect_total(vict);
-      break;
-    case 4: /* bank */
+    case 3: /* bank */
       GET_BANK_COINS(vict) = RANGE(0, 100000000);
       break;
-    case 5: /* brief */
+    case 4: /* brief */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_BRIEF);
       break;
-    case 6:  /* cha */
+    case 5:  /* cha */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3894,18 +4137,18 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.cha = value;
       affect_total(vict);
       break;
-    case 7: /* class */
+    case 6: /* class */
       if ((i = parse_class(*val_arg)) == CLASS_UNDEFINED) {
         send_to_char(ch, "That is not a class.\r\n");
         return (0);
       }
       GET_CLASS(vict) = i;
       break;
-    case 8:  /* color */
+    case 7:  /* color */
       SET_OR_REMOVE(PRF_FLAGS(vict), (PRF_COLOR_1));
       SET_OR_REMOVE(PRF_FLAGS(vict), (PRF_COLOR_2));
       break;
-    case 9: /* con */
+    case 8: /* con */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3913,10 +4156,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.con = value;
       affect_total(vict);
       break;
-    case 10: /* delete */
+    case 9: /* delete */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_DELETED);
       break;
-    case 11: /* dex */
+    case 10: /* dex */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -3924,7 +4167,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.dex = value;
       affect_total(vict);
       break;
-    case 12: /* drunk */
+    case 11: /* drunk */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, DRUNK) = -1;
         send_to_char(ch, "%s's drunkenness is now off.\r\n", GET_NAME(vict));
@@ -3938,17 +4181,17 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 13: /* exp */
+    case 12: /* exp */
       vict->points.exp = RANGE(0, 50000000);
       break;
-    case 14: /* frozen */
+    case 13: /* frozen */
       if (ch == vict && on) {
         send_to_char(ch, "Better not -- could be a long winter!\r\n");
         return (0);
       }
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_FROZEN);
       break;
-    case 15: { /* coins */
+    case 14: { /* coins */
       struct obj_data *coin_obj;
       int i;
 
@@ -3984,15 +4227,15 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       send_to_char(ch, "Ok.\r\n");
       return (1);
     }
-    case 16: /* height */
+    case 15: /* height */
       GET_HEIGHT(vict) = value;
       affect_total(vict);
       break;
-    case 17: /* hit */
+    case 16: /* hit */
       vict->points.hit = RANGE(-9, vict->points.max_hit);
       affect_total(vict);
       break;
-    case 18: /* hunger */
+    case 17: /* hunger */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, HUNGER) = -1;
         send_to_char(ch, "%s's hunger is now off.\r\n", GET_NAME(vict));
@@ -4006,7 +4249,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
        }
        break;
-   case 19: /* int */
+   case 18: /* int */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -4014,20 +4257,17 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.intel = value;
       affect_total(vict);
       break;
-    case 20: /* invis */
+    case 19: /* invis */
       if (GET_LEVEL(ch) < LVL_IMPL && ch != vict) {
         send_to_char(ch, "You aren't godly enough for that!\r\n");
         return (0);
       }
       GET_INVIS_LEV(vict) = RANGE(0, GET_LEVEL(vict));
       break;
-    case 21: /* invistart */
+    case 20: /* invistart */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_INVSTART);
       break;
-    case 22: /* killer */
-      SET_OR_REMOVE(PLR_FLAGS(vict), PLR_KILLER);
-      break;
-    case 23: /* level */
+    case 21: /* level */
       if ((!IS_NPC(vict) && value > GET_LEVEL(ch)) || value > LVL_IMPL) {
         send_to_char(ch, "You can't do that.\r\n");
         return (0);
@@ -4035,7 +4275,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       RANGE(1, LVL_IMPL);
       vict->player.level = value;
       break;
-    case 24: /* loadroom */
+    case 22: /* loadroom */
       if (!str_cmp(val_arg, "off")) {
         REMOVE_BIT_AR(PLR_FLAGS(vict), PLR_LOADROOM);
       } else if (is_number(val_arg)) {
@@ -4053,27 +4293,23 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 25: /* mana */
+    case 23: /* mana */
       vict->points.mana = RANGE(0, vict->points.max_mana);
       affect_total(vict);
       break;
-    case 26: /* maxhit */
+    case 24: /* maxhit */
       vict->points.max_hit = RANGE(1, 5000);
       affect_total(vict);
       break;
-    case 27: /* maxmana */
+    case 25: /* maxmana */
       vict->points.max_mana = RANGE(1, 5000);
       affect_total(vict);
       break;
-    case 28: /* maxmove */
-      vict->points.max_move = RANGE(1, 5000);
+    case 26: /* maxstam */
+      vict->points.max_stamina = RANGE(1, 5000);
       affect_total(vict);
       break;
-    case 29: /* move */
-      vict->points.move = RANGE(0, vict->points.max_move);
-      affect_total(vict);
-      break;
-    case 30: /* name */
+    case 27: /* name */
       if (ch != vict && GET_LEVEL(ch) < LVL_IMPL) {
         send_to_char(ch, "Only Imps can change the name of other players.\r\n");
         return (0);
@@ -4083,24 +4319,24 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 31: /* nodelete */
+    case 28: /* nodelete */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_NODELETE);
       break;
-    case 32: /* nohassle */
+    case 29: /* nohassle */
       if (GET_LEVEL(ch) < LVL_GOD && ch != vict) {
         send_to_char(ch, "You aren't godly enough for that!\r\n");
         return (0);
       }
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_NOHASSLE);
       break;
-    case 33: /* nosummon */
+    case 30: /* nosummon */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_SUMMONABLE);
       send_to_char(ch, "Nosummon %s for %s.\r\n", ONOFF(!on), GET_NAME(vict));
       break;
-    case 34: /* nowiz */
+    case 31: /* nowiz */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_NOWIZLIST);
       break;
-    case 35: /* olc */
+    case 32: /* olc */
       if (is_abbrev(val_arg, "socials") || is_abbrev(val_arg, "actions") || is_abbrev(val_arg, "aedit"))
         GET_OLC_ZONE(vict) = AEDIT_PERMISSION;
       else if (is_abbrev(val_arg, "hedit") || is_abbrev(val_arg, "help"))
@@ -4115,7 +4351,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       } else
         GET_OLC_ZONE(vict) = atoi(val_arg);
       break;
-    case 36: /* password */
+    case 33: /* password */
       if (GET_LEVEL(vict) >= LVL_GRGOD) {
         send_to_char(ch, "You cannot change that.\r\n");
         return (0);
@@ -4124,7 +4360,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       *(GET_PASSWD(vict) + MAX_PWD_LENGTH) = '\0';
       send_to_char(ch, "Password changed to '%s'.\r\n", val_arg);
       break;
-    case 37: /* poofin */
+    case 34: /* poofin */
       if ((vict == ch) || (GET_LEVEL(ch) == LVL_IMPL)) {
         skip_spaces(&val_arg);
         parse_at(val_arg);
@@ -4138,7 +4374,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
           POOFIN(vict) = strdup(val_arg);
         }
       break;
-    case 38: /* poofout */
+    case 35: /* poofout */
       if ((vict == ch) || (GET_LEVEL(ch) == LVL_IMPL)) {
         skip_spaces(&val_arg);
         parse_at(val_arg);
@@ -4152,10 +4388,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
           POOFOUT(vict) = strdup(val_arg);
         }
       break;
-    case 39: /* quest */
+    case 36: /* quest */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_QUEST);
       break;
-    case 40: /* room */
+    case 37: /* room */
       if ((rnum = real_room(value)) == NOWHERE) {
         send_to_char(ch, "No room exists with that number.\r\n");
         return (0);
@@ -4164,23 +4400,23 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         char_from_room(vict);
       char_to_room(vict, rnum);
       break;
-    case 41: /* screenwidth */
+    case 38: /* screenwidth */
       GET_SCREEN_WIDTH(vict) = RANGE(40, 200);
       break;
-    case 42: /* sex */
+    case 39: /* sex */
       if ((i = search_block(val_arg, genders, FALSE)) < 0) {
         send_to_char(ch, "Must be 'male', 'female', or 'neutral'.\r\n");
         return (0);
       }
       GET_SEX(vict) = i;
       break;
-    case 43: /* showvnums */
+    case 40: /* showvnums */
       SET_OR_REMOVE(PRF_FLAGS(vict), PRF_SHOWVNUMS);
       break;
-    case 44: /* siteok */
+    case 41: /* siteok */
       SET_OR_REMOVE(PLR_FLAGS(vict), PLR_SITEOK);
       break;
-    case 45: /* skills/spells */
+    case 42: /* skills/spells */
     {
       char local_buf[MAX_INPUT_LENGTH], *value_arg, *name_end;
       char skill_name[MAX_INPUT_LENGTH];
@@ -4265,7 +4501,12 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
     }
     break;
 
-    case 46: /* str */
+    case 43: /* stam */
+      vict->points.stamina = RANGE(0, vict->points.max_stamina);
+      affect_total(vict);
+      break;
+
+    case 44: /* str */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -4273,10 +4514,7 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.str = value;
       affect_total(vict);
       break;
-    case 47: /* thief */
-      SET_OR_REMOVE(PLR_FLAGS(vict), PLR_THIEF);
-      break;
-    case 48: /* thirst */
+    case 45: /* thirst */
       if (!str_cmp(val_arg, "off")) {
         GET_COND(vict, THIRST) = -1;
         send_to_char(ch, "%s's thirst is now off.\r\n", GET_NAME(vict));
@@ -4290,13 +4528,13 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         return (0);
       }
       break;
-    case 49: /* variable */
+    case 46: /* variable */
       return perform_set_dg_var(ch, vict, val_arg);
-    case 50: /* weight */
+    case 47: /* weight */
       GET_WEIGHT(vict) = value;
       affect_total(vict);
       break;
-    case 51: /* wis */
+    case 48: /* wis */
       if (IS_NPC(vict) || GET_LEVEL(vict) >= LVL_GRGOD)
         RANGE(3, 25);
       else
@@ -4304,10 +4542,10 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
       vict->real_abils.wis = value;
       affect_total(vict);
       break;
-    case 52: /* questpoints */
+    case 49: /* questpoints */
       GET_QUESTPOINTS(vict) = RANGE(0, 100000000);
       break;
-    case 53: /* questhistory */
+    case 50: /* questhistory */
       qvnum = atoi(val_arg);
       if (real_quest(qvnum) == NOTHING) {
         send_to_char(ch, "That quest doesn't exist.\r\n");
@@ -4324,6 +4562,16 @@ static int perform_set(struct char_data *ch, struct char_data *vict, int mode, c
         }
         break;
       }
+    case 51: /* species */
+      if ((i = parse_species(val_arg)) == SPECIES_UNDEFINED) {
+        send_to_char(ch, "That is not a species.\r\n");
+        return (0);
+      }
+      update_species(vict, i);
+      affect_total(vict);
+      send_to_char(ch, "You set %s's species to %s.\r\n",
+                   get_char_sdesc(vict), get_species_name(GET_SPECIES(vict)));
+      break;
     default:
       send_to_char(ch, "Can't set that!\r\n");
       return (0);
@@ -4410,7 +4658,21 @@ ACMD(do_set)
   } else if (!str_cmp(name, "mob"))
     half_chop(buf, name, buf);
 
-  half_chop(buf, field, buf);
+  if (!is_file && !is_player && !str_cmp(name, "species")) {
+    char val[MAX_INPUT_LENGTH];
+    char target[MAX_INPUT_LENGTH];
+
+    half_chop(buf, val, target);
+    if (!*val || !*target) {
+      send_to_char(ch, "Usage: set species <type> <target>\r\n");
+      return;
+    }
+    strlcpy(field, "species", sizeof(field));
+    strlcpy(name, target, sizeof(name));
+    strlcpy(buf, val, sizeof(buf));
+  } else {
+    half_chop(buf, field, buf);
+  }
 
   if (!*name || !*field) {
     send_to_char(ch, "Usage: set <victim> <field> <value>\r\n");
@@ -4596,7 +4858,7 @@ static struct zcheck_affs {
   {APPLY_CHAR_HEIGHT,-50,  50, "character height"},
   {APPLY_MANA,       -50,  50, "mana"},
   {APPLY_HIT,        -50,  50, "hit points"},
-  {APPLY_MOVE,       -50,  50, "movement"},
+  {APPLY_STAMINA,       -50,  50, "stamina"},
   {APPLY_COINS,         0,   0, "coins"},
   {APPLY_EXP,          0,   0, "experience"},
   {APPLY_AC,         -10,  10, "magical AC"},
@@ -4704,10 +4966,6 @@ ACMD (do_zcheck)
             len += snprintf(buf + len, sizeof(buf) - len,
                             "- No unarmed combat proficiency set (add skill or weapon)\r\n");
         }
-
-        if (MOB_FLAGGED(mob, MOB_AGGRESSIVE) && (MOB_FLAGGED(mob, MOB_AGGR_GOOD) || MOB_FLAGGED(mob, MOB_AGGR_EVIL) || MOB_FLAGGED(mob, MOB_AGGR_NEUTRAL)) && (found=1))
-	 len += snprintf(buf + len, sizeof(buf) - len,
-          "- Both aggresive and agressive to align.\r\n");
 
         if (GET_EXP(mob)>MAX_EXP_ALLOWED && (found=1))
           len += snprintf(buf + len, sizeof(buf) - len,
@@ -6091,53 +6349,6 @@ ACMD(do_recent)
 }
 
 
-ACMD(do_oset)
-{
-  char arg[MAX_INPUT_LENGTH];
-  char arg2[MAX_INPUT_LENGTH];
-  const char usage[] = "Usage: \r\n"
-                       "Options: alias, apply, longdesc, shortdesc\r\n"
-                       "> oset <object> <option> <value>\r\n";
-  struct obj_data *obj;
-  bool success = TRUE;
-
-  if (IS_NPC(ch) || ch->desc == NULL) {
-    send_to_char(ch, "oset is only usable by connected players.\r\n");
-    return;
-  }
-
-  argument = one_argument(argument, arg);
-
-  if (!*arg)
-    send_to_char(ch, usage);
-  else if (!(obj = get_obj_in_list_vis(ch, arg, NULL, ch->carrying)) && 
-    !(obj = get_obj_in_list_vis(ch, arg, NULL, world[IN_ROOM(ch)].contents)))
-    send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg), arg);
-  else {
-     argument = one_argument(argument, arg2);
-     
-     if (!*arg2) 
-       send_to_char(ch, usage);
-     else {
-       if (is_abbrev(arg2, "alias") && (success = oset_alias(obj, argument)))
-         send_to_char(ch, "Object alias set.\r\n");
-       else if (is_abbrev(arg2, "longdesc") && (success = oset_long_description(obj, argument)))
-         send_to_char(ch, "Object long description set.\r\n");
-       else if (is_abbrev(arg2, "shortdesc") && (success = oset_short_description(obj, argument)))
-         send_to_char(ch, "Object short description set.\r\n");
-       else if (is_abbrev(arg2, "apply") && (success = oset_apply(obj, argument)))
-         send_to_char(ch, "Object apply set.\r\n");           
-       else {
-         if (!success) 
-           send_to_char(ch, "%s was unsuccessful.\r\n", arg2);
-         else
-           send_to_char(ch, usage);
-         return;
-       }
-     }
-  }
-}
-
 /* 5e system helpers */
 
 /* Helper: map wear flags to our armor_slots[] index (-1 if not an armor slot) */
@@ -6173,9 +6384,26 @@ static const char *slot_name_from_index(int idx) {
 }
 
 /* Wizard command: scan armor prototypes, validate per-piece fields (compact, paged, 25 lines) */
-ACMD(do_acaudit)
+ACMD(do_audit)
 {
   int found = 0, warned = 0;
+  char arg[MAX_INPUT_LENGTH];
+  bool do_armor = FALSE;
+  bool do_weapons = FALSE;
+
+  one_argument(argument, arg);
+  if (!*arg) {
+    send_to_char(ch, "Audit what?\r\n");
+    return;
+  }
+  if (is_abbrev(arg, "armor"))
+    do_armor = TRUE;
+  else if (is_abbrev(arg, "melee"))
+    do_weapons = TRUE;
+  else {
+    send_to_char(ch, "Usage: audit armor | audit melee\r\n");
+    return;
+  }
 
   if (IS_NPC(ch) || GET_LEVEL(ch) < LVL_IMMORT) {
     send_to_char(ch, "You lack the authority to use this.\r\n");
@@ -6201,74 +6429,134 @@ ACMD(do_acaudit)
     len += (size_t)snprintf(out + len, cap - len, __VA_ARGS__);             \
   } while (0)
 
-  /* Header (short so it won’t wrap) */
-  APPEND_FMT("\r\n\tY[Armor Audit]\tn ITEM_ARMOR scan\r\n");
-  APPEND_FMT("Legend: \tR!\tn over-cap, \tY?\tn warn, S stealth-disadv\r\n");
+  if (do_armor) {
+    /* Header (short so it won’t wrap) */
+    APPEND_FMT("\r\n\tY[Armor Audit]\tn ITEM_ARMOR scan\r\n");
+    APPEND_FMT("Legend: \tR!\tn over-cap, \tY?\tn warn, S stealth-disadv\r\n");
 
-  for (obj_rnum r = 0; r <= top_of_objt; r++) {
-    struct obj_data *obj = &obj_proto[r];
-    char namebuf[128] = {0};
-    int idx, vnum, piece_ac, bulk, magic, stealth, strreq;
+    for (obj_rnum r = 0; r <= top_of_objt; r++) {
+      struct obj_data *obj = &obj_proto[r];
+      char namebuf[128] = {0};
+      int idx, vnum, piece_ac, bulk, magic, stealth, strreq;
 
-    if (GET_OBJ_TYPE(obj) != ITEM_ARMOR)
-      continue;
+      if (GET_OBJ_TYPE(obj) != ITEM_ARMOR)
+        continue;
 
-    /* Identify slot (skip shields here) */
-    idx = armor_slot_index_from_wear(obj);
-    if (idx == -2) continue; /* shield handled in AC; skip */
-    if (idx < 0)  continue;  /* not a supported armor slot */
+      /* Identify slot (skip shields here) */
+      idx = armor_slot_index_from_wear(obj);
+      if (idx == -2) continue; /* shield handled in AC; skip */
+      if (idx < 0)  continue;  /* not a supported armor slot */
 
-    vnum     = GET_OBJ_VNUM(obj);
-    piece_ac = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
-    bulk     = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
-    magic    = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
-    stealth  = GET_OBJ_VAL(obj, VAL_ARMOR_STEALTH_DISADV); /* 1/0, yes or no */
-    strreq   = GET_OBJ_VAL(obj, VAL_ARMOR_STR_REQ);        /* 0 or 13/15/16 typically */
+      vnum     = GET_OBJ_VNUM(obj);
+      piece_ac = GET_OBJ_VAL(obj, VAL_ARMOR_PIECE_AC);
+      bulk     = GET_OBJ_VAL(obj, VAL_ARMOR_BULK);
+      magic    = GET_OBJ_VAL(obj, VAL_ARMOR_MAGIC_BONUS);
+      stealth  = GET_OBJ_VAL(obj, VAL_ARMOR_STEALTH_DISADV); /* 1/0, yes or no */
+      strreq   = GET_OBJ_VAL(obj, VAL_ARMOR_STR_REQ);        /* 0 or 13/15/16 typically */
 
-    /* Display name (trim to keep line width < ~78 cols) */
-    if (obj->short_description)
-      snprintf(namebuf, sizeof(namebuf), "%s", obj->short_description);
-    else if (obj->name)
-      snprintf(namebuf, sizeof(namebuf), "%s", obj->name);
-    else
-      snprintf(namebuf, sizeof(namebuf), "object");
+      /* Display name (trim to keep line width < ~78 cols) */
+      if (obj->short_description)
+        snprintf(namebuf, sizeof(namebuf), "%s", obj->short_description);
+      else if (obj->name)
+        snprintf(namebuf, sizeof(namebuf), "%s", obj->name);
+      else
+        snprintf(namebuf, sizeof(namebuf), "object");
 
-    /* Slot caps */
-    const int max_piece_ac = armor_slots[idx].max_piece_ac;
-    const int max_magic    = armor_slots[idx].max_magic;
+      /* Slot caps */
+      const int max_piece_ac = armor_slots[idx].max_piece_ac;
+      const int max_magic    = armor_slots[idx].max_magic;
 
-    /* Validations */
-    bool over_ac    = (piece_ac > max_piece_ac);
-    bool over_magic = (magic    > max_magic);
-    bool bad_ac     = (piece_ac < 0 || piece_ac > 3);
-    bool bad_bulk   = (bulk     < 0 || bulk     > 3);
-    bool bad_magic  = (magic    < 0 || magic    > 3);
+      /* Validations */
+      bool over_ac    = (piece_ac > max_piece_ac);
+      bool over_magic = (magic    > max_magic);
+      bool bad_ac     = (piece_ac < 0 || piece_ac > 3);
+      bool bad_bulk   = (bulk     < 0 || bulk     > 3);
+      bool bad_magic  = (magic    < 0 || magic    > 3);
 
-    found++;
+      found++;
 
-    /* Compact, non-wrapping row (~70 cols worst case) */
-    APPEND_FMT("\tc[#%5d]\tn %-24.24s sl=%-5.5s ac=%2d%s b=%d%s m=%+d%s sd=%d str=%d\r\n",
-      vnum,
-      namebuf,
-      slot_name_from_index(idx),
-      piece_ac,  over_ac    ? " \tR!\tn" : (bad_ac   ? " \tY?\tn" : ""),
-      bulk,      bad_bulk   ? " \tY?\tn" : "",
-      magic,     over_magic ? " \tR!\tn" : (bad_magic? " \tY?\tn" : ""),
-      stealth, strreq);
+      /* Compact, non-wrapping row (~70 cols worst case) */
+      APPEND_FMT("\tc[#%5d]\tn %-24.24s sl=%-5.5s ac=%2d%s b=%d%s m=%+d%s sd=%d str=%d\r\n",
+        vnum,
+        namebuf,
+        slot_name_from_index(idx),
+        piece_ac,  over_ac    ? " \tR!\tn" : (bad_ac   ? " \tY?\tn" : ""),
+        bulk,      bad_bulk   ? " \tY?\tn" : "",
+        magic,     over_magic ? " \tR!\tn" : (bad_magic? " \tY?\tn" : ""),
+        stealth, strreq);
 
-    if (over_ac || over_magic || bad_ac || bad_bulk || bad_magic)
-      warned++;
+      if (over_ac || over_magic || bad_ac || bad_bulk || bad_magic)
+        warned++;
+    }
+
+    if (!found) {
+      free(out);
+      send_to_char(ch, "No ITEM_ARMOR prototypes found for the audited slots.\r\n");
+      return;
+    }
+
+    /* Footer */
+    APPEND_FMT("\r\nScanned: %d items, %d with issues. Armor magic cap +%d (shield separate).\r\n",
+               found, warned, MAX_TOTAL_ARMOR_MAGIC);
+  } else if (do_weapons) {
+    APPEND_FMT("\r\n\tY[Weapon Audit]\tn ITEM_WEAPON scan\r\n");
+    APPEND_FMT("Legend: \tR!\tn error, \tY?\tn warn, dmg=1d4/1d6/1d8/1d10/1d12\r\n");
+
+    for (obj_rnum r = 0; r <= top_of_objt; r++) {
+      struct obj_data *obj = &obj_proto[r];
+      char namebuf[128] = {0};
+      int vnum, ndice, sdice, atype, weight;
+      bool bad_type, bad_dmg, bad_weight;
+      const char *atype_name;
+
+      if (GET_OBJ_TYPE(obj) != ITEM_WEAPON)
+        continue;
+
+      vnum   = GET_OBJ_VNUM(obj);
+      ndice  = GET_OBJ_VAL(obj, 0);
+      sdice  = GET_OBJ_VAL(obj, 1);
+      atype  = GET_OBJ_VAL(obj, 2);
+      weight = GET_OBJ_WEIGHT(obj);
+
+      /* Display name (trim to keep line width < ~78 cols) */
+      if (obj->short_description)
+        snprintf(namebuf, sizeof(namebuf), "%s", obj->short_description);
+      else if (obj->name)
+        snprintf(namebuf, sizeof(namebuf), "%s", obj->name);
+      else
+        snprintf(namebuf, sizeof(namebuf), "object");
+
+      bad_type = (atype < 0 || atype >= NUM_ATTACK_TYPES);
+      bad_dmg = !(ndice == 1 &&
+                  (sdice == 4 || sdice == 6 || sdice == 8 || sdice == 10 || sdice == 12));
+      bad_weight = (weight <= 0);
+
+      if (bad_type)
+        atype_name = "invalid";
+      else
+        atype_name = attack_hit_text[atype].singular;
+
+      found++;
+
+      APPEND_FMT("\tc[#%5d]\tn %-24.24s at=%-7.7s%s dmg=%dd%d%s wt=%d%s\r\n",
+        vnum,
+        namebuf,
+        atype_name, bad_type ? " \tR!\tn" : "",
+        ndice, sdice, bad_dmg ? " \tR!\tn" : "",
+        weight, bad_weight ? " \tY?\tn" : "");
+
+      if (bad_type || bad_dmg || bad_weight)
+        warned++;
+    }
+
+    if (!found) {
+      free(out);
+      send_to_char(ch, "No ITEM_WEAPON prototypes found.\r\n");
+      return;
+    }
+
+    APPEND_FMT("\r\nScanned: %d items, %d with issues.\r\n", found, warned);
   }
-
-  if (!found) {
-    free(out);
-    send_to_char(ch, "No ITEM_ARMOR prototypes found for the audited slots.\r\n");
-    return;
-  }
-
-  /* Footer */
-  APPEND_FMT("\r\nScanned: %d items, %d with issues. Armor magic cap +%d (shield separate).\r\n",
-             found, warned, MAX_TOTAL_ARMOR_MAGIC);
 
   /* Page it (copy mode) and try to force 25-line pages */
   if (ch->desc) {
@@ -6293,199 +6581,4 @@ ACMD(do_acaudit)
   }
 
 #undef APPEND_FMT
-}
-
-/* ====== Builder snapshot: save a staged mob's gear as its prototype loadout ====== */
-/* Put these helpers near the top of act.wizard.c (or a shared .c) */
-struct inv_count { obj_vnum vnum; int qty; struct inv_count *next; };
-
-static void inv_add(struct inv_count **head, obj_vnum v, int q) {
-  struct inv_count *p;
-  if (q < 1) q = 1;
-  for (p = *head; p; p = p->next)
-    if (p->vnum == v) { p->qty += q; return; }
-  CREATE(p, struct inv_count, 1);
-  p->vnum = v; p->qty = q; p->next = *head; *head = p;
-}
-
-static void inv_free_all(struct inv_count **head) {
-  struct inv_count *n, *p = *head;
-  while (p) { n = p->next; free(p); p = n; }
-  *head = NULL;
-}
-
-/* Add ACMD prototype to interpreter.h:  ACMD(do_msave); */
-
-ACMD(do_msave)
-{
-  char a1[MAX_INPUT_LENGTH], a2[MAX_INPUT_LENGTH];
-  char target[MAX_INPUT_LENGTH] = {0}, flags[MAX_INPUT_LENGTH] = {0};
-  struct char_data *vict = NULL, *tmp = NULL;
-  mob_rnum rnum;
-  int include_inv = 0;      /* -all */
-  int clear_first = 1;      /* default replace; -append flips this to 0 */
-  int equips_added = 0, inv_entries = 0;
-  struct inv_count *inv = NULL;
-  int pos;
-  struct obj_data *o;
-
-  two_arguments(argument, a1, a2);
-  if (*a1 && *a1 == '-') {
-    /* user wrote: msave -flags <mob> */
-    strcpy(flags, a1);
-    strcpy(target, a2);
-  } else {
-    /* user wrote: msave <mob> [-flags] */
-    strcpy(target, a1);
-    strcpy(flags, a2);
-  }
-
-  /* Parse flags (space-separated, any order) */
-  if (*flags) {
-    char buf[MAX_INPUT_LENGTH], *p = flags;
-    while (*p) {
-      p = one_argument(p, buf);
-      if (!*buf) break;
-      if (!str_cmp(buf, "-all")) include_inv = 1;
-      else if (!str_cmp(buf, "-append")) clear_first = 0;
-      else if (!str_cmp(buf, "-clear")) clear_first = 1;
-      else {
-        send_to_char(ch, "Unknown flag '%s'. Try -all, -append, or -clear.\r\n", buf);
-        return;
-      }
-    }
-  }
-
-  /* Find target mob in the room */
-  if (*target)
-    vict = get_char_vis(ch, target, NULL, FIND_CHAR_ROOM);
-  else {
-    /* No name: pick the first NPC only if exactly one exists */
-    for (tmp = world[IN_ROOM(ch)].people; tmp; tmp = tmp->next_in_room) {
-      if (IS_NPC(tmp)) {
-        if (vict) { vict = NULL; break; } /* more than one — force explicit name */
-        vict = tmp;
-      }
-    }
-  }
-
-  if (!vict || !IS_NPC(vict)) {
-    send_to_char(ch, "Target an NPC in this room: msave <mob> [-all] [-append|-clear]\r\n");
-    return;
-  }
-
-  /* Resolve prototype and permission to edit its zone */
-  rnum = GET_MOB_RNUM(vict);
-  if (rnum < 0) {
-    send_to_char(ch, "I can’t resolve that mob's prototype.\r\n");
-    return;
-  }
-
-#ifdef CAN_EDIT_ZONE
-  if (!can_edit_zone(ch, real_zone_by_thing(GET_MOB_VNUM(vict)))) {
-    send_to_char(ch, "You don’t have permission to modify that mob’s zone.\r\n");
-    return;
-  }
-#endif
-
-  /* Build the new loadout into the PROTOTYPE */
-  if (clear_first)
-    loadout_free_list(&mob_proto[rnum].proto_loadout);
-
-  /* Capture equipment: one entry per worn slot */
-  for (pos = 0; pos < NUM_WEARS; pos++) {
-    o = GET_EQ(vict, pos);
-    if (!o) continue;
-    if (GET_OBJ_VNUM(o) <= 0) continue;
-    loadout_add_entry(&mob_proto[rnum].proto_loadout, GET_OBJ_VNUM(o), (int)pos, 1);
-    equips_added++;
-  }
-
-  /* Capture inventory (compressed by vnum) if requested */
-  if (include_inv) {
-    for (o = vict->carrying; o; o = o->next_content) {
-      if (GET_OBJ_VNUM(o) <= 0) continue;
-      inv_add(&inv, GET_OBJ_VNUM(o), 1);
-    }
-    {
-      struct inv_count *p;
-      for (p = inv; p; p = p->next) {
-        loadout_add_entry(&mob_proto[rnum].proto_loadout, p->vnum, -1, MAX(1, p->qty));
-        inv_entries++;
-      }
-    }
-  }
-
-  /* Persist to disk: save the zone owning this mob vnum */
-  {
-    zone_rnum zr = real_zone_by_thing(GET_MOB_VNUM(vict));
-    if (zr == NOWHERE) {
-      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
-             "msave: could not resolve zone for mob %d", GET_MOB_VNUM(vict));
-      send_to_char(ch, "Saved in memory, but couldn’t resolve zone to write disk.\r\n");
-    } else {
-      save_mobiles(zr);
-      send_to_char(ch,
-        "Loadout saved for mob [%d]. Equipped: %d, Inventory lines: %d%s\r\n",
-        GET_MOB_VNUM(vict), equips_added, inv_entries, include_inv ? "" : " (use -all to include inventory)");
-      mudlog(CMP, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE,
-             "msave: %s saved loadout for mob %d (eq=%d, inv=%d) in zone %d",
-             GET_NAME(ch), GET_MOB_VNUM(vict), equips_added, inv_entries,
-             zone_table[zr].number);
-    }
-  }
-
-  inv_free_all(&inv);
-}
-
-ACMD(do_rsave)
-{
-  room_rnum rnum;
-  zone_rnum znum;
-  int ok;
-
-  if (IS_NPC(ch)) {
-    send_to_char(ch, "Mobiles can’t use this.\r\n");
-    return;
-  }
-
-  /* IN_ROOM(ch) is already a room_rnum (index into world[]). Do NOT pass it to real_room(). */
-  rnum = IN_ROOM(ch);
-
-  if (rnum == NOWHERE || rnum < 0 || rnum > top_of_world) {
-    send_to_char(ch, "You are not in a valid room.\r\n");
-    return;
-  }
-
-  znum = world[rnum].zone;
-  if (znum < 0 || znum > top_of_zone_table) {
-    send_to_char(ch, "This room is not attached to a valid zone.\r\n");
-    return;
-  }
-
-  /* Optional: permission check */
-  if (!can_edit_zone(ch, znum)) {
-    send_to_char(ch, "You don’t have permission to modify zone %d.\r\n",
-                 zone_table[znum].number);
-    return;
-  }
-
-  /* Save just this room into the correct zone’s .rsv file */
-  ok = RoomSave_now(rnum);
-
-  if (!ok) {
-    send_to_char(ch, "rsave: failed.\r\n");
-    mudlog(BRF, GET_LEVEL(ch), TRUE,
-           "RSAVE FAIL: %s room %d (rnum=%d) zone %d (znum=%d)",
-           GET_NAME(ch), GET_ROOM_VNUM(rnum), rnum,
-           zone_table[znum].number, znum);
-    return;
-  }
-
-  send_to_char(ch, "rsave: room %d saved to roomsave file for zone %d.\r\n",
-               GET_ROOM_VNUM(rnum), zone_table[znum].number);
-
-  mudlog(CMP, GET_LEVEL(ch), TRUE,
-         "RSAVE OK: %s room %d (rnum=%d) -> world/rsv/%d.rsv",
-         GET_NAME(ch), GET_ROOM_VNUM(rnum), rnum, zone_table[znum].number);
 }

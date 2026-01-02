@@ -15,10 +15,10 @@
 
 #define PFDEF_SEX		0
 #define PFDEF_CLASS		0
+#define PFDEF_SPECIES		SPECIES_UNDEFINED
 #define PFDEF_LEVEL		0
 #define PFDEF_HEIGHT		0
 #define PFDEF_WEIGHT		0
-#define PFDEF_ALIGNMENT		0
 #define PFDEF_PLRFLAGS		0
 #define PFDEF_AFFFLAGS		0
 #define PFDEF_SAVETHROW		0
@@ -29,7 +29,6 @@
 #define PFDEF_CONDITION		0
 #define PFDEF_BADPWS		0
 #define PFDEF_PREFFLAGS		0
-#define PFDEF_PRACTICES		0
 #define PFDEF_COINS		0
 #define PFDEF_BANK_COINS		0
 #define PFDEF_EXP	        0
@@ -44,8 +43,8 @@
 #define PFDEF_MAXHIT		0
 #define PFDEF_MANA		0
 #define PFDEF_MAXMANA		0
-#define PFDEF_MOVE		0
-#define PFDEF_MAXMOVE		0
+#define PFDEF_STAMINA		0
+#define PFDEF_MAXSTAMINA		0
 #define PFDEF_HUNGER		0
 #define PFDEF_THIRST		0
 #define PFDEF_DRUNK		0
@@ -58,5 +57,7 @@
 #define PFDEF_CURRQUEST         NOTHING
 #define PFDEF_LASTMOTD          0 
 #define PFDEF_LASTNEWS          0 
+#define PFDEF_REROLL_USED       0
+#define PFDEF_REROLL_EXPIRES    0
 
 #endif /* _PFDEFAULTS_H_ */

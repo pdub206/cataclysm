@@ -22,7 +22,7 @@ BINDIR = ^.bin
 CFLAGS = $(MYFLAGS) $(PROFILE)
 
 OBJFILES = o.comm act.o.comm act.o.informative act.o.movement act.o.item \
-	act.o.offensive act.o.other act.o.social act.o.wizard o.ban o.boards \
+	act.o.offensive act.o.other act.o.social act.o.wizard o.set o.ban o.boards \
 	o.castle o.class o.config o.constants o.db o.fight o.graph o.handler \
 	o.house o.interpreter o.limits o.magic o.mail o.mobact o.modify \
 	o.objsave o.random o.shop o.spec_assign o.spec_procs \
@@ -73,6 +73,11 @@ act.o.wizard: act.c.wizard h.conf h.sysdep h.structs \
   h.utils h.comm h.interpreter h.handler \
   h.db h.spells h.house h.screen h.constants
 	$(CC) -c $(CFLAGS) act.c.wizard -o act.o.wizard
+o.set: c.set h.conf h.sysdep h.structs \
+  h.utils h.comm h.interpreter h.handler \
+  h.db h.constants h.genobj h.genolc h.genwld h.genzon h.oasis \
+  h.improved-edit h.modify h.dg_scripts h.set
+	$(CC) -c $(CFLAGS) c.set -o o.set
 o.ban: c.ban h.conf h.sysdep h.structs h.utils h.comm h.interpreter h.handler h.db
 	$(CC) -c $(CFLAGS) c.ban
 o.boards: c.boards h.conf h.sysdep h.structs h.utils h.comm h.db h.boards \

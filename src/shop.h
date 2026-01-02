@@ -74,9 +74,9 @@ struct shop_data {
 #define LIST_ROOM		2
 
 /* Whom will we not trade with (bitvector for SHOP_TRADE_WITH()) */
-#define TRADE_NOGOOD         (1 << 0)
-#define TRADE_NOEVIL         (1 << 1)
-#define TRADE_NONEUTRAL      (1 << 2)
+#define TRADE_RESERVED1      (1 << 0)
+#define TRADE_RESERVED2      (1 << 1)
+#define TRADE_RESERVED3      (1 << 2)
 #define TRADE_NOSORCEROR     (1 << 3)
 #define TRADE_NOCLERIC       (1 << 4)
 #define TRADE_NOROGUE        (1 << 5)
@@ -87,6 +87,9 @@ struct shop_data {
 #define TRADE_NODRUID        (1 << 10)
 /** Total number of trade types */
 #define NUM_TRADERS     11
+#define TRADE_RESERVED_COUNT 3
+#define TRADE_CLASS_START TRADE_RESERVED_COUNT
+#define NUM_TRADE_CLASSES (NUM_TRADERS - TRADE_RESERVED_COUNT)
 
 struct stack_data {
    int data[100];
@@ -123,9 +126,6 @@ struct stack_data {
 #define SHOP_SELLPROFIT(i)	(shop_index[(i)].profit_sell)
 #define SHOP_FUNC(i)		(shop_index[(i)].func)
 
-#define NOTRADE_GOOD(i)		   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOGOOD))
-#define NOTRADE_EVIL(i)		   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOEVIL))
-#define NOTRADE_NEUTRAL(i)	   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NONEUTRAL))
 #define NOTRADE_SORCEROR(i)	(IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOSORCEROR))
 #define NOTRADE_CLERIC(i)	   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOCLERIC))
 #define NOTRADE_ROGUE(i)	   (IS_SET(SHOP_TRADE_WITH((i)), TRADE_NOROGUE))
@@ -153,7 +153,6 @@ struct stack_data {
 #define MSG_CLOSED_FOR_DAY	"Sorry, come back tomorrow."
 #define MSG_NO_STEAL_HERE	"$n is a bloody thief!"
 #define MSG_NO_SEE_CHAR		"I don't trade with someone I can't see!"
-#define MSG_NO_SELL_ALIGN	"Get out of here before I call the guards!"
 #define MSG_NO_SELL_CLASS	"We don't serve your kind here!"
 #define MSG_NO_USED_WANDSTAFF	"I don't buy used up wands or staves!"
 #define MSG_CANT_KILL_KEEPER	"Get out of here before I call the guards!"

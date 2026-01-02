@@ -226,9 +226,7 @@ static void auto_equip(struct char_data *ch, struct obj_data *obj, int location)
 
     if (location > 0) {      /* Wearable. */
       if (!GET_EQ(ch,j)) {
-        /* Check the characters's alignment to prevent them from being zapped
-	 * through the auto-equipping. */
-        if (invalid_align(ch, obj) || invalid_class(ch, obj))
+        if (invalid_class(ch, obj))
           location = LOC_INVENTORY;
         else
           equip_char(ch, obj, j);
@@ -572,6 +570,9 @@ obj_save_data *objsave_parse_objects(FILE *fl)
   /* append current object to the result list with proper locate */
   void commit_current(void) {
     if (!temp) return;
+
+    if (GET_OBJ_TYPE(temp) == ITEM_MONEY)
+      update_money_obj(temp);
 
     /* sanitize top-level locate range only; children will be negative later */
     int loc = pending_locate;

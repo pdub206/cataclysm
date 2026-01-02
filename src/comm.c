@@ -1145,8 +1145,8 @@ static char *make_prompt(struct descriptor_data *d)
         if (count >= 0)
           len += count;
       }
-      if (GET_MOVE(ch) << 2 < GET_MAX_MOVE(ch) && len < sizeof(prompt)) {
-        count = snprintf(prompt + len, sizeof(prompt) - len, "%dV ", GET_MOVE(ch));
+      if (GET_STAMINA(ch) << 2 < GET_MAX_STAMINA(ch) && len < sizeof(prompt)) {
+        count = snprintf(prompt + len, sizeof(prompt) - len, "%dS ", GET_STAMINA(ch));
         if (count >= 0)
           len += count;
       }
@@ -1163,8 +1163,8 @@ static char *make_prompt(struct descriptor_data *d)
           len += count;
       }
 
-      if (PRF_FLAGGED(d->character, PRF_DISPMOVE) && len < sizeof(prompt)) {
-        count = snprintf(prompt + len, sizeof(prompt) - len, "%dV ", GET_MOVE(d->character));
+      if (PRF_FLAGGED(d->character, PRF_DISPSTAMINA) && len < sizeof(prompt)) {
+        count = snprintf(prompt + len, sizeof(prompt) - len, "%dS ", GET_STAMINA(d->character));
         if (count >= 0)
           len += count;
       }
@@ -2795,8 +2795,8 @@ static void msdp_update( void )
       MSDPSetNumber( d, eMSDP_MANA_MAX, GET_MAX_MANA(ch) );
       MSDPSetNumber( d, eMSDP_WIMPY, GET_WIMP_LEV(ch) );
       MSDPSetNumber( d, eMSDP_MONEY, GET_COINS(ch) );
-      MSDPSetNumber( d, eMSDP_MOVEMENT, GET_MOVE(ch) );
-      MSDPSetNumber( d, eMSDP_MOVEMENT_MAX, GET_MAX_MOVE(ch) );
+      MSDPSetNumber( d, eMSDP_MOVEMENT, GET_STAMINA(ch) );
+      MSDPSetNumber( d, eMSDP_MOVEMENT_MAX, GET_MAX_STAMINA(ch) );
       MSDPSetNumber( d, eMSDP_AC, compute_armor_class(ch) );
 
       /* This would be better moved elsewhere */

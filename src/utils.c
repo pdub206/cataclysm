@@ -570,17 +570,24 @@ time_t mud_time_to_secs(struct time_info_data *now)
   return (time(NULL) - when);
 }
 
-/** Calculate a player's MUD age.
- * @todo The minimum starting age of 17 is hardcoded in this function. Recommend
- * changing the minimum age to a property (variable) external to this function.
+time_t get_total_played_seconds(const struct char_data *ch)
+{
+  time_t played = ch->player.time.played;
+
+  if (ch->desc && STATE(ch->desc) == CON_PLAYING)
+    played += time(0) - ch->player.time.logon;
+
+  return played;
+}
+
+/** Calculate a player's mechanical age based on total played time.
  * @param ch A valid player character. */
 struct time_info_data *age(struct char_data *ch)
 {
   static struct time_info_data player_age;
 
-  player_age = *mud_time_passed(time(0), ch->player.time.birth);
-
-  player_age.year += 17;	/* All players start at 17 */
+  time_t played = get_total_played_seconds(ch);
+  player_age = *mud_time_passed(time(0), time(0) - played);
 
   return (&player_age);
 }
@@ -647,6 +654,8 @@ void stop_follower(struct char_data *ch)
   }
 
   ch->master = NULL;
+  if (HITCHED_TO(ch))
+    HITCHED_TO(ch) = NULL;
   REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_CHARM);
 }
 
@@ -1700,6 +1709,74 @@ const char *get_char_sdesc(const struct char_data *ch)
   return "someone";
 }
 
+void clear_custom_ldesc(struct char_data *ch)
+{
+  char base_buf[MAX_INPUT_LENGTH];
+  char ldesc[MAX_STRING_LENGTH];
+  const char *base;
+
+  if (!ch || !ch->char_specials.custom_ldesc)
+    return;
+
+  ch->char_specials.custom_ldesc = FALSE;
+
+  if (ch->player.long_descr) {
+    if (!IS_NPC(ch) || GET_MOB_RNUM(ch) == NOBODY ||
+        ch->player.long_descr != mob_proto[GET_MOB_RNUM(ch)].player.long_descr) {
+      free(ch->player.long_descr);
+    }
+    ch->player.long_descr = NULL;
+  }
+
+  base = (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch)) ? GET_SHORT_DESC(ch) : GET_NAME(ch);
+  if (!base || !*base)
+    base = "someone";
+
+  strlcpy(base_buf, base, sizeof(base_buf));
+  if (*base_buf)
+    base_buf[0] = UPPER(*base_buf);
+
+  snprintf(ldesc, sizeof(ldesc), "%s is standing here.\r\n", base_buf);
+  ch->player.long_descr = strdup(ldesc);
+}
+
+bool build_hidden_ldesc(const struct char_data *ch, char *out, size_t outsz)
+{
+  char base_buf[MAX_INPUT_LENGTH];
+  const char *base;
+  size_t base_len;
+  const char *suffix;
+
+  if (!out || outsz == 0) return FALSE;
+  *out = '\0';
+
+  if (!ch || !ch->char_specials.custom_ldesc || !ch->player.long_descr)
+    return FALSE;
+  if (GET_POS(ch) != GET_DEFAULT_POS(ch))
+    return FALSE;
+
+  base = (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch)) ? GET_SHORT_DESC(ch) : GET_NAME(ch);
+  if (!base || !*base)
+    base = "someone";
+
+  strlcpy(base_buf, base, sizeof(base_buf));
+  if (*base_buf)
+    base_buf[0] = UPPER(*base_buf);
+
+  base_len = strlen(base_buf);
+  if (strncmp(ch->player.long_descr, base_buf, base_len) != 0)
+    return FALSE;
+
+  suffix = ch->player.long_descr + base_len;
+  if (*suffix == ' ')
+    suffix++;
+  else
+    return FALSE;
+
+  snprintf(out, outsz, "A shadowy figure %s", suffix);
+  return TRUE;
+}
+
 /* 5e system helpers */
 
 extern const struct armor_slot armor_slots[];      /* in constants.c */
@@ -2072,6 +2149,24 @@ void loadout_add_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos
   /* push-front for O(1); order doesn’t matter yet */
   e->next = *head;
   *head = e;
+}
+
+void loadout_append_entry(struct mob_loadout **head, obj_vnum vnum, sh_int wear_pos, int qty) {
+  struct mob_loadout *e = NULL;
+  struct mob_loadout *tail;
+  if (qty < 1) qty = 1;
+  CREATE(e, struct mob_loadout, 1);
+  e->vnum = vnum;
+  e->wear_pos = wear_pos;
+  e->quantity = qty;
+  e->next = NULL;
+  if (!*head) {
+    *head = e;
+    return;
+  }
+  for (tail = *head; tail->next; tail = tail->next)
+    ;
+  tail->next = e;
 }
 
 struct mob_loadout *loadout_deep_copy(const struct mob_loadout *src) {

@@ -54,6 +54,7 @@ void sprintbitarray(int bitvector[], const char *names[], int maxar, char *resul
 int get_line(FILE *fl, char *buf);
 int get_filename(char *filename, size_t fbufsize, int mode, const char *orig_name);
 time_t mud_time_to_secs(struct time_info_data *now);
+time_t get_total_played_seconds(const struct char_data *ch);
 struct time_info_data *age(struct char_data *ch);
 int num_pc_in_room(struct room_data *room);
 void core_dump_real(const char *who, int line);
@@ -80,6 +81,8 @@ char *right_trim_whitespace(const char *string);
 void remove_from_string(char *string, const char *to_remove);
 const char *const *obj_value_labels(int item_type);
 const char *get_char_sdesc(const struct char_data *ch);
+void clear_custom_ldesc(struct char_data *ch);
+bool build_hidden_ldesc(const struct char_data *ch, char *out, size_t outsz);
 int obj_is_storage(const struct obj_data *obj);
 int obj_storage_is_closed(const struct obj_data *obj);
 int roll_skill_check(struct char_data *ch, int skillnum, int mode, int *out_d20);
@@ -193,6 +196,12 @@ void    advance_level(struct char_data *ch);
 void char_from_furniture(struct char_data *ch);
 /** What ch is currently sitting on. */
 #define SITTING(ch)             ((ch)->char_specials.furniture)
+/** Mount ch is currently riding. */
+#define MOUNT(ch)               ((ch)->char_specials.mount)
+/** Rider currently mounted on ch. */
+#define RIDDEN_BY(ch)           ((ch)->char_specials.rider)
+/** Person ch is hitched to. */
+#define HITCHED_TO(ch)          ((ch)->char_specials.hitched_to)
 /** Who is sitting next to ch, if anyone. */
 #define NEXT_SITTING(ch)        ((ch)->char_specials.next_in_furniture)
 /** Who is sitting on this obj */
@@ -233,6 +242,9 @@ void char_from_furniture(struct char_data *ch);
 /** Real life seconds per mud month.
  * Current calculation ~= 12.4 real life days */
 #define SECS_PER_MUD_YEAR	(17*SECS_PER_MUD_MONTH)
+
+#define MIN_CHAR_AGE 18
+#define MAX_CHAR_AGE 65
 
 /** The number of seconds in a real minute. */
 #define SECS_PER_REAL_MIN	60
@@ -514,6 +526,8 @@ do                                                              \
 #define GET_WAS_IN(ch)	((ch)->was_in_room)
 /** How old is PC/NPC, at last recorded time? */
 #define GET_AGE(ch)     (age(ch)->year)
+#define GET_ROLEPLAY_AGE(ch) ((ch)->player.roleplay_age)
+#define GET_ROLEPLAY_AGE_YEAR(ch) ((ch)->player.roleplay_age_year)
 
 /** Proper name for PCs and NPCs. */
 #define GET_NAME(ch)        ((ch)->player.name)
@@ -556,6 +570,8 @@ do                                                              \
 
 /** Class of ch. */
 #define GET_CLASS(ch)   ((ch)->player.chclass)
+/** Species of ch. */
+#define GET_SPECIES(ch) ((ch)->player.species)
 /** Height of ch. */
 #define GET_HEIGHT(ch)	((ch)->player.height)
 /** Weight of ch. */
@@ -596,10 +612,10 @@ do                                                              \
 #define GET_HIT(ch)	  ((ch)->points.hit)
 /** Maximum hit points of ch. */
 #define GET_MAX_HIT(ch)	  ((ch)->points.max_hit)
-/** Current move points (stamina) of ch. */
-#define GET_MOVE(ch)	  ((ch)->points.move)
-/** Maximum move points (stamina) of ch. */
-#define GET_MAX_MOVE(ch)  ((ch)->points.max_move)
+/** Current stamina points of ch. */
+#define GET_STAMINA(ch)	  ((ch)->points.stamina)
+/** Maximum stamina points of ch. */
+#define GET_MAX_STAMINA(ch)  ((ch)->points.max_stamina)
 /** Current mana points (magic) of ch. */
 #define GET_MANA(ch)	  ((ch)->points.mana)
 /** Maximum mana points (magic) of ch. */
@@ -668,6 +684,9 @@ do                                                              \
 #define GET_SCAN_RESULTS(ch)	CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->scan_results))
 #define GET_LAST_MOTD(ch)       CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.lastmotd))
 #define GET_LAST_NEWS(ch)       CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.lastnews))
+#define GET_REROLL_USED(ch)     CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.reroll_used))
+#define GET_REROLL_EXPIRES(ch)  CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.reroll_expires))
+#define GET_REROLL_OLD_ABILS(ch) CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.reroll_old_abils))
 /** Get channel history i for ch. */
 #define GET_HISTORY(ch, i)      CHECK_PLAYER_SPECIAL((ch), ((ch)->player_specials->saved.comm_hist[i]))
 /** Return the page length (height) for ch. */
@@ -735,13 +754,6 @@ do                                                              \
 /** Defines if ch can see in general in the dark. */
 #define CAN_SEE_IN_DARK(ch) \
    (AFF_FLAGGED(ch, AFF_INFRAVISION) || (!IS_NPC(ch) && PRF_FLAGGED(ch, PRF_HOLYLIGHT)))
-
-/** Defines if ch is good. */
-#define IS_GOOD(ch)    (GET_ALIGNMENT(ch) >= 350)
-/** Defines if ch is evil. */
-#define IS_EVIL(ch)    (GET_ALIGNMENT(ch) <= -350)
-/** Defines if ch is neither good nor evil. */
-#define IS_NEUTRAL(ch) (!IS_GOOD(ch) && !IS_EVIL(ch))
 
 /** Old wait state function.
  * @deprecated Use GET_WAIT_STATE */
@@ -936,6 +948,7 @@ do                                                              \
 
 /** True if ch has a valid player class assigned. */
 #define HAS_VALID_CLASS(ch) ((GET_CLASS(ch) >= CLASS_SORCEROR) && (GET_CLASS(ch) < NUM_CLASSES))
+#define HAS_VALID_SPECIES(ch) ((GET_SPECIES(ch) >= 0) && (GET_SPECIES(ch) < NUM_SPECIES))
 
 /** Return the class abbreviation for ch. */
 #define CLASS_ABBR(ch)    (HAS_VALID_CLASS(ch) ? class_abbrevs[(int)GET_CLASS(ch)] : "--")
@@ -1021,7 +1034,6 @@ do                                                              \
 #define CONFIG_CONFFILE         config_info.CONFFILE
 
 /** Player killing allowed or not? */
-#define CONFIG_PK_ALLOWED       config_info.play.pk_allowed
 /** Player thieving allowed or not? */
 #define CONFIG_PT_ALLOWED       config_info.play.pt_allowed
 /** What level to use the shout command? */
