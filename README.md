@@ -66,10 +66,10 @@ Changes in v1.1.0-alpha:
  * Introduced AGENTS.md file to ensure code quality
  * Migration away from OLC with new commands "rcreate" and "rset" for builders to modify rooms
  * Migration away from OLC with new commands "ocreate", "oset", and "osave" for builders to modify objects
- * Migration away from OLC with new commands "mcreate" and "mset" for builders to modify NPC's
+ * Migration away from OLC with new command "mcreate" and for builders to modify NPC's
  * Fixed issue with msave not saving items in containers on NPC's
 
-Features to be implemented in the next few releases:
+Features that would have been implemented in the next few releases:
 
 * Height and weight normalized to species
 * Stables allow for purchasing of mounts
