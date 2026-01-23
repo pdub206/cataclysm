@@ -22,7 +22,7 @@ lib/acctfiles/K-O/*
 lib/acctfiles/P-T/*
 lib/acctfiles/U-Z/*
 lib/acctfiles/ZZZ/*
-lib/acctfiles/index
+lib/acctfiles/index*
 
 # but do commit the placeholders
 !lib/acctfiles/A-E/00
@@ -39,7 +39,7 @@ lib/plrfiles/K-O/*
 lib/plrfiles/P-T/*
 lib/plrfiles/U-Z/*
 lib/plrfiles/ZZZ/*
-lib/plrfiles/index
+lib/plrfiles/index*
 
 # but do commit the placeholders
 !lib/plrfiles/A-E/00
@@ -56,7 +56,7 @@ lib/plrvars/K-O/*
 lib/plrvars/P-T/*
 lib/plrvars/U-Z/*
 lib/plrvars/ZZZ/*
-lib/plrvars/index
+lib/plrvars/index*
 
 # except the placeholders
 !lib/plrvars/A-E/00
@@ -73,7 +73,7 @@ lib/plrobjs/K-O/*
 lib/plrobjs/P-T/*
 lib/plrobjs/U-Z/*
 lib/plrobjs/ZZZ/*
-lib/plrobjs/index
+lib/plrobjs/index*
 
 # except the placeholders
 !lib/plrobjs/A-E/00
