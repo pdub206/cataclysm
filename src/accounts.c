@@ -12,6 +12,8 @@
 #include "utils.h"
 #include "db.h"
 #include "accounts.h"
+#include "toml.h"
+#include "toml_utils.h"
 
 static void set_account_name(struct account_data *account, const char *name)
 {
@@ -26,6 +28,31 @@ static void set_account_name(struct account_data *account, const char *name)
   if (account->name)
     free(account->name);
   account->name = strdup(tmp);
+}
+
+static char *toml_dup_string(toml_table_t *tab, const char *key)
+{
+  toml_datum_t d = toml_string_in(tab, key);
+
+  if (!d.ok)
+    return NULL;
+
+  return d.u.s;
+}
+
+static void toml_set_account_pc_name(struct account_data *account, const char *value)
+{
+  char tmp[MAX_INPUT_LENGTH];
+
+  if (!value || !*value)
+    return;
+
+  strlcpy(tmp, value, sizeof(tmp));
+  CAP(tmp);
+
+  if (account->pc_name)
+    free(account->pc_name);
+  account->pc_name = strdup(tmp);
 }
 
 int account_has_pc(const struct account_data *account, const char *pc_name)
@@ -77,9 +104,11 @@ struct account_data *account_load(const char *name)
   struct account_data *account;
   FILE *fl;
   char filename[PATH_MAX];
-  char line[MAX_INPUT_LENGTH + 1];
-  char tag[6];
-  int i;
+  char errbuf[256];
+  toml_table_t *tab = NULL;
+  toml_array_t *arr = NULL;
+  char *value = NULL;
+  int i, count;
 
   if (!name || !*name)
     return NULL;
@@ -91,29 +120,55 @@ struct account_data *account_load(const char *name)
   if (!fl)
     return NULL;
 
+  tab = toml_parse_file(fl, errbuf, sizeof(errbuf));
+  fclose(fl);
+  if (!tab) {
+    log("SYSERR: Couldn't parse account file %s: %s.", filename, errbuf);
+    return NULL;
+  }
+
   account = account_create(NULL);
 
-  while (get_line(fl, line)) {
-    tag_argument(line, tag);
+  value = toml_dup_string(tab, "name");
+  if (value) {
+    set_account_name(account, value);
+    free(value);
+  }
 
-    if (!strcmp(tag, "Name"))
-      set_account_name(account, line);
-    else if (!strcmp(tag, "Pass"))
-      strlcpy(account->passwd, line, sizeof(account->passwd));
-    else if (!strcmp(tag, "Mail")) {
-      if (account->email)
-        free(account->email);
-      account->email = strdup(line);
-    } else if (!strcmp(tag, "Char"))
-      account_add_pc(account, line);
-    else if (!strcmp(tag, "Curr")) {
-      if (account->pc_name)
-        free(account->pc_name);
-      account->pc_name = strdup(line);
+  value = toml_dup_string(tab, "password");
+  if (value) {
+    strlcpy(account->passwd, value, sizeof(account->passwd));
+    free(value);
+  }
+
+  value = toml_dup_string(tab, "email");
+  if (value) {
+    if (account->email)
+      free(account->email);
+    account->email = value;
+  }
+
+  value = toml_dup_string(tab, "current_pc");
+  if (value) {
+    toml_set_account_pc_name(account, value);
+    free(value);
+  }
+
+  arr = toml_array_in(tab, "pcs");
+  if (arr) {
+    count = toml_array_nelem(arr);
+    for (i = 0; i < count; i++) {
+      toml_datum_t d = toml_string_at(arr, i);
+      if (!d.ok) {
+        log("SYSERR: Invalid account character entry %d in %s.", i, filename);
+        continue;
+      }
+      account_add_pc(account, d.u.s);
+      free(d.u.s);
     }
   }
 
-  fclose(fl);
+  toml_free(tab);
 
   if (!account->name)
     set_account_name(account, name);
@@ -151,14 +206,33 @@ int account_save(const struct account_data *account)
     return 0;
   }
 
-  fprintf(fl, "Name: %s\n", account->name);
-  fprintf(fl, "Pass: %s\n", account->passwd);
+  fprintf(fl, "name = ");
+  toml_write_string(fl, account->name);
+  fprintf(fl, "\n");
+  fprintf(fl, "password = ");
+  toml_write_string(fl, account->passwd);
+  fprintf(fl, "\n");
   if (account->email && *account->email)
-    fprintf(fl, "Mail: %s\n", account->email);
+  {
+    fprintf(fl, "email = ");
+    toml_write_string(fl, account->email);
+    fprintf(fl, "\n");
+  }
   if (account->pc_name && *account->pc_name)
-    fprintf(fl, "Curr: %s\n", account->pc_name);
-  for (i = 0; i < account->pc_count; i++)
-    fprintf(fl, "Char: %s\n", account->pc_list[i]);
+  {
+    fprintf(fl, "current_pc = ");
+    toml_write_string(fl, account->pc_name);
+    fprintf(fl, "\n");
+  }
+  if (account->pc_count > 0) {
+    fprintf(fl, "pcs = [\n");
+    for (i = 0; i < account->pc_count; i++) {
+      fprintf(fl, "  ");
+      toml_write_string(fl, account->pc_list[i]);
+      fprintf(fl, "%s\n", (i + 1 < account->pc_count) ? "," : "");
+    }
+    fprintf(fl, "]\n");
+  }
 
   fclose(fl);
   return 1;

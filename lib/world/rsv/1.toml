@@ -1,0 +1,287 @@
+[[room]]
+vnum = 100
+saved_at = 1759514843
+
+[[room.mob]]
+vnum = 100
+
+[[room.mob.equipment]]
+wear_pos = 3
+vnum = 118
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 5
+vnum = 131
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 6
+vnum = 110
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 7
+vnum = 108
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 8
+vnum = 115
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 9
+vnum = 124
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 10
+vnum = 107
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 11
+vnum = 111
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 15
+vnum = 117
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 16
+vnum = 117
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 17
+vnum = 127
+contents = []
+
+[[room.mob]]
+vnum = 101
+
+[[room.mob.equipment]]
+wear_pos = 3
+vnum = 118
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 5
+vnum = 131
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 6
+vnum = 110
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 7
+vnum = 108
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 8
+vnum = 115
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 9
+vnum = 124
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 10
+vnum = 107
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 11
+vnum = 111
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 15
+vnum = 117
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 16
+vnum = 117
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 17
+vnum = 127
+contents = []
+
+[[room]]
+vnum = 200
+saved_at = 1759595106
+
+[[room.object]]
+vnum = 143
+timer = 0
+weight = 10
+cost = 100
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [1, 0, 0, 0, 0, 0, 0, 0]
+contents = []
+
+[[room]]
+vnum = 136
+saved_at = 1759603517
+
+[[room.object]]
+vnum = 147
+timer = 0
+weight = 100
+cost = 0
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+contents = []
+
+[[room]]
+vnum = 134
+saved_at = 1760390381
+
+[[room.object]]
+vnum = 134
+timer = 0
+weight = 100
+cost = 0
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [2, 0, 0, 0, 0, 0, 0, 0]
+contents = []
+
+[[room.object]]
+vnum = 133
+timer = 0
+weight = 100
+cost = 0
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [6, 0, 1, 0, 0, 0, 0, 0]
+contents = []
+
+[[room.object]]
+vnum = 132
+timer = 0
+weight = 200
+cost = 0
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [8, 0, 0, 0, 0, 0, 0, 0]
+contents = []
+
+[[room.object]]
+vnum = 150
+timer = 0
+weight = 0
+cost = 0
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+contents = []
+
+[[room.mob]]
+vnum = 102
+
+[[room.mob.equipment]]
+wear_pos = 9
+vnum = 112
+contents = []
+
+[[room.mob.equipment]]
+wear_pos = 14
+vnum = 113
+contents = []
+
+[[room.mob.inventory]]
+vnum = 138
+contents = []
+
+[[room.mob.inventory]]
+vnum = 137
+contents = []
+
+[[room.mob.inventory]]
+vnum = 136
+contents = []
+
+[[room.mob.inventory]]
+vnum = 135
+contents = []
+
+[[room.mob.inventory]]
+vnum = 139
+contents = []
+
+[[room.mob.inventory]]
+vnum = 140
+contents = []
+
+[[room.mob.inventory]]
+vnum = 141
+contents = []
+
+[[room.mob.inventory]]
+vnum = 142
+contents = []
+
+[[room.mob]]
+vnum = 103
+
+[[room]]
+vnum = 131
+saved_at = 1767296856
+
+[[room.object]]
+vnum = 144
+timer = 0
+weight = 20
+cost = 0
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [100, 100, 0, 0, 0, 0, 0, 0]
+contents = []
+
+[[room.object]]
+vnum = 145
+timer = 0
+weight = 40
+cost = 0
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [4, 0, 2, 0, 0, 0, 0, 0]
+contents = []
+
+[[room.object]]
+vnum = 146
+timer = 0
+weight = 80
+cost = 0
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [6, 0, 2, 0, 0, 0, 0, 0]
+contents = []
+
+[[room]]
+vnum = 101
+saved_at = 1767296996
+

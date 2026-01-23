@@ -17,11 +17,11 @@ PROFILE =
 
 BINDIR = ../bin
 
-CFLAGS = -g -O2 $(MYFLAGS) $(PROFILE)
+CFLAGS = -g -O2 $(MYFLAGS) $(PROFILE) -I../third_party/tomlc99
 
 LIBS =  -lcrypt 
 
-SRCFILES := $(shell ls *.c | sort)
+SRCFILES := $(shell ls *.c | sort) ../third_party/tomlc99/toml.c
 OBJFILES := $(patsubst %.c,%.o,$(SRCFILES))  
 
 default: all
@@ -47,13 +47,14 @@ $%.o: %.c
 
 clean:
 	rm -f *.o depend
+	rm -f ../third_party/tomlc99/toml.o
 	rm -f ./tests/*.o depend
 
 # Dependencies for the object files (automagically generated with
 # gcc -MM)
 
 depend:
-	$(CC) -MM *.c > depend
+	$(CC) $(CFLAGS) -MM *.c > depend
 
 -include depend
 

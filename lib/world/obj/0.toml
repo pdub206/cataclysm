@@ -1,0 +1,16 @@
+[[object]]
+vnum = 1
+name = "board immortal"
+short = "the immortal board"
+description = "The immortal bulletin board is here."
+main_description = "Made specifically for immortals to post on.\n"
+type = 13
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 0
+cost = 0
+level = 0
+timer = 0
+

@@ -64,7 +64,10 @@ Changes in v1.1.0-alpha:
  * Migration away from OLC with new command "mcreate" and for builders to modify NPC's
  * Fixed issue with msave not saving items in containers on NPC's
 
-Features that would have been implemented in the next few releases:
+Changes in v1.2.0-alpha:
+ * Replaced ASCII files in favor of TOML for ease of reading
+
+Features that will be implemented in the next few releases:
 
 * Height and weight normalized to species
 * Stables allow for purchasing of mounts
@@ -110,7 +113,6 @@ Features that would have been implemented in the next few releases:
 
 ...and down the road:
 
-* Replace ASCII files in favor of SQL database on the backend
 * Replace DG Scripts with a Python abstraction layer for modern scripting support
 * Replace Oasis OLC with more modern interface for easing builder duties
 * Discord server integration for ticketing and community

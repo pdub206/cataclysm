@@ -1,0 +1,446 @@
+[[mob]]
+vnum = 100
+name = "John"
+keywords = "soldier tall burly human guard"
+short = "the tall, burly human soldier"
+long = "A tall, burly human soldier stands here at the gate.\n"
+description = "   This man stands slightly taller than the average human, but not by much.  He\nhas a thick, haggard looking brown beard that is flecked with dust and sand.  \nHis eyes have a bluish-tint to them with a small amount of green.  One might\ncall his stature bulky, as he has quite a bit of muscle.\n"
+flags = [6218, 0, 0, 0]
+aff_flags = [0, 0, 0, 0]
+alignment = 0
+mob_type = "enhanced"
+
+[mob.simple]
+level = 1
+hit_dice = 3
+mana_dice = 20
+stamina_dice = 40
+pos = 8
+default_pos = 8
+sex = 1
+
+[mob.enhanced]
+class = 3
+species = 0
+
+[mob.enhanced.abilities]
+str = 16
+dex = 11
+con = 11
+int = 11
+wis = 11
+cha = 11
+
+[mob.enhanced.saving_throws]
+str = 0
+dex = 0
+con = 0
+int = 0
+wis = 0
+cha = 0
+
+[[mob.enhanced.skills]]
+id = 132
+level = 5
+[[mob.enhanced.skills]]
+id = 134
+level = 5
+[[mob.enhanced.skills]]
+id = 137
+level = 5
+[[mob.enhanced.skills]]
+id = 141
+level = 5
+[[mob.enhanced.skills]]
+id = 142
+level = 5
+[[mob.enhanced.skills]]
+id = 143
+level = 5
+[[mob.enhanced.skills]]
+id = 144
+level = 5
+[[mob.enhanced.skills]]
+id = 145
+level = 5
+[[mob.enhanced.skills]]
+id = 146
+level = 5
+[[mob.enhanced.skills]]
+id = 147
+level = 5
+
+[[mob.loadout]]
+wear_pos = 3
+vnum = 118
+quantity = 1
+[[mob.loadout]]
+wear_pos = 5
+vnum = 131
+quantity = 1
+[[mob.loadout]]
+wear_pos = 6
+vnum = 110
+quantity = 1
+[[mob.loadout]]
+wear_pos = 7
+vnum = 108
+quantity = 1
+[[mob.loadout]]
+wear_pos = 8
+vnum = 115
+quantity = 1
+[[mob.loadout]]
+wear_pos = 9
+vnum = 124
+quantity = 1
+[[mob.loadout]]
+wear_pos = 10
+vnum = 107
+quantity = 1
+[[mob.loadout]]
+wear_pos = 11
+vnum = 111
+quantity = 1
+[[mob.loadout]]
+wear_pos = 15
+vnum = 117
+quantity = 1
+[[mob.loadout]]
+wear_pos = 16
+vnum = 117
+quantity = 1
+[[mob.loadout]]
+wear_pos = 17
+vnum = 127
+quantity = 1
+
+[[mob]]
+vnum = 101
+name = "Sally"
+keywords = "slim lanky human soldier guard"
+short = "the slim, lanky human soldier"
+long = "A slim, lanky human soldier stands here eyeing passerbys.\n"
+description = "   This woman looks rather thin, with her darkly tanned skin hugging her frame\ntightly.  What muscle she does have is accentuated, though there is not much.  \nHer arms and legs are lanky, seeming to be longer than normal.  A ponytail of\ndark hair has been pulled back behind her head, intensifying the sharpness of\nher nose.\n"
+flags = [6218, 0, 0, 0]
+aff_flags = [0, 0, 0, 0]
+alignment = 0
+mob_type = "enhanced"
+
+[mob.simple]
+level = 1
+hit_dice = 3
+mana_dice = 20
+stamina_dice = 40
+pos = 8
+default_pos = 8
+sex = 2
+
+[mob.enhanced]
+class = 3
+species = 0
+
+[mob.enhanced.abilities]
+str = 11
+dex = 11
+con = 11
+int = 11
+wis = 11
+cha = 11
+
+[mob.enhanced.saving_throws]
+str = 0
+dex = 0
+con = 0
+int = 0
+wis = 0
+cha = 0
+
+[[mob.enhanced.skills]]
+id = 132
+level = 5
+[[mob.enhanced.skills]]
+id = 134
+level = 5
+[[mob.enhanced.skills]]
+id = 137
+level = 5
+[[mob.enhanced.skills]]
+id = 140
+level = 5
+[[mob.enhanced.skills]]
+id = 141
+level = 5
+[[mob.enhanced.skills]]
+id = 142
+level = 5
+[[mob.enhanced.skills]]
+id = 143
+level = 5
+[[mob.enhanced.skills]]
+id = 144
+level = 5
+[[mob.enhanced.skills]]
+id = 145
+level = 5
+[[mob.enhanced.skills]]
+id = 146
+level = 5
+[[mob.enhanced.skills]]
+id = 152
+level = 5
+[[mob.enhanced.skills]]
+id = 156
+level = 5
+[[mob.enhanced.skills]]
+id = 163
+level = 5
+
+[[mob.loadout]]
+wear_pos = 3
+vnum = 118
+quantity = 1
+[[mob.loadout]]
+wear_pos = 5
+vnum = 131
+quantity = 1
+[[mob.loadout]]
+wear_pos = 6
+vnum = 110
+quantity = 1
+[[mob.loadout]]
+wear_pos = 7
+vnum = 108
+quantity = 1
+[[mob.loadout]]
+wear_pos = 8
+vnum = 115
+quantity = 1
+[[mob.loadout]]
+wear_pos = 9
+vnum = 124
+quantity = 1
+[[mob.loadout]]
+wear_pos = 10
+vnum = 107
+quantity = 1
+[[mob.loadout]]
+wear_pos = 11
+vnum = 111
+quantity = 1
+[[mob.loadout]]
+wear_pos = 15
+vnum = 117
+quantity = 1
+[[mob.loadout]]
+wear_pos = 16
+vnum = 117
+quantity = 1
+[[mob.loadout]]
+wear_pos = 17
+vnum = 127
+quantity = 1
+
+[[mob]]
+vnum = 102
+name = "Baldy"
+keywords = "barkeep stocky bald"
+short = "a stocky, bald barkeep"
+long = "A stocky, bald barkeep stands behind the bar here.\n"
+description = "   This man is short and stocky, with a cleanly shaven head.  Pattern baldness\nhas taken hold, yet he has a thick and wiry beard that covers most of his face.\nPale blue eyes look bloodshot, and bluish-purple bags hang under them.  His\nhands are marred with minor cuts and scars from years of working in service to\nothers.\n"
+flags = [10, 0, 0, 0]
+aff_flags = [0, 0, 0, 0]
+alignment = 0
+mob_type = "enhanced"
+
+[mob.simple]
+level = 1
+hit_dice = 3
+mana_dice = 12
+stamina_dice = 60
+pos = 8
+default_pos = 8
+sex = 1
+
+[mob.enhanced]
+
+[mob.enhanced.abilities]
+str = 11
+dex = 11
+con = 11
+int = 11
+wis = 11
+cha = 11
+
+[mob.enhanced.saving_throws]
+str = 0
+dex = 0
+con = 0
+int = 0
+wis = 0
+cha = 0
+
+[[mob.loadout]]
+wear_pos = 14
+vnum = 113
+quantity = 1
+[[mob.loadout]]
+wear_pos = 9
+vnum = 112
+quantity = 1
+
+[[mob]]
+vnum = 103
+name = "Lanky"
+keywords = "woman lanky scarred"
+short = "the lanky, scarred woman"
+long = "The lanky, scarred woman is leaning against a wall here.\n"
+description = "   This human woman is of average height and has a very lanky frame.  Her skin\nhugs her body tightly and there is little fat to be seen, possibly due to\ndehydration.  Tanned dark from the harsh rays of the sun, her upper torso is\ncovered in scars from a lifetime of labor.  Unkempt brown hair covers her head,\ndescending to just above her shoulders.  Her eyes are a light blue color and\nappear slightly bloodshot.\n"
+flags = [10, 0, 0, 0]
+aff_flags = [0, 0, 0, 0]
+alignment = 0
+mob_type = "enhanced"
+
+[mob.simple]
+level = 1
+hit_dice = 3
+mana_dice = 8
+stamina_dice = 60
+pos = 8
+default_pos = 8
+sex = 2
+
+[mob.enhanced]
+
+[mob.enhanced.abilities]
+str = 11
+dex = 11
+con = 11
+int = 11
+wis = 11
+cha = 11
+
+[mob.enhanced.saving_throws]
+str = 0
+dex = 0
+con = 0
+int = 0
+wis = 0
+cha = 0
+
+[[mob.enhanced.skills]]
+id = 131
+level = 5
+[[mob.enhanced.skills]]
+id = 133
+level = 5
+[[mob.enhanced.skills]]
+id = 135
+level = 5
+[[mob.enhanced.skills]]
+id = 138
+level = 5
+[[mob.enhanced.skills]]
+id = 139
+level = 5
+[[mob.enhanced.skills]]
+id = 140
+level = 5
+[[mob.enhanced.skills]]
+id = 142
+level = 5
+[[mob.enhanced.skills]]
+id = 143
+level = 5
+[[mob.enhanced.skills]]
+id = 144
+level = 5
+[[mob.enhanced.skills]]
+id = 147
+level = 5
+
+[[mob]]
+vnum = 104
+name = "Rat"
+keywords = "rat small furry"
+short = "a small, furry rat"
+long = "Keeping low to the ground, a small, furry rat wanders around here.\n"
+description = "   This small rat is covered in thick fur.  The fur itself appears matted and\nhas grime coating it.  Two beady black eyes look around, constantly shifting.  \nIts tail is four, perhaps five inches long and grey in color.  Both hindlings\nappear thick and ready to propel the animal if it feels threatened.\n"
+background = "\n\n\n\n\n\n\n\n\n\n\n\nIt's a rat.\n"
+flags = [8, 0, 0, 0]
+aff_flags = [0, 0, 0, 0]
+alignment = 0
+mob_type = "enhanced"
+
+[mob.simple]
+level = 1
+hit_dice = 0
+mana_dice = 0
+stamina_dice = 10
+pos = 8
+default_pos = 8
+sex = 2
+
+[mob.enhanced]
+species = 25
+age = 42
+attack_type = 4
+
+[mob.enhanced.abilities]
+str = 3
+dex = 7
+con = 8
+int = 3
+wis = 8
+cha = 3
+
+[mob.enhanced.saving_throws]
+str = 0
+dex = 0
+con = 0
+int = 0
+wis = 0
+cha = 0
+
+[[mob]]
+vnum = 105
+name = "Kank"
+keywords = "kank sandy brown"
+short = "a sandy brown kank"
+long = "A sandy brown kank is here, clacking its pincers.\n"
+description = "It looks unfinished.\n"
+background = "\n\n\n\nNo background has been recorded.\n"
+flags = [1048584, 0, 0, 0]
+aff_flags = [0, 0, 0, 0]
+alignment = 0
+mob_type = "enhanced"
+
+[mob.simple]
+level = 1
+hit_dice = 0
+mana_dice = 0
+stamina_dice = 10
+pos = 8
+default_pos = 8
+sex = 0
+
+[mob.enhanced]
+species = 21
+attack_type = 4
+
+[mob.enhanced.abilities]
+str = 18
+dex = 5
+con = 18
+int = 3
+wis = 7
+cha = 3
+
+[mob.enhanced.saving_throws]
+str = 0
+dex = 0
+con = 0
+int = 0
+wis = 0
+cha = 0
+

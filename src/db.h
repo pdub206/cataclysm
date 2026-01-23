@@ -54,11 +54,11 @@
 #error "Unknown path components."
 #endif
 
-#define SUF_OBJS	"objs"
+#define SUF_OBJS	"objs.toml"
 #define SUF_TEXT	"text"
-#define SUF_MEM	        "mem"
-#define SUF_PLR		"plr"
-#define SUF_ACCT	"acc"
+#define SUF_MEM	        "mem.toml"
+#define SUF_PLR		"plr.toml"
+#define SUF_ACCT	"acc.toml"
 
 #if defined(CIRCLE_AMIGA)
 #define EXE_FILE "/bin/circle" /* maybe use argv[0] but it's not reliable */
@@ -77,8 +77,8 @@
 #endif
 
 /* names of various files and directories */
-#define INDEX_FILE	"index"		/* index of world files		*/
-#define MINDEX_FILE	"index.mini"	/* ... and for mini-mud-mode	*/
+#define INDEX_FILE	"index.toml"	/* index of world files		*/
+#define MINDEX_FILE	"index.mini.toml"	/* ... and for mini-mud-mode	*/
 #define WLD_PREFIX  LIB_WORLD"wld"SLASH	/* room definitions	*/
 #define MOB_PREFIX  LIB_WORLD"mob"SLASH	/* monster prototypes	*/
 #define OBJ_PREFIX  LIB_WORLD"obj"SLASH	/* object prototypes	*/

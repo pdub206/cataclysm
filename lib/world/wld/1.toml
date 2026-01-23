@@ -1,0 +1,2370 @@
+[[room]]
+vnum = 100
+name = "Caravan Gate"
+description = "   Two large doors, each at least ten feet in height, make up the massive gate\nset into the walls that surround the city.  Made of agafari wood, mekillot hide,\nrusted old studs and iron hinges, they provide access into the city for\ntravelers and traders alike.  A massive stone block sits off to the side of the\nroad, which seems to have been carved to the exact size and shape of the gate\nitself.  Caravans and wagons can be seen passing through at all hours of the day\nwhen the gates are open, with some pausing just inside the gate to unload while\nothers continue on their way to the inner city.\n   To the north and south, Wall Road continues onward. To the west, the main\nthoroughfare of Caravan Way passes by several buildings.\n"
+flags = [0, 0, 0, 0]
+sector = 1
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 146
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 135
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 101
+
+[[room]]
+vnum = 101
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the west and east. A placard with a stylized\neyeball, ear, and lips hangs as a standard above a building to the north,\nwhile the smell of a stable wafts from the south.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 131
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 100
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 136
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 102
+
+[[room]]
+vnum = 102
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the west and east. To the south is a two-story\nbuilding with a sign hanging above the entrance of crossed swords.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 101
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 132
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 103
+
+[[room]]
+vnum = 103
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the north and east. To the south, a side street\npasses between some buildings.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 104
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 102
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 145
+
+[[room]]
+vnum = 104
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the west and south. Buildings surround you on\nall sides.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 103
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 105
+
+[[room]]
+vnum = 105
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the west and east. To the north, a side street\npasses between some buildings.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 155
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 104
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 106
+
+[[room]]
+vnum = 106
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the west and south. Buildings surround you on\nall sides.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 105
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 107
+
+[[room]]
+vnum = 107
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the south and east. To the west appears to be a\nbuilding that deals with garments.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 106
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 108
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 133
+
+[[room]]
+vnum = 108
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the north and west. To the south, a two story\nbuilding rises above the others. Hanging above the entrance is a sign with\na golden inix upon it and a stylized bottle.\n"
+flags = [0, 0, 0, 0]
+sector = 1
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 107
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 134
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 109
+
+[[room]]
+vnum = 109
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the west and east. To the north appears to be a\nbuilding that deals with garments.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 133
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 108
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 110
+
+[[room]]
+vnum = 110
+name = "Caravan Way"
+description = "   This broad avenue is wide enough for several mounted riders to easily\nnavigate, or even a pair of wagons to pass by without incident.  Buildings line\nthe road offering services to travelers and visitors of the city.  Street\nvendors line the sides, with an occasional shout to draw attention to their\nwares.  The route through the city itself is made up of brick, though several\nappear cracked and broken when given a thorough inspection.\n   Caravan Way continues to the east, while to the west the noise of Iron\nSquare can be heard. Buildings surround you on all sides.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 109
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 111
+
+[[room]]
+vnum = 111
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the north and south, while Caravan Way winds its\nway back into the Tradesmen's District to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 122
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 110
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 112
+
+[[room]]
+vnum = 112
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the north and west. To the east is a larger\nbuilding that seems to be both emporium and warehouse, bearing a sign above\nits entrance with a silver quill on a field of red.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 111
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 128
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 113
+
+[[room]]
+vnum = 113
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the west and east. To the north is a massive\nemporium with a sign bearing a black diamond on a red-brown field. To the\nsouth is a smaller emporium with a sign bearing a gold circle on a black\nfield.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 123
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 112
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 160
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 114
+
+[[room]]
+vnum = 114
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the west and east. To the north is a rather wide\nbuilding with a sign bearing a silver jozhal on a blue field.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 124
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 113
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 115
+
+[[room]]
+vnum = 115
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the north and east. To the west is a dusty path\nthe leads toward a ziggurat that rises up above the city.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 116
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 114
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 161
+
+[[room]]
+vnum = 116
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the north and south. To the west is a smaller\nbuilding with a sign bearing a green inix on a field of yellow.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 117
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 115
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 129
+
+[[room]]
+vnum = 117
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the north and south. To the west is a building\nwith a sign bearing a silver spear on an azure field. To the east is a three\nstory building with a sign bearing three white dragonflies on a divided field.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 118
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 125
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 116
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 130
+
+[[room]]
+vnum = 118
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the south and east. To the north lies a path that\nappears to be an old, dry riverbed.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 182
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 119
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 117
+
+[[room]]
+vnum = 119
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the west and east. Buildings surround you on all\nsides.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 120
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 118
+
+[[room]]
+vnum = 120
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the west and east. To the north is what seems to\nbe a small fortress, with a sign above its entrance bearing two black\nscimitars over a white field. To the south is a building with a sign above\nbearing a pair of glaring, bestial eyes set on a black banner.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 127
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 121
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 126
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 119
+
+[[room]]
+vnum = 121
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the west and south. Buildings surround you on all\nsides.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 198
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 122
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 120
+
+[[room]]
+vnum = 122
+name = "Iron Square"
+description = "   This section of the city is filled with large buildings and seems well\nmaintained.  A large cobblestone road known as Iron Square circles around the\nbuildings at the center, providing access to the merchant houses that occupy it.\nThe area is quieter than other parts of the city, giving the impression this is\nwhere business is done between traders and the nobility.  There is a noticeable\nincrease in soldiers here, which might explain the lack of street vendors.\n   Iron Square continues to the north and south. Buildings surround you on all\nsides.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 121
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 111
+
+[[room]]
+vnum = 123
+name = "House Vordon"
+description = "   A small path from the entrance into the main area of this emporium has been\ncreated with crates.  The path is swept clean and leads to multicolored rugs\nwhich line the remainder of the floor.  Upon the walls are racks of steel tools\nand weapons which glint in the light of nearby lamps.  A central counter has\nintricate pieces of glasswork, carved stone, and cut gems.  Bolts of undyed\ncotton have been placed in a corner of the room on a large wooden platform.  \nNear the northern end of his expansive room is a set of double doors that lead\nto another part of the building.\n   Outside to the south is Iron Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 113
+
+[[room]]
+vnum = 124
+name = "House Wavir"
+description = "   A long, expansive countertop separates the goods in this building from the\nrest.  Embedded in one side of the counter is a passage system of two panels\nthat lock together, allowing incoming or outgoing shipments.  Behind the\ncountertop are orderly stacks of crates with various grains and gems.  Smaller\ndisplays of precious metals can be seen, with bits of copper, tin, and even\nsilver in its raw form.  A small pyramid has been created with pieces of\nhardwood near the countertop which draws the eye.\n   Outside to the south is Iron Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 114
+
+[[room]]
+vnum = 125
+name = "House Shom"
+description = "   Barrels line a small section of this building, filled with grains such as\nrice or wheat.  Another series of barrels with a blue slash painted across them\nhave been filled with clear water.  The floor near the northern wall are dusty\nwith obsidian powder, having visible footprints on the floor nearby.  Large\ncrates have been stacked, each with a different size of obsidian chunk.  Near\nthe northeast corner are a few smaller crates with wooden branches and stacked\nlogs.  A counter made of stone has been placed near the entrance.\n   Outside to the west is Iron Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 117
+
+[[room]]
+vnum = 126
+name = "House Tsalaxa"
+description = "   Within this building is a large open area in the middle.  Flanking the walls\nare crates, boxes, and chests full of what appears to be hemp.  Ranging from\ncompletely raw to premade bolts, they are placed in such a way that it appears\nas if the further down the row of boxes one looks, the more processed the\nmaterial becomes.  A series of barrels are placed around a support beam, with\ndifferent grains and cereals placed within.  A set of sconces light the room,\nwhich would otherwise appear very dark for a lack of windows.\n   Outside to the north is Iron Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 120
+
+[[room]]
+vnum = 127
+name = "House Stel"
+description = "   The first thing one notices about the inside of this building is the massive\namount of weapons on display.  They line the walls, countertops, and some have\nbeen run through a pair of straw-filled dummies propped up by wooden poles.  \nNot as visible and clearly an afterthought, there are armor pieces made of iron.\nIn a small corner of the building, ceramic bowls, vases, cups, and plates have\nbeen stacked upon a long wooden table.  A pair of wooden beams support the roof\nof this building, which have carved pieces of bone decorating them.\n   Outside to the south is Iron Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 120
+
+[[room]]
+vnum = 128
+name = "House M'ke"
+description = "   Clearly underutilized and lacking in merchandise, this building for the most\npart is empty.  The entryway has not been swept in some time and has small piles\nof dust and sand for the first few feet.  A wooden counter has been setup more\nthan halfway through the building.  Scarce crates and barrels can be seen behind\nthe counter, with dried food, chunks of irregular obsidian, and raw copper\nvisible within.  A few small weapons have been placed on the countertop, as if\nto offer the appearance of inventory one could buy.\n   Outside to the west is Iron Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 112
+
+[[room]]
+vnum = 129
+name = "House Ianto"
+description = "   From the outside the building looks rather small, but on the inside it is\neven smaller.  The roof seems shorter than one would expect, which feels\nuncomfortably close.  Lacking a countertop for dealing with customers, a wooden\ntable has been setup in its place near the entrance.  Scattered throughout the\nroom are various chests filled with pieces of iron, while small tables have\nstacks of bolt of fabric.  A single circular table has pieces of silk sitting in\na corner.\n   Outside to the east is Iron Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 116
+
+[[room]]
+vnum = 130
+name = "House Troika"
+description = "   Display tables are placed throughout this building, creating a small maze\nmaking it difficult to get in, but also a chore to get out.  Upon each table are\npiles of different colored silk fabric.  Most are in raw bolt form, however\nthere are some leftover pieces that are of varying sizes.  A small counter sits\nagainst the north wall.  Behind it are various pieces of glassware, ranging from\ncreative art to more functional goblets.\n   Outside to the east is Iron Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 117
+
+[[room]]
+vnum = 131
+name = "Draqoman Station"
+description = "   This large building has a variety of tables and seats available in it, and\nseems to be a meeting point for those new to the city.  The walls are lined with\nsconces to provide light throughout the evening, and barrels of water can be\nseen in the northern side of the room.  Conversations can be heard in hushed\ntones, while others may be more boisterous as if between old friends.  A crude\nmap of the city can be seen upon one wall, giving the impression this would be a\ngood place to learn more about where certain landmarks are.\n   To the south lies Caravan Way, while to the east Wall Road can be seen.\n"
+flags = [131080, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 146
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 101
+
+[[room]]
+vnum = 132
+name = "Grik's Weapons"
+description = "   The walls of this building have been made out of uneven blocks of sandstone.\nPiled haphazardly on top of each other, they somehow remain stable despite\nlooking precarious and ready to fall anytime.  Upon the walls are hooks that\nhave weapons placed on them, as well as trophies from gladiator tournaments.  A\ncounter sits in the southwest corner of the room, and a stairway behind it leads\nupward to a trapdoor in the ceiling.\n   Outside to the north lies Caravan Way.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 102
+
+[[room]]
+vnum = 133
+name = "The Shining Sands"
+description = "   Within this spacious building are several clotheslines and hanging garments.\nSome appear to be waiting to be cleaned while others are awaiting pickup by\ntheir owner.  Long work tables have been placed throughout the area which look\nto be used for cleaning clothing.  Barrels of white sand have been set near each\nof these tables, with a stone scoop protruding from them.  A simple countertop\nhas been setup near the southeastern corner.\n   Outside to the east and south is Caravan Way.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 107
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 109
+
+[[room]]
+vnum = 134
+name = "The Golden Inix Inn"
+description = "   This large, open room is filled with tables of various shapes and sizes.  \nThe smell of food being cooked drifts through the area and seems to be coming\nfrom a curtained doorway.  In a corner is an L-shaped counter made of rough-hewn\nstone which has a selection of drinks behind it.  Near the eastern wall, a\nstairway heads upward toward an open dormitory.\n"
+flags = [8, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 108
+[[room.exit]]
+dir = 4
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 200
+
+[[room]]
+vnum = 135
+name = "Wall Road"
+description = "   Following along the walls of the city is a small road only large enough for a\npair of mounted riders to traverse side by side.  The walls are thick and\nprimarily made of adobe brick, rising at least ten feet.  The occasional figure\ncan be seen walking the walls, keeping an eye on the horizon.  The buildings\nnear the gate are small and unassuming.  Most have no windows and a simple\nwooden door.\n   Wall Road continues to the south, while Caravan Gate can be seen to the \nnorth. To the west the smell of a stables wafts out onto the road.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 100
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 137
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 136
+
+[[room]]
+vnum = 136
+name = "Messenger's Mount"
+description = "   This two story building eminates a smell from the multitude of beasts within\nthat is all that is needed to knowing that this is a stable.  Various pens have\nbeen set up here, holding kanks, erdlus, crodlus, and occasionally other more\nuncommon livestock.  Traders and caravans come and go, leaving and retrieving\nmounts.  Animal handlers can be seen moving about with food and water, as well\nas shoveling dung to be taken away.\n   A small staircase is upon the southern wall and heads upward to the\nsecond floor. To the north lies Caravan Way, and to the east Wall Road can\nbe seen.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 101
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 135
+
+[[room]]
+vnum = 137
+name = "Wall Road"
+description = "   Following along the walls of the city is a small road only large enough for a\npair of mounted riders to traverse side by side.  The walls are thick and\nprimarily made of adobe brick, rising at least ten feet.  The occasional figure\ncan be seen walking the walls, keeping an eye on the horizon.  The buildings\nnear the gate are small and unassuming.  Most have no windows and a simple\nwooden door.\n   Wall Road continues to the north and south. Buildings rise up to the west,\nwhile the city walls are to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 135
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 138
+
+[[room]]
+vnum = 138
+name = "Wall Road"
+description = "   Following along the walls of the city is a small road only large enough for a\npair of mounted riders to traverse side by side.  The walls are thick and\nprimarily made of adobe brick, rising at least ten feet.  The occasional figure\ncan be seen walking the walls, keeping an eye on the horizon.  The buildings\nnear the gate are small and unassuming.  Most have no windows and a simple\nwooden door.\n   Wall Road continues to the north and south. Buildings rise up to the west,\nwhile the city walls are to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 137
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 139
+
+[[room]]
+vnum = 139
+name = "Wall Road"
+description = "   Following along the walls of the city is a small road only large enough for a\npair of mounted riders to traverse side by side.  The walls are thick and\nprimarily made of adobe brick, rising at least ten feet.  The occasional figure\ncan be seen walking the walls, keeping an eye on the horizon.  The buildings\nnear the gate are small and unassuming.  Most have no windows and a simple\nwooden door.\n   Wall Road continues to the north and south. To the west, an old dusty\nstreambed runs between two buildings.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 138
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 140
+
+[[room]]
+vnum = 140
+name = "Near a Dusty Streambed"
+description = "   This pathway appears to have once been a streambed where water flowed freely.\nOver the years the water must have dried up or has been diverted elsewhere.  \nDespite this, the path seems to be used as a walkway between buildings now.  \nThe ground is exposed dirt which is kicked up in the air as passersby make their\nway through.  Small rocks and gravel can be seen every few feet in an attempt to\nkeep the semblance of an actual road.\n   The pathway continues to the west, while to the east Wall Road can be\nseen.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 139
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 141
+
+[[room]]
+vnum = 141
+name = "Near a Dusty Streambed"
+description = "   This pathway appears to have once been a streambed where water flowed freely.\nOver the years the water must have dried up or has been diverted elsewhere.  \nDespite this, the path seems to be used as a walkway between buildings now.  \nThe ground is exposed dirt which is kicked up in the air as passersby make their\nway through.  Small rocks and gravel can be seen every few feet in an attempt to\nkeep the semblance of an actual road.\n   The pathway continues to the west and east. Buildings flank either side,\nrising upward.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 140
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 142
+
+[[room]]
+vnum = 142
+name = "Near a Dusty Streambed"
+description = "   This pathway appears to have once been a streambed where water flowed freely.\nOver the years the water must have dried up or has been diverted elsewhere.  \nDespite this, the path seems to be used as a walkway between buildings now.  \nThe ground is exposed dirt which is kicked up in the air as passersby make their\nway through.  Small rocks and gravel can be seen every few feet in an attempt to\nkeep the semblance of an actual road.\n   The pathway continues to the east, while a small side street opens up to\nthe north.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 143
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 141
+
+[[room]]
+vnum = 143
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the north, while to the south a dry streambed can\nbe seen.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 144
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 142
+
+[[room]]
+vnum = 144
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the north and south. Buildings flank either side,\nrising upward.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 145
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 143
+[[room.exit]]
+dir = 3
+description = ""
+keyword = "door"
+exit_info = 1
+key = 0
+to_room = 159
+
+[[room]]
+vnum = 145
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the south, while to the north Caravan Way can\nbe seen.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 103
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 144
+
+[[room]]
+vnum = 146
+name = "Wall Road"
+description = "   Following along the walls of the city is a small road only large enough for a\npair of mounted riders to traverse side by side.  The walls are thick and\nprimarily made of adobe brick, rising at least ten feet.  The occasional figure\ncan be seen walking the walls, keeping an eye on the horizon.  The buildings\nnear the gate are small and unassuming.  Most have no windows and a simple\nwooden door.\n   Wall Road continues to the north, while the Caravan Gate can be seen to\nthe south. A placard with a stylized eyeball, ears, and lips hangs as a\nstandard above a building to the west.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 147
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 100
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 131
+
+[[room]]
+vnum = 147
+name = "Wall Road"
+description = "   Following along the walls of the city is a small road only large enough for a\npair of mounted riders to traverse side by side.  The walls are thick and\nprimarily made of adobe brick, rising at least ten feet.  The occasional figure\ncan be seen walking the walls, keeping an eye on the horizon.  The buildings\nnear the gate are small and unassuming.  Most have no windows and a simple\nwooden door.\n   Wall Road continues to the north and south. Buildings rise up to the west,\nwhile the city walls are to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 148
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 146
+
+[[room]]
+vnum = 148
+name = "Wall Road"
+description = "   Following along the walls of the city is a small road only large enough for a\npair of mounted riders to traverse side by side.  The walls are thick and\nprimarily made of adobe brick, rising at least ten feet.  The occasional figure\ncan be seen walking the walls, keeping an eye on the horizon.  The buildings\nnear the gate are small and unassuming.  Most have no windows and a simple\nwooden door.\n   Wall Road continues to the north and south. Buildings rise up to the west,\nwhile the city walls are to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 149
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 147
+
+[[room]]
+vnum = 149
+name = "Wall Road"
+description = "   Following along the walls of the city is a small road only large enough for a\npair of mounted riders to traverse side by side.  The walls are thick and\nprimarily made of adobe brick, rising at least ten feet.  The occasional figure\ncan be seen walking the walls, keeping an eye on the horizon.  The buildings\nnear the gate are small and unassuming.  Most have no windows and a simple\nwooden door.\n   Wall Road continues to the north and south. To the west, a side street opens\nup between two buildings.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 148
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 150
+
+[[room]]
+vnum = 150
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the west, while Wall Road can be seen to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 149
+[[room.exit]]
+dir = 2
+description = ""
+keyword = "door"
+exit_info = 1
+key = 0
+to_room = 157
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 151
+
+[[room]]
+vnum = 151
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the west and east. Buildings flank either side,\nrising upward.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 150
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 152
+
+[[room]]
+vnum = 152
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the west and east. Buildings flank either side,\nrising upward.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 151
+[[room.exit]]
+dir = 2
+description = ""
+keyword = "door"
+exit_info = 9
+key = 0
+to_room = 156
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 153
+
+[[room]]
+vnum = 153
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the south and east. Buildings flank either side,\nrising upward.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 152
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 154
+
+[[room]]
+vnum = 154
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the north and south. Buildings flank either side,\nrising upward.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 153
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 155
+[[room.exit]]
+dir = 3
+description = ""
+keyword = "door"
+exit_info = 9
+key = 0
+to_room = 158
+
+[[room]]
+vnum = 155
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the north, while to the south Caravan Way can\nbe seen.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 154
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 105
+
+[[room]]
+vnum = 156
+name = "A Small Domicile"
+description = "   Somewhat upscale compared to other buildings around it, this domicile feels\nmore like a home.  It has a hearth in the south side of the room to allow the\noccupants to cook their own food.  The walls are made of adobe brick set in\nalternating patterns, with the grout having been smoothed over by the\nbricklayers.  Pieces of flat wood have been placed along the floor, giving the\ndwelling a reprieve from the dusty cobblestone outside.\n   A simple wooden door has been placed in the northern wall, leading\nback outside.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = "door"
+exit_info = 9
+key = 0
+to_room = 152
+
+[[room]]
+vnum = 157
+name = "A Large Domicile"
+description = "   Somewhat upscale compared to other buildings around it, this domicile feels\nmore like a home.  It has a hearth in the south side of the room to allow the\noccupants to cook their own food.  The walls are made of adobe brick set in\nalternating patterns, with the grout having been smoothed over by the\nbricklayers.  Pieces of flat wood have been placed along the floor, giving the\ndwelling a reprieve from the dusty cobblestone outside.\n   A simple wooden door has been placed in the northern wall, leading\nback outside.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = "door"
+exit_info = 1
+key = 0
+to_room = 150
+
+[[room]]
+vnum = 158
+name = "A Small Hovel"
+description = "   Small and dilapidated, this hovel is only big enough for a few pieces of\nfurniture.  The walls are adobe brick that are showing their age with cracks\nthroughout.  In one corner the ceiling appears to be falling in on itself,\nletting light through during the day.\n   A simple wooden door has been placed in the eastern wall, leading back\noutside.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = "door"
+exit_info = 9
+key = 0
+to_room = 154
+
+[[room]]
+vnum = 159
+name = "A Small Hovel"
+description = "   Small and dilapidated, this hovel is only big enough for a few pieces of\nfurniture.  The walls are adobe brick that are showing their age with cracks\nthroughout.  In one corner the ceiling appears to be falling in on itself,\nletting light through during the day.\n   A simple wooden door has been placed in the eastern wall, leading back\noutside.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = "door"
+exit_info = 1
+key = 0
+to_room = 144
+
+[[room]]
+vnum = 160
+name = "House Inika"
+description = "   Inside this building are several barrels filled with all sorts of nuts,\nspices, feathers, and other small items.  The floor is swept clean, keeping dust\nand debris outside.  There is a single counter in the middle of the room that\nforms a square shape, with a wooden pass-through panel on one side to allow the\nmerchants to step behind it.  Within the counter are a few other boxes and\ncrates of goods for trade.\n   Outside to the north is Iron Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 113
+
+[[room]]
+vnum = 161
+name = "A Dusty Path"
+description = "   This pathway is more of a road that has fallen into disrepair.  Through years\nof use the cobblestone beneath has been cracked and broken.  Sections of the\nroad appear to have deep divets, making it dangerous to not watch where you are\nstepping.  Large buildings made of adobe brick rise up on either side, though\nfew have entrances that can be entered.\n   To the west, an immense ziggurat can be seen that rises up above the city.\nThe sound of Iron Square can be heard to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 115
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 162
+
+[[room]]
+vnum = 162
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet. From this point an enormous staircase can be seen which\nleads up to the pinnacle.\n   The path circling the ziggurat continues to the north and south. To the\neast a dusty pathway can be seen that leads into the rest of the city.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 163
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 161
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 177
+
+[[room]]
+vnum = 163
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet. From this point an enormous staircase can be seen which\nleads up to the pinnacle.\n   The path circling the ziggurat continues to the north and south. Buildings\nrise up to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 164
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 162
+
+[[room]]
+vnum = 164
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet. From this point an enormous staircase can be seen which\nleads up to the pinnacle.\n   The path circling the ziggurat continues to the north and south. Buildings\nrise up to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 165
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 163
+
+[[room]]
+vnum = 165
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet. From this point an enormous staircase can be seen which\nleads up to the pinnacle.\n   The path circling the ziggurat continues to the south and west. To the\nnorth a dusty pathway can be seen that leads into the rest of the city.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 178
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 164
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 166
+
+[[room]]
+vnum = 166
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the west and east. Buildings\nrise up to the north.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 165
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 167
+
+[[room]]
+vnum = 167
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the west and east. Buildings\nrise up to the north.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 166
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 168
+
+[[room]]
+vnum = 168
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the west and east. Buildings\nrise up to the north.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 167
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 169
+
+[[room]]
+vnum = 169
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the south and east. Buildings\nrise up to the north and west.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 168
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 170
+
+[[room]]
+vnum = 170
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the north and south. Buildings\nrise up to the west.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 169
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 171
+
+[[room]]
+vnum = 171
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the north and south. Buildings\nrise up to the west.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 170
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 172
+
+[[room]]
+vnum = 172
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the north and south. Buildings\nrise up to the west.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 171
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 173
+
+[[room]]
+vnum = 173
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the north and east. Buildings\nrise up to the south and west.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 172
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 174
+
+[[room]]
+vnum = 174
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the west and east. Buildings\nrise up to the south.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 175
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 173
+
+[[room]]
+vnum = 175
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the west and east. Buildings\nrise up to the south.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 176
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 174
+
+[[room]]
+vnum = 176
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet.  The ziggurat seems to dwarf everything else in sight except\nfor an imposing golden tower off to the west.\n   The path circling the ziggurat continues to the west and east. Buildings\nrise up to the south.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 177
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 175
+
+[[room]]
+vnum = 177
+name = "Before the Ziggurat"
+description = "   This pathway circles around an immense ziggurat that towers over the city.  \nThe pyramid has multiple levels, each made of glazed brick of different color.\nThe base is made of violet, the second tier indigo, third colored azure, the\nfourth a dark green, fifth yellow, sixth of a fiery orange, and finally at the\ntop a deep scarlet. From this point an enormous staircase can be seen which\nleads up to the pinnacle.\n   The path circling the ziggurat continues to the north and south. Buildings\nrise up to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 162
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 176
+
+[[room]]
+vnum = 178
+name = "A Dusty Path"
+description = "   This pathway is more of a road that has fallen into disrepair.  Through years\nof use the cobblestone beneath has been cracked and broken.  Sections of the\nroad appear to have deep divets, making it dangerous to not watch where you are\nstepping.  Large buildings made of adobe brick rise up on either side, though\nfew have entrances that can be entered.\n   To the south, an immense ziggurat can be seen that rises up above the city.\nThe dusty pathway continues to the north.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 179
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 165
+
+[[room]]
+vnum = 179
+name = "A Dusty Path"
+description = "   This pathway is more of a road that has fallen into disrepair.  Through years\nof use the cobblestone beneath has been cracked and broken.  Sections of the\nroad appear to have deep divets, making it dangerous to not watch where you are\nstepping.  Large buildings made of adobe brick rise up on either side, though\nfew have entrances that can be entered.\n   The dusty pathway continues to the west and south. A small side street can\nbe seen to the east.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 180
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 178
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 184
+
+[[room]]
+vnum = 180
+name = "A Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street gives way to a dusty old riverbed to the east, and to the west\na wider path can be seen.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 181
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 179
+
+[[room]]
+vnum = 181
+name = "A Dry Riverbed"
+description = "   This wide, dust choked pathway looks as if it may have been a riverbed at\nsome point in the distant past.  The water seems to have carved its way through\nthe land, leaving a natural route through the city and between buildings.  \nSmall plants attempt to grow near the buildings nearby, clinging to the shade.\nSeveral extremely smooth stones can be seen, having been worn down from years of\nwater flowing over them.\n   The dusty riverbed continues to the south, while to the north a market can\nbe seen. A small side street intersects with this pathway to the west.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 183
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 182
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 180
+
+[[room]]
+vnum = 182
+name = "A Dry Riverbed"
+description = "   This wide, dust choked pathway looks as if it may have been a riverbed at\nsome point in the distant past.  The water seems to have carved its way through\nthe land, leaving a natural route through the city and between buildings.  \nSmall plants attempt to grow near the buildings nearby, clinging to the shade.\nSeveral extremely smooth stones can be seen, having been worn down from years of\nwater flowing over them.\n   The dusty riverbed continues to the north, while to the south the sounds\nof Iron Square can be heard.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 181
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 118
+
+[[room]]
+vnum = 183
+name = "Elven Market"
+description = "   Numerous stalls form small collectives in this open air market.  Sets of\nfour, six, or eight seems to have been setup near each other, creating walkways\nthroughout.  Most are made of simple wooden poles and sandcloth, with either a\ncounter and seat behind it for the proprietor, or simply an open stall to walk\ninto.  At all hours of the day conversations can be heard and bartering taking\nplace.\n   To the south is an old dry riverbed, which acts as a pathway through the\ncity. To the east is the Elven Bridge, which stretches over to another part\nof the city.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 194
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 181
+
+[[room]]
+vnum = 184
+name = "A Dusty Path"
+description = "   This pathway is more of a road that has fallen into disrepair.  Through years\nof use the cobblestone beneath has been cracked and broken.  Sections of the\nroad appear to have deep divets, making it dangerous to not watch where you are\nstepping.  Large buildings made of adobe brick rise up on either side, though\nfew have entrances that can be entered.\n   The dusty pathway continues to the east. To the west, a small square of\nshops can be seen.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 179
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 185
+
+[[room]]
+vnum = 185
+name = "Shadow Square"
+description = "   This plaza within the city has many roads that join it, making it a clear\nconvergence point for people.  The cobblestone seems well taken care of, with\nnewer and lighter bricks replacing those that have cracked.  Benches have been\nplaced in shaded areas, offering a reprieve from the harsh sun.  A few small\nstands have been placed here, offering food to those that pass by.\n   Shadow Square continues to the north and west. To the east, a dusty\npathway leads on to the rest of the city.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 186
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 184
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 188
+
+[[room]]
+vnum = 186
+name = "Shadow Square"
+description = "   This plaza within the city has many roads that join it, making it a clear\nconvergence point for people.  The cobblestone seems well taken care of, with\nnewer and lighter bricks replacing those that have cracked.  Benches have been\nplaced in shaded areas, offering a reprieve from the harsh sun.  A few small\nstands have been placed here, offering food to those that pass by.\n   Shadow Square continues to the south and west. To the north is a building\nwith a curtain covering the entrance and oil lamps illuminating the inside.\nTo the east is a two story building that appears to be some sort of shop.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 192
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 193
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 185
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 187
+
+[[room]]
+vnum = 187
+name = "Shadow Square"
+description = "   This plaza within the city has many roads that join it, making it a clear\nconvergence point for people.  The cobblestone seems well taken care of, with\nnewer and lighter bricks replacing those that have cracked.  Benches have been\nplaced in shaded areas, offering a reprieve from the harsh sun.  A few small\nstands have been placed here, offering food to those that pass by.\n   Shadow square continues to the south and east. To the north is a well lit\nbuilding with sweet scents eminating from within. To the west is a small\nbuilding with an obvious bar immediately inside.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 191
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 186
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 188
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 190
+
+[[room]]
+vnum = 188
+name = "Shadow Square"
+description = "   This plaza within the city has many roads that join it, making it a clear\nconvergence point for people.  The cobblestone seems well taken care of, with\nnewer and lighter bricks replacing those that have cracked.  Benches have been\nplaced in shaded areas, offering a reprieve from the harsh sun.  A few small\nstands have been placed here, offering food to those that pass by.\n   Shadow Square continues to the north and east. To the west, a dimly lit\nestablishment has a propped open door.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 187
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 185
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 189
+
+[[room]]
+vnum = 189
+name = "The Rat's Nest"
+description = "   This building is not well lit, which takes your eyes a moment to adjust to.\nBehind the bar is a small oil lamp that provides light for those nearby, but\nbesides that the shadows prevail here.  A wooden beam supports a ceiling that\nappears to be sagging or falling in on itself, with cracks extending toward the\nwalls.  The smell of something that has gone bad lingers in the air, though it\nis difficult to identify its source.\n   Outside to the east is Shadow Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 188
+
+[[room]]
+vnum = 190
+name = "The Weeping Wyvern"
+description = "   Hanging on the walls are the heads of different animals, bloodied weapons,\nshields, and harnesses worn by the city's gladiators.  A stuffed jhakar head\ndescends from the ceiling in the middle of the room, its jaws open but eyes\ndistant.  There isn't much seating in this building except for what is near the\nbar.\n   Outside to the east is Shadow Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 187
+
+[[room]]
+vnum = 191
+name = "The Drunken Giant"
+description = "   The smell of cheap beer and roasting meats assaults your senses as you enter\nthis room.  Parts of the floor are sticky, possibly from vomit or perhaps just\nspilled drinks.  Numerous tables have been placed throughout the floor, with\nsome of them missing chairs.  A long wooden bar runs the length of the northern\nwall with fixed stools mounted to the ground before it.  A hearth takes up a\nportion of the western wall where food is being cooked.\n   Outside to the south is Shadow Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 187
+
+[[room]]
+vnum = 192
+name = "The Midnight Sands"
+description = "   This dimly lit establishment has oil lamps placed strategically throughout,\ngranting a small amount of illumination to those that sit nearby.  The scent of\nincense drifts about the room from various burners.  A counter with no seating\nhas been set near the northwestern corner.  Behind the counter are several\nbottles and delicate glasses.\n   Outside to the south is Shadow Square.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 186
+
+[[room]]
+vnum = 193
+name = "The Red Kank"
+description = "   This building has a long counter with rows of bottles behind it.  The entire\neast wall has had wooden pieces installed in an X pattern, which allows for the\nbottles to be placed within up to the ceiling.  The floor is made of smoothed\npieces of granite and is nearly free of sand despite it flowing in from the\noutside square when a breeze passes through.\n   Outside to the west is Shadow Square. A staircase climbs the northern\nside of the building and leads through a trapdoor to a room above.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 186
+[[room.exit]]
+dir = 4
+description = "A trapdoor in the ceiling can be passed through by climbing a set of stairs.\n"
+keyword = "trapdoor"
+exit_info = 1
+key = 0
+to_room = 201
+
+[[room]]
+vnum = 194
+name = "Elven Bridge"
+description = "   This bridge looks absolutely ancient.  Made of solid stone quarried long ago,\nthe pieces fit together smoothly and leave little gap between them.  While the\nmortar looks like it is aging in places, it still seems sturdy.  Below the\nbridge is a dusty, serpentine streambed that once had water free flowing in it.\nYears ago the water must have dried up was diverted elsewhere, leaving a place\nunder the bridge for people to gather.  \n   The bridge leads west to east across the old streambed. To the east is a\nsmall side street that leads between buildings, while to the west a market\ncan be seen.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 195
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 183
+
+[[room]]
+vnum = 195
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the west and east. Buildings flank either side,\nrising upward.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 196
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 194
+
+[[room]]
+vnum = 196
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the west and south. To the east is a building that\nhas the scent of cooking meat wafting from it.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 1
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 199
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 197
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 195
+
+[[room]]
+vnum = 197
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the north and south. Buildings flank either side,\nrising upward.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 196
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 198
+
+[[room]]
+vnum = 198
+name = "Side Street"
+description = "   This small street is hardly big enough for a single mounted rider to pass\nthrough.  The ground is made up of a mix of broken brick and rough stones,\ngiving the impression that it is not considered as main route through the city.\nSmall buildings can be seen on either side without any windows, and most have a\nsingle small wooden door.\n   The street continues to the north, while to the south Iron Square can\nbe seen.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 0
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 197
+[[room.exit]]
+dir = 2
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 121
+
+[[room]]
+vnum = 199
+name = "The Sandstone Inn"
+description = "   This modest building has two entrances, one on the west end and one on the\neast.  The occasional breeze passes through, cooling the building slightly.  On\nthe south end is a hearth that is used for cooking food, and nearby is a small\ncounter with drinks behind it.  The northern end of the room has a couple small\ntables.  The overall feel of the place is a cozy place to rest after a long day.\n   Outside to the west is a small side street, while to the east is a\ncourtyard that smells vaguely of a stable.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 3
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 196
+
+[[room]]
+vnum = 200
+name = "A Cramped Dormitory"
+description = "   While this room is rather large, the amount of cots crammed into it makes it\nfeel quite cramped.  Between the cots are small pathways that one can walk,\nthough backpacks and other items spill out from below their respective cots to\noccasionally block the way.  The walls have small hooks on them and some appear\nto have cloaks attached.  An opening in the wall lets light in from the north\nand allows for fresh air to circulate.  A pair of sconces are on either side of\nthe room to provide light during the evening hours.  On the south side of the\nroom, a staircase descends to the room below.\n"
+flags = [131080, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 5
+description = ""
+keyword = ""
+exit_info = 0
+key = 0
+to_room = 134
+
+[[room]]
+vnum = 201
+name = "The Red Kank Terrace"
+description = "   This upper floor is partially covered, with a terrace that looks out on\nShadow Square below.  Artistically carved pieces of stone have been placed at\nthe edge of the terrace, providing a small amount of protection from falling as\nwell as preventing those below from seeing what transpires here.  Canopies have\nbeen installed above the exposed terrace, shading it from the sun.\n   A trapdoor on the northern end of the terrace leads downward to the shop\nbelow.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+
+[[room.exit]]
+dir = 5
+description = "A trapdoor in the floor can be passed through by climbing a set of stairs.\n"
+keyword = "trapdoor"
+exit_info = 1
+key = 0
+to_room = 193
+

@@ -29,6 +29,8 @@
 #include "genzon.h" /* for real_zone_by_thing */
 #include "act.h"
 #include "modify.h"
+#include "toml.h"
+#include "toml_utils.h"
 
 #define PULSES_PER_MUD_HOUR     (SECS_PER_MUD_HOUR*PASSES_PER_SEC)
 
@@ -2826,11 +2828,11 @@ static struct cmdlist_element *find_done(struct cmdlist_element *cl)
 void read_saved_vars(struct char_data *ch)
 {
   FILE *file;
-  long context;
   char fn[127];
-  char input_line[1024], *temp, *p;
-  char varname[32];
-  char context_str[16];
+  char errbuf[256];
+  toml_table_t *tab = NULL;
+  toml_array_t *arr = NULL;
+  int i, count;
 
   /* If getting to the menu from inside the game, the vars aren't removed. So 
    * let's not allocate them again. */
@@ -2851,22 +2853,44 @@ void read_saved_vars(struct char_data *ch)
     log("%s had no variable file", GET_NAME(ch));
     return;
   }
-  /* walk through each line in the file parsing variables */
-  do {
-    if (get_line(file, input_line)>0) {
-      p = temp = strdup(input_line);
-      temp = any_one_arg(temp, varname);
-      temp = any_one_arg(temp, context_str);
-      skip_spaces(&temp); /* temp now points to the rest of the line */
 
-      context = atol(context_str);
-      add_var(&(SCRIPT(ch)->global_vars), varname, temp, context);
-      free(p); /* plug memory hole */
-    }
-  } while( !feof(file) );
-
-  /* close the file and return */
+  tab = toml_parse_file(file, errbuf, sizeof(errbuf));
   fclose(file);
+  if (!tab) {
+    log("SYSERR: Could not parse variable file %s: %s", fn, errbuf);
+    return;
+  }
+
+  arr = toml_array_in(tab, "var");
+  if (!arr) {
+    toml_free(tab);
+    return;
+  }
+
+  count = toml_array_nelem(arr);
+  for (i = 0; i < count; i++) {
+    toml_table_t *var_tab = toml_table_at(arr, i);
+    toml_datum_t name;
+    toml_datum_t value;
+    toml_datum_t context;
+
+    if (!var_tab)
+      continue;
+
+    name = toml_string_in(var_tab, "name");
+    value = toml_string_in(var_tab, "value");
+    context = toml_int_in(var_tab, "context");
+
+    if (!name.ok || !value.ok)
+      continue;
+
+    add_var(&(SCRIPT(ch)->global_vars), name.u.s, value.u.s,
+            context.ok ? (long)context.u.i : 0);
+    free(name.u.s);
+    free(value.u.s);
+  }
+
+  toml_free(tab);
 }
 
 /* save a characters variables out to disk */
@@ -2901,7 +2925,12 @@ void save_char_vars(struct char_data *ch)
    * future. */
   while (vars) {
     if (*vars->name != '-') /* don't save if it begins with - */
-      fprintf(file, "%s %ld %s\n", vars->name, vars->context, vars->value);
+    {
+      fprintf(file, "[[var]]\n");
+      toml_write_kv_string(file, "name", vars->name);
+      fprintf(file, "context = %ld\n", vars->context);
+      toml_write_kv_string(file, "value", vars->value);
+    }
     vars = vars->next;
   }
 

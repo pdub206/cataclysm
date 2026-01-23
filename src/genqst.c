@@ -16,6 +16,7 @@
 #include "quest.h"
 #include "genolc.h"
 #include "genzon.h" /* for create_world_index */
+#include "toml_utils.h"
 
 
 /*-------------------------------------------------------------------*/
@@ -176,10 +177,9 @@ int delete_quest(qst_rnum rnum)
 int save_quests(zone_rnum zone_num)
 {
   FILE *sf;
-  char filename[128], oldname[128], quest_flags[MAX_STRING_LENGTH];
+  char filename[128], oldname[128];
   char quest_desc[MAX_STRING_LENGTH], quest_info[MAX_STRING_LENGTH];
   char quest_done[MAX_STRING_LENGTH], quest_quit[MAX_STRING_LENGTH];
-  char buf[MAX_STRING_LENGTH];
   int i, num_quests = 0;
 
 #if CIRCLE_UNSIGNED_INDEX
@@ -219,53 +219,37 @@ int save_quests(zone_rnum zone_num)
       strip_cr(quest_done);
       strip_cr(quest_quit);
       /* Save the quest details to the file.  */
-      sprintascii(quest_flags, QST_FLAGS(rnum));
-      int n = snprintf(buf, MAX_STRING_LENGTH,
-        "#%d\n"
-        "%s%c\n"
-        "%s%c\n"
-        "%s%c\n"
-        "%s%c\n"
-        "%s%c\n"
-        "%d %d %s %d %d %d %d\n"
-        "%d %d %d %d %d %d %d\n"
-        "%d %d %d\n"
-        "S\n",
-        QST_NUM(rnum),
-        QST_NAME(rnum) ? QST_NAME(rnum) : "Untitled", STRING_TERMINATOR,
-        quest_desc, STRING_TERMINATOR,
-        quest_info, STRING_TERMINATOR,
-        quest_done, STRING_TERMINATOR,
-        quest_quit, STRING_TERMINATOR,
-        QST_TYPE(rnum),
-        QST_MASTER(rnum) == NOBODY ? -1 : QST_MASTER(rnum),
-        quest_flags,
-        QST_TARGET(rnum) == NOTHING ? -1 : QST_TARGET(rnum),
-        QST_PREV(rnum)   == NOTHING ? -1 : QST_PREV(rnum),
-        QST_NEXT(rnum)   == NOTHING ? -1 : QST_NEXT(rnum),
-        QST_PREREQ(rnum) == NOTHING ? -1 : QST_PREREQ(rnum),
-        QST_POINTS(rnum), QST_PENALTY(rnum), QST_MINLEVEL(rnum),
-        QST_MAXLEVEL(rnum), QST_TIME(rnum),
-        QST_RETURNMOB(rnum) == NOBODY ? -1 : QST_RETURNMOB(rnum),
-        QST_QUANTITY(rnum), QST_COINS(rnum), QST_EXP(rnum), QST_OBJ(rnum)
-      );
-      
-      if(n < MAX_STRING_LENGTH) {
-        fprintf(sf, "%s", convert_from_tabs(buf));
-        num_quests++;
-      } else {
-        mudlog(BRF,LVL_BUILDER,TRUE, 
-               "SYSERR: Could not save quest #%d due to size (%d > maximum of %d).", 
-               QST_NUM(rnum), n, MAX_STRING_LENGTH);
-      }
+      fprintf(sf, "[[quest]]\n");
+      fprintf(sf, "vnum = %d\n", QST_NUM(rnum));
+      toml_write_kv_string(sf, "name", QST_NAME(rnum) ? QST_NAME(rnum) : "Untitled");
+      toml_write_kv_string(sf, "description", quest_desc);
+      toml_write_kv_string(sf, "info", quest_info);
+      toml_write_kv_string(sf, "done", quest_done);
+      toml_write_kv_string(sf, "quit", quest_quit);
+      fprintf(sf, "type = %d\n", QST_TYPE(rnum));
+      fprintf(sf, "quest_master = %d\n", QST_MASTER(rnum) == NOBODY ? -1 : QST_MASTER(rnum));
+      fprintf(sf, "flags = %d\n", (int)QST_FLAGS(rnum));
+      fprintf(sf, "target = %d\n", QST_TARGET(rnum) == NOTHING ? -1 : QST_TARGET(rnum));
+      fprintf(sf, "prev_quest = %d\n", QST_PREV(rnum) == NOTHING ? -1 : QST_PREV(rnum));
+      fprintf(sf, "next_quest = %d\n", QST_NEXT(rnum) == NOTHING ? -1 : QST_NEXT(rnum));
+      fprintf(sf, "prereq = %d\n", QST_PREREQ(rnum) == NOTHING ? -1 : QST_PREREQ(rnum));
+      fprintf(sf, "values = [%d, %d, %d, %d, %d, %d, %d]\n",
+              QST_POINTS(rnum), QST_PENALTY(rnum), QST_MINLEVEL(rnum),
+              QST_MAXLEVEL(rnum), QST_TIME(rnum),
+              QST_RETURNMOB(rnum) == NOBODY ? -1 : QST_RETURNMOB(rnum),
+              QST_QUANTITY(rnum));
+      fprintf(sf, "[quest.rewards]\n");
+      fprintf(sf, "coins = %d\n", QST_COINS(rnum));
+      fprintf(sf, "exp = %d\n", QST_EXP(rnum));
+      fprintf(sf, "obj_vnum = %d\n", QST_OBJ(rnum) == NOTHING ? -1 : QST_OBJ(rnum));
+      fputc('\n', sf);
+      num_quests++;
     }
   }
-  /* Write the final line and close it.  */
-  fprintf(sf, "$~\n");
   fclose(sf);
 
   /* Old file we're replacing. */
-  snprintf(oldname, sizeof(oldname), "%s/%d.qst",
+  snprintf(oldname, sizeof(oldname), "%s/%d.toml",
            QST_PREFIX, zone_table[zone_num].number);
   remove(oldname);
   rename(filename, oldname);

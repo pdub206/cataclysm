@@ -22,6 +22,8 @@
 #include "config.h"
 #include "modify.h"
 #include "genolc.h" /* for strip_cr and sprintascii */
+#include "toml.h"
+#include "toml_utils.h"
 
 /* these factors should be unique integers */
 #define CRYO_FACTOR    4
@@ -37,106 +39,84 @@ static int Crash_load_objs(struct char_data *ch);
 static int handle_obj(struct obj_data *obj, struct char_data *ch, int locate, struct obj_data **cont_rows);
 static void Crash_write_header(struct char_data *ch, FILE *fp, int savecode);
 
+static int toml_get_int_default(toml_table_t *tab, const char *key, int def)
+{
+  toml_datum_t d = toml_int_in(tab, key);
+
+  if (!d.ok)
+    return def;
+
+  return (int)d.u.i;
+}
+
+static char *toml_get_string_dup(toml_table_t *tab, const char *key)
+{
+  toml_datum_t d = toml_string_in(tab, key);
+
+  if (!d.ok)
+    return NULL;
+
+  return d.u.s;
+}
+
+static void toml_read_int_array(toml_array_t *arr, int *out, int out_count, int def)
+{
+  int i;
+
+  for (i = 0; i < out_count; i++)
+    out[i] = def;
+
+  if (!arr)
+    return;
+
+  for (i = 0; i < out_count; i++) {
+    toml_datum_t d = toml_int_at(arr, i);
+    if (d.ok)
+      out[i] = (int)d.u.i;
+  }
+}
+
 /* Writes one object record to FILE.  Old name: Obj_to_store().
  * Updated to save all NUM_OBJ_VAL_POSITIONS values instead of only 4. */
 int objsave_save_obj_record(struct obj_data *obj, FILE *fp, int locate)
 {
   int i;
   char buf1[MAX_STRING_LENGTH + 1];
-  struct obj_data *temp = NULL;
+  int out_locate = (locate > 0) ? locate : 0;
+  int nest = (locate < 0) ? -locate : 0;
 
-  /* Build a prototype baseline to diff against so we only emit changed fields */
-  if (GET_OBJ_VNUM(obj) != NOTHING)
-    temp = read_object(GET_OBJ_VNUM(obj), VIRTUAL);
-  else {
-    temp = create_obj();
-    temp->item_number = NOWHERE;
+  fprintf(fp, "\n[[object]]\n");
+  fprintf(fp, "vnum = %d\n", GET_OBJ_VNUM(obj));
+  fprintf(fp, "locate = %d\n", out_locate);
+  fprintf(fp, "nest = %d\n", nest);
+
+  fprintf(fp, "values = [");
+  for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
+    if (i > 0)
+      fputs(", ", fp);
+    fprintf(fp, "%d", GET_OBJ_VAL(obj, i));
   }
+  fprintf(fp, "]\n");
 
-  if (obj->main_description) {
-    strcpy(buf1, obj->main_description);
+  fprintf(fp, "extra_flags = [%d, %d, %d, %d]\n",
+          GET_OBJ_EXTRA(obj)[0], GET_OBJ_EXTRA(obj)[1],
+          GET_OBJ_EXTRA(obj)[2], GET_OBJ_EXTRA(obj)[3]);
+  fprintf(fp, "wear_flags = [%d, %d, %d, %d]\n",
+          GET_OBJ_WEAR(obj)[0], GET_OBJ_WEAR(obj)[1],
+          GET_OBJ_WEAR(obj)[2], GET_OBJ_WEAR(obj)[3]);
+
+  toml_write_kv_string_opt(fp, "name", obj->name);
+  toml_write_kv_string_opt(fp, "short", obj->short_description);
+  toml_write_kv_string_opt(fp, "description", obj->description);
+  if (obj->main_description && *obj->main_description) {
+    strlcpy(buf1, obj->main_description, sizeof(buf1));
     strip_cr(buf1);
-  } else
-    *buf1 = 0;
-
-  /* Header and placement */
-  fprintf(fp, "#%d\n", GET_OBJ_VNUM(obj));
-
-  /* Top-level worn slots are positive (1..NUM_WEARS); inventory is 0.
-   * Children use negative numbers from Crash_save recursion (…,-1,-2,…) — we map that to Nest. */
-  if (locate > 0)
-    fprintf(fp, "Loc : %d\n", locate);
-
-  if (locate < 0) {
-    int nest = -locate;            /* e.g. -1 => Nest:1, -2 => Nest:2, etc. */
-    fprintf(fp, "Nest: %d\n", nest);
-  } else {
-    fprintf(fp, "Nest: %d\n", 0);  /* top-level object (inventory or worn) */
+    toml_write_kv_string(fp, "main_description", buf1);
   }
 
-  /* Save all object values (diffed against proto) */
-  {
-    bool diff = FALSE;
-    for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
-      if (GET_OBJ_VAL(obj, i) != GET_OBJ_VAL(temp, i)) {
-        diff = TRUE;
-        break;
-      }
-    }
-    if (diff) {
-      fprintf(fp, "Vals:");
-      for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
-        fprintf(fp, " %d", GET_OBJ_VAL(obj, i));
-      fprintf(fp, "\n");
-    }
-  }
-
-  /* Extra flags (array words) */
-  if (GET_OBJ_EXTRA(obj) != GET_OBJ_EXTRA(temp))
-    fprintf(fp, "Flag: %d %d %d %d\n",
-            GET_OBJ_EXTRA(obj)[0], GET_OBJ_EXTRA(obj)[1],
-            GET_OBJ_EXTRA(obj)[2], GET_OBJ_EXTRA(obj)[3]);
-
-  /* Names/descriptions */
-  if (obj->name && (!temp->name || strcmp(obj->name, temp->name)))
-    fprintf(fp, "Name: %s\n", obj->name);
-  if (obj->short_description && (!temp->short_description ||
-      strcmp(obj->short_description, temp->short_description)))
-    fprintf(fp, "Shrt: %s\n", obj->short_description);
-  if (obj->description && (!temp->description ||
-      strcmp(obj->description, temp->description)))
-    fprintf(fp, "Desc: %s\n", obj->description);
-  if (obj->main_description && (!temp->main_description ||
-      strcmp(obj->main_description, temp->main_description)))
-    fprintf(fp, "ADes:\n%s~\n", buf1);
-
-  /* Core fields */
-  if (GET_OBJ_TYPE(obj) != GET_OBJ_TYPE(temp))
-    fprintf(fp, "Type: %d\n", GET_OBJ_TYPE(obj));
-  if (GET_OBJ_WEIGHT(obj) != GET_OBJ_WEIGHT(temp))
-    fprintf(fp, "Wght: %d\n", GET_OBJ_WEIGHT(obj));
-  if (GET_OBJ_COST(obj) != GET_OBJ_COST(temp))
-    fprintf(fp, "Cost: %d\n", GET_OBJ_COST(obj));
-
-  /* Permanent affects (array words) */
-  if (GET_OBJ_AFFECT(obj)[0] != GET_OBJ_AFFECT(temp)[0] ||
-      GET_OBJ_AFFECT(obj)[1] != GET_OBJ_AFFECT(temp)[1] ||
-      GET_OBJ_AFFECT(obj)[2] != GET_OBJ_AFFECT(temp)[2] ||
-      GET_OBJ_AFFECT(obj)[3] != GET_OBJ_AFFECT(temp)[3])
-    fprintf(fp, "Perm: %d %d %d %d\n",
-            GET_OBJ_AFFECT(obj)[0], GET_OBJ_AFFECT(obj)[1],
-            GET_OBJ_AFFECT(obj)[2], GET_OBJ_AFFECT(obj)[3]);
-
-  /* Wear flags (array words) */
-  if (GET_OBJ_WEAR(obj)[0] != GET_OBJ_WEAR(temp)[0] ||
-      GET_OBJ_WEAR(obj)[1] != GET_OBJ_WEAR(temp)[1] ||
-      GET_OBJ_WEAR(obj)[2] != GET_OBJ_WEAR(temp)[2] ||
-      GET_OBJ_WEAR(obj)[3] != GET_OBJ_WEAR(temp)[3])
-    fprintf(fp, "Wear: %d %d %d %d\n",
-            GET_OBJ_WEAR(obj)[0], GET_OBJ_WEAR(obj)[1],
-            GET_OBJ_WEAR(obj)[2], GET_OBJ_WEAR(obj)[3]);
-
-  /* (If you also persist applies, extra descs, scripts, etc., keep that code here unchanged) */
+  fprintf(fp, "type = %d\n", GET_OBJ_TYPE(obj));
+  fprintf(fp, "weight = %d\n", GET_OBJ_WEIGHT(obj));
+  fprintf(fp, "cost = %d\n", GET_OBJ_COST(obj));
 
   return 1;
 }
@@ -266,10 +246,11 @@ int Crash_delete_file(char *name)
 int Crash_delete_crashfile(struct char_data *ch)
 {
   char filename[MAX_INPUT_LENGTH];
-  int numread;
   FILE *fl;
+  char errbuf[256];
+  toml_table_t *tab = NULL;
+  toml_table_t *header = NULL;
   int savecode;
-  char line[READ_SIZE];
 
   if (!get_filename(filename, sizeof(filename), CRASH_FILE, GET_NAME(ch)))
     return FALSE;
@@ -279,12 +260,19 @@ int Crash_delete_crashfile(struct char_data *ch)
       log("SYSERR: checking for crash file %s (3): %s", filename, strerror(errno));
     return FALSE;
   }
-  numread = get_line(fl,line);
+  tab = toml_parse_file(fl, errbuf, sizeof(errbuf));
   fclose(fl);
 
-  if (numread == FALSE)
+  if (!tab)
     return FALSE;
-  sscanf(line,"%d ",&savecode);
+
+  header = toml_table_in(tab, "header");
+  if (!header) {
+    toml_free(tab);
+    return FALSE;
+  }
+  savecode = toml_get_int_default(header, "save_code", SAVE_UNDEF);
+  toml_free(tab);
 
   if (savecode == SAVE_CRASH)
     Crash_delete_file(GET_NAME(ch));
@@ -295,10 +283,11 @@ int Crash_delete_crashfile(struct char_data *ch)
 int Crash_clean_file(char *name)
 {
   char filename[MAX_INPUT_LENGTH], filetype[20];
-  int numread;
   FILE *fl;
-  int savecode, timed, netcost, coins, account, nitems;
-  char line[READ_SIZE];
+  char errbuf[256];
+  toml_table_t *tab = NULL;
+  toml_table_t *header = NULL;
+  int savecode, timed;
 
   if (!get_filename(filename, sizeof(filename), CRASH_FILE, name))
     return FALSE;
@@ -310,13 +299,20 @@ int Crash_clean_file(char *name)
     return FALSE;
   }
 
-  numread = get_line(fl,line);
+  tab = toml_parse_file(fl, errbuf, sizeof(errbuf));
   fclose(fl);
-  if (numread == FALSE)
+  if (!tab)
     return FALSE;
 
-  sscanf(line, "%d %d %d %d %d %d",&savecode,&timed,&netcost,
-         &coins,&account,&nitems);
+  header = toml_table_in(tab, "header");
+  if (!header) {
+    toml_free(tab);
+    return FALSE;
+  }
+
+  savecode = toml_get_int_default(header, "save_code", SAVE_UNDEF);
+  timed = toml_get_int_default(header, "timed", 0);
+  toml_free(tab);
 
   if ((savecode == SAVE_CRASH) ||
       (savecode == SAVE_LOGOUT) ||
@@ -403,7 +399,13 @@ static void Crash_write_header(struct char_data *ch, FILE *fp, int savecode)
   int account = ch ? GET_BANK_COINS(ch) : 0;
   int nitems = 0;
 
-  fprintf(fp, "%d %d %d %d %d %d\n", savecode, timed, netcost, coins, account, nitems);
+  fprintf(fp, "[header]\n");
+  fprintf(fp, "save_code = %d\n", savecode);
+  fprintf(fp, "timed = %d\n", timed);
+  fprintf(fp, "net_cost = %d\n", netcost);
+  fprintf(fp, "coins = %d\n", coins);
+  fprintf(fp, "account = %d\n", account);
+  fprintf(fp, "item_count = %d\n", nitems);
 }
 
 void Crash_crashsave(struct char_data *ch)
@@ -438,7 +440,6 @@ void Crash_crashsave(struct char_data *ch)
   }
   Crash_restore_weight(ch->carrying);
 
-  fprintf(fp, "$~\n");
   fclose(fp);
   REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_CRASH);
 }
@@ -476,7 +477,6 @@ void Crash_idlesave(struct char_data *ch)
   }
   Crash_restore_weight(ch->carrying);
 
-  fprintf(fp, "$~\n");
   fclose(fp);
   REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_CRASH);
 }
@@ -514,7 +514,6 @@ void Crash_rentsave(struct char_data *ch, int cost)
   }
   Crash_restore_weight(ch->carrying);
 
-  fprintf(fp, "$~\n");
   fclose(fp);
   REMOVE_BIT_AR(PLR_FLAGS(ch), PLR_CRASH);
 }
@@ -553,100 +552,32 @@ void Crash_save_all(void)
   }
 }
 
-/* Load all objects from file into memory. Updated to load NUM_OBJ_VAL_POSITIONS values. */
-obj_save_data *objsave_parse_objects(FILE *fl)
+/* Load all objects from TOML into memory. */
+static obj_save_data *objsave_parse_objects_from_toml(toml_table_t *tab, const char *filename)
 {
-  char line[MAX_STRING_LENGTH];
-
   obj_save_data *head = NULL, *tail = NULL;
+  toml_array_t *arr = NULL;
+  int count, i;
 
-  /* State for the object we’re currently assembling */
-  struct obj_data *temp = NULL;
-  int pending_locate = 0;  /* 0 = inventory, 1..NUM_WEARS = worn slot */
-  int pending_nest   = 0;  /* 0 = top-level; >0 = inside container at level-1 */
+  arr = toml_array_in(tab, "object");
+  if (!arr)
+    return NULL;
 
-  /* --- helpers (GCC nested functions OK in tbaMUD build) ---------------- */
+  count = toml_array_nelem(arr);
+  for (i = 0; i < count; i++) {
+    toml_table_t *obj_tab = toml_table_at(arr, i);
+    struct obj_data *temp = NULL;
+    int locate, nest;
+    int values[NUM_OBJ_VAL_POSITIONS];
+    int flags[4];
+    char *str = NULL;
 
-  /* append current object to the result list with proper locate */
-  void commit_current(void) {
-    if (!temp) return;
+    if (!obj_tab)
+      continue;
 
-    if (GET_OBJ_TYPE(temp) == ITEM_MONEY)
-      update_money_obj(temp);
-
-    /* sanitize top-level locate range only; children will be negative later */
-    int loc = pending_locate;
-    if (pending_nest <= 0) {
-      if (loc < 0 || loc > NUM_WEARS) {
-        mudlog(NRM, LVL_IMMORT, TRUE,
-               "SAVE-LOAD: bad locate %d for vnum %d; defaulting to inventory.",
-               loc, GET_OBJ_VNUM(temp));
-        loc = 0;
-      }
-    }
-
-    /* convert Nest>0 into negative locate for handle_obj()/cont_row */
-    int effective_loc = (pending_nest > 0) ? -pending_nest : loc;
-
-    obj_save_data *node = NULL;
-    CREATE(node, obj_save_data, 1);
-    node->obj    = temp;
-    node->locate = effective_loc;
-    node->next   = NULL;
-
-    if (!head) head = node, tail = node;
-    else tail->next = node, tail = node;
-
-    temp = NULL;
-    pending_locate = 0;
-    pending_nest   = 0;
-  }
-
-  /* split a line into normalized tag (no colon) and payload pointer */
-  void split_tag_line(const char *src, char tag_out[6], const char **payload_out) {
-    const char *s = src;
-
-    while (*s && isspace((unsigned char)*s)) s++;        /* skip leading ws */
-
-    const char *te = s;
-    while (*te && !isspace((unsigned char)*te) && *te != ':') te++;
-
-    size_t tlen = (size_t)(te - s);
-    if (tlen > 5) tlen = 5;
-    memcpy(tag_out, s, tlen);
-    tag_out[tlen] = '\0';
-
-    const char *p = te;
-    while (*p && isspace((unsigned char)*p)) p++;
-    if (*p == ':') {
-      p++;
-      while (*p && isspace((unsigned char)*p)) p++;
-    }
-    *payload_out = p;
-  }
-
-  /* ---------------------------------------------------------------------- */
-
-  while (get_line(fl, line)) {
-    if (!*line) continue;
-
-    /* New object header: "#<vnum>" (commit any previous one first) */
-    if (*line == '#') {
-      if (temp) commit_current();
-
-      long vnum = -1L;
-      vnum = strtol(line + 1, NULL, 10);
-
-      if (vnum <= 0 && vnum != -1L) {
-        mudlog(NRM, LVL_IMMORT, TRUE, "SAVE-LOAD: bad vnum header: '%s'", line);
-        temp = NULL;
-        pending_locate = 0;
-        pending_nest   = 0;
-        continue;
-      }
-
-      /* Instantiate from prototype if available, else create a blank */
-      if (vnum == -1L) {
+    {
+      int vnum = toml_get_int_default(obj_tab, "vnum", -1);
+      if (vnum == -1) {
         temp = create_obj();
         temp->item_number = NOTHING;
         if (!temp->name)              temp->name = strdup("object");
@@ -658,133 +589,122 @@ obj_save_data *objsave_parse_objects(FILE *fl)
           temp = read_object(rnum, REAL);
         } else {
           temp = create_obj();
-          /* Do NOT assign GET_OBJ_VNUM(temp); item_number derives vnum. */
           if (!temp->name)              temp->name = strdup("object");
           if (!temp->short_description) temp->short_description = strdup("an object");
           if (!temp->description)       temp->description = strdup("An object lies here.");
         }
       }
-
-      pending_locate = 0;
-      pending_nest   = 0;
-      continue;
     }
 
-    /* Normal data line: TAG [ : ] payload */
-    char tag[6];
-    const char *payload = NULL;
-    split_tag_line(line, tag, &payload);
+    locate = toml_get_int_default(obj_tab, "locate", 0);
+    if (locate < 0 || locate > NUM_WEARS)
+      locate = 0;
 
-    if (!*tag) continue;
-    if (!temp) {
-      mudlog(NRM, LVL_IMMORT, TRUE, "SAVE-LOAD: data before header ignored: '%s'", line);
-      continue;
-    }
-
-    if (!strcmp(tag, "Loc")) {
-      pending_locate = (int)strtol(payload, NULL, 10);
-    }
-    else if (!strcmp(tag, "Nest")) {
-      pending_nest = (int)strtol(payload, NULL, 10);
-      if (pending_nest < 0) pending_nest = 0;
-      if (pending_nest > MAX_BAG_ROWS) {
+    nest = toml_get_int_default(obj_tab, "nest", 0);
+    if (nest < 0)
+      nest = 0;
+    if (nest > MAX_BAG_ROWS) {
+      if (filename)
+        mudlog(NRM, LVL_IMMORT, TRUE,
+               "SAVE-LOAD: nest level %d too deep in %s; clamping to %d.",
+               nest, filename, MAX_BAG_ROWS);
+      else
         mudlog(NRM, LVL_IMMORT, TRUE,
                "SAVE-LOAD: nest level %d too deep; clamping to %d.",
-               pending_nest, MAX_BAG_ROWS);
-        pending_nest = MAX_BAG_ROWS;
-      }
+               nest, MAX_BAG_ROWS);
+      nest = MAX_BAG_ROWS;
     }
-    else if (!strcmp(tag, "Vals")) {
-      const char *p = payload;
-      for (int i = 0; i < NUM_OBJ_VAL_POSITIONS; i++) {
-        if (!*p) { GET_OBJ_VAL(temp, i) = 0; continue; }
-        GET_OBJ_VAL(temp, i) = (int)strtol(p, (char **)&p, 10);
-      }
-    }
-    else if (!strcmp(tag, "Wght")) {
-      GET_OBJ_WEIGHT(temp) = (int)strtol(payload, NULL, 10);
-    }
-    else if (!strcmp(tag, "Cost")) {
-      GET_OBJ_COST(temp) = (int)strtol(payload, NULL, 10);
-    }
-    else if (!strcmp(tag, "Rent")) {
-      /* Legacy tag ignored (cost-per-day no longer used). */
-    }
-    else if (!strcmp(tag, "Type")) {
-      GET_OBJ_TYPE(temp) = (int)strtol(payload, NULL, 10);
-    }
-    else if (!strcmp(tag, "Wear")) {
-      unsigned long words[4] = {0,0,0,0};
-      const char *p = payload;
-      for (int i = 0; i < 4 && *p; i++) words[i] = strtoul(p, (char **)&p, 10);
 
-#if defined(TW_ARRAY_MAX) && defined(GET_OBJ_WEAR_AR)
-      for (int i = 0; i < 4; i++) {
-        if (i < TW_ARRAY_MAX) GET_OBJ_WEAR_AR(temp, i) = (bitvector_t)words[i];
-        else if (words[i])
-          mudlog(NRM, LVL_IMMORT, TRUE,
-                 "SAVE-LOAD: Wear word %d (%lu) truncated (TW_ARRAY_MAX=%d).",
-                 i, words[i], TW_ARRAY_MAX);
-      }
-#elif defined(GET_OBJ_WEAR_AR)
-      for (int i = 0; i < 4; i++) GET_OBJ_WEAR_AR(temp, i) = (bitvector_t)words[i];
-#endif
-    }
-    else if (!strcmp(tag, "Flag")) {
-      unsigned long words[4] = {0,0,0,0};
-      const char *p = payload;
-      for (int i = 0; i < 4 && *p; i++) words[i] = strtoul(p, (char **)&p, 10);
+    toml_read_int_array(toml_array_in(obj_tab, "values"), values, NUM_OBJ_VAL_POSITIONS, 0);
+    for (int j = 0; j < NUM_OBJ_VAL_POSITIONS; j++)
+      GET_OBJ_VAL(temp, j) = values[j];
 
-#if defined(EF_ARRAY_MAX) && defined(GET_OBJ_EXTRA_AR)
-      for (int i = 0; i < 4; i++) {
-        if (i < EF_ARRAY_MAX) GET_OBJ_EXTRA_AR(temp, i) = (bitvector_t)words[i];
-        else if (words[i])
-          mudlog(NRM, LVL_IMMORT, TRUE,
-                 "SAVE-LOAD: Extra word %d (%lu) truncated (EF_ARRAY_MAX=%d).",
-                 i, words[i], EF_ARRAY_MAX);
-      }
-#elif defined(GET_OBJ_EXTRA_AR)
-      for (int i = 0; i < 4; i++) GET_OBJ_EXTRA_AR(temp, i) = (bitvector_t)words[i];
-#endif
+    toml_read_int_array(toml_array_in(obj_tab, "extra_flags"), flags, 4, 0);
+    for (int j = 0; j < 4; j++)
+      GET_OBJ_EXTRA(temp)[j] = flags[j];
+
+    toml_read_int_array(toml_array_in(obj_tab, "wear_flags"), flags, 4, 0);
+    for (int j = 0; j < 4; j++)
+      GET_OBJ_WEAR(temp)[j] = flags[j];
+
+    str = toml_get_string_dup(obj_tab, "name");
+    if (str) {
+      if (temp->name)
+        free(temp->name);
+      temp->name = str;
     }
-    else if (!strcmp(tag, "Name")) {
-      if (temp->name) free(temp->name);
-      temp->name = *payload ? strdup(payload) : strdup("object");
+
+    str = toml_get_string_dup(obj_tab, "short");
+    if (str) {
+      if (temp->short_description)
+        free(temp->short_description);
+      temp->short_description = str;
     }
-    else if (!strcmp(tag, "Shrt")) {
-      if (temp->short_description) free(temp->short_description);
-      temp->short_description = *payload ? strdup(payload) : strdup("an object");
+
+    str = toml_get_string_dup(obj_tab, "description");
+    if (str) {
+      if (temp->description)
+        free(temp->description);
+      temp->description = str;
     }
-    else if (!strcmp(tag, "Desc")) {
-      if (temp->description) free(temp->description);
-      temp->description = *payload ? strdup(payload) : strdup("An object lies here.");
+
+    str = toml_get_string_dup(obj_tab, "main_description");
+    if (str) {
+      if (temp->main_description)
+        free(temp->main_description);
+      temp->main_description = str;
     }
-    else if (!strcmp(tag, "ADes")) {
-      if (temp->main_description) free(temp->main_description);
-      temp->main_description = *payload ? strdup(payload) : NULL;
-    }
-    else if (!strcmp(tag, "End")) {
-      commit_current();
-    }
-    else {
-      mudlog(NRM, LVL_IMMORT, TRUE, "SAVE-LOAD: unknown tag '%s'", tag);
+
+    GET_OBJ_TYPE(temp) = toml_get_int_default(obj_tab, "type", GET_OBJ_TYPE(temp));
+    GET_OBJ_WEIGHT(temp) = toml_get_int_default(obj_tab, "weight", GET_OBJ_WEIGHT(temp));
+    GET_OBJ_COST(temp) = toml_get_int_default(obj_tab, "cost", GET_OBJ_COST(temp));
+
+    if (GET_OBJ_TYPE(temp) == ITEM_MONEY)
+      update_money_obj(temp);
+
+    {
+      int effective_loc = (nest > 0) ? -nest : locate;
+      obj_save_data *node = NULL;
+      CREATE(node, obj_save_data, 1);
+      node->obj = temp;
+      node->locate = effective_loc;
+      node->next = NULL;
+
+      if (!head)
+        head = node, tail = node;
+      else
+        tail->next = node, tail = node;
     }
   }
 
-  if (temp) commit_current();
-
   return head;
+}
+
+obj_save_data *objsave_parse_objects(FILE *fl)
+{
+  char errbuf[256];
+  toml_table_t *tab = toml_parse_file(fl, errbuf, sizeof(errbuf));
+  obj_save_data *list = NULL;
+
+  if (!tab)
+    return NULL;
+
+  list = objsave_parse_objects_from_toml(tab, NULL);
+  toml_free(tab);
+  return list;
 }
 
 static int Crash_load_objs(struct char_data *ch) {
   FILE *fl;
   char filename[PATH_MAX];
-  char line[READ_SIZE];
   char buf[MAX_STRING_LENGTH];
   int i, orig_save_code, num_objs=0;
   struct obj_data *cont_row[MAX_BAG_ROWS];
   int savecode = SAVE_UNDEF;
-  int timed=0,netcost=0,coins,account,nitems;
+  int timed=0,netcost=0,coins=0,account=0,nitems=0;
+  char errbuf[256];
+  toml_table_t *tab = NULL;
+  toml_table_t *header = NULL;
 	obj_save_data *loaded, *current;
 
   if (!get_filename(filename, sizeof(filename), CRASH_FILE, GET_NAME(ch)))
@@ -810,10 +730,28 @@ static int Crash_load_objs(struct char_data *ch) {
     return 1;
   }
  
-  if (!get_line(fl, line))
-    mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE, "Failed to read player's save code: %s.", GET_NAME(ch));
-  else
-    sscanf(line,"%d %d %d %d %d %d",&savecode, &timed, &netcost,&coins,&account,&nitems);
+  tab = toml_parse_file(fl, errbuf, sizeof(errbuf));
+  fclose(fl);
+  if (!tab) {
+    mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE,
+           "Failed to parse player's object file %s: %s.", filename, errbuf);
+    return 1;
+  }
+
+  header = toml_table_in(tab, "header");
+  if (!header) {
+    mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE,
+           "Player object file %s missing header.", filename);
+    toml_free(tab);
+    return 1;
+  }
+
+  savecode = toml_get_int_default(header, "save_code", SAVE_UNDEF);
+  timed = toml_get_int_default(header, "timed", 0);
+  netcost = toml_get_int_default(header, "net_cost", 0);
+  coins = toml_get_int_default(header, "coins", 0);
+  account = toml_get_int_default(header, "account", 0);
+  nitems = toml_get_int_default(header, "item_count", 0);
 
   if (savecode == SAVE_LOGOUT || savecode == SAVE_TIMEDOUT) {
     mudlog(NRM, MAX(LVL_IMMORT, GET_INVIS_LEV(ch)), TRUE,
@@ -844,7 +782,8 @@ static int Crash_load_objs(struct char_data *ch) {
     break;
   }
 
-	loaded = objsave_parse_objects(fl);
+	loaded = objsave_parse_objects_from_toml(tab, filename);
+  toml_free(tab);
 	for (current = loaded; current != NULL; current=current->next)
 	  num_objs += handle_obj(current->obj, ch, current->locate, cont_row);
 
@@ -873,8 +812,6 @@ static int Crash_load_objs(struct char_data *ch) {
   /* Little hoarding check. -gg 3/1/98 */
   mudlog(NRM, MAX(LVL_GOD, GET_INVIS_LEV(ch)), TRUE, "%s (level %d) has %d object%s.",
          GET_NAME(ch), GET_LEVEL(ch), num_objs, num_objs != 1 ? "s" : "");
-
-  fclose(fl);
 
   if ((orig_save_code == SAVE_LOGOUT) || (orig_save_code == SAVE_CRYO))
     return 0;

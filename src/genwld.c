@@ -18,6 +18,7 @@
 #include "shop.h"
 #include "dg_olc.h"
 #include "mud_event.h"
+#include "toml_utils.h"
 
 
 /* This function will copy the strings so be sure you free your own copies of 
@@ -269,7 +270,6 @@ int save_rooms(zone_rnum rzone)
   char filename[128];
   char buf[MAX_STRING_LENGTH];
   char buf1[MAX_STRING_LENGTH];
-  char buf2[MAX_STRING_LENGTH];
 
 #if CIRCLE_UNSIGNED_INDEX
   if (rzone == NOWHERE || rzone > top_of_zone_table) {
@@ -301,96 +301,70 @@ int save_rooms(zone_rnum rzone)
       strncpy(buf, room->description ? room->description : "Empty room.", sizeof(buf)-1 );
       strip_cr(buf);
 
-      /* Save the numeric and string section of the file. */
-      int n = snprintf(buf2, MAX_STRING_LENGTH, "#%d\n"
-			"%s%c\n"
-			"%s%c\n"
-			"%d %d %d %d %d %d\n",
-	room->number,
-	room->name ? room->name : "Untitled", STRING_TERMINATOR,
-	buf, STRING_TERMINATOR,
-	zone_table[room->zone].number, room->room_flags[0], room->room_flags[1], room->room_flags[2], 
-	  room->room_flags[3], room->sector_type 
-      );
-      
-      if(n >= MAX_STRING_LENGTH) {
-        mudlog(BRF,LVL_BUILDER,TRUE,
-               "SYSERR: Could not save room #%d due to size (%d > maximum of %d).",
-               room->number, n, MAX_STRING_LENGTH);
-        continue;
-      }
+      fprintf(sf, "[[room]]\n");
+      fprintf(sf, "vnum = %d\n", room->number);
+      toml_write_kv_string(sf, "name", room->name ? convert_from_tabs(room->name) : "Untitled");
+      toml_write_kv_string(sf, "description", convert_from_tabs(buf));
+      fprintf(sf, "flags = [%d, %d, %d, %d]\n",
+              room->room_flags[0], room->room_flags[1],
+              room->room_flags[2], room->room_flags[3]);
+      fprintf(sf, "sector = %d\n", room->sector_type);
 
-  fprintf(sf, "%s", convert_from_tabs(buf2));
- 
       /* Now you write out the exits for the room. */
       for (j = 0; j < DIR_COUNT; j++) {
-	if (R_EXIT(room, j)) {
-	  int dflag;
-	  if (R_EXIT(room, j)->general_description) {
-	    strncpy(buf, R_EXIT(room, j)->general_description, sizeof(buf)-1);
-	    strip_cr(buf);
-	  } else
-	    *buf = '\0';
+        if (R_EXIT(room, j)) {
+          if (R_EXIT(room, j)->general_description) {
+            strncpy(buf, R_EXIT(room, j)->general_description, sizeof(buf)-1);
+            strip_cr(buf);
+          } else
+            *buf = '\0';
 
-	  /* Figure out door flag. */
-	  if (IS_SET(R_EXIT(room, j)->exit_info, EX_ISDOOR)) {
-	    if (IS_SET(R_EXIT(room, j)->exit_info, EX_PICKPROOF))
-	      dflag = 2;
-	    else
-	      dflag = 1;
-	      
-	   if (IS_SET(R_EXIT(room, j)->exit_info, EX_HIDDEN))
-          dflag += 2;   
-          
-	  } else
-	    dflag = 0;
+          if (R_EXIT(room, j)->keyword)
+            strncpy(buf1, R_EXIT(room, j)->keyword, sizeof(buf1)-1 );
+          else
+            *buf1 = '\0';
 
-	  if (R_EXIT(room, j)->keyword)
-	    strncpy(buf1, R_EXIT(room, j)->keyword, sizeof(buf1)-1 );
-	  else
-	    *buf1 = '\0';
-
-	  /* Now write the exit to the file. */
-	  fprintf(sf,	"D%d\n"
-			"%s~\n"
-			"%s~\n"
-			"%d %d %d\n", j, buf, buf1, dflag,
-		R_EXIT(room, j)->key != NOTHING ? R_EXIT(room, j)->key : -1,
-		R_EXIT(room, j)->to_room != NOWHERE ? world[R_EXIT(room, j)->to_room].number : -1);
-
-	}
+          fprintf(sf, "\n[[room.exit]]\n");
+          fprintf(sf, "dir = %d\n", j);
+          toml_write_kv_string(sf, "description", convert_from_tabs(buf));
+          toml_write_kv_string(sf, "keyword", buf1);
+          fprintf(sf, "exit_info = %d\n", R_EXIT(room, j)->exit_info);
+          fprintf(sf, "key = %d\n",
+                  R_EXIT(room, j)->key != NOTHING ? R_EXIT(room, j)->key : -1);
+          fprintf(sf, "to_room = %d\n",
+                  R_EXIT(room, j)->to_room != NOWHERE ? world[R_EXIT(room, j)->to_room].number : -1);
+        }
       }
 
       if (room->ex_description) {
         struct extra_descr_data *xdesc;
 
-	for (xdesc = room->ex_description; xdesc; xdesc = xdesc->next) {
-	  strncpy(buf, xdesc->description, sizeof(buf) - 1);
-	  buf[sizeof(buf) - 1] = '\0';
-	  strip_cr(buf);
-	  fprintf(sf,	"E\n"
-			"%s~\n"
-			"%s~\n", xdesc->keyword, buf);
-	}
+        for (xdesc = room->ex_description; xdesc; xdesc = xdesc->next) {
+          strncpy(buf, xdesc->description, sizeof(buf) - 1);
+          buf[sizeof(buf) - 1] = '\0';
+          strip_cr(buf);
+          fprintf(sf, "\n[[room.extra_desc]]\n");
+          toml_write_kv_string(sf, "keyword", xdesc->keyword);
+          toml_write_kv_string(sf, "description", convert_from_tabs(buf));
+        }
       }
       if (room->forage) {
         struct forage_entry *entry;
-        fprintf(sf, "F\n");
-        for (entry = room->forage; entry; entry = entry->next)
-          fprintf(sf, "%d %d\n", entry->obj_vnum, entry->dc);
-        fprintf(sf, "0 0\n");
+        for (entry = room->forage; entry; entry = entry->next) {
+          fprintf(sf, "\n[[room.forage]]\n");
+          fprintf(sf, "obj_vnum = %d\n", entry->obj_vnum);
+          fprintf(sf, "dc = %d\n", entry->dc);
+        }
       }
-      fprintf(sf, "S\n");
       script_save_to_disk(sf, room, WLD_TRIGGER);
+      fputc('\n', sf);
     }
   }
 
-  /* Write the final line and close it. */
-  fprintf(sf, "$~\n");
   fclose(sf);
 
   /* Old file we're replacing. */
-  snprintf(buf, sizeof(buf), "%s/%d.wld", WLD_PREFIX, zone_table[rzone].number);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", WLD_PREFIX, zone_table[rzone].number);
 
   remove(buf);
   rename(filename, buf);
