@@ -21,6 +21,8 @@
 #include "comm.h"
 #include "interpreter.h"
 #include "spells.h"
+#include "class.h"
+#include "species.h"
 #include "handler.h"
 #include "db.h"
 #include "constants.h"
@@ -2335,6 +2337,1723 @@ ACMD(do_oset)
   }
 
   oset_show_usage(ch);
+}
+
+static const char *mset_stat_types[] = {
+  "str",
+  "dex",
+  "con",
+  "int",
+  "wis",
+  "cha"
+};
+
+static void mset_show_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Usage:\r\n"
+    "  mset show <npc>\r\n"
+    "  mset add name <npc> <text>\r\n"
+    "  mset add keywords <npc> <keyword> [keywords]\r\n"
+    "  mset add sdesc <npc> <text>\r\n"
+    "  mset add ldesc <npc> <text>\r\n"
+    "  mset add desc <npc> (enters editor)\r\n"
+    "  mset add background <npc> (enters editor)\r\n"
+    "  mset add attack <npc> <attack type>\r\n"
+    "  mset add sex <npc> <male/female/neutral>\r\n"
+    "  mset add species <npc> <species name>\r\n"
+    "  mset add class <npc> <class name>\r\n"
+    "  mset add stat <npc> <stat> <value>\r\n"
+    "  mset add save <npc> <stat> <value>\r\n"
+    "  mset add skill <npc> <skill name> <skill level>\r\n"
+    "  mset add flags <npc> <flags> [flags]\r\n"
+    "  mset add affect <npc> <affect> [affects]\r\n"
+    "  mset add skinning <npc> <vnum> <dc>\r\n"
+    "  mset del <npc>\r\n"
+    "  mset clear <npc>\r\n"
+    "  mset validate <npc>\r\n");
+}
+
+static void mset_show_add_name_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a name to an NPC. Try to be creative when adding a name!\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add name <npc> kinther\r\n"
+    "  mset add name <npc> tektolnes\r\n"
+    "  mset add name <npc> saddira\r\n");
+}
+
+static void mset_show_add_keywords_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds keywords to an NPC. Can add a single keyword or several at once.\r\n"
+    "It is always best to use the most specific keyword as the first entry.\r\n"
+    "These should be equivalent to what your short description is, minus\r\n"
+    "any words like \"the\".\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add keywords <npc> soldier thick burly\r\n"
+    "  mset add keywords <npc> templar tall bald\r\n"
+    "  mset add keywords <npc> elf lithe feminine\r\n");
+}
+
+static void mset_show_add_sdesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a short description to an NPC. This is what is seen when looking\r\n"
+    "at the NPC, in combat, when it speaks, and emotes.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add sdesc <npc> the thick, burly soldier\r\n"
+    "  mset add sdesc <npc> the tall, bald templar\r\n"
+    "  mset add sdesc <npc> the lithe, feminine elf\r\n");
+}
+
+static void mset_show_add_ldesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a long description to an NPC. This is what everyone sees when an NPC\r\n"
+    "is in a room.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add ldesc <npc> The thick, burly soldier is eyeing the crowd here.\r\n"
+    "  mset add ldesc <npc> The tall, bald templar is here barking orders at a work crew.\r\n"
+    "  mset add ldesc <npc> The lithe, feminine elf is leaning against a wall here.\r\n");
+}
+
+static void mset_show_add_desc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Enters text editor for editing the main description of the NPC.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  mset add desc <npc>\r\n");
+}
+
+static void mset_show_add_background_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Enters text editor for editing the NPC background.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  mset add background <npc>\r\n");
+}
+
+static void mset_show_add_attack_usage(struct char_data *ch)
+{
+  const char *types[NUM_ATTACK_TYPES];
+  int i;
+
+  send_to_char(ch,
+    "Specifies the attack type of the NPC. Can only be one type.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add attack <npc> hit\r\n"
+    "  mset add attack <npc> bite\r\n"
+    "  mset add attack <npc> claw\r\n"
+    "\r\n"
+    "Types:\r\n");
+
+  for (i = 0; i < NUM_ATTACK_TYPES; i++)
+    types[i] = attack_hit_text[i].singular;
+  column_list(ch, 0, types, NUM_ATTACK_TYPES, FALSE);
+}
+
+static void mset_show_add_sex_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies NPC sex.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add sex <npc> male\r\n"
+    "  mset add sex <npc> female\r\n"
+    "  mset add sex <npc> neutral\r\n");
+}
+
+static void mset_show_add_species_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies the species of the NPC. Can only be one type.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add species <npc> human\r\n"
+    "\r\n"
+    "Species:\r\n");
+  column_list(ch, 0, species_types, NUM_SPECIES, FALSE);
+}
+
+static void mset_show_add_class_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies the class of the NPC. Can only be one type.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add class <npc> fighter\r\n"
+    "\r\n"
+    "Classes:\r\n");
+  column_list(ch, 0, pc_class_types, NUM_CLASSES, FALSE);
+}
+
+static void mset_show_add_stat_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies the stat of the NPC. Can only be one type. Defaults to 10.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add stat <npc> str 18\r\n"
+    "\r\n"
+    "Stats:\r\n");
+  column_list(ch, 0, mset_stat_types, NUM_ABILITIES, FALSE);
+}
+
+static void mset_show_add_save_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies an additional saving throw bonus to the stat of the NPC.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add save <npc> str 1\r\n"
+    "\r\n"
+    "Stats:\r\n");
+  column_list(ch, 0, mset_stat_types, NUM_ABILITIES, FALSE);
+}
+
+static void mset_show_add_skill_usage(struct char_data *ch)
+{
+  const char *skills[MAX_SKILLS];
+  int count = 0;
+  int i;
+
+  send_to_char(ch,
+    "Specifies a skill the NPC has, and what skill level. For a full list, type \"skills\".\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add skill <npc> kick 40\r\n"
+    "  mset add skill <npc> fireball 80\r\n"
+    "  mset add skill <npc> hide 10\r\n"
+    "\r\n"
+    "Skills:\r\n");
+
+  for (i = MAX_SPELLS + 1; i < MAX_SKILLS && i <= TOP_SPELL_DEFINE; i++) {
+    if (spell_info[i].name &&
+        str_cmp(spell_info[i].name, "UNDEFINED") &&
+        str_cmp(spell_info[i].name, "UNUSED")) {
+      skills[count++] = spell_info[i].name;
+    }
+  }
+
+  if (count)
+    column_list(ch, 0, skills, count, FALSE);
+  else
+    send_to_char(ch, "  <None>\r\n");
+}
+
+static void mset_show_add_flags_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies a flag to be assigned to the NPC. Can be one or a list of flags.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add flag <npc> SENTINEL\r\n"
+    "  mset add flag <npc> SENTINEL MEMORY HELPER\r\n"
+    "\r\n"
+    "Flags:\r\n");
+  column_list(ch, 0, action_bits, NUM_MOB_FLAGS, FALSE);
+}
+
+static void mset_show_add_affect_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies a affect to be assigned to the NPC. Can be one or a list of flags.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add affect <npc> FLY\r\n"
+    "  mset add affect <npc> BLIND NO_TRACK\r\n"
+    "\r\n"
+    "Affects:\r\n");
+  column_list(ch, 0, affected_bits + 1, NUM_AFF_FLAGS - 1, FALSE);
+}
+
+static void mset_show_add_skinning_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Specifies an item vnum that can be skinned from the corpse of the NPC, and DC check for success.\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add skinning <npc> 134 15\r\n");
+}
+
+static void mset_show_del_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Deletes specific configuration from the NPC.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  mset del <npc> name\r\n"
+    "  mset del <npc> keywords <keyword> [keywords]\r\n"
+    "  mset del <npc> sdesc\r\n"
+    "  mset del <npc> ldesc\r\n"
+    "  mset del <npc> desc\r\n"
+    "  mset del <npc> background\r\n"
+    "  mset del <npc> attack\r\n"
+    "  mset del <npc> sex\r\n"
+    "  mset del <npc> species\r\n"
+    "  mset del <npc> class\r\n"
+    "  mset del <npc> stat <stat>\r\n"
+    "  mset del <npc> save <stat>\r\n"
+    "  mset del <npc> skill <skill name>\r\n"
+    "  mset del <npc> flags <flags> [flags]\r\n"
+    "  mset del <npc> affect <affect> [affects]\r\n"
+    "  mset del <npc> skinning <vnum>\r\n");
+}
+
+static void mset_show_del_flags_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Deletes NPC flags.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  mset del <npc> flags <flag> [flags]\r\n"
+    "\r\n"
+    "Flags:\r\n");
+  column_list(ch, 0, action_bits, NUM_MOB_FLAGS, FALSE);
+}
+
+static void mset_show_del_affect_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Deletes NPC affects.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  mset del <npc> affect <affect> [affects]\r\n"
+    "\r\n"
+    "Affects:\r\n");
+  column_list(ch, 0, affected_bits + 1, NUM_AFF_FLAGS - 1, FALSE);
+}
+
+static bool mset_illegal_mob_flag(int fl)
+{
+  int i;
+  const int illegal_flags[] = {
+    MOB_ISNPC,
+    MOB_NOTDEADYET,
+  };
+  const int num_illegal_flags = sizeof(illegal_flags) / sizeof(int);
+
+  for (i = 0; i < num_illegal_flags; i++)
+    if (fl == illegal_flags[i])
+      return TRUE;
+
+  return FALSE;
+}
+
+static int mset_find_mob_flag(const char *arg)
+{
+  int i;
+
+  if (!arg || !*arg)
+    return -1;
+
+  for (i = 0; i < NUM_MOB_FLAGS; i++)
+    if (is_abbrev(arg, action_bits[i]))
+      return i;
+
+  return -1;
+}
+
+static int mset_find_affect_flag(const char *arg)
+{
+  int i;
+
+  if (!arg || !*arg)
+    return -1;
+
+  for (i = 1; i < NUM_AFF_FLAGS; i++)
+    if (is_abbrev(arg, affected_bits[i]))
+      return i;
+
+  return -1;
+}
+
+static int mset_find_stat(const char *arg)
+{
+  int i;
+
+  if (!arg || !*arg)
+    return -1;
+
+  for (i = 0; i < NUM_ABILITIES; i++)
+    if (is_abbrev(arg, mset_stat_types[i]))
+      return i;
+
+  return -1;
+}
+
+static int mset_find_sex(const char *arg)
+{
+  char sexbuf[MAX_INPUT_LENGTH];
+  int sex;
+
+  if (!arg || !*arg)
+    return -1;
+
+  strlcpy(sexbuf, arg, sizeof(sexbuf));
+  sex = search_block(sexbuf, genders, FALSE);
+  if (sex < 0 || sex >= NUM_GENDERS)
+    return -1;
+
+  return sex;
+}
+
+static void mset_mark_mob_modified(mob_vnum vnum)
+{
+  zone_rnum znum;
+
+  if (vnum == NOBODY || vnum <= 0)
+    return;
+
+  znum = real_zone_by_thing(vnum);
+  if (znum == NOWHERE)
+    return;
+
+  add_to_save_list(zone_table[znum].number, SL_MOB);
+}
+
+static void mset_update_proto_strings(mob_rnum rnum)
+{
+  struct char_data *mob;
+
+  if (rnum < 0)
+    return;
+
+  for (mob = character_list; mob; mob = mob->next) {
+    if (GET_MOB_RNUM(mob) == rnum)
+      update_mobile_strings(mob, &mob_proto[rnum]);
+  }
+}
+
+static void mset_update_proto_keywords(mob_rnum rnum, const char *value)
+{
+  struct char_data *mob;
+  char *old;
+
+  if (rnum < 0)
+    return;
+
+  old = mob_proto[rnum].player.keywords;
+  mob_proto[rnum].player.keywords = strdup(value ? value : "");
+
+  for (mob = character_list; mob; mob = mob->next) {
+    if (GET_MOB_RNUM(mob) == rnum && GET_KEYWORDS(mob) == old)
+      GET_KEYWORDS(mob) = mob_proto[rnum].player.keywords;
+  }
+
+  if (old)
+    free(old);
+}
+
+static void mset_replace_string(struct char_data *mob, char **field, const char *value, const char *proto_field)
+{
+  if (*field && (!proto_field || *field != proto_field))
+    free(*field);
+
+  *field = strdup(value ? value : "");
+}
+
+static void mset_set_stat_value(struct char_data *mob, int stat, int value, bool apply_affects)
+{
+  switch (stat) {
+    case ABIL_STR: mob->real_abils.str = value; break;
+    case ABIL_DEX: mob->real_abils.dex = value; break;
+    case ABIL_CON: mob->real_abils.con = value; break;
+    case ABIL_INT: mob->real_abils.intel = value; break;
+    case ABIL_WIS: mob->real_abils.wis = value; break;
+    case ABIL_CHA: mob->real_abils.cha = value; break;
+    default: return;
+  }
+
+  if (apply_affects)
+    affect_total(mob);
+  else
+    mob->aff_abils = mob->real_abils;
+}
+
+static void mset_build_ldesc(char *out, size_t outsz, const char *input)
+{
+  size_t len;
+
+  if (!input || !*input) {
+    *out = '\0';
+    return;
+  }
+
+  strlcpy(out, input, outsz);
+  len = strlen(out);
+  if (len < 2 || out[len - 2] != '\r' || out[len - 1] != '\n')
+    strlcat(out, "\r\n", outsz);
+}
+
+static struct char_data *mset_get_target_mob(struct char_data *ch, const char *name)
+{
+  struct char_data *mob;
+
+  if (!ch || !name || !*name || IN_ROOM(ch) == NOWHERE)
+    return NULL;
+
+  mob = get_char_vis(ch, (char *)name, NULL, FIND_CHAR_ROOM);
+  if (!mob || !IS_NPC(mob))
+    return NULL;
+
+  return mob;
+}
+
+static void mset_show_mob(struct char_data *ch, struct char_data *mob)
+{
+  char buf[MAX_STRING_LENGTH];
+  char buf2[MAX_STRING_LENGTH];
+  mob_rnum rnum = GET_MOB_RNUM(mob);
+  int i;
+
+  send_to_char(ch, "NPC [%d]: %s\r\n", GET_MOB_VNUM(mob),
+               GET_NAME(mob) ? GET_NAME(mob) : "<None>");
+  send_to_char(ch, "Keywords: %s\r\n", GET_KEYWORDS(mob) ? GET_KEYWORDS(mob) : "<None>");
+  send_to_char(ch, "Short desc: %s\r\n", GET_SDESC(mob) ? GET_SDESC(mob) : "<None>");
+  send_to_char(ch, "Long desc: %s\r\n", GET_LDESC(mob) ? GET_LDESC(mob) : "<None>");
+  send_to_char(ch, "Main desc:\r\n%s", GET_DDESC(mob) ? GET_DDESC(mob) : "  <None>\r\n");
+  send_to_char(ch, "Background:\r\n%s", GET_BACKGROUND(mob) ? GET_BACKGROUND(mob) : "  <None>\r\n");
+
+  if (GET_ATTACK(mob) >= 0 && GET_ATTACK(mob) < NUM_ATTACK_TYPES)
+    send_to_char(ch, "Attack: %s\r\n", attack_hit_text[(int)GET_ATTACK(mob)].singular);
+  else
+    send_to_char(ch, "Attack: <None>\r\n");
+
+  if (GET_SEX(mob) >= 0 && GET_SEX(mob) < NUM_GENDERS)
+    send_to_char(ch, "Sex: %s\r\n", genders[(int)GET_SEX(mob)]);
+  else
+    send_to_char(ch, "Sex: <None>\r\n");
+
+  send_to_char(ch, "Species: %s\r\n", HAS_VALID_SPECIES(mob) ? species_types[GET_SPECIES(mob)] : "Unassigned");
+  send_to_char(ch, "Class: %s\r\n", HAS_VALID_CLASS(mob) ? pc_class_types[GET_CLASS(mob)] : "Unassigned");
+
+  send_to_char(ch, "Stats: Str %d Dex %d Con %d Int %d Wis %d Cha %d\r\n",
+               GET_STR(mob), GET_DEX(mob), GET_CON(mob),
+               GET_INT(mob), GET_WIS(mob), GET_CHA(mob));
+
+  send_to_char(ch, "Saves: Str %d Dex %d Con %d Int %d Wis %d Cha %d\r\n",
+               GET_SAVE(mob, ABIL_STR), GET_SAVE(mob, ABIL_DEX), GET_SAVE(mob, ABIL_CON),
+               GET_SAVE(mob, ABIL_INT), GET_SAVE(mob, ABIL_WIS), GET_SAVE(mob, ABIL_CHA));
+
+  sprintbitarray(MOB_FLAGS(mob), action_bits, AF_ARRAY_MAX, buf);
+  send_to_char(ch, "Flags: %s\r\n", buf);
+  sprintbitarray(AFF_FLAGS(mob), affected_bits, AF_ARRAY_MAX, buf2);
+  send_to_char(ch, "Affects: %s\r\n", buf2);
+
+  send_to_char(ch, "Skills:\r\n");
+  for (i = 0; i < MAX_SKILLS; i++) {
+    if (mob->mob_specials.skills[i] > 0 && i > 0 && i <= TOP_SPELL_DEFINE)
+      send_to_char(ch, "  %s %d\r\n", spell_info[i].name, mob->mob_specials.skills[i]);
+  }
+
+  send_to_char(ch, "Skinning:\r\n");
+  if (rnum != NOBODY && mob_index[rnum].skin_yields) {
+    struct skin_yield_entry *e;
+    for (e = mob_index[rnum].skin_yields; e; e = e->next) {
+      obj_rnum ornum = real_object(e->obj_vnum);
+      const char *sdesc = (ornum != NOTHING) ? obj_proto[ornum].short_description : "Unknown object";
+      send_to_char(ch, "  [%d] DC %d - %s\r\n", e->obj_vnum, e->dc, sdesc);
+    }
+  } else {
+    send_to_char(ch, "  None.\r\n");
+  }
+}
+
+static void mset_desc_edit(struct char_data *ch, char **field, const char *label)
+{
+  char *oldtext = NULL;
+
+  send_editor_help(ch->desc);
+  write_to_output(ch->desc, "Enter %s:\r\n\r\n", label);
+
+  if (*field) {
+    write_to_output(ch->desc, "%s", *field);
+    oldtext = strdup(*field);
+  }
+
+  string_write(ch->desc, field, MAX_MOB_DESC, 0, oldtext);
+}
+
+static void mset_validate_mob(struct char_data *ch, struct char_data *mob)
+{
+  int errors = 0;
+
+  if (!GET_NAME(mob) || !*GET_NAME(mob)) {
+    send_to_char(ch, "Error: name is not set.\r\n");
+    errors++;
+  }
+
+  if (!GET_KEYWORDS(mob) || !*GET_KEYWORDS(mob)) {
+    send_to_char(ch, "Error: keywords are not set.\r\n");
+    errors++;
+  }
+
+  if (!GET_SDESC(mob) || !*GET_SDESC(mob)) {
+    send_to_char(ch, "Error: short description is not set.\r\n");
+    errors++;
+  }
+
+  if (!GET_LDESC(mob) || !*GET_LDESC(mob)) {
+    send_to_char(ch, "Error: long description is not set.\r\n");
+    errors++;
+  }
+
+  if (!GET_DDESC(mob) || !*GET_DDESC(mob)) {
+    send_to_char(ch, "Error: main description is not set.\r\n");
+    errors++;
+  }
+
+  if (!GET_BACKGROUND(mob) || !*GET_BACKGROUND(mob)) {
+    send_to_char(ch, "Error: background is not set.\r\n");
+    errors++;
+  }
+
+  if (GET_SEX(mob) < 0 || GET_SEX(mob) >= NUM_GENDERS) {
+    send_to_char(ch, "Error: sex is not set.\r\n");
+    errors++;
+  }
+
+  if (!HAS_VALID_SPECIES(mob)) {
+    send_to_char(ch, "Error: species is not set.\r\n");
+    errors++;
+  }
+
+  if (!HAS_VALID_CLASS(mob)) {
+    send_to_char(ch, "Error: class is not set.\r\n");
+    errors++;
+  }
+
+  if (!errors)
+    send_to_char(ch, "NPC validates cleanly.\r\n");
+  else
+    send_to_char(ch, "Validation failed: %d issue%s.\r\n", errors, errors == 1 ? "" : "s");
+}
+
+ACMD(do_mset)
+{
+  char arg1[MAX_INPUT_LENGTH];
+  char arg2[MAX_INPUT_LENGTH];
+  char arg3[MAX_INPUT_LENGTH];
+  char buf[MAX_STRING_LENGTH];
+  struct char_data *mob;
+  mob_rnum rnum;
+  mob_vnum vnum;
+
+  if (IS_NPC(ch) || ch->desc == NULL) {
+    send_to_char(ch, "mset is only usable by connected players.\r\n");
+    return;
+  }
+
+  argument = one_argument(argument, arg1);
+  if (!*arg1) {
+    mset_show_usage(ch);
+    return;
+  }
+
+  if (is_abbrev(arg1, "show")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2) {
+      mset_show_usage(ch);
+      return;
+    }
+
+    mob = mset_get_target_mob(ch, arg2);
+    if (!mob) {
+      send_to_char(ch, "Target an NPC in this room: mset show <npc>\r\n");
+      return;
+    }
+
+    rnum = GET_MOB_RNUM(mob);
+    vnum = GET_MOB_VNUM(mob);
+    if (vnum == NOBODY) {
+      send_to_char(ch, "That NPC has no valid vnum.\r\n");
+      return;
+    }
+
+    if (!can_edit_zone(ch, real_zone_by_thing(vnum))) {
+      send_to_char(ch, "You do not have permission to modify that zone.\r\n");
+      return;
+    }
+
+    mset_show_mob(ch, mob);
+    return;
+  }
+
+  if (is_abbrev(arg1, "add")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2) {
+      mset_show_usage(ch);
+      return;
+    }
+
+    argument = one_argument(argument, arg3);
+    if (!*arg3) {
+      mset_show_usage(ch);
+      return;
+    }
+
+    mob = mset_get_target_mob(ch, arg3);
+    if (!mob) {
+      send_to_char(ch, "Target an NPC in this room: mset add <field> <npc> ...\r\n");
+      return;
+    }
+
+    rnum = GET_MOB_RNUM(mob);
+    vnum = GET_MOB_VNUM(mob);
+    if (vnum == NOBODY) {
+      send_to_char(ch, "That NPC has no valid vnum.\r\n");
+      return;
+    }
+
+    if (!can_edit_zone(ch, real_zone_by_thing(vnum))) {
+      send_to_char(ch, "You do not have permission to modify that zone.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "name")) {
+      skip_spaces(&argument);
+      if (!*argument) {
+        mset_show_add_name_usage(ch);
+        return;
+      }
+
+      genolc_checkstring(ch->desc, argument);
+      if (rnum != NOBODY) {
+        if (mob_proto[rnum].player.name)
+          free(mob_proto[rnum].player.name);
+        mob_proto[rnum].player.name = str_udup(argument);
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &GET_NAME(mob), argument, NULL);
+      }
+
+      send_to_char(ch, "Name set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "keywords")) {
+      char kwbuf[MAX_STRING_LENGTH];
+      char word[MAX_INPUT_LENGTH];
+      const char *current;
+      bool changed = FALSE;
+
+      if (!*argument) {
+        mset_show_add_keywords_usage(ch);
+        return;
+      }
+
+      current = GET_KEYWORDS(mob);
+      kwbuf[0] = '\0';
+      if (current && *current)
+        strlcpy(kwbuf, current, sizeof(kwbuf));
+
+      while (*argument) {
+        argument = one_argument(argument, word);
+        if (!*word)
+          break;
+        if (!isname(word, kwbuf)) {
+          if (*kwbuf)
+            strlcat(kwbuf, " ", sizeof(kwbuf));
+          strlcat(kwbuf, word, sizeof(kwbuf));
+          changed = TRUE;
+        }
+      }
+
+      if (!changed) {
+        send_to_char(ch, "Keywords updated.\r\n");
+        return;
+      }
+
+  if (rnum != NOBODY) {
+        mset_update_proto_keywords(rnum, kwbuf);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &GET_KEYWORDS(mob), kwbuf, NULL);
+      }
+
+      send_to_char(ch, "Keywords updated.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "sdesc")) {
+      skip_spaces(&argument);
+      if (!*argument) {
+        mset_show_add_sdesc_usage(ch);
+        return;
+      }
+
+      genolc_checkstring(ch->desc, argument);
+      if (rnum != NOBODY) {
+        if (mob_proto[rnum].player.short_descr)
+          free(mob_proto[rnum].player.short_descr);
+        mob_proto[rnum].player.short_descr = str_udup(argument);
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &GET_SDESC(mob), argument, NULL);
+      }
+
+      send_to_char(ch, "Short description set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "ldesc")) {
+      skip_spaces(&argument);
+      if (!*argument) {
+        mset_show_add_ldesc_usage(ch);
+        return;
+      }
+
+      genolc_checkstring(ch->desc, argument);
+      mset_build_ldesc(buf, sizeof(buf), argument);
+      if (rnum != NOBODY) {
+        if (mob_proto[rnum].player.long_descr)
+          free(mob_proto[rnum].player.long_descr);
+        mob_proto[rnum].player.long_descr = str_udup(buf);
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &GET_LDESC(mob), buf, NULL);
+      }
+
+      send_to_char(ch, "Long description set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "desc")) {
+      if (*argument) {
+        mset_show_add_desc_usage(ch);
+        return;
+      }
+
+      if (rnum != NOBODY) {
+        mset_desc_edit(ch, &mob_proto[rnum].player.description, "mob description");
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_desc_edit(ch, &mob->player.description, "mob description");
+      }
+
+      return;
+    }
+
+    if (is_abbrev(arg2, "background")) {
+      if (*argument) {
+        mset_show_add_background_usage(ch);
+        return;
+      }
+
+      if (rnum != NOBODY) {
+        mset_desc_edit(ch, &mob_proto[rnum].player.background, "mob background");
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_desc_edit(ch, &mob->player.background, "mob background");
+      }
+
+      return;
+    }
+
+    if (is_abbrev(arg2, "attack")) {
+      int atype;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        mset_show_add_attack_usage(ch);
+        return;
+      }
+
+      atype = oset_find_attack_type(arg3);
+      if (atype < 0 || atype >= NUM_ATTACK_TYPES) {
+        send_to_char(ch, "Invalid attack type.\r\n");
+        return;
+      }
+
+      mob->mob_specials.attack_type = (byte)atype;
+      if (rnum != NOBODY) {
+        mob_proto[rnum].mob_specials.attack_type = (byte)atype;
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Attack type set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "sex")) {
+      int sex;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        mset_show_add_sex_usage(ch);
+        return;
+      }
+
+      sex = mset_find_sex(arg3);
+      if (sex < 0) {
+        send_to_char(ch, "Invalid sex.\r\n");
+        return;
+      }
+
+      GET_SEX(mob) = sex;
+      if (rnum != NOBODY) {
+        GET_SEX(&mob_proto[rnum]) = sex;
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Sex set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "species")) {
+      int species;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        mset_show_add_species_usage(ch);
+        return;
+      }
+
+      species = parse_species(arg3);
+      if (species == SPECIES_UNDEFINED) {
+        send_to_char(ch, "Invalid species.\r\n");
+        return;
+      }
+
+      GET_SPECIES(mob) = species;
+      if (rnum != NOBODY) {
+        GET_SPECIES(&mob_proto[rnum]) = species;
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Species set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "class")) {
+      int cls;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        mset_show_add_class_usage(ch);
+        return;
+      }
+
+      cls = get_class_by_name(arg3);
+      if (cls < 0 || cls >= NUM_CLASSES) {
+        send_to_char(ch, "Invalid class.\r\n");
+        return;
+      }
+
+      GET_CLASS(mob) = cls;
+      if (rnum != NOBODY) {
+        GET_CLASS(&mob_proto[rnum]) = cls;
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Class set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "stat")) {
+      int stat;
+      int value;
+
+      argument = one_argument(argument, arg1);
+      if (!*arg1) {
+        mset_show_add_stat_usage(ch);
+        return;
+      }
+
+      stat = mset_find_stat(arg1);
+      if (stat < 0) {
+        mset_show_add_stat_usage(ch);
+        return;
+      }
+
+      argument = one_argument(argument, arg1);
+      if (!*arg1 || !is_number(arg1)) {
+        mset_show_add_stat_usage(ch);
+        return;
+      }
+
+      value = atoi(arg1);
+      mset_set_stat_value(mob, stat, value, TRUE);
+      if (rnum != NOBODY) {
+        mset_set_stat_value(&mob_proto[rnum], stat, value, FALSE);
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Stat set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "save")) {
+      int stat;
+      int value;
+
+      argument = one_argument(argument, arg1);
+      if (!*arg1) {
+        mset_show_add_save_usage(ch);
+        return;
+      }
+
+      stat = mset_find_stat(arg1);
+      if (stat < 0) {
+        mset_show_add_save_usage(ch);
+        return;
+      }
+
+      argument = one_argument(argument, arg1);
+      if (!*arg1 || !is_number(arg1)) {
+        mset_show_add_save_usage(ch);
+        return;
+      }
+
+      value = atoi(arg1);
+      GET_SAVE(mob, stat) = value;
+      if (rnum != NOBODY) {
+        GET_SAVE(&mob_proto[rnum], stat) = value;
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Save set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "skill")) {
+      char skillbuf[MAX_INPUT_LENGTH];
+      char *skillname;
+      char *level_arg;
+      char *end;
+      int snum;
+      int val;
+
+      if (!*argument) {
+        mset_show_add_skill_usage(ch);
+        return;
+      }
+
+      strlcpy(skillbuf, argument, sizeof(skillbuf));
+      skillname = skillbuf;
+      skip_spaces(&skillname);
+      if (!*skillname) {
+        mset_show_add_skill_usage(ch);
+        return;
+      }
+
+      end = skillname + strlen(skillname) - 1;
+      while (end > skillname && isspace(*end)) {
+        *end = '\0';
+        end--;
+      }
+
+      level_arg = strrchr(skillname, ' ');
+      if (!level_arg) {
+        mset_show_add_skill_usage(ch);
+        return;
+      }
+
+      *level_arg = '\0';
+      level_arg++;
+      if (!*skillname || !*level_arg || !is_number(level_arg)) {
+        mset_show_add_skill_usage(ch);
+        return;
+      }
+
+      snum = find_skill_num(skillname);
+      if (snum <= 0 || snum >= MAX_SKILLS) {
+        send_to_char(ch, "Invalid skill.\r\n");
+        return;
+      }
+
+      val = atoi(level_arg);
+      val = MAX(0, MIN(100, val));
+
+      mob->mob_specials.skills[snum] = (byte)val;
+      if (rnum != NOBODY) {
+        mob_proto[rnum].mob_specials.skills[snum] = (byte)val;
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Skill set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "flags")) {
+      bool any = FALSE;
+
+      if (!*argument) {
+        mset_show_add_flags_usage(ch);
+        return;
+      }
+
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg3);
+        if (!*arg3)
+          break;
+
+        flag = mset_find_mob_flag(arg3);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown mob flag: %s\r\n", arg3);
+          continue;
+        }
+        if (mset_illegal_mob_flag(flag)) {
+          send_to_char(ch, "Flag %s cannot be set.\r\n", action_bits[flag]);
+          continue;
+        }
+
+        SET_BIT_AR(MOB_FLAGS(mob), flag);
+        if (rnum != NOBODY)
+          SET_BIT_AR(MOB_FLAGS(&mob_proto[rnum]), flag);
+        any = TRUE;
+      }
+
+      if (any) {
+        if (rnum != NOBODY)
+          mset_mark_mob_modified(vnum);
+        send_to_char(ch, "Mob flags updated.\r\n");
+      }
+      return;
+    }
+
+    if (is_abbrev(arg2, "affect")) {
+      bool any = FALSE;
+
+      if (!*argument) {
+        mset_show_add_affect_usage(ch);
+        return;
+      }
+
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg3);
+        if (!*arg3)
+          break;
+
+        flag = mset_find_affect_flag(arg3);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown affect: %s\r\n", arg3);
+          continue;
+        }
+
+        SET_BIT_AR(AFF_FLAGS(mob), flag);
+        if (rnum != NOBODY)
+          SET_BIT_AR(AFF_FLAGS(&mob_proto[rnum]), flag);
+        any = TRUE;
+      }
+
+      if (any) {
+        if (rnum != NOBODY)
+          mset_mark_mob_modified(vnum);
+        send_to_char(ch, "Affects updated.\r\n");
+      }
+      return;
+    }
+
+    if (is_abbrev(arg2, "skinning")) {
+      int skin_vnum;
+      int dc;
+      struct skin_yield_entry *entry;
+
+      argument = one_argument(argument, arg1);
+      if (!*arg1) {
+        mset_show_add_skinning_usage(ch);
+        return;
+      }
+
+      skin_vnum = atoi(arg1);
+      argument = one_argument(argument, arg1);
+      if (!*arg1 || !is_number(arg1)) {
+        mset_show_add_skinning_usage(ch);
+        return;
+      }
+
+      dc = atoi(arg1);
+      if (skin_vnum <= 0 || dc <= 0) {
+        send_to_char(ch, "Both vnum and DC must be positive.\r\n");
+        return;
+      }
+
+      if (real_object(skin_vnum) == NOTHING) {
+        send_to_char(ch, "That object vnum does not exist.\r\n");
+        return;
+      }
+
+      if (rnum == NOBODY) {
+        send_to_char(ch, "That NPC has no prototype to attach skinning yields.\r\n");
+        return;
+      }
+
+      CREATE(entry, struct skin_yield_entry, 1);
+      entry->mob_vnum = vnum;
+      entry->obj_vnum = skin_vnum;
+      entry->dc = dc;
+      entry->next = mob_index[rnum].skin_yields;
+      mob_index[rnum].skin_yields = entry;
+      mset_mark_mob_modified(vnum);
+      send_to_char(ch, "Skinning entry added.\r\n");
+      return;
+    }
+
+    mset_show_usage(ch);
+    return;
+  }
+
+  if (is_abbrev(arg1, "del")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2) {
+      mset_show_del_usage(ch);
+      return;
+    }
+
+    argument = one_argument(argument, arg3);
+    if (!*arg3) {
+      mset_show_del_usage(ch);
+      return;
+    }
+
+    mob = mset_get_target_mob(ch, arg2);
+    if (!mob) {
+      send_to_char(ch, "Target an NPC in this room: mset del <npc> <field> ...\r\n");
+      return;
+    }
+
+    rnum = GET_MOB_RNUM(mob);
+    vnum = GET_MOB_VNUM(mob);
+    if (vnum == NOBODY) {
+      send_to_char(ch, "That NPC has no valid vnum.\r\n");
+      return;
+    }
+
+    if (!can_edit_zone(ch, real_zone_by_thing(vnum))) {
+      send_to_char(ch, "You do not have permission to modify that zone.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "name")) {
+      if (rnum != NOBODY) {
+        if (mob_proto[rnum].player.name)
+          free(mob_proto[rnum].player.name);
+        mob_proto[rnum].player.name = strdup("");
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &GET_NAME(mob), "", NULL);
+      }
+      send_to_char(ch, "Name cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "keywords")) {
+      char work[MAX_STRING_LENGTH];
+      char out[MAX_STRING_LENGTH];
+      char word[MAX_INPUT_LENGTH];
+      bool changed = FALSE;
+      char *ptr;
+
+      if (!*argument) {
+        mset_show_add_keywords_usage(ch);
+        return;
+      }
+
+      if (!GET_KEYWORDS(mob) || !*GET_KEYWORDS(mob)) {
+        send_to_char(ch, "NPC has no keywords to remove.\r\n");
+        return;
+      }
+
+      strlcpy(work, GET_KEYWORDS(mob), sizeof(work));
+      out[0] = '\0';
+      ptr = work;
+      while (*ptr) {
+        ptr = one_argument(ptr, word);
+        if (!*word)
+          break;
+        if (isname(word, argument)) {
+          changed = TRUE;
+          continue;
+        }
+        if (*out)
+          strlcat(out, " ", sizeof(out));
+        strlcat(out, word, sizeof(out));
+      }
+
+      if (!changed) {
+        send_to_char(ch, "No matching keywords found.\r\n");
+        return;
+      }
+
+      if (rnum != NOBODY) {
+        mset_update_proto_keywords(rnum, out);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &GET_KEYWORDS(mob), out, NULL);
+      }
+
+      send_to_char(ch, "Keywords updated.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "sdesc")) {
+      if (rnum != NOBODY) {
+        if (mob_proto[rnum].player.short_descr)
+          free(mob_proto[rnum].player.short_descr);
+        mob_proto[rnum].player.short_descr = strdup("");
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &GET_SDESC(mob), "", NULL);
+      }
+      send_to_char(ch, "Short description cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "ldesc")) {
+      if (rnum != NOBODY) {
+        if (mob_proto[rnum].player.long_descr)
+          free(mob_proto[rnum].player.long_descr);
+        mob_proto[rnum].player.long_descr = strdup("");
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &GET_LDESC(mob), "", NULL);
+      }
+      send_to_char(ch, "Long description cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "desc")) {
+      if (rnum != NOBODY) {
+        if (mob_proto[rnum].player.description)
+          free(mob_proto[rnum].player.description);
+        mob_proto[rnum].player.description = strdup("");
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &mob->player.description, "", NULL);
+      }
+      send_to_char(ch, "Main description cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "background")) {
+      if (rnum != NOBODY) {
+        if (mob_proto[rnum].player.background)
+          free(mob_proto[rnum].player.background);
+        mob_proto[rnum].player.background = strdup("");
+        mset_update_proto_strings(rnum);
+        mset_mark_mob_modified(vnum);
+      } else {
+        mset_replace_string(mob, &mob->player.background, "", NULL);
+      }
+      send_to_char(ch, "Background cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "attack")) {
+      mob->mob_specials.attack_type = 0;
+      if (rnum != NOBODY) {
+        mob_proto[rnum].mob_specials.attack_type = 0;
+        mset_mark_mob_modified(vnum);
+      }
+      send_to_char(ch, "Attack type cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "sex")) {
+      GET_SEX(mob) = SEX_NEUTRAL;
+      if (rnum != NOBODY) {
+        GET_SEX(&mob_proto[rnum]) = SEX_NEUTRAL;
+        mset_mark_mob_modified(vnum);
+      }
+      send_to_char(ch, "Sex cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "species")) {
+      GET_SPECIES(mob) = SPECIES_UNDEFINED;
+      if (rnum != NOBODY) {
+        GET_SPECIES(&mob_proto[rnum]) = SPECIES_UNDEFINED;
+        mset_mark_mob_modified(vnum);
+      }
+      send_to_char(ch, "Species cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "class")) {
+      GET_CLASS(mob) = CLASS_UNDEFINED;
+      if (rnum != NOBODY) {
+        GET_CLASS(&mob_proto[rnum]) = CLASS_UNDEFINED;
+        mset_mark_mob_modified(vnum);
+      }
+      send_to_char(ch, "Class cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "stat")) {
+      int stat;
+
+      if (!*argument) {
+        mset_show_add_stat_usage(ch);
+        return;
+      }
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        mset_show_add_stat_usage(ch);
+        return;
+      }
+
+      stat = mset_find_stat(arg3);
+      if (stat < 0) {
+        mset_show_add_stat_usage(ch);
+        return;
+      }
+
+      mset_set_stat_value(mob, stat, 10, TRUE);
+      if (rnum != NOBODY) {
+        mset_set_stat_value(&mob_proto[rnum], stat, 10, FALSE);
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Stat cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "save")) {
+      int stat;
+
+      if (!*argument) {
+        mset_show_add_save_usage(ch);
+        return;
+      }
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        mset_show_add_save_usage(ch);
+        return;
+      }
+
+      stat = mset_find_stat(arg3);
+      if (stat < 0) {
+        mset_show_add_save_usage(ch);
+        return;
+      }
+
+      GET_SAVE(mob, stat) = 10;
+      if (rnum != NOBODY) {
+        GET_SAVE(&mob_proto[rnum], stat) = 10;
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Save cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "skill")) {
+      char skillbuf[MAX_INPUT_LENGTH];
+      char *skillname;
+      int snum;
+
+      if (!*argument) {
+        mset_show_add_skill_usage(ch);
+        return;
+      }
+
+      strlcpy(skillbuf, argument, sizeof(skillbuf));
+      skillname = skillbuf;
+      skip_spaces(&skillname);
+      if (!*skillname) {
+        mset_show_add_skill_usage(ch);
+        return;
+      }
+
+      snum = find_skill_num(skillname);
+      if (snum <= 0 || snum >= MAX_SKILLS) {
+        send_to_char(ch, "Invalid skill.\r\n");
+        return;
+      }
+
+      mob->mob_specials.skills[snum] = 0;
+      if (rnum != NOBODY) {
+        mob_proto[rnum].mob_specials.skills[snum] = 0;
+        mset_mark_mob_modified(vnum);
+      }
+
+      send_to_char(ch, "Skill cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "flags")) {
+      bool any = FALSE;
+
+      if (!*argument) {
+        mset_show_del_flags_usage(ch);
+        return;
+      }
+
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg3);
+        if (!*arg3)
+          break;
+
+        flag = mset_find_mob_flag(arg3);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown mob flag: %s\r\n", arg3);
+          continue;
+        }
+        if (mset_illegal_mob_flag(flag)) {
+          send_to_char(ch, "Flag %s cannot be removed.\r\n", action_bits[flag]);
+          continue;
+        }
+
+        REMOVE_BIT_AR(MOB_FLAGS(mob), flag);
+        if (rnum != NOBODY)
+          REMOVE_BIT_AR(MOB_FLAGS(&mob_proto[rnum]), flag);
+        any = TRUE;
+      }
+
+      if (any) {
+        if (rnum != NOBODY)
+          mset_mark_mob_modified(vnum);
+        send_to_char(ch, "Mob flags updated.\r\n");
+      }
+      return;
+    }
+
+    if (is_abbrev(arg3, "affect")) {
+      bool any = FALSE;
+
+      if (!*argument) {
+        mset_show_del_affect_usage(ch);
+        return;
+      }
+
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg3);
+        if (!*arg3)
+          break;
+
+        flag = mset_find_affect_flag(arg3);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown affect: %s\r\n", arg3);
+          continue;
+        }
+
+        REMOVE_BIT_AR(AFF_FLAGS(mob), flag);
+        if (rnum != NOBODY)
+          REMOVE_BIT_AR(AFF_FLAGS(&mob_proto[rnum]), flag);
+        any = TRUE;
+      }
+
+      if (any) {
+        if (rnum != NOBODY)
+          mset_mark_mob_modified(vnum);
+        send_to_char(ch, "Affects updated.\r\n");
+      }
+      return;
+    }
+
+    if (is_abbrev(arg3, "skinning")) {
+      int skin_vnum;
+      struct skin_yield_entry *entry;
+      struct skin_yield_entry *prev = NULL;
+
+      if (!*argument) {
+        mset_show_add_skinning_usage(ch);
+        return;
+      }
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3 || !is_number(arg3)) {
+        mset_show_add_skinning_usage(ch);
+        return;
+      }
+
+      if (rnum == NOBODY) {
+        send_to_char(ch, "That NPC has no prototype to edit skinning yields.\r\n");
+        return;
+      }
+
+      skin_vnum = atoi(arg3);
+      entry = mob_index[rnum].skin_yields;
+      while (entry) {
+        if (entry->obj_vnum == skin_vnum)
+          break;
+        prev = entry;
+        entry = entry->next;
+      }
+
+      if (!entry) {
+        send_to_char(ch, "No skinning entry found for vnum %d.\r\n", skin_vnum);
+        return;
+      }
+
+      if (prev)
+        prev->next = entry->next;
+      else
+        mob_index[rnum].skin_yields = entry->next;
+      free(entry);
+      mset_mark_mob_modified(vnum);
+      send_to_char(ch, "Skinning entry removed.\r\n");
+      return;
+    }
+
+    mset_show_del_usage(ch);
+    return;
+  }
+
+  if (is_abbrev(arg1, "clear")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2 || *argument) {
+      mset_show_usage(ch);
+      return;
+    }
+
+    mob = mset_get_target_mob(ch, arg2);
+    if (!mob) {
+      send_to_char(ch, "Target an NPC in this room: mset clear <npc>\r\n");
+      return;
+    }
+
+    rnum = GET_MOB_RNUM(mob);
+    vnum = GET_MOB_VNUM(mob);
+    if (vnum == NOBODY) {
+      send_to_char(ch, "That NPC has no valid vnum.\r\n");
+      return;
+    }
+
+    if (!can_edit_zone(ch, real_zone_by_thing(vnum))) {
+      send_to_char(ch, "You do not have permission to modify that zone.\r\n");
+      return;
+    }
+
+    if (rnum != NOBODY) {
+      if (mob_proto[rnum].player.name)
+        free(mob_proto[rnum].player.name);
+      if (mob_proto[rnum].player.short_descr)
+        free(mob_proto[rnum].player.short_descr);
+      if (mob_proto[rnum].player.long_descr)
+        free(mob_proto[rnum].player.long_descr);
+      if (mob_proto[rnum].player.description)
+        free(mob_proto[rnum].player.description);
+      if (mob_proto[rnum].player.background)
+        free(mob_proto[rnum].player.background);
+
+      mob_proto[rnum].player.name = strdup("An unfinished NPC");
+      mob_proto[rnum].player.short_descr = strdup("the unfinished npc");
+      mob_proto[rnum].player.long_descr = strdup("An unfinished npc stands here.\r\n");
+      mob_proto[rnum].player.description = strdup("It looks unfinished.\r\n");
+      mob_proto[rnum].player.background = strdup("No background has been recorded.\r\n");
+
+      mob_proto[rnum].mob_specials.attack_type = 0;
+      GET_SEX(&mob_proto[rnum]) = SEX_NEUTRAL;
+      GET_CLASS(&mob_proto[rnum]) = CLASS_UNDEFINED;
+      GET_SPECIES(&mob_proto[rnum]) = SPECIES_UNDEFINED;
+
+      mset_set_stat_value(&mob_proto[rnum], ABIL_STR, 10, FALSE);
+      mset_set_stat_value(&mob_proto[rnum], ABIL_DEX, 10, FALSE);
+      mset_set_stat_value(&mob_proto[rnum], ABIL_CON, 10, FALSE);
+      mset_set_stat_value(&mob_proto[rnum], ABIL_INT, 10, FALSE);
+      mset_set_stat_value(&mob_proto[rnum], ABIL_WIS, 10, FALSE);
+      mset_set_stat_value(&mob_proto[rnum], ABIL_CHA, 10, FALSE);
+
+      for (int i = 0; i < NUM_ABILITIES; i++)
+        GET_SAVE(&mob_proto[rnum], i) = 10;
+      for (int i = 0; i < MAX_SKILLS; i++)
+        mob_proto[rnum].mob_specials.skills[i] = 0;
+
+      memset(MOB_FLAGS(&mob_proto[rnum]), 0, sizeof(mob_proto[rnum].char_specials.saved.act));
+      SET_BIT_AR(MOB_FLAGS(&mob_proto[rnum]), MOB_ISNPC);
+      memset(AFF_FLAGS(&mob_proto[rnum]), 0, sizeof(mob_proto[rnum].char_specials.saved.affected_by));
+
+      free_skin_yields(mob_index[rnum].skin_yields);
+      mob_index[rnum].skin_yields = NULL;
+
+      mset_update_proto_strings(rnum);
+      mset_update_proto_keywords(rnum, "unfinished npc");
+      mset_mark_mob_modified(vnum);
+    } else {
+      mset_replace_string(mob, &GET_NAME(mob), "An unfinished NPC", NULL);
+      mset_replace_string(mob, &GET_KEYWORDS(mob), "unfinished npc", NULL);
+      mset_replace_string(mob, &GET_SDESC(mob), "the unfinished npc", NULL);
+      mset_replace_string(mob, &GET_LDESC(mob), "An unfinished npc stands here.\r\n", NULL);
+      mset_replace_string(mob, &mob->player.description, "It looks unfinished.\r\n", NULL);
+      mset_replace_string(mob, &mob->player.background, "No background has been recorded.\r\n", NULL);
+
+      mob->mob_specials.attack_type = 0;
+      GET_SEX(mob) = SEX_NEUTRAL;
+      GET_CLASS(mob) = CLASS_UNDEFINED;
+      GET_SPECIES(mob) = SPECIES_UNDEFINED;
+
+      mset_set_stat_value(mob, ABIL_STR, 10, TRUE);
+      mset_set_stat_value(mob, ABIL_DEX, 10, TRUE);
+      mset_set_stat_value(mob, ABIL_CON, 10, TRUE);
+      mset_set_stat_value(mob, ABIL_INT, 10, TRUE);
+      mset_set_stat_value(mob, ABIL_WIS, 10, TRUE);
+      mset_set_stat_value(mob, ABIL_CHA, 10, TRUE);
+
+      for (int i = 0; i < NUM_ABILITIES; i++)
+        GET_SAVE(mob, i) = 10;
+      for (int i = 0; i < MAX_SKILLS; i++)
+        mob->mob_specials.skills[i] = 0;
+
+      memset(MOB_FLAGS(mob), 0, sizeof(mob->char_specials.saved.act));
+      SET_BIT_AR(MOB_FLAGS(mob), MOB_ISNPC);
+      memset(AFF_FLAGS(mob), 0, sizeof(mob->char_specials.saved.affected_by));
+    }
+
+    send_to_char(ch, "NPC cleared.\r\n");
+    return;
+  }
+
+  if (is_abbrev(arg1, "validate")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2 || *argument) {
+      mset_show_usage(ch);
+      return;
+    }
+
+    mob = mset_get_target_mob(ch, arg2);
+    if (!mob) {
+      send_to_char(ch, "Target an NPC in this room: mset validate <npc>\r\n");
+      return;
+    }
+
+    rnum = GET_MOB_RNUM(mob);
+    vnum = GET_MOB_VNUM(mob);
+    if (vnum == NOBODY) {
+      send_to_char(ch, "That NPC has no valid vnum.\r\n");
+      return;
+    }
+
+    if (!can_edit_zone(ch, real_zone_by_thing(vnum))) {
+      send_to_char(ch, "You do not have permission to modify that zone.\r\n");
+      return;
+    }
+
+    mset_validate_mob(ch, mob);
+    return;
+  }
+
+  mset_show_usage(ch);
 }
 
 static struct obj_data *find_obj_vnum_nearby(struct char_data *ch, obj_vnum vnum)

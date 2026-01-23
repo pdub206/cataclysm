@@ -67,6 +67,9 @@ Changes in v1.1.0-alpha:
 Changes in v1.2.0-alpha:
  * Replaced ASCII files in favor of TOML for ease of reading
 
+Changes in v1.3.0-alpha:
+ * Migration away from OLC with new command "mset" and for builders to update NPC's
+
 Features that will be implemented in the next few releases:
 
 * Height and weight normalized to species
