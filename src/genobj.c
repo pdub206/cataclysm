@@ -19,6 +19,7 @@
 #include "handler.h"
 #include "interpreter.h"
 #include "boards.h" /* for board_info */
+#include "toml_utils.h"
 
 
 /* local functions */
@@ -178,10 +179,7 @@ obj_rnum index_object(struct obj_data *obj, obj_vnum ovnum, obj_rnum ornum)
 
 int save_objects(zone_rnum zone_num)
 {
-  char filename[128], buf[MAX_STRING_LENGTH], buf2[MAX_STRING_LENGTH];
-  char ebuf1[MAX_STRING_LENGTH], ebuf2[MAX_STRING_LENGTH], ebuf3[MAX_STRING_LENGTH], ebuf4[MAX_STRING_LENGTH];
-  char wbuf1[MAX_STRING_LENGTH], wbuf2[MAX_STRING_LENGTH], wbuf3[MAX_STRING_LENGTH], wbuf4[MAX_STRING_LENGTH];
-  char pbuf1[MAX_STRING_LENGTH], pbuf2[MAX_STRING_LENGTH], pbuf3[MAX_STRING_LENGTH], pbuf4[MAX_STRING_LENGTH];
+  char filename[128], buf[MAX_STRING_LENGTH];
   int counter, counter2, realcounter;
   FILE *fp;
   struct obj_data *obj;
@@ -210,54 +208,33 @@ int save_objects(zone_rnum zone_num)
       } else
         *buf = '\0';
 
-      int n = snprintf(buf2, MAX_STRING_LENGTH,
-	      "#%d\n"
-	      "%s~\n"
-	      "%s~\n"
-	      "%s~\n"
-	      "%s~\n",
-
-	      GET_OBJ_VNUM(obj),
-	      (obj->name && *obj->name) ? obj->name : "undefined",
-	      (obj->short_description && *obj->short_description) ? obj->short_description : "undefined",
-	      (obj->description && *obj->description) ?	obj->description : "undefined",
-	      buf);
-        
-      if(n >= MAX_STRING_LENGTH) {
-        mudlog(BRF,LVL_BUILDER,TRUE,
-               "SYSERR: Could not save object #%d due to size (%d > maximum of %d).",
-               GET_OBJ_VNUM(obj), n, MAX_STRING_LENGTH);
-        continue;
+      fprintf(fp, "[[object]]\n");
+      fprintf(fp, "vnum = %d\n", GET_OBJ_VNUM(obj));
+      toml_write_kv_string(fp, "name", (obj->name && *obj->name) ? obj->name : "undefined");
+      toml_write_kv_string(fp, "short", (obj->short_description && *obj->short_description) ? obj->short_description : "undefined");
+      toml_write_kv_string(fp, "description", (obj->description && *obj->description) ? obj->description : "undefined");
+      toml_write_kv_string(fp, "main_description", buf);
+      fprintf(fp, "type = %d\n", GET_OBJ_TYPE(obj));
+      fprintf(fp, "extra_flags = [%d, %d, %d, %d]\n",
+              GET_OBJ_EXTRA(obj)[0], GET_OBJ_EXTRA(obj)[1],
+              GET_OBJ_EXTRA(obj)[2], GET_OBJ_EXTRA(obj)[3]);
+      fprintf(fp, "wear_flags = [%d, %d, %d, %d]\n",
+              GET_OBJ_WEAR(obj)[0], GET_OBJ_WEAR(obj)[1],
+              GET_OBJ_WEAR(obj)[2], GET_OBJ_WEAR(obj)[3]);
+      fprintf(fp, "affect_flags = [%d, %d, %d, %d]\n",
+              GET_OBJ_AFFECT(obj)[0], GET_OBJ_AFFECT(obj)[1],
+              GET_OBJ_AFFECT(obj)[2], GET_OBJ_AFFECT(obj)[3]);
+      fprintf(fp, "values = [");
+      for (counter2 = 0; counter2 < NUM_OBJ_VAL_POSITIONS; counter2++) {
+        if (counter2)
+          fputs(", ", fp);
+        fprintf(fp, "%d", GET_OBJ_VAL(obj, counter2));
       }
-      
-      fprintf(fp, "%s", convert_from_tabs(buf2));
-
-      sprintascii(ebuf1, GET_OBJ_EXTRA(obj)[0]);
-      sprintascii(ebuf2, GET_OBJ_EXTRA(obj)[1]);
-      sprintascii(ebuf3, GET_OBJ_EXTRA(obj)[2]);
-      sprintascii(ebuf4, GET_OBJ_EXTRA(obj)[3]);
-      sprintascii(wbuf1, GET_OBJ_WEAR(obj)[0]);
-      sprintascii(wbuf2, GET_OBJ_WEAR(obj)[1]);
-      sprintascii(wbuf3, GET_OBJ_WEAR(obj)[2]);
-      sprintascii(wbuf4, GET_OBJ_WEAR(obj)[3]);
-      sprintascii(pbuf1, GET_OBJ_AFFECT(obj)[0]);
-      sprintascii(pbuf2, GET_OBJ_AFFECT(obj)[1]);
-      sprintascii(pbuf3, GET_OBJ_AFFECT(obj)[2]);
-      sprintascii(pbuf4, GET_OBJ_AFFECT(obj)[3]);
-
-      fprintf(fp, "%d %s %s %s %s %s %s %s %s %s %s %s %s\n"
-          "%d %d %d %d\n"
-          "%d %d %d %d %d\n",
-
-	  GET_OBJ_TYPE(obj),
-          ebuf1, ebuf2, ebuf3, ebuf4,
-          wbuf1, wbuf2, wbuf3, wbuf4,
-          pbuf1, pbuf2, pbuf3, pbuf4,
-          GET_OBJ_VAL(obj, 0), GET_OBJ_VAL(obj, 1),
-          GET_OBJ_VAL(obj, 2), GET_OBJ_VAL(obj, 3),
-          GET_OBJ_WEIGHT(obj), GET_OBJ_COST(obj),
-          GET_OBJ_COST_PER_DAY(obj), GET_OBJ_LEVEL(obj), GET_OBJ_TIMER(obj)
-      );
+      fputs("]\n", fp);
+      fprintf(fp, "weight = %d\n", GET_OBJ_WEIGHT(obj));
+      fprintf(fp, "cost = %d\n", GET_OBJ_COST(obj));
+      fprintf(fp, "level = %d\n", GET_OBJ_LEVEL(obj));
+      fprintf(fp, "timer = %d\n", GET_OBJ_TIMER(obj));
 
       /* Do we have script(s) attached? */
       script_save_to_disk(fp, obj, OBJ_TRIGGER);
@@ -272,24 +249,25 @@ int save_objects(zone_rnum zone_num)
 	  }
 	  strncpy(buf, ex_desc->description, sizeof(buf) - 1);
 	  strip_cr(buf);
-	  fprintf(fp, "E\n"
-		  "%s~\n"
-		  "%s~\n", ex_desc->keyword, buf);
+	  fprintf(fp, "\n[[object.extra_desc]]\n");
+	  toml_write_kv_string(fp, "keyword", ex_desc->keyword);
+	  toml_write_kv_string(fp, "description", buf);
 	}
       }
       /* Do we have affects? */
-      for (counter2 = 0; counter2 < MAX_OBJ_AFFECT; counter2++)
-	if (obj->affected[counter2].modifier)
-	  fprintf(fp, "A\n"
-		  "%d %d\n", obj->affected[counter2].location,
-		  obj->affected[counter2].modifier);
+      for (counter2 = 0; counter2 < MAX_OBJ_AFFECT; counter2++) {
+	if (obj->affected[counter2].modifier) {
+	  fprintf(fp, "\n[[object.affect]]\n");
+	  fprintf(fp, "location = %d\n", obj->affected[counter2].location);
+	  fprintf(fp, "modifier = %d\n", obj->affected[counter2].modifier);
+	}
+      }
+      fputc('\n', fp);
     }
   }
 
-  /* Write the final line, close the file. */
-  fprintf(fp, "$~\n");
   fclose(fp);
-  snprintf(buf, sizeof(buf), "%s/%d.obj", OBJ_PREFIX, zone_table[zone_num].number);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", OBJ_PREFIX, zone_table[zone_num].number);
   remove(buf);
   rename(filename, buf);
 

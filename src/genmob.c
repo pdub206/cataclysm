@@ -17,6 +17,7 @@
 #include "genzon.h"
 #include "dg_olc.h"
 #include "spells.h"
+#include "toml_utils.h"
 
 /* local functions */
 static void extract_mobile_all(mob_vnum vnum);
@@ -312,10 +313,9 @@ int save_mobiles(zone_rnum rznum)
     if (write_mobile_record(i, &mob_proto[rmob], mobfd) < 0)
       log("SYSERR: GenOLC: Error writing mobile #%d.", i);
   }
-  fputs("$\n", mobfd);
   written = ftell(mobfd);
   fclose(mobfd);
-  snprintf(usedfname, sizeof(usedfname), "%s%d.mob", MOB_PREFIX, vznum);
+  snprintf(usedfname, sizeof(usedfname), "%s%d.toml", MOB_PREFIX, vznum);
   remove(usedfname);
   rename(mobfname, usedfname);
 
@@ -407,7 +407,6 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
   char ldesc[MAX_STRING_LENGTH];
   char ddesc[MAX_STRING_LENGTH];
   char bdesc[MAX_STRING_LENGTH];
-  char buf[MAX_STRING_LENGTH];
   int has_bdesc = 0;
 
   ldesc[MAX_STRING_LENGTH - 1] = '\0';
@@ -429,94 +428,71 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
   } else
     bdesc[0] = '\0';
 
-  int n;
-  if (has_bdesc) {
-    n = snprintf(buf, MAX_STRING_LENGTH,
-                 "#%d\n"
-                 "%s%c\n"
-                 "%s%c\n"
-                 "%s%c\n"
-                 "%s%c\n"
-                 "%s%c\n"
-                 "B\n"
-                 "%s%c\n",
-                 mvnum,
-                 GET_NAME(mob), STRING_TERMINATOR,
-                 GET_KEYWORDS(mob), STRING_TERMINATOR,
-                 GET_SDESC(mob), STRING_TERMINATOR,
-                 ldesc, STRING_TERMINATOR,
-                 ddesc, STRING_TERMINATOR,
-                 bdesc, STRING_TERMINATOR);
-  } else {
-    n = snprintf(buf, MAX_STRING_LENGTH,
-                 "#%d\n"
-                 "%s%c\n"
-                 "%s%c\n"
-                 "%s%c\n"
-                 "%s%c\n"
-                 "%s%c\n",
-                 mvnum,
-                 GET_NAME(mob), STRING_TERMINATOR,
-                 GET_KEYWORDS(mob), STRING_TERMINATOR,
-                 GET_SDESC(mob), STRING_TERMINATOR,
-                 ldesc, STRING_TERMINATOR,
-                 ddesc, STRING_TERMINATOR);
-  }
+  fprintf(fd, "[[mob]]\n");
+  fprintf(fd, "vnum = %d\n", mvnum);
+  toml_write_kv_string(fd, "name", GET_NAME(mob));
+  toml_write_kv_string(fd, "keywords", GET_KEYWORDS(mob));
+  toml_write_kv_string(fd, "short", GET_SDESC(mob));
+  toml_write_kv_string(fd, "long", ldesc);
+  toml_write_kv_string(fd, "description", ddesc);
+  if (has_bdesc)
+    toml_write_kv_string_opt(fd, "background", bdesc);
 
-  if (n >= MAX_STRING_LENGTH) {
-    mudlog(BRF, LVL_BUILDER, TRUE,
-           "SYSERR: Could not save mobile #%d due to size (%d > maximum of %d)",
-           mvnum, n, MAX_STRING_LENGTH);
-    return TRUE;
-  }
-
-  fprintf(fd, "%s", convert_from_tabs(buf));
-
-  /* --- FLAGS/AFFECT/ALIGN line --- */
-  fprintf(fd,
-          "%d %d %d %d %d %d %d %d %d E\n",
+  fprintf(fd, "flags = [%d, %d, %d, %d]\n",
           MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
-          MOB_FLAGS(mob)[2], MOB_FLAGS(mob)[3],
+          MOB_FLAGS(mob)[2], MOB_FLAGS(mob)[3]);
+  fprintf(fd, "aff_flags = [%d, %d, %d, %d]\n",
           AFF_FLAGS(mob)[0], AFF_FLAGS(mob)[1],
-          AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3],
-          GET_ALIGNMENT(mob));
+          AFF_FLAGS(mob)[2], AFF_FLAGS(mob)[3]);
+  fprintf(fd, "alignment = %d\n", GET_ALIGNMENT(mob));
+  toml_write_kv_string(fd, "mob_type", "enhanced");
 
-  /* --- Level, hitdice, mana, move --- */
-  fprintf(fd, "%d %dd%d+%d\n",
-          GET_LEVEL(mob),
-          GET_HIT(mob),
-          GET_MANA(mob),
-          GET_STAMINA(mob));
+  fprintf(fd, "\n[mob.simple]\n");
+  fprintf(fd, "level = %d\n", GET_LEVEL(mob));
+  fprintf(fd, "hit_dice = %d\n", GET_HIT(mob));
+  fprintf(fd, "mana_dice = %d\n", GET_MANA(mob));
+  fprintf(fd, "stamina_dice = %d\n", GET_STAMINA(mob));
+  fprintf(fd, "pos = %d\n", GET_POS(mob));
+  fprintf(fd, "default_pos = %d\n", GET_DEFAULT_POS(mob));
+  fprintf(fd, "sex = %d\n", GET_SEX(mob));
 
-  /* --- Position / default position / sex --- */
-  fprintf(fd, "%d %d %d\n",
-          GET_POS(mob),
-          GET_DEFAULT_POS(mob),
-          GET_SEX(mob));
+  fprintf(fd, "\n[mob.enhanced]\n");
+  fprintf(fd, "class = %d\n", GET_CLASS(mob));
+  fprintf(fd, "species = %d\n", GET_SPECIES(mob));
+  fprintf(fd, "age = %d\n", GET_ROLEPLAY_AGE(mob));
+  fprintf(fd, "attack_type = %d\n", mob->mob_specials.attack_type);
 
-  /* --- Enhanced (E-spec + Skills) --- */
-  if (write_mobile_espec(mvnum, mob, fd) < 0)
-    log("SYSERR: GenOLC: Error writing E-specs for mobile #%d.", mvnum);
+  fprintf(fd, "\n[mob.enhanced.abilities]\n");
+  fprintf(fd, "str = %d\n", GET_STR(mob));
+  fprintf(fd, "dex = %d\n", GET_DEX(mob));
+  fprintf(fd, "con = %d\n", GET_CON(mob));
+  fprintf(fd, "int = %d\n", GET_INT(mob));
+  fprintf(fd, "wis = %d\n", GET_WIS(mob));
+  fprintf(fd, "cha = %d\n", GET_CHA(mob));
+
+  fprintf(fd, "\n[mob.enhanced.saving_throws]\n");
+  fprintf(fd, "str = %d\n", GET_SAVE(mob, ABIL_STR));
+  fprintf(fd, "dex = %d\n", GET_SAVE(mob, ABIL_DEX));
+  fprintf(fd, "con = %d\n", GET_SAVE(mob, ABIL_CON));
+  fprintf(fd, "int = %d\n", GET_SAVE(mob, ABIL_INT));
+  fprintf(fd, "wis = %d\n", GET_SAVE(mob, ABIL_WIS));
+  fprintf(fd, "cha = %d\n", GET_SAVE(mob, ABIL_CHA));
 
   /* Write NPC skills (if any set) */
   for (int s = 0; s < MAX_SKILLS; s++) {
-    if (mob->mob_specials.skills[s] > 0)
-      fprintf(fd, "Skill %d %d\n", s, mob->mob_specials.skills[s]);
+    if (mob->mob_specials.skills[s] > 0) {
+      fprintf(fd, "\n[[mob.enhanced.skills]]\n");
+      fprintf(fd, "id = %d\n", s);
+      fprintf(fd, "level = %d\n", mob->mob_specials.skills[s]);
+    }
   }
 
-  /* Write attack type (if set) */
-  if (mob->mob_specials.attack_type > 0)
-    fprintf(fd, "AtkT %d\n", mob->mob_specials.attack_type);
-
-  /* Single proper terminator */
-  fprintf(fd, "E\n");
-
-  /* --- Loadout lines --- */
+  /* --- Loadout entries --- */
   for (struct mob_loadout *e = mob->proto_loadout; e; e = e->next) {
-    fprintf(fd, "L %d %d %d\n",
-            (int)e->wear_pos,
-            (int)e->vnum,
-            MAX(1, e->quantity));
+    fprintf(fd, "\n[[mob.loadout]]\n");
+    fprintf(fd, "wear_pos = %d\n", (int)e->wear_pos);
+    fprintf(fd, "vnum = %d\n", (int)e->vnum);
+    fprintf(fd, "quantity = %d\n", MAX(1, e->quantity));
   }
 
   /* --- DG Scripts --- */
@@ -528,10 +504,11 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
     struct skin_yield_entry *sy;
 
     if (rmob != NOBODY && mob_index[rmob].skin_yields) {
-      fprintf(fd, "Y\n");
-      for (sy = mob_index[rmob].skin_yields; sy; sy = sy->next)
-        fprintf(fd, "%d %d\n", sy->obj_vnum, sy->dc);
-      fprintf(fd, "0 0\n");
+      for (sy = mob_index[rmob].skin_yields; sy; sy = sy->next) {
+        fprintf(fd, "\n[[mob.skin_yield]]\n");
+        fprintf(fd, "obj_vnum = %d\n", sy->obj_vnum);
+        fprintf(fd, "dc = %d\n", sy->dc);
+      }
     }
   }
 
@@ -540,6 +517,7 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
     log("SYSERR: GenOLC: Error writing MobProgs for mobile #%d.", mvnum);
 #endif
 
+  fputc('\n', fd);
   return TRUE;
 }
 

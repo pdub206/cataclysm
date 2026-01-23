@@ -48,7 +48,7 @@ static int House_get_filename(room_vnum vnum, char *filename, size_t maxlen)
   if (vnum == NOWHERE)
     return (0);
 
-  snprintf(filename, maxlen, LIB_HOUSE"%d.house", vnum);
+  snprintf(filename, maxlen, LIB_HOUSE"%d.house.toml", vnum);
   return (1);
 }
 
@@ -709,8 +709,6 @@ static int ascii_convert_house(struct char_data *ch, obj_vnum vnum)
       j++;
     }
   }
-
-	fprintf(out, "$~\n");
 
 	fclose(in);
 	fclose(out);

@@ -1,0 +1,12 @@
+[[zone]]
+vnum = 1
+builders = "City of Caleran"
+name = "Kinther"
+bot = 100
+top = 999
+lifespan = 30
+reset_mode = 2
+flags = [0, 0, 0, 0]
+min_level = -1
+max_level = -1
+

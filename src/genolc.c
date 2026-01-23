@@ -313,7 +313,7 @@ ACMD(do_export_zone)
 #else /* all other configurations */
   zone_rnum zrnum; 
   zone_vnum zvnum; 
-  char sysbuf[MAX_INPUT_LENGTH]; 
+  char sysbuf[MAX_STRING_LENGTH]; 
   char zone_name[READ_SIZE], fixed_file_name[READ_SIZE];
   int success, errorcode = 0;
 
@@ -384,7 +384,7 @@ ACMD(do_export_zone)
 
 
   /* Tar the new copy. */ 
-  snprintf(sysbuf, sizeof(sysbuf), "tar -cf %s%s.tar %sqq.info %sqq.wld %sqq.zon %sqq.mob %sqq.obj %sqq.trg %sqq.shp", path, fixed_file_name, path, path, path, path, path, path, path);
+  snprintf(sysbuf, sizeof(sysbuf), "tar -cf %s%s.tar %sqq.info %sqq.wld.toml %sqq.zon.toml %sqq.mob.toml %sqq.obj.toml %sqq.trg.toml %sqq.shp.toml %sqq.qst.toml", path, fixed_file_name, path, path, path, path, path, path, path, path);
   errorcode = system(sysbuf);
   if (errorcode) {
     send_to_char(ch, "Failed to tar files.\r\n");
@@ -425,8 +425,8 @@ static int export_info_file(zone_rnum zrnum)
   fprintf(info_file, "Implementation:\n");
   fprintf(info_file, "1. All the files have been QQ'ed. This means all occurences of the zone number\n");
   fprintf(info_file, "   have been changed to QQ. In other words, if you decide to have this zone as\n");
-  fprintf(info_file, "   zone 123, replace all occurences of QQ with 123 and rename the qq.zon file\n");
-  fprintf(info_file, "   to 123.zon (etc.). And of course add 123.zon to the respective index file.\n");
+  fprintf(info_file, "   zone 123, replace all occurences of QQ with 123 and rename the qq.wld.toml file\n");
+  fprintf(info_file, "   to 123.toml (etc.). And of course add 123.toml to the respective index file.\n");
   if (zone_exits) {
     fprintf(info_file, "2. Exits out of this zone have been ZZ'd. So all doors leading out have ZZ??\n");
     fprintf(info_file, "   instead of the room vnum (?? are numbers 00 - 99).\n");
@@ -481,7 +481,7 @@ static int export_save_shops(zone_rnum zrnum)
   FILE *shop_file;
   struct shop_data *shop;
 
-  if (!(shop_file = fopen("world/export/qq.shp", "w"))) {
+  if (!(shop_file = fopen("world/export/qq.shp.toml", "w"))) {
     mudlog(BRF, LVL_GOD, TRUE, "SYSERR: export_save_shops : Cannot open shop file!");
     return FALSE;
   } else if (fprintf(shop_file, "CircleMUD v3.0 Shop File~\n") < 0) {
@@ -571,7 +571,7 @@ static int export_save_mobiles(zone_rnum rznum)
   mob_vnum i;
   mob_rnum rmob;
 
-  if (!(mob_file = fopen("world/export/qq.mob", "w"))) {
+  if (!(mob_file = fopen("world/export/qq.mob.toml", "w"))) {
     mudlog(BRF, LVL_GOD, TRUE, "SYSERR: export_save_mobiles : Cannot open file!");
     return FALSE;
   }
@@ -648,7 +648,7 @@ static int export_save_zone(zone_rnum zrnum)
   int subcmd;
   FILE *zone_file;
 
-  if (!(zone_file = fopen("world/export/qq.zon", "w"))) {
+  if (!(zone_file = fopen("world/export/qq.zon.toml", "w"))) {
     mudlog(BRF, LVL_GOD, TRUE, "SYSERR: export_save_zone : Cannot open file!");
     return FALSE;
   }
@@ -783,7 +783,7 @@ static int export_save_objects(zone_rnum zrnum)
   struct obj_data *obj;
   struct extra_descr_data *ex_desc;
 
-  if (!(obj_file = fopen("world/export/qq.obj", "w"))) {
+  if (!(obj_file = fopen("world/export/qq.obj.toml", "w"))) {
     mudlog(BRF, LVL_GOD, TRUE, "SYSERR: export_save_objects : Cannot open file!");
     return FALSE;
   }
@@ -889,7 +889,7 @@ static int export_save_rooms(zone_rnum zrnum)
   char buf[MAX_STRING_LENGTH];
   char buf1[MAX_STRING_LENGTH];
 
-  if (!(room_file = fopen("world/export/qq.wld", "w"))) {
+  if (!(room_file = fopen("world/export/qq.wld.toml", "w"))) {
     mudlog(BRF, LVL_GOD, TRUE, "SYSERR: export_save_rooms : Cannot open file!");
     return FALSE;
   }
@@ -1028,7 +1028,7 @@ static int export_save_triggers(zone_rnum zrnum)
   FILE *trig_file;
   char bitBuf[MAX_INPUT_LENGTH];
 
-  if (!(trig_file = fopen("world/export/qq.trg", "w"))) {
+  if (!(trig_file = fopen("world/export/qq.trg.toml", "w"))) {
     mudlog(BRF, LVL_GOD, TRUE, "SYSERR: export_save_triggers : Cannot open file!");
     return FALSE;
   }

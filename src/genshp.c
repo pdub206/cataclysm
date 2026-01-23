@@ -14,6 +14,7 @@
 #include "genolc.h"
 #include "genshp.h"
 #include "genzon.h"
+#include "toml_utils.h"
 
 /* NOTE (gg): Didn't modify sedit much. Don't consider it as 'recent' as the
  * other editors with regard to updates or style. */
@@ -345,7 +346,7 @@ int save_shops(zone_rnum zone_num)
 {
   int i, j, rshop, num_shops = 0;
   FILE *shop_file;
-  char fname[128], oldname[128], buf[MAX_STRING_LENGTH];
+  char fname[128], oldname[128];
   struct shop_data *shop;
 
 #if CIRCLE_UNSIGNED_INDEX
@@ -361,77 +362,68 @@ int save_shops(zone_rnum zone_num)
   if (!(shop_file = fopen(fname, "w"))) {
     mudlog(BRF, LVL_GOD, TRUE, "SYSERR: OLC: Cannot open shop file!");
     return FALSE;
-  } else if (fprintf(shop_file, "CircleMUD v3.0 Shop File~\n") < 0) {
-    mudlog(BRF, LVL_GOD, TRUE, "SYSERR: OLC: Cannot write to shop file!");
-    fclose(shop_file);
-    return FALSE;
   }
   /* Search database for shops in this zone. */
   for (i = genolc_zone_bottom(zone_num); i <= zone_table[zone_num].top; i++) {
     if ((rshop = real_shop(i)) != NOWHERE) {
-      fprintf(shop_file, "#%d~\n", i);
       shop = shop_index + rshop;
 
-      /* Save the products. */
-      for (j = 0; S_PRODUCT(shop, j) != NOTHING; j++)
-	fprintf(shop_file, "%d\n", obj_index[S_PRODUCT(shop, j)].vnum);
-      fprintf(shop_file, "-1\n");
+      fprintf(shop_file, "[[shop]]\n");
+      fprintf(shop_file, "vnum = %d\n", i);
 
-      /* Save the rates. */
-      fprintf(shop_file, "%1.2f\n"
-                         "%1.2f\n",
-                         S_BUYPROFIT(shop),
-                         S_SELLPROFIT(shop));
+      fprintf(shop_file, "products = [");
+      for (j = 0; S_PRODUCT(shop, j) != NOTHING; j++) {
+        if (j)
+          fputs(", ", shop_file);
+        fprintf(shop_file, "%d", obj_index[S_PRODUCT(shop, j)].vnum);
+      }
+      fputs("]\n", shop_file);
 
-      /* Save the buy types and namelists. */
-      for (j = 0;S_BUYTYPE(shop, j) != NOTHING; j++)
-        fprintf(shop_file, "%d%s\n",
-                S_BUYTYPE(shop, j),
-		S_BUYWORD(shop, j) ? S_BUYWORD(shop, j) : "");
-      fprintf(shop_file, "-1\n");
+      fprintf(shop_file, "buy_profit = %1.2f\n", S_BUYPROFIT(shop));
+      fprintf(shop_file, "sell_profit = %1.2f\n", S_SELLPROFIT(shop));
 
-      /* Save messages. Added some defaults as sanity checks. */
-      sprintf(buf,
-	      "%s~\n"
-	      "%s~\n"
-	      "%s~\n"
-	      "%s~\n"
-	      "%s~\n"
-	      "%s~\n"
-	      "%s~\n"
-	      "%d\n"
-	      "%ld\n"
-	      "%d\n"
-	      "%d\n",
-	      S_NOITEM1(shop) ? S_NOITEM1(shop) : "%s Ke?!",
-	      S_NOITEM2(shop) ? S_NOITEM2(shop) : "%s Ke?!",
-	      S_NOBUY(shop) ? S_NOBUY(shop) : "%s Ke?!",
-	      S_NOCASH1(shop) ? S_NOCASH1(shop) : "%s Ke?!",
-	      S_NOCASH2(shop) ? S_NOCASH2(shop) : "%s Ke?!",
-	      S_BUY(shop) ? S_BUY(shop) : "%s Ke?! %d?",
-	      S_SELL(shop) ? S_SELL(shop) : "%s Ke?! %d?",
-	      S_BROKE_TEMPER(shop),
-	      S_BITVECTOR(shop),
-	      S_KEEPER(shop) == NOBODY ? -1 : mob_index[S_KEEPER(shop)].vnum,
-	      S_NOTRADE(shop)
-	      );
-        
-        fputs(convert_from_tabs(buf), shop_file);
+      for (j = 0; S_BUYTYPE(shop, j) != NOTHING; j++) {
+        fprintf(shop_file, "\n[[shop.buy_type]]\n");
+        fprintf(shop_file, "type = %d\n", S_BUYTYPE(shop, j));
+        toml_write_kv_string_opt(shop_file, "keyword", S_BUYWORD(shop, j));
+      }
 
-      /* Save the rooms. */
-      for (j = 0;S_ROOM(shop, j) != NOWHERE; j++)
-        fprintf(shop_file, "%d\n", S_ROOM(shop, j));
-      fprintf(shop_file, "-1\n");
+      fprintf(shop_file, "\n[shop.messages]\n");
+      toml_write_kv_string(shop_file, "no_such_item1", S_NOITEM1(shop) ? S_NOITEM1(shop) : "");
+      toml_write_kv_string(shop_file, "no_such_item2", S_NOITEM2(shop) ? S_NOITEM2(shop) : "");
+      toml_write_kv_string(shop_file, "do_not_buy", S_NOBUY(shop) ? S_NOBUY(shop) : "");
+      toml_write_kv_string(shop_file, "missing_cash1", S_NOCASH1(shop) ? S_NOCASH1(shop) : "");
+      toml_write_kv_string(shop_file, "missing_cash2", S_NOCASH2(shop) ? S_NOCASH2(shop) : "");
+      toml_write_kv_string(shop_file, "message_buy", S_BUY(shop) ? S_BUY(shop) : "");
+      toml_write_kv_string(shop_file, "message_sell", S_SELL(shop) ? S_SELL(shop) : "");
 
-      /* Save open/closing times. */
-      fprintf(shop_file, "%d\n%d\n%d\n%d\n", S_OPEN1(shop), S_CLOSE1(shop),
-          S_OPEN2(shop), S_CLOSE2(shop));
+      fprintf(shop_file, "broke_temper = %d\n", S_BROKE_TEMPER(shop));
+      fprintf(shop_file, "bitvector = %ld\n", S_BITVECTOR(shop));
+      fprintf(shop_file, "keeper = %d\n",
+              S_KEEPER(shop) == NOBODY ? -1 : mob_index[S_KEEPER(shop)].vnum);
+      fprintf(shop_file, "trade_with = %d\n", S_NOTRADE(shop));
+
+      fprintf(shop_file, "rooms = [");
+      for (j = 0; S_ROOM(shop, j) != NOWHERE; j++) {
+        if (j)
+          fputs(", ", shop_file);
+        fprintf(shop_file, "%d", S_ROOM(shop, j));
+      }
+      fputs("]\n", shop_file);
+
+      fprintf(shop_file, "open1 = %d\n", S_OPEN1(shop));
+      fprintf(shop_file, "close1 = %d\n", S_CLOSE1(shop));
+      fprintf(shop_file, "open2 = %d\n", S_OPEN2(shop));
+      fprintf(shop_file, "close2 = %d\n", S_CLOSE2(shop));
+      fprintf(shop_file, "bank = %d\n", S_BANK(shop));
+      fprintf(shop_file, "sort = %d\n", S_SORT(shop));
+
+      fputc('\n', shop_file);
       num_shops++;
     }
   }
-  fprintf(shop_file, "$~\n");
   fclose(shop_file);
-  snprintf(oldname, sizeof(oldname), "%s/%d.shp", SHP_PREFIX, zone_table[zone_num].number);
+  snprintf(oldname, sizeof(oldname), "%s/%d.toml", SHP_PREFIX, zone_table[zone_num].number);
   remove(oldname);
   rename(fname, oldname);
 

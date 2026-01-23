@@ -11,6 +11,8 @@
 #include "utils.h"
 #include "db.h"
 #include "genolc.h"
+#include "toml.h"
+#include "toml_utils.h"
 #include "genzon.h"
 #include "dg_scripts.h"
 
@@ -89,7 +91,7 @@ zone_rnum create_new_zone(zone_vnum vzone_num, room_vnum bottom, room_vnum top, 
      }
 
   /* Create the zone file. */
-  snprintf(buf, sizeof(buf), "%s/%d.zon", ZON_PREFIX, vzone_num);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", ZON_PREFIX, vzone_num);
   if (!(fp = fopen(buf, "w"))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new zone file.");
     *error = "Could not write zone file.\r\n";
@@ -99,7 +101,7 @@ zone_rnum create_new_zone(zone_vnum vzone_num, room_vnum bottom, room_vnum top, 
   fclose(fp);
 
   /* Create the room file. */
-  snprintf(buf, sizeof(buf), "%s/%d.wld", WLD_PREFIX, vzone_num);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", WLD_PREFIX, vzone_num);
   if (!(fp = fopen(buf, "w"))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new world file.");
     *error = "Could not write world file.\r\n";
@@ -109,7 +111,7 @@ zone_rnum create_new_zone(zone_vnum vzone_num, room_vnum bottom, room_vnum top, 
   fclose(fp);
 
   /* Create the mobile file. */
-  snprintf(buf, sizeof(buf), "%s/%d.mob", MOB_PREFIX, vzone_num);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", MOB_PREFIX, vzone_num);
   if (!(fp = fopen(buf, "w"))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new mob file.");
     *error = "Could not write mobile file.\r\n";
@@ -119,7 +121,7 @@ zone_rnum create_new_zone(zone_vnum vzone_num, room_vnum bottom, room_vnum top, 
   fclose(fp);
 
   /* Create the object file. */
-  snprintf(buf, sizeof(buf), "%s/%d.obj", OBJ_PREFIX, vzone_num);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", OBJ_PREFIX, vzone_num);
   if (!(fp = fopen(buf, "w"))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new obj file.");
     *error = "Could not write object file.\r\n";
@@ -129,7 +131,7 @@ zone_rnum create_new_zone(zone_vnum vzone_num, room_vnum bottom, room_vnum top, 
   fclose(fp);
 
   /* Create the shop file. */
-  snprintf(buf, sizeof(buf), "%s/%d.shp", SHP_PREFIX, vzone_num);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", SHP_PREFIX, vzone_num);
   if (!(fp = fopen(buf, "w"))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new shop file.");
     *error = "Could not write shop file.\r\n";
@@ -139,7 +141,7 @@ zone_rnum create_new_zone(zone_vnum vzone_num, room_vnum bottom, room_vnum top, 
   fclose(fp);
 
   /* Create the quests file */
-  snprintf(buf, sizeof(buf), "%s/%d.qst", QST_PREFIX, vzone_num);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", QST_PREFIX, vzone_num);
   if (!(fp = fopen(buf, "w"))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new quest file");
     *error = "Could not write quest file.\r\n";
@@ -149,7 +151,7 @@ zone_rnum create_new_zone(zone_vnum vzone_num, room_vnum bottom, room_vnum top, 
   fclose(fp);
 
   /* Create the trigger file. */
-  snprintf(buf, sizeof(buf), "%s/%d.trg", TRG_PREFIX, vzone_num);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", TRG_PREFIX, vzone_num);
   if (!(fp = fopen(buf, "w"))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Can't write new trigger file");
     *error = "Could not write trigger file.\r\n";
@@ -219,9 +221,12 @@ void create_world_index(int znum, const char *type)
 {
   FILE *newfile, *oldfile;
   char new_name[32], old_name[32], *prefix;
-  int num, found = FALSE;
-  char buf[MAX_STRING_LENGTH];
-  char buf1[MAX_STRING_LENGTH];
+  char **files = NULL;
+  char errbuf[256];
+  char file_name[32];
+  toml_table_t *tab = NULL;
+  toml_array_t *arr = NULL;
+  int i, num, count, insert_at;
 
   switch (*type) {
   case 'z':
@@ -250,44 +255,98 @@ void create_world_index(int znum, const char *type)
     return;
   }
 
-  snprintf(old_name, sizeof(old_name), "%s/index", prefix);
-  snprintf(new_name, sizeof(new_name), "%s/newindex", prefix);
+  snprintf(old_name, sizeof(old_name), "%s/index.toml", prefix);
+  snprintf(new_name, sizeof(new_name), "%s/newindex.toml", prefix);
+  snprintf(file_name, sizeof(file_name), "%d.toml", znum);
 
   if (!(oldfile = fopen(old_name, "r"))) {
     mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Failed to open %s.", old_name);
     return;
-  } else if (!(newfile = fopen(new_name, "w"))) {
-    mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Failed to open %s.", new_name);
-    fclose(oldfile);
+  }
+
+  tab = toml_parse_file(oldfile, errbuf, sizeof(errbuf));
+  fclose(oldfile);
+  if (!tab) {
+    mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Failed to parse %s: %s.", old_name, errbuf);
     return;
   }
 
-  /* Index contents must be in order: search through the old file for the right
-   * place, insert the new file, then copy the rest over. */
-  snprintf(buf1, sizeof(buf1), "%d.%s", znum, type);
-  while (get_line(oldfile, buf)) {
-    if (*buf == '$') {
-      /* The following used to add a blank line, thanks to Brian Taylor for the fix. */
-      fprintf(newfile, "%s", (!found ? strncat(buf1, "\n$\n", sizeof(buf1) - strlen(buf1) - 1) : "$\n"));
-      break;
-    } else if (!found) {
-      sscanf(buf, "%d", &num);
-      if (num > znum) {
-	found = TRUE;
-	fprintf(newfile, "%s\n", buf1);
-      } else if (num == znum) {
-        /* index file already had an entry for this zone. */
-        fclose(oldfile);
-        fclose(newfile);
-        remove(new_name);
-        return;
-      }
-    }
-    fprintf(newfile, "%s\n", buf);
+  arr = toml_array_in(tab, "files");
+  if (!arr) {
+    mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: %s missing 'files' array.", old_name);
+    toml_free(tab);
+    return;
   }
 
+  count = toml_array_nelem(arr);
+  CREATE(files, char *, count + 1);
+  for (i = 0; i < count; i++) {
+    toml_datum_t d = toml_string_at(arr, i);
+    if (!d.ok) {
+      mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: %s has invalid 'files' entry at %d.", old_name, i);
+      toml_free(tab);
+      while (i-- > 0)
+        free(files[i]);
+      free(files);
+      return;
+    }
+    files[i] = d.u.s;
+  }
+
+  for (i = 0; i < count; i++) {
+    if (!strcmp(files[i], file_name)) {
+      toml_free(tab);
+      for (i = 0; i < count; i++)
+        free(files[i]);
+      free(files);
+      return;
+    }
+    if (sscanf(files[i], "%d", &num) == 1 && num == znum) {
+      toml_free(tab);
+      for (i = 0; i < count; i++)
+        free(files[i]);
+      free(files);
+      return;
+    }
+  }
+
+  insert_at = count;
+  for (i = 0; i < count; i++) {
+    if (sscanf(files[i], "%d", &num) == 1 && num > znum) {
+      insert_at = i;
+      break;
+    }
+  }
+
+  RECREATE(files, char *, count + 2);
+  if (insert_at < count)
+    memmove(&files[insert_at + 1], &files[insert_at], sizeof(char *) * (count - insert_at));
+  files[insert_at] = strdup(file_name);
+  count++;
+
+  if (!(newfile = fopen(new_name, "w"))) {
+    mudlog(BRF, LVL_IMPL, TRUE, "SYSERR: OLC: Failed to open %s.", new_name);
+    toml_free(tab);
+    for (i = 0; i < count; i++)
+      free(files[i]);
+    free(files);
+    return;
+  }
+
+  fprintf(newfile, "files = [\n");
+  for (i = 0; i < count; i++) {
+    fprintf(newfile, "  ");
+    toml_write_string(newfile, files[i]);
+    fprintf(newfile, "%s\n", (i + 1 < count) ? "," : "");
+  }
+  fprintf(newfile, "]\n");
+
   fclose(newfile);
-  fclose(oldfile);
+  toml_free(tab);
+  for (i = 0; i < count; i++)
+    free(files[i]);
+  free(files);
+
   /* Out with the old, in with the new. */
   remove(old_name);
   rename(new_name, old_name);
@@ -326,12 +385,9 @@ void remove_room_zone_commands(zone_rnum zone, room_rnum room_num)
  * field is also there. */
 int save_zone(zone_rnum zone_num)
 {
-  int subcmd, arg1 = -1, arg2 = -1, arg3 = -1, flag_tot=0, i;
+  int subcmd, arg1 = -1, arg2 = -1, arg3 = -1;
   char fname[128], oldname[128];
-  const char *comment = NULL;
   FILE *zfile;
-  char zbuf1[MAX_STRING_LENGTH], zbuf2[MAX_STRING_LENGTH];
-  char zbuf3[MAX_STRING_LENGTH], zbuf4[MAX_STRING_LENGTH];
 
 #if CIRCLE_UNSIGNED_INDEX
   if (zone_num == NOWHERE || zone_num > top_of_zone_table) {
@@ -348,67 +404,25 @@ int save_zone(zone_rnum zone_num)
     return FALSE;
   }
 
-  for (i=0; i<ZN_ARRAY_MAX; i++)
-    flag_tot += zone_table[zone_num].zone_flags[(i)];
-
-  /* If zone flags or levels aren't set, there is no reason to save them! */
-  if (flag_tot == 0 && zone_table[zone_num].min_level == -1 && zone_table[zone_num].max_level == -1)
-  {
-    /* Print zone header to file. */
-    fprintf(zfile, "#%d\n"
-                   "%s~\n"
-                   "%s~\n"
-                   "%d %d %d %d\n",
-           zone_table[zone_num].number,
-          (zone_table[zone_num].builders && *zone_table[zone_num].builders)
-                ? zone_table[zone_num].builders : "None.",
-          (zone_table[zone_num].name && *zone_table[zone_num].name)
-                ? convert_from_tabs(zone_table[zone_num].name) : "undefined",
-          genolc_zone_bottom(zone_num),
-          zone_table[zone_num].top,
-          zone_table[zone_num].lifespan,
-          zone_table[zone_num].reset_mode
-          );
-  } else {
-    sprintascii(zbuf1, zone_table[zone_num].zone_flags[0]);
-    sprintascii(zbuf2, zone_table[zone_num].zone_flags[1]);
-    sprintascii(zbuf3, zone_table[zone_num].zone_flags[2]);
-    sprintascii(zbuf4, zone_table[zone_num].zone_flags[3]);
-
-    /* Print zone header to file. */
-    fprintf(zfile, "#%d\n"
-                   "%s~\n"
-                   "%s~\n"
-                   "%d %d %d %d %s %s %s %s %d %d\n",       /* New tbaMUD data line */
-           zone_table[zone_num].number,
-          (zone_table[zone_num].builders && *zone_table[zone_num].builders)
-                ? zone_table[zone_num].builders : "None.",
-          (zone_table[zone_num].name && *zone_table[zone_num].name)
-                ? convert_from_tabs(zone_table[zone_num].name) : "undefined",
-          genolc_zone_bottom(zone_num),
-          zone_table[zone_num].top,
-          zone_table[zone_num].lifespan,
-          zone_table[zone_num].reset_mode,
-          zbuf1, zbuf2, zbuf3, zbuf4,
-          zone_table[zone_num].min_level,
-          zone_table[zone_num].max_level
-          );
-  }
-
-	/* Handy Quick Reference Chart for Zone Values.
-	 *
-	 * Field #1    Field #3   Field #4  Field #5
-	 * -------------------------------------------------
-	 * M (Mobile)  Mob-Vnum   Wld-Max   Room-Vnum
-	 * O (Object)  Obj-Vnum   Wld-Max   Room-Vnum
-	 * G (Give)    Obj-Vnum   Wld-Max   Unused
-	 * E (Equip)   Obj-Vnum   Wld-Max   EQ-Position
-	 * P (Put)     Obj-Vnum   Wld-Max   Target-Obj-Vnum
-	 * D (Door)    Room-Vnum  Door-Dir  Door-State
-	 * R (Remove)  Room-Vnum  Obj-Vnum  Unused
-         * T (Trigger) Trig-type  Trig-Vnum Room-Vnum
-         * V (var)     Trig-type  Context   Room-Vnum Varname Value
-	 * ------------------------------------------------- */
+  fprintf(zfile, "[[zone]]\n");
+  fprintf(zfile, "vnum = %d\n", zone_table[zone_num].number);
+  toml_write_kv_string(zfile, "builders",
+                       (zone_table[zone_num].builders && *zone_table[zone_num].builders)
+                         ? zone_table[zone_num].builders : "None.");
+  toml_write_kv_string(zfile, "name",
+                       (zone_table[zone_num].name && *zone_table[zone_num].name)
+                         ? convert_from_tabs(zone_table[zone_num].name) : "undefined");
+  fprintf(zfile, "bot = %d\n", genolc_zone_bottom(zone_num));
+  fprintf(zfile, "top = %d\n", zone_table[zone_num].top);
+  fprintf(zfile, "lifespan = %d\n", zone_table[zone_num].lifespan);
+  fprintf(zfile, "reset_mode = %d\n", zone_table[zone_num].reset_mode);
+  fprintf(zfile, "flags = [%d, %d, %d, %d]\n",
+          zone_table[zone_num].zone_flags[0],
+          zone_table[zone_num].zone_flags[1],
+          zone_table[zone_num].zone_flags[2],
+          zone_table[zone_num].zone_flags[3]);
+  fprintf(zfile, "min_level = %d\n", zone_table[zone_num].min_level);
+  fprintf(zfile, "max_level = %d\n", zone_table[zone_num].max_level);
 
   for (subcmd = 0; ZCMD(zone_num, subcmd).command != 'S'; subcmd++) {
     switch (ZCMD(zone_num, subcmd).command) {
@@ -416,49 +430,41 @@ int save_zone(zone_rnum zone_num)
       arg1 = mob_index[ZCMD(zone_num, subcmd).arg1].vnum;
       arg2 = ZCMD(zone_num, subcmd).arg2;
       arg3 = world[ZCMD(zone_num, subcmd).arg3].number;
-      comment = mob_proto[ZCMD(zone_num, subcmd).arg1].player.short_descr;
       break;
     case 'O':
       arg1 = obj_index[ZCMD(zone_num, subcmd).arg1].vnum;
       arg2 = ZCMD(zone_num, subcmd).arg2;
       arg3 = world[ZCMD(zone_num, subcmd).arg3].number;
-      comment = obj_proto[ZCMD(zone_num, subcmd).arg1].short_description;
       break;
     case 'G':
       arg1 = obj_index[ZCMD(zone_num, subcmd).arg1].vnum;
       arg2 = ZCMD(zone_num, subcmd).arg2;
       arg3 = -1;
-      comment = obj_proto[ZCMD(zone_num, subcmd).arg1].short_description;
       break;
     case 'E':
       arg1 = obj_index[ZCMD(zone_num, subcmd).arg1].vnum;
       arg2 = ZCMD(zone_num, subcmd).arg2;
       arg3 = ZCMD(zone_num, subcmd).arg3;
-      comment = obj_proto[ZCMD(zone_num, subcmd).arg1].short_description;
       break;
     case 'P':
       arg1 = obj_index[ZCMD(zone_num, subcmd).arg1].vnum;
       arg2 = ZCMD(zone_num, subcmd).arg2;
       arg3 = obj_index[ZCMD(zone_num, subcmd).arg3].vnum;
-      comment = obj_proto[ZCMD(zone_num, subcmd).arg1].short_description;
       break;
     case 'D':
       arg1 = world[ZCMD(zone_num, subcmd).arg1].number;
       arg2 = ZCMD(zone_num, subcmd).arg2;
       arg3 = ZCMD(zone_num, subcmd).arg3;
-      comment = world[ZCMD(zone_num, subcmd).arg1].name;
       break;
     case 'R':
       arg1 = world[ZCMD(zone_num, subcmd).arg1].number;
       arg2 = obj_index[ZCMD(zone_num, subcmd).arg2].vnum;
-      comment = obj_proto[ZCMD(zone_num, subcmd).arg2].short_description;
       arg3 = -1;
       break;
     case 'T':
       arg1 = ZCMD(zone_num, subcmd).arg1; /* trigger type */
       arg2 = trig_index[ZCMD(zone_num, subcmd).arg2]->vnum; /* trigger vnum */
       arg3 = world[ZCMD(zone_num, subcmd).arg3].number; /* room num */
-      comment = GET_TRIG_NAME(trig_index[real_trigger(arg2)]->proto);
       break;
     case 'V':
       arg1 = ZCMD(zone_num, subcmd).arg1; /* trigger type */
@@ -472,17 +478,20 @@ int save_zone(zone_rnum zone_num)
       mudlog(BRF, LVL_BUILDER, TRUE, "SYSERR: OLC: z_save_to_disk(): Unknown cmd '%c' - NOT saving", ZCMD(zone_num, subcmd).command);
       continue;
     }
-    if (ZCMD(zone_num, subcmd).command != 'V')
-      fprintf(zfile, "%c %d %d %d %d \t(%s)\n",
-		ZCMD(zone_num, subcmd).command, ZCMD(zone_num, subcmd).if_flag, arg1, arg2, arg3, comment);
-    else
-      fprintf(zfile, "%c %d %d %d %d %s %s\n",
-              ZCMD(zone_num, subcmd).command, ZCMD(zone_num, subcmd).if_flag, arg1, arg2, arg3,
-              ZCMD(zone_num, subcmd).sarg1, ZCMD(zone_num, subcmd).sarg2);
+    fprintf(zfile, "\n[[zone.command]]\n");
+    fprintf(zfile, "command = \"%c\"\n", ZCMD(zone_num, subcmd).command);
+    fprintf(zfile, "if_flag = %d\n", ZCMD(zone_num, subcmd).if_flag);
+    fprintf(zfile, "arg1 = %d\n", arg1);
+    fprintf(zfile, "arg2 = %d\n", arg2);
+    fprintf(zfile, "arg3 = %d\n", arg3);
+    if (ZCMD(zone_num, subcmd).command == 'V') {
+      toml_write_kv_string(zfile, "sarg1", ZCMD(zone_num, subcmd).sarg1 ? ZCMD(zone_num, subcmd).sarg1 : "");
+      toml_write_kv_string(zfile, "sarg2", ZCMD(zone_num, subcmd).sarg2 ? ZCMD(zone_num, subcmd).sarg2 : "");
+    }
+    fprintf(zfile, "line = %d\n", ZCMD(zone_num, subcmd).line);
   }
-  fputs("S\n$\n", zfile);
   fclose(zfile);
-  snprintf(oldname, sizeof(oldname), "%s/%d.zon", ZON_PREFIX, zone_table[zone_num].number);
+  snprintf(oldname, sizeof(oldname), "%s/%d.toml", ZON_PREFIX, zone_table[zone_num].number);
   remove(oldname);
   rename(fname, oldname);
 
@@ -586,4 +595,3 @@ void delete_zone_command(struct zone_data *zone, int pos)
   /* Ok, let's zap it. */
   remove_cmd_from_list(&zone->cmd, pos);
 }
-

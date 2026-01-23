@@ -1,0 +1,54 @@
+[[shop]]
+vnum = 100
+products = [135, 136, 137, 138, 139, 140, 141, 142]
+buy_profit = 1.00
+sell_profit = 1.00
+broke_temper = 0
+bitvector = 4
+keeper = 102
+trade_with = 0
+rooms = [134]
+open1 = 0
+close1 = 28
+open2 = 0
+close2 = 0
+bank = 0
+sort = 0
+
+[shop.messages]
+no_such_item1 = "%s We're fresh out of that."
+no_such_item2 = "%s Trying to sell something you don't have?"
+do_not_buy = "%s Not interested. Try someone else."
+missing_cash1 = "%s I can't afford that!"
+missing_cash2 = "%s Come back when you have some coin."
+message_buy = "%s That'll be %d coins."
+message_sell = "%s I'll give you %d coins for that."
+
+
+[[shop]]
+vnum = 101
+products = [138]
+buy_profit = 1.00
+sell_profit = 1.00
+broke_temper = 0
+bitvector = 0
+keeper = 103
+trade_with = 0
+rooms = []
+open1 = 0
+close1 = 28
+open2 = 0
+close2 = 0
+bank = 0
+sort = 0
+
+[shop.messages]
+no_such_item1 = "%s Sorry, I don't stock that item."
+no_such_item2 = "%s You don't seem to have that."
+do_not_buy = "%s I don't trade in such items."
+missing_cash1 = "%s I can't afford that!"
+missing_cash2 = "%s You are too poor!"
+message_buy = "%s That'll be %d coins, thanks."
+message_sell = "%s I'll give you %d coins for that."
+
+

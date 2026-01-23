@@ -16,6 +16,8 @@ file(GLOB CIRCLE_SOURCES
 )
 
 add_executable(circle ${CIRCLE_SOURCES})
+target_sources(circle PRIVATE ${CMAKE_SOURCE_DIR}/third_party/tomlc99/toml.c)
+target_include_directories(circle PRIVATE ${CMAKE_SOURCE_DIR}/third_party/tomlc99)
 
 if(MSVC)
 	target_link_libraries(circle wsock32.lib)

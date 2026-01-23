@@ -394,10 +394,12 @@ configure_file(
 
 # ========== Source-filer ==========
 file(GLOB SRC_FILES src/*.c)
+list(APPEND SRC_FILES third_party/tomlc99/toml.c)
 
 # ========== Bygg kjørbar ==========
 add_executable(circle ${SRC_FILES})
 target_link_libraries(circle ${EXTRA_LIBS})
+target_include_directories(circle PRIVATE ${CMAKE_SOURCE_DIR}/third_party/tomlc99)
 
 add_subdirectory(src/util)
 

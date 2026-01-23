@@ -22,6 +22,8 @@
 #include "config.h" /* for pclean_criteria[] */
 #include "dg_scripts.h" /* To enable saving of player variables to disk */
 #include "quest.h"
+#include "toml.h"
+#include "toml_utils.h"
 
 #define LOAD_HIT	0
 #define LOAD_MANA	1
@@ -35,21 +37,32 @@
 #define PT_LLAST(i) (player_table[(i)].last)
 
 /* local functions */
+#if 0
 static void load_affects(FILE *fl, struct char_data *ch);
 static void load_skills(FILE *fl, struct char_data *ch);
 static void load_quests(FILE *fl, struct char_data *ch);
 static void load_HMVS(struct char_data *ch, const char *line, int mode);
 static void write_aliases_ascii(FILE *file, struct char_data *ch);
 static void read_aliases_ascii(FILE *file, struct char_data *ch, int count);
+#endif
+static int toml_get_int_default(toml_table_t *tab, const char *key, int def);
+static long toml_get_long_default(toml_table_t *tab, const char *key, long def);
+static char *toml_get_string_dup(toml_table_t *tab, const char *key);
+static void toml_read_int_array(toml_array_t *arr, int *out, int out_count, int def);
+static void toml_read_long_array(toml_array_t *arr, long *out, int out_count, long def);
+static void toml_write_int_array(FILE *fp, const char *key, const int *values, int count);
+static void toml_write_long_array(FILE *fp, const char *key, const long *values, int count);
 
-/* New version to build player index for ASCII Player Files. Generate index
+/* New version to build player index for TOML Player Files. Generate index
  * table for the player file. */
 void build_player_index(void)
 {
   int rec_count = 0, i;
   FILE *plr_index;
-  char index_name[40], line[256], bits[64];
-  char arg2[80];
+  char index_name[40];
+  char errbuf[256];
+  toml_table_t *tab = NULL;
+  toml_array_t *arr = NULL;
 
   sprintf(index_name, "%s%s", LIB_PLRFILES, INDEX_FILE);
   if (!(plr_index = fopen(index_name, "r"))) {
@@ -58,12 +71,25 @@ void build_player_index(void)
     return;
   }
 
-  while (get_line(plr_index, line))
-    if (*line != '~')
-      rec_count++;
-  rewind(plr_index);
+  tab = toml_parse_file(plr_index, errbuf, sizeof(errbuf));
+  fclose(plr_index);
+  if (!tab) {
+    top_of_p_table = -1;
+    log("SYSERR: Could not parse player index file %s: %s", index_name, errbuf);
+    return;
+  }
 
+  arr = toml_array_in(tab, "player");
+  if (!arr) {
+    toml_free(tab);
+    player_table = NULL;
+    top_of_p_table = -1;
+    return;
+  }
+
+  rec_count = toml_array_nelem(arr);
   if (rec_count == 0) {
+    toml_free(tab);
     player_table = NULL;
     top_of_p_table = -1;
     return;
@@ -71,16 +97,27 @@ void build_player_index(void)
 
   CREATE(player_table, struct player_index_element, rec_count);
   for (i = 0; i < rec_count; i++) {
-    get_line(plr_index, line);
-    sscanf(line, "%ld %s %d %s %ld", &player_table[i].id, arg2,
-      &player_table[i].level, bits, (long *)&player_table[i].last);
-    CREATE(player_table[i].name, char, strlen(arg2) + 1);
-    strcpy(player_table[i].name, arg2);
-    player_table[i].flags = asciiflag_conv(bits);
+    toml_table_t *entry = toml_table_at(arr, i);
+    char *name = NULL;
+    int j;
+
+    if (!entry)
+      continue;
+    player_table[i].id = toml_get_long_default(entry, "id", 0);
+    player_table[i].level = toml_get_int_default(entry, "level", 0);
+    player_table[i].flags = toml_get_int_default(entry, "flags", 0);
+    player_table[i].last = toml_get_long_default(entry, "last", 0);
+
+    name = toml_get_string_dup(entry, "name");
+    if (!name)
+      name = strdup("");
+    CREATE(player_table[i].name, char, strlen(name) + 1);
+    for (j = 0; (player_table[i].name[j] = LOWER(name[j])); j++)
+      /* Nothing */;
+    free(name);
     top_idnum = MAX(top_idnum, player_table[i].id);
   }
-
-  fclose(plr_index);
+  toml_free(tab);
   top_of_p_file = top_of_p_table = i - 1;
 }
 
@@ -148,11 +185,11 @@ static void remove_player_from_index(int pos)
   }
 }
 
-/* This function necessary to save a seperate ASCII player index */
+/* This function necessary to save a seperate TOML player index */
 void save_player_index(void)
 {
   int i;
-  char index_name[50], bits[64];
+  char index_name[50];
   FILE *index_file;
 
   sprintf(index_name, "%s%s", LIB_PLRFILES, INDEX_FILE);
@@ -163,12 +200,13 @@ void save_player_index(void)
 
   for (i = 0; i <= top_of_p_table; i++)
     if (*player_table[i].name) {
-      sprintascii(bits, player_table[i].flags);
-      fprintf(index_file, "%ld %s %d %s %ld\n", player_table[i].id,
-	player_table[i].name, player_table[i].level, *bits ? bits : "0",
-        (long)player_table[i].last);
+      fprintf(index_file, "[[player]]\n");
+      fprintf(index_file, "id = %ld\n", player_table[i].id);
+      toml_write_kv_string(index_file, "name", player_table[i].name);
+      fprintf(index_file, "level = %d\n", player_table[i].level);
+      fprintf(index_file, "flags = %d\n", player_table[i].flags);
+      fprintf(index_file, "last = %ld\n\n", (long)player_table[i].last);
     }
-  fprintf(index_file, "~\n");
 
   fclose(index_file);
 }
@@ -236,17 +274,111 @@ static void update_roleplay_age(struct char_data *ch)
   }
 }
 
+static int toml_get_int_default(toml_table_t *tab, const char *key, int def)
+{
+  toml_datum_t d = toml_int_in(tab, key);
+
+  if (!d.ok)
+    return def;
+
+  return (int)d.u.i;
+}
+
+static long toml_get_long_default(toml_table_t *tab, const char *key, long def)
+{
+  toml_datum_t d = toml_int_in(tab, key);
+
+  if (!d.ok)
+    return def;
+
+  return (long)d.u.i;
+}
+
+static char *toml_get_string_dup(toml_table_t *tab, const char *key)
+{
+  toml_datum_t d = toml_string_in(tab, key);
+
+  if (!d.ok)
+    return NULL;
+
+  return d.u.s;
+}
+
+static void toml_read_int_array(toml_array_t *arr, int *out, int out_count, int def)
+{
+  int i;
+
+  for (i = 0; i < out_count; i++)
+    out[i] = def;
+
+  if (!arr)
+    return;
+
+  for (i = 0; i < out_count; i++) {
+    toml_datum_t d = toml_int_at(arr, i);
+    if (d.ok)
+      out[i] = (int)d.u.i;
+  }
+}
+
+static void toml_read_long_array(toml_array_t *arr, long *out, int out_count, long def)
+{
+  int i;
+
+  for (i = 0; i < out_count; i++)
+    out[i] = def;
+
+  if (!arr)
+    return;
+
+  for (i = 0; i < out_count; i++) {
+    toml_datum_t d = toml_int_at(arr, i);
+    if (d.ok)
+      out[i] = (long)d.u.i;
+  }
+}
+
+static void toml_write_int_array(FILE *fp, const char *key, const int *values, int count)
+{
+  int i;
+
+  fprintf(fp, "%s = [", key);
+  for (i = 0; i < count; i++) {
+    if (i > 0)
+      fputs(", ", fp);
+    fprintf(fp, "%d", values[i]);
+  }
+  fprintf(fp, "]\n");
+}
+
+static void toml_write_long_array(FILE *fp, const char *key, const long *values, int count)
+{
+  int i;
+
+  fprintf(fp, "%s = [", key);
+  for (i = 0; i < count; i++) {
+    if (i > 0)
+      fputs(", ", fp);
+    fprintf(fp, "%ld", values[i]);
+  }
+  fprintf(fp, "]\n");
+}
+
 /* Stuff related to the save/load player system. */
-/* New load_char reads ASCII Player Files. Load a char, TRUE if loaded, FALSE
+/* New load_char reads TOML Player Files. Load a char, TRUE if loaded, FALSE
  * if not. */
 int load_char(const char *name, struct char_data *ch)
 {
   int id, i;
   FILE *fl;
   char filename[40];
-  char buf[128], buf2[128], line[MAX_INPUT_LENGTH + 1], tag[6];
-  char f1[128], f2[128], f3[128], f4[128];
-  bool loaded_stamina = FALSE;
+  char errbuf[256];
+  toml_table_t *tab = NULL;
+  toml_table_t *sub = NULL;
+  toml_array_t *arr = NULL;
+  char *str = NULL;
+  long long_values[MAX_SKILLS];
+  int int_values[6];
   trig_data *t = NULL;
   trig_rnum t_rnum = NOTHING;
 
@@ -329,223 +461,308 @@ int load_char(const char *name, struct char_data *ch)
     for (i = 0; i < PR_ARRAY_MAX; i++)
       PRF_FLAGS(ch)[i] = PFDEF_PREFFLAGS;
 
-    while (get_line(fl, line)) {
-      tag_argument(line, tag);
+    tab = toml_parse_file(fl, errbuf, sizeof(errbuf));
+    fclose(fl);
+    if (!tab) {
+      mudlog(NRM, LVL_GOD, TRUE, "SYSERR: Couldn't parse player file %s: %s", filename, errbuf);
+      return (-1);
+    }
 
-      switch (*tag) {
-      case 'A':
-        if (!strcmp(tag, "Ac  "))	GET_AC(ch)		= atoi(line);
-	else if (!strcmp(tag, "AgYr"))	GET_ROLEPLAY_AGE_YEAR(ch) = atoi(line);
-	else if (!strcmp(tag, "Age "))	GET_ROLEPLAY_AGE(ch)	= LIMIT(atoi(line), MIN_CHAR_AGE, MAX_CHAR_AGE);
-	else if (!strcmp(tag, "Acct")) {
-          if (GET_ACCOUNT(ch))
-            free(GET_ACCOUNT(ch));
-          GET_ACCOUNT(ch) = strdup(line);
-        }
-	else if (!strcmp(tag, "Act ")) {
-         if (sscanf(line, "%s %s %s %s", f1, f2, f3, f4) == 4) {
-          PLR_FLAGS(ch)[0] = asciiflag_conv(f1);
-          PLR_FLAGS(ch)[1] = asciiflag_conv(f2);
-          PLR_FLAGS(ch)[2] = asciiflag_conv(f3);
-          PLR_FLAGS(ch)[3] = asciiflag_conv(f4);
-        } else
-          PLR_FLAGS(ch)[0] = asciiflag_conv(line);
-      } else if (!strcmp(tag, "Aff ")) {
-        if (sscanf(line, "%s %s %s %s", f1, f2, f3, f4) == 4) {
-          AFF_FLAGS(ch)[0] = asciiflag_conv(f1);
-          AFF_FLAGS(ch)[1] = asciiflag_conv(f2);
-          AFF_FLAGS(ch)[2] = asciiflag_conv(f3);
-          AFF_FLAGS(ch)[3] = asciiflag_conv(f4);
-        } else
-          AFF_FLAGS(ch)[0] = asciiflag_conv(line);
-	}
-	if (!strcmp(tag, "Affs")) 	load_affects(fl, ch);
-	else if (!strcmp(tag, "Alis"))	read_aliases_ascii(fl, ch, atoi(line));
-	break;
+    str = toml_get_string_dup(tab, "name");
+    if (str) {
+      if (GET_PC_NAME(ch))
+        free(GET_PC_NAME(ch));
+      GET_PC_NAME(ch) = str;
+    } else if (!GET_PC_NAME(ch))
+      GET_PC_NAME(ch) = strdup(name);
 
-      case 'B':
-        if (!strcmp(tag, "Back"))     ch->player.background   = fread_string(fl, buf2);
-	else if (!strcmp(tag, "Badp"))	GET_BAD_PWS(ch)		= atoi(line);
-	else if (!strcmp(tag, "BankCoins"))	GET_BANK_COINS(ch)	= atoi(line);
-	else if (!strcmp(tag, "Brth"))	ch->player.time.birth	= atol(line);
-	break;
+    str = toml_get_string_dup(tab, "short_desc");
+    if (str) {
+      if (GET_SHORT_DESC(ch))
+        free(GET_SHORT_DESC(ch));
+      GET_SHORT_DESC(ch) = str;
+    }
 
-      case 'C':
-	     if (!strcmp(tag, "Cha "))	ch->real_abils.cha	= atoi(line);
-	else if (!strcmp(tag, "Clas"))	GET_CLASS(ch)		= atoi(line);
-	else if (!strcmp(tag, "Coin"))	GET_COINS(ch)		= atoi(line);
-	else if (!strcmp(tag, "Con "))	ch->real_abils.con	= atoi(line);
-	break;
+    str = toml_get_string_dup(tab, "password");
+    if (str) {
+      strlcpy(GET_PASSWD(ch), str, MAX_PWD_LENGTH + 1);
+      free(str);
+    }
 
-      case 'D':
-	     if (!strcmp(tag, "Desc"))	ch->player.description	= fread_string(fl, buf2);
-	else if (!strcmp(tag, "Dex "))	ch->real_abils.dex	= atoi(line);
-	else if (!strcmp(tag, "Drnk"))	GET_COND(ch, DRUNK)	= atoi(line);
-	break;
+    str = toml_get_string_dup(tab, "account");
+    if (str) {
+      if (GET_ACCOUNT(ch))
+        free(GET_ACCOUNT(ch));
+      GET_ACCOUNT(ch) = str;
+    }
 
-      case 'E':
-	     if (!strcmp(tag, "Exp "))	GET_EXP(ch)		= atoi(line);
-	break;
+    str = toml_get_string_dup(tab, "description");
+    if (str) {
+      if (ch->player.description)
+        free(ch->player.description);
+      ch->player.description = str;
+    }
 
-      case 'F':
-	     if (!strcmp(tag, "Frez"))	GET_FREEZE_LEV(ch)	= atoi(line);
-	break;
+    str = toml_get_string_dup(tab, "background");
+    if (str) {
+      if (ch->player.background)
+        free(ch->player.background);
+      ch->player.background = str;
+    }
 
-      case 'H':
-	     if (!strcmp(tag, "Hit "))	load_HMVS(ch, line, LOAD_HIT);
-	else if (!strcmp(tag, "Hite"))	GET_HEIGHT(ch)		= atoi(line);
-        else if (!strcmp(tag, "Host")) {
-          if (GET_HOST(ch))
-            free(GET_HOST(ch));
-          GET_HOST(ch) = strdup(line);
-        }
-	else if (!strcmp(tag, "Hung"))	GET_COND(ch, HUNGER)	= atoi(line);
-	break;
+    str = toml_get_string_dup(tab, "poofin");
+    if (str) {
+      if (POOFIN(ch))
+        free(POOFIN(ch));
+      POOFIN(ch) = str;
+    }
 
-      case 'I':
-	     if (!strcmp(tag, "Id  "))	GET_IDNUM(ch)		= atol(line);
-	else if (!strcmp(tag, "Int "))	ch->real_abils.intel	= atoi(line);
-	else if (!strcmp(tag, "Invs"))	GET_INVIS_LEV(ch)	= atoi(line);
-	break;
+    str = toml_get_string_dup(tab, "poofout");
+    if (str) {
+      if (POOFOUT(ch))
+        free(POOFOUT(ch));
+      POOFOUT(ch) = str;
+    }
 
-      case 'L':
-	     if (!strcmp(tag, "Last"))	ch->player.time.logon	= atol(line);
-	else if (!strcmp(tag, "Levl"))	GET_LEVEL(ch)		= atoi(line);
-        else if (!strcmp(tag, "Lmot"))   GET_LAST_MOTD(ch)   = atoi(line);
-        else if (!strcmp(tag, "Lnew"))   GET_LAST_NEWS(ch)   = atoi(line);
-	break;
+    GET_SEX(ch) = toml_get_int_default(tab, "sex", GET_SEX(ch));
+    GET_CLASS(ch) = toml_get_int_default(tab, "class", GET_CLASS(ch));
+    GET_SPECIES(ch) = toml_get_int_default(tab, "species", GET_SPECIES(ch));
+    GET_LEVEL(ch) = toml_get_int_default(tab, "level", GET_LEVEL(ch));
+    GET_IDNUM(ch) = toml_get_long_default(tab, "id", GET_IDNUM(ch));
+    ch->player.time.birth = toml_get_long_default(tab, "birth", ch->player.time.birth);
+    GET_ROLEPLAY_AGE(ch) = toml_get_int_default(tab, "age", GET_ROLEPLAY_AGE(ch));
+    GET_ROLEPLAY_AGE_YEAR(ch) = toml_get_int_default(tab, "age_year", GET_ROLEPLAY_AGE_YEAR(ch));
+    ch->player.time.played = toml_get_int_default(tab, "played", ch->player.time.played);
+    ch->player.time.logon = toml_get_long_default(tab, "logon", ch->player.time.logon);
+    GET_LAST_MOTD(ch) = toml_get_int_default(tab, "last_motd", GET_LAST_MOTD(ch));
+    GET_LAST_NEWS(ch) = toml_get_int_default(tab, "last_news", GET_LAST_NEWS(ch));
+    GET_REROLL_USED(ch) = toml_get_int_default(tab, "reroll_used", GET_REROLL_USED(ch));
+    GET_REROLL_EXPIRES(ch) = (time_t)toml_get_long_default(tab, "reroll_expires", (long)GET_REROLL_EXPIRES(ch));
 
-      case 'M':
-	     if (!strcmp(tag, "Mana"))	load_HMVS(ch, line, LOAD_MANA);
-	else if (!strcmp(tag, "Move") && !loaded_stamina)	load_HMVS(ch, line, LOAD_STAMINA);
-	break;
+    arr = toml_array_in(tab, "reroll_old_abils");
+    if (arr) {
+      toml_read_int_array(arr, int_values, 6, 0);
+      GET_REROLL_OLD_ABILS(ch).str = int_values[0];
+      GET_REROLL_OLD_ABILS(ch).intel = int_values[1];
+      GET_REROLL_OLD_ABILS(ch).wis = int_values[2];
+      GET_REROLL_OLD_ABILS(ch).dex = int_values[3];
+      GET_REROLL_OLD_ABILS(ch).con = int_values[4];
+      GET_REROLL_OLD_ABILS(ch).cha = int_values[5];
+    }
 
-      case 'N':
-	     if (!strcmp(tag, "Name"))	GET_PC_NAME(ch)	= strdup(line);
-	break;
+    str = toml_get_string_dup(tab, "host");
+    if (str) {
+      if (GET_HOST(ch))
+        free(GET_HOST(ch));
+      GET_HOST(ch) = str;
+    }
 
-      case 'O':
-       if (!strcmp(tag, "Olc "))  GET_OLC_ZONE(ch) = atoi(line);
-  break;
+    GET_HEIGHT(ch) = toml_get_int_default(tab, "height", GET_HEIGHT(ch));
+    GET_WEIGHT(ch) = toml_get_int_default(tab, "weight", GET_WEIGHT(ch));
 
-      case 'P':
-       if (!strcmp(tag, "Page"))  GET_PAGE_LENGTH(ch) = atoi(line);
-	else if (!strcmp(tag, "Pass"))	strcpy(GET_PASSWD(ch), line);
-	else if (!strcmp(tag, "Plyd"))	ch->player.time.played	= atoi(line);
-	else if (!strcmp(tag, "PfIn"))	POOFIN(ch)		= strdup(line);
-	else if (!strcmp(tag, "PfOt"))	POOFOUT(ch)		= strdup(line);
-        else if (!strcmp(tag, "Pref")) {
-          if (sscanf(line, "%s %s %s %s", f1, f2, f3, f4) == 4) {
-            PRF_FLAGS(ch)[0] = asciiflag_conv(f1);
-            PRF_FLAGS(ch)[1] = asciiflag_conv(f2);
-            PRF_FLAGS(ch)[2] = asciiflag_conv(f3);
-            PRF_FLAGS(ch)[3] = asciiflag_conv(f4);
-          } else
-	    PRF_FLAGS(ch)[0] = asciiflag_conv(f1);
-	  }
-        break;
+    arr = toml_array_in(tab, "act_flags");
+    toml_read_int_array(arr, int_values, PM_ARRAY_MAX, PFDEF_PLRFLAGS);
+    for (i = 0; i < PM_ARRAY_MAX; i++)
+      PLR_FLAGS(ch)[i] = int_values[i];
 
-      case 'Q':
-	     if (!strcmp(tag, "Qstp"))  GET_QUESTPOINTS(ch)     = atoi(line);
-       else if (!strcmp(tag, "Qpnt")) GET_QUESTPOINTS(ch) = atoi(line); /* Backward compatibility */
-       else if (!strcmp(tag, "Qcur")) GET_QUEST(ch) = atoi(line);
-       else if (!strcmp(tag, "Qcnt")) GET_QUEST_COUNTER(ch) = atoi(line);
-       else if (!strcmp(tag, "Qest")) load_quests(fl, ch);
-        break;
+    arr = toml_array_in(tab, "aff_flags");
+    toml_read_int_array(arr, int_values, AF_ARRAY_MAX, PFDEF_AFFFLAGS);
+    for (i = 0; i < AF_ARRAY_MAX; i++)
+      AFF_FLAGS(ch)[i] = int_values[i];
 
-      case 'R':
-	     if (!strcmp(tag, "Room"))	GET_LOADROOM(ch)	= atoi(line);
-        else if (!strcmp(tag, "RrUs")) GET_REROLL_USED(ch)   = atoi(line);
-        else if (!strcmp(tag, "RrTm")) GET_REROLL_EXPIRES(ch) = (time_t)atol(line);
-        else if (!strcmp(tag, "RrAb")) {
-          int rstr, rint, rwis, rdex, rcon, rcha;
+    arr = toml_array_in(tab, "pref_flags");
+    toml_read_int_array(arr, int_values, PR_ARRAY_MAX, PFDEF_PREFFLAGS);
+    for (i = 0; i < PR_ARRAY_MAX; i++)
+      PRF_FLAGS(ch)[i] = int_values[i];
 
-          if (sscanf(line, "%d %d %d %d %d %d", &rstr, &rint, &rwis, &rdex, &rcon, &rcha) == 6) {
-            GET_REROLL_OLD_ABILS(ch).str = rstr;
-            GET_REROLL_OLD_ABILS(ch).intel = rint;
-            GET_REROLL_OLD_ABILS(ch).wis = rwis;
-            GET_REROLL_OLD_ABILS(ch).dex = rdex;
-            GET_REROLL_OLD_ABILS(ch).con = rcon;
-            GET_REROLL_OLD_ABILS(ch).cha = rcha;
-          }
-        }
-	break;
+    arr = toml_array_in(tab, "saving_throws");
+    toml_read_int_array(arr, int_values, NUM_OF_SAVING_THROWS, PFDEF_SAVETHROW);
+    for (i = 0; i < NUM_OF_SAVING_THROWS; i++)
+      GET_SAVE(ch, i) = int_values[i];
 
-      case 'S':
-	     if (!strcmp(tag, "Spec")) {
-        int val = atoi(line);
-        if (val < SPECIES_UNDEFINED || val >= NUM_SPECIES)
-          val = SPECIES_UNDEFINED;
-        GET_SPECIES(ch) = val;
+    GET_WIMP_LEV(ch) = toml_get_int_default(tab, "wimp", GET_WIMP_LEV(ch));
+    GET_FREEZE_LEV(ch) = toml_get_int_default(tab, "freeze", GET_FREEZE_LEV(ch));
+    GET_INVIS_LEV(ch) = toml_get_int_default(tab, "invis", GET_INVIS_LEV(ch));
+    GET_LOADROOM(ch) = toml_get_int_default(tab, "load_room", GET_LOADROOM(ch));
+    GET_BAD_PWS(ch) = toml_get_int_default(tab, "bad_passwords", GET_BAD_PWS(ch));
+
+    sub = toml_table_in(tab, "conditions");
+    if (sub) {
+      GET_COND(ch, HUNGER) = toml_get_int_default(sub, "hunger", GET_COND(ch, HUNGER));
+      GET_COND(ch, THIRST) = toml_get_int_default(sub, "thirst", GET_COND(ch, THIRST));
+      GET_COND(ch, DRUNK) = toml_get_int_default(sub, "drunk", GET_COND(ch, DRUNK));
+    }
+
+    sub = toml_table_in(tab, "hmv");
+    if (sub) {
+      GET_HIT(ch) = toml_get_int_default(sub, "hit", GET_HIT(ch));
+      GET_MAX_HIT(ch) = toml_get_int_default(sub, "max_hit", GET_MAX_HIT(ch));
+      GET_MANA(ch) = toml_get_int_default(sub, "mana", GET_MANA(ch));
+      GET_MAX_MANA(ch) = toml_get_int_default(sub, "max_mana", GET_MAX_MANA(ch));
+      GET_STAMINA(ch) = toml_get_int_default(sub, "stamina", GET_STAMINA(ch));
+      GET_MAX_STAMINA(ch) = toml_get_int_default(sub, "max_stamina", GET_MAX_STAMINA(ch));
+    }
+
+    sub = toml_table_in(tab, "abilities");
+    if (sub) {
+      ch->real_abils.str = toml_get_int_default(sub, "str", ch->real_abils.str);
+      ch->real_abils.intel = toml_get_int_default(sub, "int", ch->real_abils.intel);
+      ch->real_abils.wis = toml_get_int_default(sub, "wis", ch->real_abils.wis);
+      ch->real_abils.dex = toml_get_int_default(sub, "dex", ch->real_abils.dex);
+      ch->real_abils.con = toml_get_int_default(sub, "con", ch->real_abils.con);
+      ch->real_abils.cha = toml_get_int_default(sub, "cha", ch->real_abils.cha);
+    }
+
+    GET_AC(ch) = toml_get_int_default(tab, "ac", GET_AC(ch));
+    GET_COINS(ch) = toml_get_int_default(tab, "coins", GET_COINS(ch));
+    GET_BANK_COINS(ch) = toml_get_int_default(tab, "bank_coins", GET_BANK_COINS(ch));
+    GET_EXP(ch) = toml_get_int_default(tab, "exp", GET_EXP(ch));
+    GET_OLC_ZONE(ch) = toml_get_int_default(tab, "olc_zone", GET_OLC_ZONE(ch));
+    GET_PAGE_LENGTH(ch) = toml_get_int_default(tab, "page_length", GET_PAGE_LENGTH(ch));
+    GET_SCREEN_WIDTH(ch) = toml_get_int_default(tab, "screen_width", GET_SCREEN_WIDTH(ch));
+    GET_QUESTPOINTS(ch) = toml_get_int_default(tab, "quest_points", GET_QUESTPOINTS(ch));
+    GET_QUEST_COUNTER(ch) = toml_get_int_default(tab, "quest_counter", GET_QUEST_COUNTER(ch));
+    GET_QUEST(ch) = toml_get_int_default(tab, "current_quest", GET_QUEST(ch));
+
+    arr = toml_array_in(tab, "completed_quests");
+    if (arr) {
+      int count = toml_array_nelem(arr);
+      for (i = 0; i < count; i++) {
+        toml_datum_t d = toml_int_at(arr, i);
+        if (d.ok)
+          add_completed_quest(ch, (int)d.u.i);
       }
-  else if (!strcmp(tag, "Stam")) {
-    load_HMVS(ch, line, LOAD_STAMINA);
-    loaded_stamina = TRUE;
-  }
-	else if (!strcmp(tag, "Sex "))	GET_SEX(ch)		= atoi(line);
-  else if (!strcmp(tag, "Sdsc")) {
-    /* Clear any existing sdesc to avoid leaks */
-    if (GET_SHORT_DESC(ch))
-      free(GET_SHORT_DESC(ch));
-    /* 'line' is the remainder of the line after "Sdsc" + space */
-    GET_SHORT_DESC(ch) = strdup(line);
-  }
-  else if (!strcmp(tag, "ScrW"))  GET_SCREEN_WIDTH(ch) = atoi(line);
-	else if (!strcmp(tag, "Skil"))	load_skills(fl, ch);
-  else if (!strcmp(tag, "SkGt")) {  /* Skill Gain Timers */
-    char *p = line;
-    for (int i = 1; i <= MAX_SKILLS; i++) {
-      long t = 0;
+    }
 
-      while (*p && isspace((unsigned char)*p))
-        ++p;
+    arr = toml_array_in(tab, "triggers");
+    if (arr && CONFIG_SCRIPT_PLAYERS) {
+      int count = toml_array_nelem(arr);
+      for (i = 0; i < count; i++) {
+        toml_datum_t d = toml_int_at(arr, i);
+        if (!d.ok)
+          continue;
+        t_rnum = real_trigger((int)d.u.i);
+        if (t_rnum == NOTHING)
+          continue;
+        t = read_trigger(t_rnum);
+        if (!SCRIPT(ch))
+          CREATE(SCRIPT(ch), struct script_data, 1);
+        add_trigger(SCRIPT(ch), t, -1);
+      }
+    }
 
-      if (*p) {
-        char *endptr = p;
-        t = strtol(p, &endptr, 10);
-        if (endptr == p)
-          t = 0;
+    arr = toml_array_in(tab, "skill_gain_next");
+    toml_read_long_array(arr, long_values, MAX_SKILLS, 0);
+    for (i = 0; i < MAX_SKILLS; i++)
+      GET_SKILL_NEXT_GAIN(ch, i + 1) = (time_t)long_values[i];
+
+    arr = toml_array_in(tab, "skill");
+    if (arr) {
+      int count = toml_array_nelem(arr);
+      for (i = 0; i < count; i++) {
+        toml_table_t *skill = toml_table_at(arr, i);
+        int skill_id, skill_level;
+
+        if (!skill)
+          continue;
+        skill_id = toml_get_int_default(skill, "id", 0);
+        skill_level = toml_get_int_default(skill, "level", 0);
+        if (skill_id < 1 || skill_id > MAX_SKILLS)
+          continue;
+        if (IS_NPC(ch))
+          ch->mob_specials.skills[skill_id] = skill_level;
         else
-          p = endptr;
-      }
-
-      GET_SKILL_NEXT_GAIN(ch, i) = (time_t)t;
-    }
-  }
-	else if (!strcmp(tag, "Str "))	load_HMVS(ch, line, LOAD_STRENGTH);
-	break;
-
-      case 'T':
-	     if (!strcmp(tag, "Thir"))	GET_COND(ch, THIRST)	= atoi(line);
-	else if (!strcmp(tag, "Thr1"))	GET_SAVE(ch, 0)		= atoi(line);
-	else if (!strcmp(tag, "Thr2"))	GET_SAVE(ch, 1)		= atoi(line);
-	else if (!strcmp(tag, "Thr3"))	GET_SAVE(ch, 2)		= atoi(line);
-	else if (!strcmp(tag, "Thr4"))	GET_SAVE(ch, 3)		= atoi(line);
-	else if (!strcmp(tag, "Thr5"))	GET_SAVE(ch, 4)		= atoi(line);
-        else if (!strcmp(tag, "Trig") && CONFIG_SCRIPT_PLAYERS) {
-          if ((t_rnum = real_trigger(atoi(line))) != NOTHING) {
-            t = read_trigger(t_rnum);
-          if (!SCRIPT(ch))
-            CREATE(SCRIPT(ch), struct script_data, 1);
-          add_trigger(SCRIPT(ch), t, -1);
-          }
-         }
-	break;
-
-      case 'V':
-	     if (!strcmp(tag, "Vars"))	read_saved_vars_ascii(fl, ch, atoi(line));
-      break;
-
-      case 'W':
-	     if (!strcmp(tag, "Wate"))	GET_WEIGHT(ch)		= atoi(line);
-	else if (!strcmp(tag, "Wimp"))	GET_WIMP_LEV(ch)	= atoi(line);
-	else if (!strcmp(tag, "Wis "))	ch->real_abils.wis	= atoi(line);
-	break;
-
-      default:
-	sprintf(buf, "SYSERR: Unknown tag %s in pfile %s", tag, name);
+          ch->player_specials->saved.skills[skill_id] = skill_level;
       }
     }
+
+    arr = toml_array_in(tab, "affect");
+    if (arr) {
+      int count = toml_array_nelem(arr);
+      for (i = 0; i < count; i++) {
+        struct affected_type af;
+        toml_table_t *aff_tab = toml_table_at(arr, i);
+
+        if (!aff_tab)
+          continue;
+
+        new_affect(&af);
+        af.spell = toml_get_int_default(aff_tab, "spell", 0);
+        af.duration = toml_get_int_default(aff_tab, "duration", 0);
+        af.modifier = toml_get_int_default(aff_tab, "modifier", 0);
+        af.location = toml_get_int_default(aff_tab, "location", 0);
+        toml_read_int_array(toml_array_in(aff_tab, "bitvector"), int_values, AF_ARRAY_MAX, 0);
+        af.bitvector[0] = int_values[0];
+        af.bitvector[1] = int_values[1];
+        af.bitvector[2] = int_values[2];
+        af.bitvector[3] = int_values[3];
+        if (af.spell > 0)
+          affect_to_char(ch, &af);
+      }
+    }
+
+    arr = toml_array_in(tab, "alias");
+    if (arr) {
+      int count = toml_array_nelem(arr);
+      for (i = 0; i < count; i++) {
+        toml_table_t *alias_tab = toml_table_at(arr, i);
+        char *alias = NULL;
+        char *replacement = NULL;
+        int type;
+        struct alias_data *temp;
+
+        if (!alias_tab)
+          continue;
+        alias = toml_get_string_dup(alias_tab, "alias");
+        replacement = toml_get_string_dup(alias_tab, "replacement");
+        type = toml_get_int_default(alias_tab, "type", 0);
+        if (!alias || !replacement) {
+          if (alias)
+            free(alias);
+          if (replacement)
+            free(replacement);
+          continue;
+        }
+
+        CREATE(temp, struct alias_data, 1);
+        temp->alias = alias;
+        temp->replacement = replacement;
+        temp->type = type;
+        temp->next = GET_ALIASES(ch);
+        GET_ALIASES(ch) = temp;
+      }
+    }
+
+    arr = toml_array_in(tab, "var");
+    if (arr) {
+      int count = toml_array_nelem(arr);
+      for (i = 0; i < count; i++) {
+        toml_table_t *var_tab = toml_table_at(arr, i);
+        char *varname = NULL;
+        char *value = NULL;
+        long context;
+
+        if (!var_tab)
+          continue;
+        varname = toml_get_string_dup(var_tab, "name");
+        value = toml_get_string_dup(var_tab, "value");
+        context = toml_get_long_default(var_tab, "context", 0);
+        if (!varname || !value) {
+          if (varname)
+            free(varname);
+          if (value)
+            free(value);
+          continue;
+        }
+        if (!SCRIPT(ch))
+          CREATE(SCRIPT(ch), struct script_data, 1);
+        add_var(&(SCRIPT(ch)->global_vars), varname, value, context);
+        free(varname);
+        free(value);
+      }
+    }
+
+    toml_free(tab);
   }
 
   update_roleplay_age(ch);
@@ -567,17 +784,18 @@ int load_char(const char *name, struct char_data *ch)
     GET_COND(ch, THIRST) = -1;
     GET_COND(ch, DRUNK) = -1;
   }
-  fclose(fl);
   return(id);
 }
 
 /* Write the vital data of a player to the player file. */
-/* This is the ASCII Player Files save routine. */
+/* This is the TOML Player Files save routine. */
 void save_char(struct char_data * ch)
 {
   FILE *fl;
-  char filename[40], buf[MAX_STRING_LENGTH], bits[127], bits2[127], bits3[127], bits4[127];
+  char filename[40], buf[MAX_STRING_LENGTH];
   int i, j, id, save_index = FALSE;
+  int save_throws[NUM_OF_SAVING_THROWS];
+  long gain_times[MAX_SKILLS];
   struct affected_type *aff, tmp_aff[MAX_AFFECT];
   struct obj_data *char_eq[NUM_WEARS];
   trig_data *t;
@@ -650,154 +868,157 @@ void save_char(struct char_data * ch)
   ch->aff_abils = ch->real_abils;
   /* end char_to_store code */
 
-  if (GET_NAME(ch))				fprintf(fl, "Name: %s\n", GET_NAME(ch));
-  if (GET_SHORT_DESC(ch) && *GET_SHORT_DESC(ch))       fprintf(fl, "Sdsc: %s\n", GET_SHORT_DESC(ch));
-  if (GET_PASSWD(ch))				fprintf(fl, "Pass: %s\n", GET_PASSWD(ch));
-  if (GET_ACCOUNT(ch) && *GET_ACCOUNT(ch))	fprintf(fl, "Acct: %s\n", GET_ACCOUNT(ch));
+  if (GET_NAME(ch))
+    toml_write_kv_string(fl, "name", GET_NAME(ch));
+  toml_write_kv_string_opt(fl, "short_desc", GET_SHORT_DESC(ch));
+  if (GET_PASSWD(ch) && *GET_PASSWD(ch))
+    toml_write_kv_string(fl, "password", GET_PASSWD(ch));
+  toml_write_kv_string_opt(fl, "account", GET_ACCOUNT(ch));
   if (ch->player.description && *ch->player.description) {
-    strcpy(buf, ch->player.description);
+    strlcpy(buf, ch->player.description, sizeof(buf));
     strip_cr(buf);
-    fprintf(fl, "Desc:\n%s~\n", buf);
+    toml_write_kv_string(fl, "description", buf);
   }
   if (ch->player.background && *ch->player.background) {
-    strcpy(buf, ch->player.background);
+    strlcpy(buf, ch->player.background, sizeof(buf));
     strip_cr(buf);
-    fprintf(fl, "Back:\n%s~\n", buf);
+    toml_write_kv_string(fl, "background", buf);
   }
-  if (POOFIN(ch))				fprintf(fl, "PfIn: %s\n", POOFIN(ch));
-  if (POOFOUT(ch))				fprintf(fl, "PfOt: %s\n", POOFOUT(ch));
-  if (GET_SEX(ch)	     != PFDEF_SEX)	fprintf(fl, "Sex : %d\n", GET_SEX(ch));
-  if (GET_CLASS(ch)	   != PFDEF_CLASS)	fprintf(fl, "Clas: %d\n", GET_CLASS(ch));
-  if (GET_SPECIES(ch)  != PFDEF_SPECIES)	fprintf(fl, "Spec: %d\n", GET_SPECIES(ch));
-  if (GET_LEVEL(ch)	   != PFDEF_LEVEL)	fprintf(fl, "Levl: %d\n", GET_LEVEL(ch));
+  toml_write_kv_string_opt(fl, "poofin", POOFIN(ch));
+  toml_write_kv_string_opt(fl, "poofout", POOFOUT(ch));
 
-  fprintf(fl, "Id  : %ld\n", GET_IDNUM(ch));
-  fprintf(fl, "Brth: %ld\n", (long)ch->player.time.birth);
-  fprintf(fl, "Age : %d\n", GET_ROLEPLAY_AGE(ch));
-  fprintf(fl, "AgYr: %d\n", GET_ROLEPLAY_AGE_YEAR(ch));
-  fprintf(fl, "Plyd: %d\n",  ch->player.time.played);
-  fprintf(fl, "Last: %ld\n", (long)ch->player.time.logon);
+  fprintf(fl, "sex = %d\n", GET_SEX(ch));
+  fprintf(fl, "class = %d\n", GET_CLASS(ch));
+  fprintf(fl, "species = %d\n", GET_SPECIES(ch));
+  fprintf(fl, "level = %d\n", GET_LEVEL(ch));
 
-  if (GET_LAST_MOTD(ch) != PFDEF_LASTMOTD)
-    fprintf(fl, "Lmot: %d\n", (int)GET_LAST_MOTD(ch));
-  if (GET_LAST_NEWS(ch) != PFDEF_LASTNEWS)
-    fprintf(fl, "Lnew: %d\n", (int)GET_LAST_NEWS(ch));
-  if (GET_REROLL_USED(ch) != PFDEF_REROLL_USED)
-    fprintf(fl, "RrUs: %d\n", (int)GET_REROLL_USED(ch));
-  if (GET_REROLL_EXPIRES(ch) != PFDEF_REROLL_EXPIRES) {
-    fprintf(fl, "RrTm: %ld\n", (long)GET_REROLL_EXPIRES(ch));
-    fprintf(fl, "RrAb: %d %d %d %d %d %d\n",
-            GET_REROLL_OLD_ABILS(ch).str,
-            GET_REROLL_OLD_ABILS(ch).intel,
-            GET_REROLL_OLD_ABILS(ch).wis,
-            GET_REROLL_OLD_ABILS(ch).dex,
-            GET_REROLL_OLD_ABILS(ch).con,
-            GET_REROLL_OLD_ABILS(ch).cha);
-  }
+  fprintf(fl, "id = %ld\n", GET_IDNUM(ch));
+  fprintf(fl, "birth = %ld\n", (long)ch->player.time.birth);
+  fprintf(fl, "age = %d\n", GET_ROLEPLAY_AGE(ch));
+  fprintf(fl, "age_year = %d\n", GET_ROLEPLAY_AGE_YEAR(ch));
+  fprintf(fl, "played = %d\n", ch->player.time.played);
+  fprintf(fl, "logon = %ld\n", (long)ch->player.time.logon);
+  fprintf(fl, "last_motd = %d\n", (int)GET_LAST_MOTD(ch));
+  fprintf(fl, "last_news = %d\n", (int)GET_LAST_NEWS(ch));
+  fprintf(fl, "reroll_used = %d\n", (int)GET_REROLL_USED(ch));
+  fprintf(fl, "reroll_expires = %ld\n", (long)GET_REROLL_EXPIRES(ch));
+  fprintf(fl, "reroll_old_abils = [%d, %d, %d, %d, %d, %d]\n",
+          GET_REROLL_OLD_ABILS(ch).str,
+          GET_REROLL_OLD_ABILS(ch).intel,
+          GET_REROLL_OLD_ABILS(ch).wis,
+          GET_REROLL_OLD_ABILS(ch).dex,
+          GET_REROLL_OLD_ABILS(ch).con,
+          GET_REROLL_OLD_ABILS(ch).cha);
 
-  if (GET_HOST(ch))				fprintf(fl, "Host: %s\n", GET_HOST(ch));
-  if (GET_HEIGHT(ch)	   != PFDEF_HEIGHT)	fprintf(fl, "Hite: %d\n", GET_HEIGHT(ch));
-  if (GET_WEIGHT(ch)	   != PFDEF_WEIGHT)	fprintf(fl, "Wate: %d\n", GET_WEIGHT(ch));
+  toml_write_kv_string_opt(fl, "host", GET_HOST(ch));
+  fprintf(fl, "height = %d\n", GET_HEIGHT(ch));
+  fprintf(fl, "weight = %d\n", GET_WEIGHT(ch));
 
+  toml_write_int_array(fl, "act_flags", PLR_FLAGS(ch), PM_ARRAY_MAX);
+  toml_write_int_array(fl, "aff_flags", AFF_FLAGS(ch), AF_ARRAY_MAX);
+  toml_write_int_array(fl, "pref_flags", PRF_FLAGS(ch), PR_ARRAY_MAX);
 
-  sprintascii(bits,  PLR_FLAGS(ch)[0]);
-  sprintascii(bits2, PLR_FLAGS(ch)[1]);
-  sprintascii(bits3, PLR_FLAGS(ch)[2]);
-  sprintascii(bits4, PLR_FLAGS(ch)[3]);
-  fprintf(fl, "Act : %s %s %s %s\n", bits, bits2, bits3, bits4);
+  for (i = 0; i < NUM_OF_SAVING_THROWS; i++)
+    save_throws[i] = GET_SAVE(ch, i);
+  toml_write_int_array(fl, "saving_throws", save_throws, NUM_OF_SAVING_THROWS);
 
-  sprintascii(bits,  AFF_FLAGS(ch)[0]);
-  sprintascii(bits2, AFF_FLAGS(ch)[1]);
-  sprintascii(bits3, AFF_FLAGS(ch)[2]);
-  sprintascii(bits4, AFF_FLAGS(ch)[3]);
-  fprintf(fl, "Aff : %s %s %s %s\n", bits, bits2, bits3, bits4);
+  fprintf(fl, "wimp = %d\n", GET_WIMP_LEV(ch));
+  fprintf(fl, "freeze = %d\n", GET_FREEZE_LEV(ch));
+  fprintf(fl, "invis = %d\n", GET_INVIS_LEV(ch));
+  fprintf(fl, "load_room = %d\n", GET_LOADROOM(ch));
+  fprintf(fl, "bad_passwords = %d\n", GET_BAD_PWS(ch));
+  fprintf(fl, "conditions = { hunger = %d, thirst = %d, drunk = %d }\n",
+          GET_COND(ch, HUNGER), GET_COND(ch, THIRST), GET_COND(ch, DRUNK));
+  fprintf(fl, "hmv = { hit = %d, max_hit = %d, mana = %d, max_mana = %d, stamina = %d, max_stamina = %d }\n",
+          GET_HIT(ch), GET_MAX_HIT(ch), GET_MANA(ch), GET_MAX_MANA(ch),
+          GET_STAMINA(ch), GET_MAX_STAMINA(ch));
+  fprintf(fl, "abilities = { str = %d, int = %d, wis = %d, dex = %d, con = %d, cha = %d }\n",
+          GET_STR(ch), GET_INT(ch), GET_WIS(ch), GET_DEX(ch), GET_CON(ch), GET_CHA(ch));
 
-  sprintascii(bits,  PRF_FLAGS(ch)[0]);
-  sprintascii(bits2, PRF_FLAGS(ch)[1]);
-  sprintascii(bits3, PRF_FLAGS(ch)[2]);
-  sprintascii(bits4, PRF_FLAGS(ch)[3]);
-  fprintf(fl, "Pref: %s %s %s %s\n", bits, bits2, bits3, bits4);
+  fprintf(fl, "ac = %d\n", GET_AC(ch));
+  fprintf(fl, "coins = %d\n", GET_COINS(ch));
+  fprintf(fl, "bank_coins = %d\n", GET_BANK_COINS(ch));
+  fprintf(fl, "exp = %d\n", GET_EXP(ch));
+  fprintf(fl, "olc_zone = %d\n", GET_OLC_ZONE(ch));
+  fprintf(fl, "page_length = %d\n", GET_PAGE_LENGTH(ch));
+  fprintf(fl, "screen_width = %d\n", GET_SCREEN_WIDTH(ch));
+  fprintf(fl, "quest_points = %d\n", GET_QUESTPOINTS(ch));
+  fprintf(fl, "quest_counter = %d\n", GET_QUEST_COUNTER(ch));
+  fprintf(fl, "current_quest = %d\n", GET_QUEST(ch));
 
- if (GET_SAVE(ch, 0)	   != PFDEF_SAVETHROW)	fprintf(fl, "Thr1: %d\n", GET_SAVE(ch, 0));
-  if (GET_SAVE(ch, 1)	   != PFDEF_SAVETHROW)	fprintf(fl, "Thr2: %d\n", GET_SAVE(ch, 1));
-  if (GET_SAVE(ch, 2)	   != PFDEF_SAVETHROW)	fprintf(fl, "Thr3: %d\n", GET_SAVE(ch, 2));
-  if (GET_SAVE(ch, 3)	   != PFDEF_SAVETHROW)	fprintf(fl, "Thr4: %d\n", GET_SAVE(ch, 3));
-  if (GET_SAVE(ch, 4)	   != PFDEF_SAVETHROW)	fprintf(fl, "Thr5: %d\n", GET_SAVE(ch, 4));
-
-  if (GET_WIMP_LEV(ch)	   != PFDEF_WIMPLEV)	fprintf(fl, "Wimp: %d\n", GET_WIMP_LEV(ch));
-  if (GET_FREEZE_LEV(ch)   != PFDEF_FREEZELEV)	fprintf(fl, "Frez: %d\n", GET_FREEZE_LEV(ch));
-  if (GET_INVIS_LEV(ch)	   != PFDEF_INVISLEV)	fprintf(fl, "Invs: %d\n", GET_INVIS_LEV(ch));
-  if (GET_LOADROOM(ch)	   != PFDEF_LOADROOM)	fprintf(fl, "Room: %d\n", GET_LOADROOM(ch));
-
-  if (GET_BAD_PWS(ch)	   != PFDEF_BADPWS)	fprintf(fl, "Badp: %d\n", GET_BAD_PWS(ch));
-
-  if (GET_COND(ch, HUNGER)   != PFDEF_HUNGER && GET_LEVEL(ch) < LVL_IMMORT) fprintf(fl, "Hung: %d\n", GET_COND(ch, HUNGER));
-  if (GET_COND(ch, THIRST) != PFDEF_THIRST && GET_LEVEL(ch) < LVL_IMMORT) fprintf(fl, "Thir: %d\n", GET_COND(ch, THIRST));
-  if (GET_COND(ch, DRUNK)  != PFDEF_DRUNK  && GET_LEVEL(ch) < LVL_IMMORT) fprintf(fl, "Drnk: %d\n", GET_COND(ch, DRUNK));
-
-  if (GET_HIT(ch)	   != PFDEF_HIT  || GET_MAX_HIT(ch)  != PFDEF_MAXHIT)  fprintf(fl, "Hit : %d/%d\n", GET_HIT(ch),  GET_MAX_HIT(ch));
-  if (GET_MANA(ch)	   != PFDEF_MANA || GET_MAX_MANA(ch) != PFDEF_MAXMANA) fprintf(fl, "Mana: %d/%d\n", GET_MANA(ch), GET_MAX_MANA(ch));
-  if (GET_STAMINA(ch)	   != PFDEF_STAMINA || GET_MAX_STAMINA(ch) != PFDEF_MAXSTAMINA) fprintf(fl, "Stam: %d/%d\n", GET_STAMINA(ch), GET_MAX_STAMINA(ch));
-
-  if (GET_STR(ch)	   != PFDEF_STR)  fprintf(fl, "Str : %d\n", GET_STR(ch));
-  if (GET_INT(ch)	   != PFDEF_INT)	fprintf(fl, "Int : %d\n", GET_INT(ch));
-  if (GET_WIS(ch)	   != PFDEF_WIS)	fprintf(fl, "Wis : %d\n", GET_WIS(ch));
-  if (GET_DEX(ch)	   != PFDEF_DEX)	fprintf(fl, "Dex : %d\n", GET_DEX(ch));
-  if (GET_CON(ch)	   != PFDEF_CON)	fprintf(fl, "Con : %d\n", GET_CON(ch));
-  if (GET_CHA(ch)	   != PFDEF_CHA)	fprintf(fl, "Cha : %d\n", GET_CHA(ch));
-
-  if (GET_AC(ch)	   != PFDEF_AC)		fprintf(fl, "Ac  : %d\n", GET_AC(ch));
-  if (GET_COINS(ch)	   != PFDEF_COINS)	fprintf(fl, "Coin: %d\n", GET_COINS(ch));
-  if (GET_BANK_COINS(ch)	   != PFDEF_BANK_COINS)	fprintf(fl, "BankCoins: %d\n", GET_BANK_COINS(ch));
-  if (GET_EXP(ch)	   != PFDEF_EXP)	fprintf(fl, "Exp : %d\n", GET_EXP(ch));
-  if (GET_OLC_ZONE(ch)     != PFDEF_OLC)        fprintf(fl, "Olc : %d\n", GET_OLC_ZONE(ch));
-  if (GET_PAGE_LENGTH(ch)  != PFDEF_PAGELENGTH) fprintf(fl, "Page: %d\n", GET_PAGE_LENGTH(ch));
-  if (GET_SCREEN_WIDTH(ch) != PFDEF_SCREENWIDTH) fprintf(fl, "ScrW: %d\n", GET_SCREEN_WIDTH(ch));
-  if (GET_QUESTPOINTS(ch)  != PFDEF_QUESTPOINTS) fprintf(fl, "Qstp: %d\n", GET_QUESTPOINTS(ch));
-  if (GET_QUEST_COUNTER(ch)!= PFDEF_QUESTCOUNT)  fprintf(fl, "Qcnt: %d\n", GET_QUEST_COUNTER(ch));
-  if (GET_NUM_QUESTS(ch)   != PFDEF_COMPQUESTS) {
-    fprintf(fl, "Qest:\n");
-    for (i = 0; i < GET_NUM_QUESTS(ch); i++)
-      fprintf(fl, "%d\n", ch->player_specials->saved.completed_quests[i]);
-    fprintf(fl, "%d\n", NOTHING);
-  }
-  if (GET_QUEST(ch)        != PFDEF_CURRQUEST)  fprintf(fl, "Qcur: %d\n", GET_QUEST(ch));
-
- if (SCRIPT(ch)) {
-   for (t = TRIGGERS(SCRIPT(ch)); t; t = t->next)
-   fprintf(fl, "Trig: %d\n",GET_TRIG_VNUM(t));
-}
-
-  /* Save skills */
-  if (GET_LEVEL(ch) < LVL_IMMORT) {
-    fprintf(fl, "Skil:\n");
-    for (i = 1; i <= MAX_SKILLS; i++) {
-     if (GET_SKILL(ch, i))
-	fprintf(fl, "%d %d\n", i, GET_SKILL(ch, i));
+  if (GET_NUM_QUESTS(ch) > 0) {
+    fprintf(fl, "completed_quests = [");
+    for (i = 0; i < GET_NUM_QUESTS(ch); i++) {
+      if (i > 0)
+        fputs(", ", fl);
+      fprintf(fl, "%d", ch->player_specials->saved.completed_quests[i]);
     }
-    fprintf(fl, "0 0\n");
+    fprintf(fl, "]\n");
   }
 
-  /* Write per-skill next gain times as epoch seconds. */
-  fprintf(fl, "SkGt:");  /* Skill Gain Timer */
-  for (int i = 1; i <= MAX_SKILLS; i++)
-    fprintf(fl, " %ld", (long)GET_SKILL_NEXT_GAIN(ch, i));
-  fputc('\n', fl);
+  if (SCRIPT(ch)) {
+    int trig_count = 0;
+    for (t = TRIGGERS(SCRIPT(ch)); t; t = t->next)
+      trig_count++;
+    if (trig_count > 0) {
+      fprintf(fl, "triggers = [");
+      for (t = TRIGGERS(SCRIPT(ch)), i = 0; t; t = t->next, i++) {
+        if (i > 0)
+          fputs(", ", fl);
+        fprintf(fl, "%d", GET_TRIG_VNUM(t));
+      }
+      fprintf(fl, "]\n");
+    }
+  }
 
-  /* Save affects */
+  for (i = 1; i <= MAX_SKILLS; i++)
+    gain_times[i - 1] = (long)GET_SKILL_NEXT_GAIN(ch, i);
+  toml_write_long_array(fl, "skill_gain_next", gain_times, MAX_SKILLS);
+
+  if (GET_LEVEL(ch) < LVL_IMMORT) {
+    for (i = 1; i <= MAX_SKILLS; i++) {
+      if (!GET_SKILL(ch, i))
+        continue;
+      fprintf(fl, "\n[[skill]]\n");
+      fprintf(fl, "id = %d\n", i);
+      fprintf(fl, "level = %d\n", GET_SKILL(ch, i));
+    }
+  }
+
   if (tmp_aff[0].spell > 0) {
-    fprintf(fl, "Affs:\n");
     for (i = 0; i < MAX_AFFECT; i++) {
       aff = &tmp_aff[i];
-      if (aff->spell)
-		fprintf(fl, "%d %d %d %d %d %d %d %d\n", aff->spell, aff->duration,
-          aff->modifier, aff->location, aff->bitvector[0], aff->bitvector[1], aff->bitvector[2], aff->bitvector[3]);
+      if (!aff->spell)
+        continue;
+      fprintf(fl, "\n[[affect]]\n");
+      fprintf(fl, "spell = %d\n", aff->spell);
+      fprintf(fl, "duration = %d\n", aff->duration);
+      fprintf(fl, "modifier = %d\n", aff->modifier);
+      fprintf(fl, "location = %d\n", aff->location);
+      fprintf(fl, "bitvector = [%d, %d, %d, %d]\n",
+              aff->bitvector[0], aff->bitvector[1], aff->bitvector[2], aff->bitvector[3]);
     }
-    fprintf(fl, "0 0 0 0 0 0 0 0\n");
   }
 
-  write_aliases_ascii(fl, ch);
-  save_char_vars_ascii(fl, ch);
+  for (struct alias_data *temp = GET_ALIASES(ch); temp; temp = temp->next) {
+    fprintf(fl, "\n[[alias]]\n");
+    toml_write_kv_string(fl, "alias", temp->alias);
+    toml_write_kv_string(fl, "replacement", temp->replacement);
+    fprintf(fl, "type = %d\n", temp->type);
+  }
+
+  if (SCRIPT(ch) && ch->script->global_vars) {
+    struct trig_var_data *vars;
+
+    for (vars = ch->script->global_vars; vars; vars = vars->next) {
+      if (*vars->name == '-')
+        continue;
+      fprintf(fl, "\n[[var]]\n");
+      toml_write_kv_string(fl, "name", vars->name);
+      fprintf(fl, "context = %ld\n", vars->context);
+      toml_write_kv_string(fl, "value", vars->value);
+    }
+  }
 
   fclose(fl);
 
@@ -933,6 +1154,7 @@ void clean_pfiles(void)
 
 /* load_affects function now handles both 32-bit and
    128-bit affect bitvectors for backward compatibility */
+#if 0
 static void load_affects(FILE *fl, struct char_data *ch)
 {
   int num = 0, num2 = 0, num3 = 0, num4 = 0, num5 = 0, num6 = 0, num7 = 0, num8 = 0, i, n_vars;
@@ -1085,3 +1307,4 @@ static void read_aliases_ascii(FILE *file, struct char_data *ch, int count)
     }
   }
 }
+#endif

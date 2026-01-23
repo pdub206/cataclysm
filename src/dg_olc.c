@@ -113,6 +113,7 @@ ACMD(do_oasis_trigedit)
 void script_save_to_disk(FILE *fp, void *item, int type)
 {
   struct trig_proto_list *t;
+  int first = 1;
 
   if (type==MOB_TRIGGER)
     t = ((struct char_data *)item)->proto_script;
@@ -125,11 +126,18 @@ void script_save_to_disk(FILE *fp, void *item, int type)
     return;
   }
 
-  while (t)
-  {
-    fprintf(fp,"T %d\n", t->vnum);
+  if (!t)
+    return;
+
+  fprintf(fp, "triggers = [");
+  while (t) {
+    if (!first)
+      fputs(", ", fp);
+    fprintf(fp, "%d", t->vnum);
+    first = 0;
     t = t->next;
   }
+  fputs("]\n", fp);
 }
 
 static void trigedit_setup_new(struct descriptor_data *d)
@@ -852,9 +860,9 @@ void trigedit_save(struct descriptor_data *d)
   fclose(trig_file);
 
 #ifdef CIRCLE_MAC
-  snprintf(buf, sizeof(buf), "%s:%d.trg", TRG_PREFIX, zone);
+  snprintf(buf, sizeof(buf), "%s:%d.toml", TRG_PREFIX, zone);
 #else
-  snprintf(buf, sizeof(buf), "%s/%d.trg", TRG_PREFIX, zone);
+  snprintf(buf, sizeof(buf), "%s/%d.toml", TRG_PREFIX, zone);
 #endif
 
   remove(buf);

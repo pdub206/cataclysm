@@ -1,0 +1,7 @@
+[[room]]
+vnum = 1
+name = "Limbo"
+description = "Floating in the void, you lose all sense of time and space.\n"
+flags = [0, 0, 0, 0]
+sector = 0
+

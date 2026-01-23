@@ -1,0 +1,15 @@
+[[room]]
+vnum = 1
+saved_at = 1759515981
+
+[[room.object]]
+vnum = 1
+timer = 0
+weight = 0
+cost = 0
+cost_per_day = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+contents = []
+

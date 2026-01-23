@@ -40,6 +40,7 @@
 #include "mud_event.h"
 #include "msgedit.h"
 #include "screen.h"
+#include "toml.h"
 #include <sys/stat.h>
 
 /*  declarations of most of the 'global' variables */
@@ -139,6 +140,11 @@ static void parse_simple_mob(FILE *mob_f, int i, int nr);
 static void interpret_espec(const char *keyword, const char *value, int i, int nr);
 static void parse_espec(char *buf, int i, int nr);
 static void parse_enhanced_mob(FILE *mob_f, int i, int nr);
+static void parse_room_toml(toml_table_t *room_tab);
+static void parse_mobile_toml(toml_table_t *mob_tab);
+static void parse_object_toml(toml_table_t *obj_tab);
+static void parse_trigger_toml(toml_table_t *trig_tab);
+static void parse_quest_toml(toml_table_t *quest_tab);
 static void get_one_line(FILE *fl, char *buf);
 static void check_start_rooms(void);
 static void renum_zone_table(void);
@@ -944,12 +950,234 @@ int count_hash_records(FILE *fl)
   return (count);
 }
 
+static const char *toml_mode_key(int mode)
+{
+  switch (mode) {
+  case DB_BOOT_WLD:
+    return "room";
+  case DB_BOOT_MOB:
+    return "mob";
+  case DB_BOOT_OBJ:
+    return "object";
+  case DB_BOOT_ZON:
+    return "zone";
+  case DB_BOOT_SHP:
+    return "shop";
+  case DB_BOOT_TRG:
+    return "trigger";
+  case DB_BOOT_QST:
+    return "quest";
+  default:
+    return NULL;
+  }
+}
+
+static char **toml_load_index_files(const char *index_path, int *count)
+{
+  FILE *fp;
+  toml_table_t *tab;
+  toml_array_t *files;
+  char errbuf[200];
+  char **list = NULL;
+  int i, n;
+
+  if (!count)
+    return NULL;
+
+  *count = 0;
+
+  if (!(fp = fopen(index_path, "r"))) {
+    log("SYSERR: opening index file '%s': %s", index_path, strerror(errno));
+    exit(1);
+  }
+
+  tab = toml_parse_file(fp, errbuf, sizeof(errbuf));
+  fclose(fp);
+  if (!tab) {
+    log("SYSERR: parsing index file '%s': %s", index_path, errbuf);
+    exit(1);
+  }
+
+  files = toml_array_in(tab, "files");
+  if (!files) {
+    toml_free(tab);
+    log("SYSERR: index file '%s' missing 'files' array.", index_path);
+    exit(1);
+  }
+
+  n = toml_array_nelem(files);
+  if (n > 0)
+    CREATE(list, char *, n);
+
+  for (i = 0; i < n; i++) {
+    toml_datum_t v = toml_string_at(files, i);
+    if (!v.ok || !v.u.s) {
+      toml_free(tab);
+      log("SYSERR: index file '%s' has invalid entry at %d.", index_path, i);
+      exit(1);
+    }
+    list[i] = strdup(v.u.s);
+    free(v.u.s);
+  }
+
+  toml_free(tab);
+  *count = n;
+  return list;
+}
+
+static int toml_count_records(const char *path, int mode)
+{
+  FILE *fp;
+  toml_table_t *tab;
+  toml_array_t *arr;
+  char errbuf[200];
+  const char *key;
+  int count = 0;
+
+  key = toml_mode_key(mode);
+  if (!key)
+    return 0;
+
+  fp = fopen(path, "r");
+  if (!fp) {
+    log("SYSERR: File '%s' listed in '%s': %s", path, key, strerror(errno));
+    return 0;
+  }
+
+  tab = toml_parse_file(fp, errbuf, sizeof(errbuf));
+  fclose(fp);
+  if (!tab) {
+    log("SYSERR: parsing file '%s': %s", path, errbuf);
+    return 0;
+  }
+
+  arr = toml_array_in(tab, key);
+  if (arr)
+    count = toml_array_nelem(arr);
+
+  toml_free(tab);
+  return count;
+}
+
+static int toml_get_int_default(toml_table_t *tab, const char *key, int def)
+{
+  toml_datum_t v = toml_int_in(tab, key);
+  if (!v.ok)
+    return def;
+  return (int)v.u.i;
+}
+
+static char *toml_get_string_dup(toml_table_t *tab, const char *key)
+{
+  toml_datum_t v = toml_string_in(tab, key);
+  char *out;
+
+  if (!v.ok || !v.u.s)
+    return NULL;
+
+  out = strdup(v.u.s);
+  free(v.u.s);
+  return out;
+}
+
+static int toml_get_int_array(toml_table_t *tab, const char *key, int *out, int out_len)
+{
+  toml_array_t *arr;
+  int i, n;
+
+  if (!out || out_len <= 0)
+    return 0;
+
+  arr = toml_array_in(tab, key);
+  if (!arr)
+    return 0;
+
+  n = toml_array_nelem(arr);
+  for (i = 0; i < out_len && i < n; i++) {
+    toml_datum_t v = toml_int_at(arr, i);
+    if (v.ok)
+      out[i] = (int)v.u.i;
+  }
+  return n;
+}
+
+static void add_proto_trigger(void *proto, int type, int vnum)
+{
+  struct trig_proto_list *trg_proto, *new_trg;
+  int rnum;
+
+  rnum = real_trigger(vnum);
+  if (rnum == NOTHING) {
+    switch (type) {
+    case MOB_TRIGGER:
+      mudlog(BRF, LVL_BUILDER, TRUE,
+             "SYSERR: Trigger vnum #%d asked for but non-existant! (mob: %s - %d)",
+             vnum, GET_NAME((char_data *)proto), GET_MOB_VNUM((char_data *)proto));
+      break;
+    case WLD_TRIGGER:
+      mudlog(BRF, LVL_BUILDER, TRUE,
+             "SYSERR: Trigger vnum #%d asked for but non-existant! (room:%d)",
+             vnum, GET_ROOM_VNUM(((room_data *)proto)->number));
+      break;
+    case OBJ_TRIGGER:
+      mudlog(BRF, LVL_BUILDER, TRUE,
+             "SYSERR: Trigger vnum #%d asked for but non-existant! (obj:%d)",
+             vnum, GET_OBJ_VNUM((obj_data *)proto));
+      break;
+    default:
+      mudlog(BRF, LVL_BUILDER, TRUE,
+             "SYSERR: Trigger vnum #%d asked for but non-existant! (?)", vnum);
+      break;
+    }
+    return;
+  }
+
+  CREATE(new_trg, struct trig_proto_list, 1);
+  new_trg->vnum = vnum;
+  new_trg->next = NULL;
+
+  switch (type) {
+  case MOB_TRIGGER:
+    trg_proto = ((char_data *)proto)->proto_script;
+    if (!trg_proto)
+      ((char_data *)proto)->proto_script = trg_proto = new_trg;
+    else {
+      while (trg_proto->next)
+        trg_proto = trg_proto->next;
+      trg_proto->next = new_trg;
+    }
+    break;
+  case WLD_TRIGGER:
+    trg_proto = ((room_data *)proto)->proto_script;
+    if (!trg_proto)
+      ((room_data *)proto)->proto_script = trg_proto = new_trg;
+    else {
+      while (trg_proto->next)
+        trg_proto = trg_proto->next;
+      trg_proto->next = new_trg;
+    }
+    break;
+  case OBJ_TRIGGER:
+    trg_proto = ((obj_data *)proto)->proto_script;
+    if (!trg_proto)
+      ((obj_data *)proto)->proto_script = trg_proto = new_trg;
+    else {
+      while (trg_proto->next)
+        trg_proto = trg_proto->next;
+      trg_proto->next = new_trg;
+    }
+    break;
+  }
+}
+
 void index_boot(int mode)
 {
   const char *index_filename, *prefix = NULL;	/* NULL or egcs 1.1 complains */
-  FILE *db_index, *db_file;
+  FILE *db_index = NULL, *db_file;
   int line_number, rec_count = 0, size[2];
   char buf2[PATH_MAX], buf1[PATH_MAX - 100];   // - 100 to make room for prefix
+  char **index_files = NULL;
+  int index_count = 0;
 
   switch (mode) {
   case DB_BOOT_WLD:
@@ -981,48 +1209,55 @@ void index_boot(int mode)
     exit(1);
   }
 
-  if (mini_mud)
-    index_filename = MINDEX_FILE;
-  else
-    index_filename = INDEX_FILE;
+  if (mode == DB_BOOT_HLP) {
+    index_filename = mini_mud ? "index.mini" : "index";
 
-  snprintf(buf2, sizeof(buf2), "%s%s", prefix, index_filename);
-  if (!(db_index = fopen(buf2, "r"))) {
-    log("SYSERR: opening index file '%s': %s", buf2, strerror(errno));
-    exit(1);
-  }
-
-  for (line_number = 0;; ++line_number) {
-    /* first, count the number of records in the file so we can malloc */
-    if (fscanf(db_index, "%s\n", buf1) != 1) {
-      if (feof(db_index))
-        log("SYSERR: boot error -- unexpected end of file encountered in index file ./%s%s. "
-            "Ensure that the last line of the file starts with the character '$'.",
-            prefix, index_filename);
-      else if (ferror(db_index))
-        log("SYSERR: boot error -- unexpected end of file encountered in index file ./%s%s: %s",
-            prefix, index_filename, strerror(errno));
-      else
-        log("SYSERR: boot error -- error parsing index file %s%s on line %d",
-            prefix, index_filename, line_number);
+    snprintf(buf2, sizeof(buf2), "%s%s", prefix, index_filename);
+    if (!(db_index = fopen(buf2, "r"))) {
+      log("SYSERR: opening index file '%s': %s", buf2, strerror(errno));
       exit(1);
     }
 
-    if (*buf1 == '$')
-      break;
+    for (line_number = 0;; ++line_number) {
+      /* first, count the number of records in the file so we can malloc */
+      if (fscanf(db_index, "%s\n", buf1) != 1) {
+        if (feof(db_index))
+          log("SYSERR: boot error -- unexpected end of file encountered in index file ./%s%s. "
+              "Ensure that the last line of the file starts with the character '$'.",
+              prefix, index_filename);
+        else if (ferror(db_index))
+          log("SYSERR: boot error -- unexpected end of file encountered in index file ./%s%s: %s",
+              prefix, index_filename, strerror(errno));
+        else
+          log("SYSERR: boot error -- error parsing index file %s%s on line %d",
+              prefix, index_filename, line_number);
+        exit(1);
+      }
 
-    snprintf(buf2, sizeof(buf2), "%s%s", prefix, buf1);
-    if (!(db_file = fopen(buf2, "r"))) {
-      log("SYSERR: File '%s' listed in '%s/%s': %s", buf2, prefix,
-          index_filename, strerror(errno));
-    } else {
-      if (mode == DB_BOOT_ZON)
-        rec_count++;
-      else if (mode == DB_BOOT_HLP)
+      if (*buf1 == '$')
+        break;
+
+      snprintf(buf2, sizeof(buf2), "%s%s", prefix, buf1);
+      if (!(db_file = fopen(buf2, "r"))) {
+        log("SYSERR: File '%s' listed in '%s/%s': %s", buf2, prefix,
+            index_filename, strerror(errno));
+      } else {
         rec_count += count_alias_records(db_file);
-      else
-        rec_count += count_hash_records(db_file);
-      fclose(db_file);
+        fclose(db_file);
+      }
+    }
+  } else {
+    if (mini_mud)
+      index_filename = MINDEX_FILE;
+    else
+      index_filename = INDEX_FILE;
+
+    snprintf(buf2, sizeof(buf2), "%s%s", prefix, index_filename);
+    index_files = toml_load_index_files(buf2, &index_count);
+
+    for (line_number = 0; line_number < index_count; line_number++) {
+      snprintf(buf2, sizeof(buf2), "%s%s", prefix, index_files[line_number]);
+      rec_count += toml_count_records(buf2, mode);
     }
   }
 
@@ -1076,52 +1311,58 @@ void index_boot(int mode)
     break;
   }
 
-  rewind(db_index);
+  if (mode == DB_BOOT_HLP) {
+    rewind(db_index);
 
-  for (line_number = 1;; ++line_number) {
-    if (fscanf(db_index, "%s\n", buf1) != 1) {
-      if (feof(db_index))
-        log("SYSERR: boot error -- unexpected end of file encountered in index file ./%s%s",
-            prefix, index_filename);
-      else if (ferror(db_index))
-        log("SYSERR: boot error -- unexpected end of file encountered in index file ./%s%s: %s",
-            prefix, index_filename, strerror(errno));
-      else
-        log("SYSERR: boot error -- error parsing index file ./%s%s on line %d",
-            prefix, index_filename, line_number);
-      exit(1);
-    }
+    for (line_number = 1;; ++line_number) {
+      if (fscanf(db_index, "%s\n", buf1) != 1) {
+        if (feof(db_index))
+          log("SYSERR: boot error -- unexpected end of file encountered in index file ./%s%s",
+              prefix, index_filename);
+        else if (ferror(db_index))
+          log("SYSERR: boot error -- unexpected end of file encountered in index file ./%s%s: %s",
+              prefix, index_filename, strerror(errno));
+        else
+          log("SYSERR: boot error -- error parsing index file ./%s%s on line %d",
+              prefix, index_filename, line_number);
+        exit(1);
+      }
 
-    if (*buf1 == '$')
-      break;
+      if (*buf1 == '$')
+        break;
 
-    snprintf(buf2, sizeof(buf2), "%s%s", prefix, buf1);
-    if (!(db_file = fopen(buf2, "r"))) {
-      log("SYSERR: %s: %s", buf2, strerror(errno));
-      exit(1);
-    }
-    switch (mode) {
-    case DB_BOOT_WLD:
-    case DB_BOOT_OBJ:
-    case DB_BOOT_MOB:
-    case DB_BOOT_TRG:
-    case DB_BOOT_QST:
-      discrete_load(db_file, mode, buf2);
-      break;
-    case DB_BOOT_ZON:
-      load_zones(db_file, buf2);
-      break;
-    case DB_BOOT_HLP:
+      snprintf(buf2, sizeof(buf2), "%s%s", prefix, buf1);
+      if (!(db_file = fopen(buf2, "r"))) {
+        log("SYSERR: %s: %s", buf2, strerror(errno));
+        exit(1);
+      }
       load_help(db_file, buf2);
-      break;
-    case DB_BOOT_SHP:
-      boot_the_shops(db_file, buf2, rec_count);
-      break;
+      fclose(db_file);
     }
-
-    fclose(db_file);
+    fclose(db_index);
+  } else {
+    for (line_number = 0; line_number < index_count; line_number++) {
+      snprintf(buf2, sizeof(buf2), "%s%s", prefix, index_files[line_number]);
+      switch (mode) {
+      case DB_BOOT_WLD:
+      case DB_BOOT_OBJ:
+      case DB_BOOT_MOB:
+      case DB_BOOT_TRG:
+      case DB_BOOT_QST:
+        discrete_load(NULL, mode, buf2);
+        break;
+      case DB_BOOT_ZON:
+        load_zones(NULL, buf2);
+        break;
+      case DB_BOOT_SHP:
+        boot_the_shops(NULL, buf2, rec_count);
+        break;
+      }
+    }
+    for (line_number = 0; line_number < index_count; line_number++)
+      free(index_files[line_number]);
+    free(index_files);
   }
-  fclose(db_index);
 
   /* Sort the help index. */
   if (mode == DB_BOOT_HLP) {
@@ -1131,63 +1372,63 @@ void index_boot(int mode)
 
 void discrete_load(FILE *fl, int mode, char *filename)
 {
-  int nr = -1, last;
-  char line[READ_SIZE];
+  FILE *fp;
+  toml_table_t *tab;
+  toml_array_t *arr;
+  char errbuf[200];
+  const char *key;
+  int i, count;
 
-  const char *modes[] = {"world", "mob", "obj", "ZON", "SHP", "HLP", "trg", "qst"};
-  /* modes positions correspond to DB_BOOT_xxx in db.h */
+  (void)fl;
 
-  for (;;) {
-    /* We have to do special processing with the obj files because they have no
-     * end-of-record marker. */
-    if (mode != DB_BOOT_OBJ || nr < 0)
-      if (!get_line(fl, line)) {
-	if (nr == -1) {
-	  log("SYSERR: %s file %s is empty!", modes[mode], filename);
-	} else {
-	  log("SYSERR: Format error in %s after %s #%d\n"
-	      "...expecting a new %s, but file ended!\n"
-	      "(maybe the file is not terminated with '$'?)", filename,
-	      modes[mode], nr, modes[mode]);
-	}
-	exit(1);
-      }
-    if (*line == '$')
-      return;
+  key = toml_mode_key(mode);
+  if (!key)
+    return;
 
-    if (*line == '#') {
-      last = nr;
-      if (sscanf(line, "#%d", &nr) != 1) {
-	log("SYSERR: Format error after %s #%d", modes[mode], last);
-	exit(1);
-      }
-      if (nr >= 99999)
-	return;
-      else
-	switch (mode) {
-	case DB_BOOT_WLD:
-	  parse_room(fl, nr);
-	  break;
-	case DB_BOOT_MOB:
-	  parse_mobile(fl, nr);
-	  break;
-        case DB_BOOT_TRG:
-          parse_trigger(fl, nr);
-          break;
-	case DB_BOOT_OBJ:
-	  strlcpy(line, parse_object(fl, nr), sizeof(line));
-	  break;
-  case DB_BOOT_QST:
-    parse_quest(fl, nr);
-    break;
-	}
-    } else {
-      log("SYSERR: Format error in %s file %s near %s #%d", modes[mode],
-	  filename, modes[mode], nr);
-      log("SYSERR: ... offending line: '%s'", line);
-      exit(1);
+  if (!(fp = fopen(filename, "r"))) {
+    log("SYSERR: %s: %s", filename, strerror(errno));
+    exit(1);
+  }
+
+  tab = toml_parse_file(fp, errbuf, sizeof(errbuf));
+  fclose(fp);
+  if (!tab) {
+    log("SYSERR: parsing file '%s': %s", filename, errbuf);
+    exit(1);
+  }
+
+  arr = toml_array_in(tab, key);
+  if (!arr) {
+    toml_free(tab);
+    log("SYSERR: TOML file '%s' missing '%s' array.", filename, key);
+    exit(1);
+  }
+
+  count = toml_array_nelem(arr);
+  for (i = 0; i < count; i++) {
+    toml_table_t *item = toml_table_at(arr, i);
+    if (!item)
+      continue;
+    switch (mode) {
+    case DB_BOOT_WLD:
+      parse_room_toml(item);
+      break;
+    case DB_BOOT_MOB:
+      parse_mobile_toml(item);
+      break;
+    case DB_BOOT_TRG:
+      parse_trigger_toml(item);
+      break;
+    case DB_BOOT_OBJ:
+      parse_object_toml(item);
+      break;
+    case DB_BOOT_QST:
+      parse_quest_toml(item);
+      break;
     }
   }
+
+  toml_free(tab);
 }
 
 static char fread_letter(FILE *fp)
@@ -1261,6 +1502,729 @@ void ensure_newline_terminated(struct extra_descr_data* new_descr) {
     free(new_descr->description);
     new_descr->description = with_term;
   }
+}
+
+static void parse_room_toml(toml_table_t *room_tab)
+{
+  static int room_nr = 0, zone = 0;
+  int virtual_nr, i;
+  int flags[AF_ARRAY_MAX];
+  int sector;
+  toml_array_t *arr;
+  char buf2[MAX_STRING_LENGTH], buf[128];
+
+  if (!room_tab)
+    return;
+
+  virtual_nr = toml_get_int_default(room_tab, "vnum", NOWHERE);
+  if (virtual_nr == NOWHERE) {
+    log("SYSERR: TOML room missing vnum.");
+    exit(1);
+  }
+
+  /* This really had better fit or there are other problems. */
+  snprintf(buf2, sizeof(buf2), "room #%d", virtual_nr);
+
+  if (virtual_nr < zone_table[zone].bot) {
+    log("SYSERR: Room #%d is below zone %d (bot=%d, top=%d).", virtual_nr, zone_table[zone].number, zone_table[zone].bot, zone_table[zone].top);
+    exit(1);
+  }
+  while (virtual_nr > zone_table[zone].top)
+    if (++zone > top_of_zone_table) {
+      log("SYSERR: Room %d is outside of any zone.", virtual_nr);
+      exit(1);
+    }
+  world[room_nr].zone = zone;
+  world[room_nr].number = virtual_nr;
+
+  world[room_nr].name = toml_get_string_dup(room_tab, "name");
+  world[room_nr].description = toml_get_string_dup(room_tab, "description");
+  if (!world[room_nr].name || !world[room_nr].description) {
+    log("SYSERR: Room #%d missing name/description.", virtual_nr);
+    exit(1);
+  }
+
+  for (i = 0; i < AF_ARRAY_MAX; i++)
+    flags[i] = 0;
+  toml_get_int_array(room_tab, "flags", flags, AF_ARRAY_MAX);
+  for (i = 0; i < AF_ARRAY_MAX; i++)
+    world[room_nr].room_flags[i] = flags[i];
+
+  snprintf(buf, sizeof(buf), "room #%d", virtual_nr);
+  for (i = 0; i < AF_ARRAY_MAX; i++)
+    check_bitvector_names(world[room_nr].room_flags[i], room_bits_count, buf, "room");
+
+  sector = toml_get_int_default(room_tab, "sector", SECT_INSIDE);
+  if (sector > NUM_ROOM_SECTORS)
+    sector = SECT_INSIDE;
+  world[room_nr].sector_type = sector;
+
+  world[room_nr].func = NULL;
+  world[room_nr].contents = NULL;
+  world[room_nr].people = NULL;
+  world[room_nr].light = 0;	/* Zero light sources */
+
+  for (i = 0; i < NUM_OF_DIRS; i++) /* NUM_OF_DIRS here, not DIR_COUNT */
+    world[room_nr].dir_option[i] = NULL;
+
+  world[room_nr].ex_description = NULL;
+  world[room_nr].forage = NULL;
+  world[room_nr].proto_script = NULL;
+
+  arr = toml_array_in(room_tab, "exit");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_table_t *exit_tab = toml_table_at(arr, i);
+      int dir, exit_info, key, to_room;
+      char *general_description, *keyword;
+
+      if (!exit_tab)
+        continue;
+
+      dir = toml_get_int_default(exit_tab, "dir", -1);
+      if (dir < 0 || dir >= NUM_OF_DIRS)
+        continue;
+
+      if (!CONFIG_DIAGONAL_DIRS && IS_DIAGONAL(dir)) {
+        snprintf(buf2, sizeof(buf2), "room #%d, direction D%d", virtual_nr, dir);
+        log("Warning: Diagonal direction disabled: %s", buf2);
+        continue;
+      }
+
+      CREATE(world[room_nr].dir_option[dir], struct room_direction_data, 1);
+      general_description = toml_get_string_dup(exit_tab, "description");
+      keyword = toml_get_string_dup(exit_tab, "keyword");
+      world[room_nr].dir_option[dir]->general_description = general_description;
+      world[room_nr].dir_option[dir]->keyword = keyword;
+
+      exit_info = toml_get_int_default(exit_tab, "exit_info", 0);
+      key = toml_get_int_default(exit_tab, "key", NOTHING);
+      to_room = toml_get_int_default(exit_tab, "to_room", NOWHERE);
+
+      world[room_nr].dir_option[dir]->exit_info = exit_info;
+      world[room_nr].dir_option[dir]->key = ((key == -1 || key == 65535) ? NOTHING : key);
+      world[room_nr].dir_option[dir]->to_room = ((to_room == -1 || to_room == 0) ? NOWHERE : to_room);
+    }
+  }
+
+  arr = toml_array_in(room_tab, "extra_desc");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_table_t *ed_tab = toml_table_at(arr, i);
+      struct extra_descr_data *new_descr;
+      char *keyword, *description;
+
+      if (!ed_tab)
+        continue;
+      keyword = toml_get_string_dup(ed_tab, "keyword");
+      description = toml_get_string_dup(ed_tab, "description");
+      if (!keyword || !description) {
+        if (keyword) free(keyword);
+        if (description) free(description);
+        continue;
+      }
+      CREATE(new_descr, struct extra_descr_data, 1);
+      new_descr->keyword = keyword;
+      new_descr->description = description;
+      ensure_newline_terminated(new_descr);
+
+      new_descr->next = world[room_nr].ex_description;
+      world[room_nr].ex_description = new_descr;
+    }
+  }
+
+  arr = toml_array_in(room_tab, "forage");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_table_t *f_tab = toml_table_at(arr, i);
+      struct forage_entry *e, *tail;
+      int ovnum, dc;
+
+      if (!f_tab)
+        continue;
+      ovnum = toml_get_int_default(f_tab, "obj_vnum", 0);
+      dc = toml_get_int_default(f_tab, "dc", 0);
+      if (ovnum <= 0)
+        continue;
+
+      CREATE(e, struct forage_entry, 1);
+      e->obj_vnum = ovnum;
+      e->dc = dc;
+      e->next = NULL;
+      if (!world[room_nr].forage) {
+        world[room_nr].forage = e;
+      } else {
+        tail = world[room_nr].forage;
+        while (tail->next)
+          tail = tail->next;
+        tail->next = e;
+      }
+    }
+  }
+
+  arr = toml_array_in(room_tab, "triggers");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_datum_t v = toml_int_at(arr, i);
+      if (v.ok)
+        add_proto_trigger(&world[room_nr], WLD_TRIGGER, (int)v.u.i);
+    }
+  }
+
+  top_of_world = room_nr++;
+}
+
+static void parse_mobile_toml(toml_table_t *mob_tab)
+{
+  static int i = 0;
+  int j;
+  int vnum;
+  int level, hit_dice, mana_dice, stamina_dice;
+  int pos, default_pos, sex;
+  int val;
+  char *mob_type;
+  toml_table_t *simple_tab, *enh_tab, *sub_tab;
+  toml_array_t *arr;
+  char buf2[128];
+
+  if (!mob_tab)
+    return;
+
+  vnum = toml_get_int_default(mob_tab, "vnum", -1);
+  if (vnum < 0) {
+    log("SYSERR: TOML mob missing vnum.");
+    exit(1);
+  }
+
+  mob_index[i].vnum = vnum;
+  mob_index[i].number = 0;
+  mob_index[i].func = NULL;
+  mob_index[i].skin_yields = NULL;
+
+  clear_char(mob_proto + i);
+
+  /* Mobiles should NEVER use anything in the 'player_specials' structure. */
+  mob_proto[i].player_specials = &dummy_mob;
+  sprintf(buf2, "mob vnum %d", vnum);	/* sprintf: OK (for 'buf2 >= 19') */
+
+  mob_proto[i].player.name = toml_get_string_dup(mob_tab, "name");
+  mob_proto[i].player.keywords = toml_get_string_dup(mob_tab, "keywords");
+  mob_proto[i].player.short_descr = toml_get_string_dup(mob_tab, "short");
+  mob_proto[i].player.long_descr = toml_get_string_dup(mob_tab, "long");
+  mob_proto[i].player.description = toml_get_string_dup(mob_tab, "description");
+  mob_proto[i].player.background = toml_get_string_dup(mob_tab, "background");
+
+  if (!mob_proto[i].player.name || !mob_proto[i].player.keywords ||
+      !mob_proto[i].player.short_descr || !mob_proto[i].player.long_descr ||
+      !mob_proto[i].player.description) {
+    log("SYSERR: Mob #%d missing required strings.", vnum);
+    exit(1);
+  }
+
+  if (mob_proto[i].player.short_descr && *mob_proto[i].player.short_descr)
+    if (!str_cmp(fname(mob_proto[i].player.short_descr), "a") ||
+        !str_cmp(fname(mob_proto[i].player.short_descr), "an") ||
+        !str_cmp(fname(mob_proto[i].player.short_descr), "the"))
+      *mob_proto[i].player.short_descr = LOWER(*mob_proto[i].player.short_descr);
+
+  for (j = 0; j < AF_ARRAY_MAX; j++) {
+    MOB_FLAGS(mob_proto + i)[j] = 0;
+    AFF_FLAGS(mob_proto + i)[j] = 0;
+  }
+
+  toml_get_int_array(mob_tab, "flags", (int *)MOB_FLAGS(mob_proto + i), AF_ARRAY_MAX);
+  toml_get_int_array(mob_tab, "aff_flags", (int *)AFF_FLAGS(mob_proto + i), AF_ARRAY_MAX);
+
+  for (j = 0; j < AF_ARRAY_MAX; j++)
+    check_bitvector_names(MOB_FLAGS(mob_proto + i)[j], action_bits_count, buf2, "mobile");
+  for (j = 0; j < AF_ARRAY_MAX; j++)
+    check_bitvector_names(AFF_FLAGS(mob_proto + i)[j], affected_bits_count, buf2, "mobile affect");
+
+  GET_ALIGNMENT(mob_proto + i) = toml_get_int_default(mob_tab, "alignment", 0);
+
+  SET_BIT_AR(MOB_FLAGS(mob_proto + i), MOB_ISNPC);
+  if (MOB_FLAGGED(mob_proto + i, MOB_NOTDEADYET)) {
+    log("SYSERR: Mob #%d has reserved bit MOB_NOTDEADYET set.", vnum);
+    REMOVE_BIT_AR(MOB_FLAGS(mob_proto + i), MOB_NOTDEADYET);
+  }
+
+  mob_proto[i].real_abils.str = 11;
+  mob_proto[i].real_abils.intel = 11;
+  mob_proto[i].real_abils.wis = 11;
+  mob_proto[i].real_abils.dex = 11;
+  mob_proto[i].real_abils.con = 11;
+  mob_proto[i].real_abils.cha = 11;
+
+  simple_tab = toml_table_in(mob_tab, "simple");
+  if (!simple_tab) {
+    log("SYSERR: Mob #%d missing [mob.simple] table.", vnum);
+    exit(1);
+  }
+
+  level = toml_get_int_default(simple_tab, "level", 1);
+  if (level != 1)
+    log("INFO: Forcing mob #%d level from %d to 1 per level lock.", vnum, level);
+  GET_LEVEL(mob_proto + i) = 1;
+
+  hit_dice = toml_get_int_default(simple_tab, "hit_dice", 0);
+  mana_dice = toml_get_int_default(simple_tab, "mana_dice", 0);
+  stamina_dice = toml_get_int_default(simple_tab, "stamina_dice", 0);
+
+  GET_MAX_HIT(mob_proto + i) = 0;
+  GET_HIT(mob_proto + i) = hit_dice;
+  GET_MANA(mob_proto + i) = mana_dice;
+  GET_STAMINA(mob_proto + i) = stamina_dice;
+
+  GET_MAX_MANA(mob_proto + i) = 10;
+  GET_MAX_STAMINA(mob_proto + i) = 50;
+
+  pos = toml_get_int_default(simple_tab, "pos", POS_STANDING);
+  default_pos = toml_get_int_default(simple_tab, "default_pos", POS_STANDING);
+  sex = toml_get_int_default(simple_tab, "sex", SEX_NEUTRAL);
+
+  GET_POS(mob_proto + i) = pos;
+  GET_DEFAULT_POS(mob_proto + i) = default_pos;
+  GET_SEX(mob_proto + i) = sex;
+
+  GET_CLASS(mob_proto + i) = CLASS_UNDEFINED;
+  GET_SPECIES(mob_proto + i) = SPECIES_UNDEFINED;
+  GET_WEIGHT(mob_proto + i) = 200;
+  GET_HEIGHT(mob_proto + i) = 198;
+
+  for (j = 0; j < NUM_OF_SAVING_THROWS; j++)
+    GET_SAVE(mob_proto + i, j) = 0;
+
+  mob_type = toml_get_string_dup(mob_tab, "mob_type");
+  if (!mob_type)
+    mob_type = strdup("simple");
+
+  if (!str_cmp(mob_type, "enhanced")) {
+    enh_tab = toml_table_in(mob_tab, "enhanced");
+    if (!enh_tab) {
+      log("SYSERR: Mob #%d missing [mob.enhanced] table.", vnum);
+      exit(1);
+    }
+
+    sub_tab = toml_table_in(enh_tab, "abilities");
+    if (sub_tab) {
+      val = toml_get_int_default(sub_tab, "str", mob_proto[i].real_abils.str);
+      mob_proto[i].real_abils.str = MAX(3, MIN(25, val));
+      val = toml_get_int_default(sub_tab, "dex", mob_proto[i].real_abils.dex);
+      mob_proto[i].real_abils.dex = MAX(3, MIN(25, val));
+      val = toml_get_int_default(sub_tab, "con", mob_proto[i].real_abils.con);
+      mob_proto[i].real_abils.con = MAX(3, MIN(25, val));
+      val = toml_get_int_default(sub_tab, "int", mob_proto[i].real_abils.intel);
+      mob_proto[i].real_abils.intel = MAX(3, MIN(25, val));
+      val = toml_get_int_default(sub_tab, "wis", mob_proto[i].real_abils.wis);
+      mob_proto[i].real_abils.wis = MAX(3, MIN(25, val));
+      val = toml_get_int_default(sub_tab, "cha", mob_proto[i].real_abils.cha);
+      mob_proto[i].real_abils.cha = MAX(3, MIN(25, val));
+    }
+
+    val = toml_get_int_default(enh_tab, "class", GET_CLASS(mob_proto + i));
+    if (val >= CLASS_UNDEFINED && val < NUM_CLASSES)
+      GET_CLASS(mob_proto + i) = val;
+    val = toml_get_int_default(enh_tab, "species", GET_SPECIES(mob_proto + i));
+    if (val >= SPECIES_UNDEFINED && val < NUM_SPECIES)
+      GET_SPECIES(mob_proto + i) = val;
+    val = toml_get_int_default(enh_tab, "age", 0);
+    if (val > 0)
+      mob_proto[i].player.roleplay_age = MAX(MIN_CHAR_AGE, MIN(MAX_CHAR_AGE, val));
+
+    sub_tab = toml_table_in(enh_tab, "saving_throws");
+    if (sub_tab) {
+      mob_proto[i].char_specials.saved.saving_throws[ABIL_STR] =
+        MAX(0, MIN(100, toml_get_int_default(sub_tab, "str", 0)));
+      mob_proto[i].char_specials.saved.saving_throws[ABIL_DEX] =
+        MAX(0, MIN(100, toml_get_int_default(sub_tab, "dex", 0)));
+      mob_proto[i].char_specials.saved.saving_throws[ABIL_CON] =
+        MAX(0, MIN(100, toml_get_int_default(sub_tab, "con", 0)));
+      mob_proto[i].char_specials.saved.saving_throws[ABIL_INT] =
+        MAX(0, MIN(100, toml_get_int_default(sub_tab, "int", 0)));
+      mob_proto[i].char_specials.saved.saving_throws[ABIL_WIS] =
+        MAX(0, MIN(100, toml_get_int_default(sub_tab, "wis", 0)));
+      mob_proto[i].char_specials.saved.saving_throws[ABIL_CHA] =
+        MAX(0, MIN(100, toml_get_int_default(sub_tab, "cha", 0)));
+    }
+
+    arr = toml_array_in(enh_tab, "skills");
+    if (!arr)
+      arr = toml_array_in(mob_tab, "skills");
+    if (arr) {
+      int n = toml_array_nelem(arr);
+      for (j = 0; j < n; j++) {
+        toml_table_t *sk_tab = toml_table_at(arr, j);
+        int snum, sval;
+        if (!sk_tab)
+          continue;
+        snum = toml_get_int_default(sk_tab, "id", 0);
+        sval = toml_get_int_default(sk_tab, "level", 0);
+        if (snum >= 0 && snum < MAX_SKILLS)
+          SET_SKILL(&mob_proto[i], snum, (byte)MIN(MAX(0, sval), 100));
+      }
+    }
+
+    val = toml_get_int_default(enh_tab, "attack_type", -1);
+    if (val >= TYPE_HIT && val < (TYPE_HIT + NUM_ATTACK_TYPES))
+      val -= TYPE_HIT;
+    if (val >= 0 && val < NUM_ATTACK_TYPES)
+      mob_proto[i].mob_specials.attack_type = val;
+  }
+
+  free(mob_type);
+
+  if (mob_proto[i].player.time.birth == 0)
+    mob_proto[i].player.time.birth = time(0);
+  if (mob_proto[i].player.roleplay_age == 0)
+    mob_proto[i].player.roleplay_age = MIN_CHAR_AGE;
+  if (mob_proto[i].player.roleplay_age_year == 0)
+    mob_proto[i].player.roleplay_age_year = time_info.year;
+
+  arr = toml_array_in(mob_tab, "loadout");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (j = 0; j < n; j++) {
+      toml_table_t *lo_tab = toml_table_at(arr, j);
+      int v, wpos, qty;
+      if (!lo_tab)
+        continue;
+      v = toml_get_int_default(lo_tab, "vnum", NOTHING);
+      wpos = toml_get_int_default(lo_tab, "wear_pos", 0);
+      qty = toml_get_int_default(lo_tab, "quantity", 1);
+      if (v > 0)
+        loadout_append_entry(&mob_proto[i].proto_loadout, v, wpos, qty);
+    }
+  }
+
+  arr = toml_array_in(mob_tab, "skin_yield");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (j = 0; j < n; j++) {
+      toml_table_t *y_tab = toml_table_at(arr, j);
+      struct skin_yield_entry *e;
+      int ovnum, dc;
+
+      if (!y_tab)
+        continue;
+      ovnum = toml_get_int_default(y_tab, "obj_vnum", 0);
+      dc = toml_get_int_default(y_tab, "dc", 0);
+      if (ovnum <= 0)
+        continue;
+
+      CREATE(e, struct skin_yield_entry, 1);
+      e->mob_vnum = mob_index[i].vnum;
+      e->obj_vnum = ovnum;
+      e->dc = dc;
+      e->next = mob_index[i].skin_yields;
+      mob_index[i].skin_yields = e;
+    }
+  }
+
+  arr = toml_array_in(mob_tab, "triggers");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (j = 0; j < n; j++) {
+      toml_datum_t v = toml_int_at(arr, j);
+      if (v.ok)
+        add_proto_trigger(&mob_proto[i], MOB_TRIGGER, (int)v.u.i);
+    }
+  }
+
+  mob_proto[i].aff_abils = mob_proto[i].real_abils;
+
+  for (j = 0; j < NUM_WEARS; j++)
+    mob_proto[i].equipment[j] = NULL;
+
+  mob_proto[i].nr = i;
+  mob_proto[i].desc = NULL;
+
+  top_of_mobt = i++;
+}
+
+static void parse_object_toml(toml_table_t *obj_tab)
+{
+  static int i = 0;
+  int j;
+  int vnum;
+  toml_array_t *arr;
+  char *tmpptr;
+  char buf2[128];
+
+  if (!obj_tab)
+    return;
+
+  vnum = toml_get_int_default(obj_tab, "vnum", -1);
+  if (vnum < 0) {
+    log("SYSERR: TOML object missing vnum.");
+    exit(1);
+  }
+
+  obj_index[i].vnum = vnum;
+  obj_index[i].number = 0;
+  obj_index[i].func = NULL;
+
+  clear_object(obj_proto + i);
+  obj_proto[i].item_number = i;
+
+  sprintf(buf2, "object #%d", vnum);	/* sprintf: OK (for 'buf2 >= 19') */
+
+  /* string data */
+  if ((obj_proto[i].name = toml_get_string_dup(obj_tab, "name")) == NULL) {
+    log("SYSERR: Null obj name or format error at or near %s", buf2);
+    exit(1);
+  }
+  tmpptr = obj_proto[i].short_description = toml_get_string_dup(obj_tab, "short");
+  if (tmpptr && *tmpptr)
+    if (!str_cmp(fname(tmpptr), "a") || !str_cmp(fname(tmpptr), "an") ||
+        !str_cmp(fname(tmpptr), "the"))
+      *tmpptr = LOWER(*tmpptr);
+
+  tmpptr = obj_proto[i].description = toml_get_string_dup(obj_tab, "description");
+  if (tmpptr && *tmpptr)
+    CAP(tmpptr);
+  obj_proto[i].main_description = toml_get_string_dup(obj_tab, "main_description");
+
+  for (j = 0; j < AF_ARRAY_MAX; j++) {
+    GET_OBJ_EXTRA(obj_proto + i)[j] = 0;
+    GET_OBJ_WEAR(obj_proto + i)[j] = 0;
+    GET_OBJ_AFFECT(obj_proto + i)[j] = 0;
+  }
+  toml_get_int_array(obj_tab, "extra_flags", (int *)GET_OBJ_EXTRA(obj_proto + i), AF_ARRAY_MAX);
+  toml_get_int_array(obj_tab, "wear_flags", (int *)GET_OBJ_WEAR(obj_proto + i), AF_ARRAY_MAX);
+  toml_get_int_array(obj_tab, "affect_flags", (int *)GET_OBJ_AFFECT(obj_proto + i), AF_ARRAY_MAX);
+
+  GET_OBJ_TYPE(obj_proto + i) = toml_get_int_default(obj_tab, "type", 0);
+
+  {
+    int values[NUM_OBJ_VAL_POSITIONS];
+    for (j = 0; j < NUM_OBJ_VAL_POSITIONS; j++)
+      values[j] = 0;
+    toml_get_int_array(obj_tab, "values", values, NUM_OBJ_VAL_POSITIONS);
+    for (j = 0; j < NUM_OBJ_VAL_POSITIONS; j++)
+      GET_OBJ_VAL(obj_proto + i, j) = values[j];
+  }
+
+  GET_OBJ_WEIGHT(obj_proto + i) = toml_get_int_default(obj_tab, "weight", 0);
+  GET_OBJ_COST(obj_proto + i) = toml_get_int_default(obj_tab, "cost", 0);
+  GET_OBJ_COST_PER_DAY(obj_proto + i) = 0;
+  GET_OBJ_LEVEL(obj_proto + i) = toml_get_int_default(obj_tab, "level", 0);
+  GET_OBJ_TIMER(obj_proto + i) = toml_get_int_default(obj_tab, "timer", 0);
+
+  obj_proto[i].sitting_here = NULL;
+
+  /* check to make sure that weight of containers exceeds curr. quantity */
+  if (GET_OBJ_TYPE(obj_proto + i) == ITEM_DRINKCON ||
+      GET_OBJ_TYPE(obj_proto + i) == ITEM_FOUNTAIN) {
+    if (GET_OBJ_WEIGHT(obj_proto + i) < GET_OBJ_VAL(obj_proto + i, 1) && CAN_WEAR(obj_proto + i, ITEM_WEAR_TAKE))
+      GET_OBJ_WEIGHT(obj_proto + i) = GET_OBJ_VAL(obj_proto + i, 1) + 5;
+  }
+
+  /* extra descriptions and affect fields */
+  for (j = 0; j < MAX_OBJ_AFFECT; j++) {
+    obj_proto[i].affected[j].location = APPLY_NONE;
+    obj_proto[i].affected[j].modifier = 0;
+  }
+
+  arr = toml_array_in(obj_tab, "extra_desc");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (j = 0; j < n; j++) {
+      toml_table_t *ed_tab = toml_table_at(arr, j);
+      struct extra_descr_data *new_descr;
+      char *keyword, *description;
+      if (!ed_tab)
+        continue;
+      keyword = toml_get_string_dup(ed_tab, "keyword");
+      description = toml_get_string_dup(ed_tab, "description");
+      if (!keyword || !description) {
+        if (keyword) free(keyword);
+        if (description) free(description);
+        continue;
+      }
+      CREATE(new_descr, struct extra_descr_data, 1);
+      new_descr->keyword = keyword;
+      new_descr->description = description;
+      new_descr->next = obj_proto[i].ex_description;
+      obj_proto[i].ex_description = new_descr;
+    }
+  }
+
+  arr = toml_array_in(obj_tab, "affect");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (j = 0; j < n && j < MAX_OBJ_AFFECT; j++) {
+      toml_table_t *af_tab = toml_table_at(arr, j);
+      if (!af_tab)
+        continue;
+      obj_proto[i].affected[j].location = toml_get_int_default(af_tab, "location", APPLY_NONE);
+      obj_proto[i].affected[j].modifier = toml_get_int_default(af_tab, "modifier", 0);
+    }
+  }
+
+  arr = toml_array_in(obj_tab, "triggers");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (j = 0; j < n; j++) {
+      toml_datum_t v = toml_int_at(arr, j);
+      if (v.ok)
+        add_proto_trigger(&obj_proto[i], OBJ_TRIGGER, (int)v.u.i);
+    }
+  }
+
+  top_of_objt = i;
+  check_object(obj_proto + i);
+  i++;
+}
+
+static void parse_trigger_toml(toml_table_t *trig_tab)
+{
+  int vnum;
+  toml_array_t *arr;
+  int i, n;
+  struct cmdlist_element *cle = NULL;
+  struct index_data *t_index;
+  struct trig_data *trig;
+
+  if (!trig_tab)
+    return;
+
+  vnum = toml_get_int_default(trig_tab, "vnum", -1);
+  if (vnum < 0) {
+    log("SYSERR: TOML trigger missing vnum.");
+    exit(1);
+  }
+
+  CREATE(trig, trig_data, 1);
+  memset(trig, 0, sizeof(*trig));
+  CREATE(t_index, index_data, 1);
+
+  t_index->vnum = vnum;
+  t_index->number = 0;
+  t_index->func = NULL;
+  t_index->proto = trig;
+
+  trig->nr = top_of_trigt;
+  trig->name = toml_get_string_dup(trig_tab, "name");
+  if (!trig->name) {
+    trig->name = strdup("unnamed trigger");
+    log("Trigger with no name! (%d)", trig->nr);
+  }
+
+  trig->attach_type = (byte)toml_get_int_default(trig_tab, "attach_type", 0);
+  trig->trigger_type = (long)toml_get_int_default(trig_tab, "flags", 0);
+  trig->narg = toml_get_int_default(trig_tab, "narg", 0);
+  trig->arglist = toml_get_string_dup(trig_tab, "arglist");
+
+  arr = toml_array_in(trig_tab, "commands");
+  if (arr) {
+    n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_datum_t v = toml_string_at(arr, i);
+      if (!v.ok || !v.u.s)
+        continue;
+      if (!trig->cmdlist) {
+        CREATE(trig->cmdlist, struct cmdlist_element, 1);
+        trig->cmdlist->cmd = strdup(v.u.s);
+        trig->cmdlist->next = NULL;
+        cle = trig->cmdlist;
+      } else {
+        CREATE(cle->next, struct cmdlist_element, 1);
+        cle = cle->next;
+        cle->cmd = strdup(v.u.s);
+        cle->next = NULL;
+      }
+      free(v.u.s);
+    }
+  }
+
+  trig_index[top_of_trigt++] = t_index;
+}
+
+static void parse_quest_toml(toml_table_t *quest_tab)
+{
+  static int i = 0;
+  int j;
+  int vnum;
+  toml_table_t *rewards;
+  toml_array_t *values;
+
+  if (!quest_tab)
+    return;
+
+  vnum = toml_get_int_default(quest_tab, "vnum", -1);
+  if (vnum < 0) {
+    log("SYSERR: TOML quest missing vnum.");
+    exit(1);
+  }
+
+  aquest_table[i].vnum = vnum;
+  aquest_table[i].qm = NOBODY;
+  aquest_table[i].name = NULL;
+  aquest_table[i].desc = NULL;
+  aquest_table[i].info = NULL;
+  aquest_table[i].done = NULL;
+  aquest_table[i].quit = NULL;
+  aquest_table[i].flags = 0;
+  aquest_table[i].type = -1;
+  aquest_table[i].target = -1;
+  aquest_table[i].prereq = NOTHING;
+  for (j = 0; j < 7; j++)
+    aquest_table[i].value[j] = 0;
+  aquest_table[i].prev_quest = NOTHING;
+  aquest_table[i].next_quest = NOTHING;
+  aquest_table[i].func = NULL;
+
+  aquest_table[i].coins_reward = 0;
+  aquest_table[i].exp_reward  = 0;
+  aquest_table[i].obj_reward  = NOTHING;
+
+  aquest_table[i].name = toml_get_string_dup(quest_tab, "name");
+  aquest_table[i].desc = toml_get_string_dup(quest_tab, "description");
+  aquest_table[i].info = toml_get_string_dup(quest_tab, "info");
+  aquest_table[i].done = toml_get_string_dup(quest_tab, "done");
+  aquest_table[i].quit = toml_get_string_dup(quest_tab, "quit");
+
+  if (!aquest_table[i].name || !aquest_table[i].desc || !aquest_table[i].info ||
+      !aquest_table[i].done || !aquest_table[i].quit) {
+    log("SYSERR: Quest #%d missing required strings.", vnum);
+    exit(1);
+  }
+
+  aquest_table[i].type = toml_get_int_default(quest_tab, "type", -1);
+  {
+    int qm = toml_get_int_default(quest_tab, "quest_master", NOBODY);
+    aquest_table[i].qm = (real_mobile(qm) == NOBODY) ? NOBODY : qm;
+  }
+  aquest_table[i].flags = toml_get_int_default(quest_tab, "flags", 0);
+  aquest_table[i].target = toml_get_int_default(quest_tab, "target", NOTHING);
+  aquest_table[i].prev_quest = toml_get_int_default(quest_tab, "prev_quest", NOTHING);
+  aquest_table[i].next_quest = toml_get_int_default(quest_tab, "next_quest", NOTHING);
+  aquest_table[i].prereq = toml_get_int_default(quest_tab, "prereq", NOTHING);
+
+  values = toml_array_in(quest_tab, "values");
+  if (values) {
+    int n = toml_array_nelem(values);
+    for (j = 0; j < 7 && j < n; j++) {
+      toml_datum_t v = toml_int_at(values, j);
+      if (v.ok)
+        aquest_table[i].value[j] = (int)v.u.i;
+    }
+  }
+
+  rewards = toml_table_in(quest_tab, "rewards");
+  if (rewards) {
+    aquest_table[i].coins_reward = toml_get_int_default(rewards, "coins", 0);
+    aquest_table[i].exp_reward = toml_get_int_default(rewards, "exp", 0);
+    aquest_table[i].obj_reward = toml_get_int_default(rewards, "obj_vnum", NOTHING);
+    if (aquest_table[i].obj_reward == -1)
+      aquest_table[i].obj_reward = NOTHING;
+  }
+
+  total_quests = ++i;
 }
 
 /* load the rooms */
@@ -2296,154 +3260,107 @@ char *parse_object(FILE *obj_f, int nr)
 static void load_zones(FILE *fl, char *zonename)
 {
   static zone_rnum zone = 0;
-  int i, cmd_no, num_of_cmds = 0, line_num = 0, tmp, error;
-  char *ptr, buf[READ_SIZE], zname[READ_SIZE], buf2[MAX_STRING_LENGTH];
-  int zone_fix = FALSE;
-  char t1[80], t2[80];
-  char zbuf1[MAX_STRING_LENGTH], zbuf2[MAX_STRING_LENGTH];
-  char zbuf3[MAX_STRING_LENGTH], zbuf4[MAX_STRING_LENGTH];
+  FILE *fp;
+  toml_table_t *tab;
+  toml_array_t *zones;
+  char errbuf[200];
+  int i, zcount;
 
-  strlcpy(zname, zonename, sizeof(zname));
+  (void)fl;
 
-  /* Skip first 3 lines lest we mistake the zone name for a command. */
-  for (tmp = 0; tmp < 3; tmp++)
-    get_line(fl, buf);
-
-  /* More accurate count. Previous was always 4 or 5 too high. -gg Note that if
-   * a new zone command is added to reset_zone(), this string will need to be
-   * updated to suit. - ae. */
-  while (get_line(fl, buf))
-    if ((strchr("MOPGERDTV", buf[0]) && buf[1] == ' ') || (buf[0] == 'S' && buf[1] == '\0'))
-      num_of_cmds++;
-
-  rewind(fl);
-
-  if (num_of_cmds == 0) {
-    log("SYSERR: %s is empty!", zname);
-    exit(1);
-  } else
-    CREATE(Z.cmd, struct reset_com, num_of_cmds);
-
-  line_num += get_line(fl, buf);
-
-  if (sscanf(buf, "#%d", &Z.number) != 1) {
-    log("SYSERR: Format error in %s, line %d", zname, line_num);
-    exit(1);
-  }
-  snprintf(buf2, sizeof(buf2), "beginning of zone #%d", Z.number);
-
-  line_num += get_line(fl, buf);
-  if ((ptr = strchr(buf, '~')) != NULL) /* take off the '~' if it's there */
-    *ptr = '\0';
-  Z.builders = strdup(buf);
-
-  line_num += get_line(fl, buf);
-  if ((ptr = strchr(buf, '~')) != NULL)	/* take off the '~' if it's there */
-    *ptr = '\0';
-  Z.name = strdup(buf);
-  parse_at(Z.name);
-
-  /* Clear all the zone flags */
-  for (i=0; i<ZN_ARRAY_MAX; i++)
-    Z.zone_flags[i] = 0;
-
-  line_num += get_line(fl, buf);
-  /* Look for 10 items first (new tbaMUD), if not found, try 4 (old tbaMUD) */
-  if  (sscanf(buf, " %d %d %d %d %s %s %s %s %d %d", &Z.bot, &Z.top, &Z.lifespan,
-      &Z.reset_mode, zbuf1, zbuf2, zbuf3, zbuf4, &Z.min_level, &Z.max_level) != 10)
-  {
-    if (sscanf(buf, " %d %d %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
-      /* This may be due to the fact that the zone has no builder.  So, we just
-       * attempt to fix this by copying the previous 2 last reads into this
-       * variable and the last one. */
-      log("SYSERR: Format error in numeric constant line of %s, attempting to fix.", zname);
-      if (sscanf(Z.name, " %d %d %d %d ", &Z.bot, &Z.top, &Z.lifespan, &Z.reset_mode) != 4) {
-        log("SYSERR: Could not fix previous error, aborting game.");
-        exit(1);
-      } else {
-        free(Z.name);
-        Z.name = strdup(Z.builders);
-        free(Z.builders);
-        Z.builders = strdup("None.");
-        zone_fix = TRUE;
-      }
-    }
-    /* We only found 4 values, so set 'defaults' for the ones not found */
-    Z.min_level = -1;
-    Z.max_level = -1;
-  }
-  else
-  {
-    /* We found 10 values, so deal with the strings */
-    Z.zone_flags[0] = asciiflag_conv(zbuf1);
-    Z.zone_flags[1] = asciiflag_conv(zbuf2);
-    Z.zone_flags[2] = asciiflag_conv(zbuf3);
-    Z.zone_flags[3] = asciiflag_conv(zbuf4);
-  }
-  if (Z.bot > Z.top) {
-    log("SYSERR: Zone %d bottom (%d) > top (%d).", Z.number, Z.bot, Z.top);
+  fp = fopen(zonename, "r");
+  if (!fp) {
+    log("SYSERR: %s: %s", zonename, strerror(errno));
     exit(1);
   }
 
-  cmd_no = 0;
+  tab = toml_parse_file(fp, errbuf, sizeof(errbuf));
+  fclose(fp);
+  if (!tab) {
+    log("SYSERR: parsing file '%s': %s", zonename, errbuf);
+    exit(1);
+  }
 
-  for (;;) {
-    /* skip reading one line if we fixed above (line is correct already) */
-    if (zone_fix != TRUE) {
-      if ((tmp = get_line(fl, buf)) == 0) {
-        log("SYSERR: Format error in %s - premature end of file", zname);
-        exit(1);
-      }
-    } else
-      zone_fix = FALSE;
+  zones = toml_array_in(tab, "zone");
+  if (!zones) {
+    toml_free(tab);
+    log("SYSERR: TOML file '%s' missing 'zone' array.", zonename);
+    exit(1);
+  }
 
-    line_num += tmp;
-    ptr = buf;
-    skip_spaces(&ptr);
+  zcount = toml_array_nelem(zones);
+  for (i = 0; i < zcount; i++) {
+    toml_table_t *z_tab = toml_table_at(zones, i);
+    toml_array_t *cmds;
+    int j, cmd_count;
 
-    if ((ZCMD.command = *ptr) == '*')
+    if (!z_tab)
       continue;
 
-    ptr++;
+    Z.number = toml_get_int_default(z_tab, "vnum", 0);
+    Z.builders = toml_get_string_dup(z_tab, "builders");
+    Z.name = toml_get_string_dup(z_tab, "name");
+    if (!Z.builders)
+      Z.builders = strdup("None.");
+    if (!Z.name)
+      Z.name = strdup("Unnamed zone");
+    parse_at(Z.name);
 
-    if (ZCMD.command == 'S' || ZCMD.command == '$') {
-      ZCMD.command = 'S';
-      break;
-    }
-    error = 0;
-    if (strchr("MOGEPDTV", ZCMD.command) == NULL) {	/* a 3-arg command */
-      if (sscanf(ptr, " %d %d %d ", &tmp, &ZCMD.arg1, &ZCMD.arg2) != 3)
-	error = 1;
-    } else if (ZCMD.command=='V') { /* a string-arg command */
-      if (sscanf(ptr, " %d %d %d %d %79s %79[^\f\n\r\t\v]", &tmp, &ZCMD.arg1, &ZCMD.arg2,
-		 &ZCMD.arg3, t1, t2) != 6)
-	error = 1;
-      else {
-        ZCMD.sarg1 = strdup(t1);
-        ZCMD.sarg2 = strdup(t2);
-      }
-    } else {
-      if (sscanf(ptr, " %d %d %d %d ", &tmp, &ZCMD.arg1, &ZCMD.arg2,
-		 &ZCMD.arg3) != 4)
-	error = 1;
-    }
+    for (j = 0; j < ZN_ARRAY_MAX; j++)
+      Z.zone_flags[j] = 0;
+    toml_get_int_array(z_tab, "flags", (int *)Z.zone_flags, ZN_ARRAY_MAX);
 
-    ZCMD.if_flag = tmp;
+    Z.bot = toml_get_int_default(z_tab, "bot", 0);
+    Z.top = toml_get_int_default(z_tab, "top", 0);
+    Z.lifespan = toml_get_int_default(z_tab, "lifespan", 0);
+    Z.reset_mode = toml_get_int_default(z_tab, "reset_mode", 0);
+    Z.min_level = toml_get_int_default(z_tab, "min_level", -1);
+    Z.max_level = toml_get_int_default(z_tab, "max_level", -1);
 
-    if (error) {
-      log("SYSERR: Format error in %s, line %d: '%s'", zname, line_num, buf);
+    if (Z.bot > Z.top) {
+      log("SYSERR: Zone %d bottom (%d) > top (%d).", Z.number, Z.bot, Z.top);
       exit(1);
     }
-    ZCMD.line = line_num;
-    cmd_no++;
+
+    cmds = toml_array_in(z_tab, "command");
+    cmd_count = cmds ? toml_array_nelem(cmds) : 0;
+    CREATE(Z.cmd, struct reset_com, cmd_count + 1);
+
+    for (j = 0; j < cmd_count; j++) {
+      toml_table_t *c_tab = toml_table_at(cmds, j);
+      char *cmd = NULL;
+      if (!c_tab)
+        continue;
+
+      cmd = toml_get_string_dup(c_tab, "command");
+      Z.cmd[j].command = (cmd && *cmd) ? *cmd : 'S';
+      if (cmd)
+        free(cmd);
+
+      Z.cmd[j].if_flag = toml_get_int_default(c_tab, "if_flag", 0);
+      Z.cmd[j].arg1 = toml_get_int_default(c_tab, "arg1", 0);
+      Z.cmd[j].arg2 = toml_get_int_default(c_tab, "arg2", 0);
+      Z.cmd[j].arg3 = toml_get_int_default(c_tab, "arg3", 0);
+      Z.cmd[j].line = toml_get_int_default(c_tab, "line", 0);
+
+      Z.cmd[j].sarg1 = toml_get_string_dup(c_tab, "sarg1");
+      Z.cmd[j].sarg2 = toml_get_string_dup(c_tab, "sarg2");
+    }
+
+    Z.cmd[cmd_count].command = 'S';
+    Z.cmd[cmd_count].if_flag = 0;
+    Z.cmd[cmd_count].arg1 = 0;
+    Z.cmd[cmd_count].arg2 = 0;
+    Z.cmd[cmd_count].arg3 = 0;
+    Z.cmd[cmd_count].sarg1 = NULL;
+    Z.cmd[cmd_count].sarg2 = NULL;
+    Z.cmd[cmd_count].line = 0;
+
+    top_of_zone_table = zone;
+    zone++;
   }
 
-  if (num_of_cmds != cmd_no + 1) {
-    log("SYSERR: Zone command count mismatch for %s. Estimated: %d, Actual: %d", zname, num_of_cmds, cmd_no + 1);
-    exit(1);
-  }
-
-  top_of_zone_table = zone++;
+  toml_free(tab);
 }
 #undef Z
 

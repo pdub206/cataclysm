@@ -35,6 +35,7 @@
 #include "genmob.h"
 #include "dg_scripts.h"
 #include "fight.h"
+#include "toml.h"
 
 #include "set.h"
 
@@ -2928,7 +2929,7 @@ ACMD(do_rsave)
     return;
   }
 
-  /* Save the owning zone's .wld file so the room data persists */
+  /* Save the owning zone's .toml file so the room data persists */
   ok = save_rooms(znum);
   if (ok)
     ok = RoomSave_now(rnum);
@@ -2946,16 +2947,16 @@ ACMD(do_rsave)
                GET_ROOM_VNUM(rnum), zone_table[znum].number);
 
   mudlog(CMP, GET_LEVEL(ch), TRUE,
-         "RSAVE OK: %s room %d (rnum=%d) -> world/wld/%d.wld",
+         "RSAVE OK: %s room %d (rnum=%d) -> world/wld/%d.toml",
          GET_NAME(ch), GET_ROOM_VNUM(rnum), rnum, zone_table[znum].number);
 }
 
-/* Write saved rooms under lib/world/rsv/<vnum>.rsv (like wld/ zon/ obj/). */
+/* Write saved rooms under lib/world/rsv/<vnum>.toml (like wld/ zon/ obj/). */
 #ifndef ROOMSAVE_PREFIX
 #define ROOMSAVE_PREFIX  LIB_WORLD "rsv/"
 #endif
 #ifndef ROOMSAVE_EXT
-#define ROOMSAVE_EXT     ".rsv"
+#define ROOMSAVE_EXT     ".toml"
 #endif
 
 static unsigned char *roomsave_dirty = NULL;
@@ -2980,154 +2981,811 @@ room_rnum RoomSave_room_of_obj(struct obj_data *o) {
   return o->in_room;
 }
 
-/* --- helper: read a list of objects until '.' or 'E' and return the head --- */
-/* Context-aware implementation: stop_on_E = 1 for nested B..E, 0 for top-level. */
-static struct obj_data *roomsave_read_list_ctx(FILE *fl, int stop_on_E)
+static struct obj_data *RS_create_obj_by_vnum(obj_vnum ov);
+static struct char_data *RS_create_mob_by_vnum(mob_vnum mv);
+static void RS_apply_inventory_loadout(struct char_data *mob);
+
+/* --- RoomSave TOML helpers --- */
+static int roomsave_toml_get_int_default(toml_table_t *tab, const char *key, int def)
 {
-  char line[256];
-  struct obj_data *head = NULL, *tail = NULL;
+  toml_datum_t v = toml_int_in(tab, key);
+  if (v.ok)
+    return (int)v.u.i;
+  return def;
+}
 
-  while (fgets(line, sizeof(line), fl)) {
-    if (line[0] == '.') {
-      /* End of this list scope */
-      break;
-    }
+static int roomsave_toml_get_int_array(toml_table_t *tab, const char *key, int *out, int out_len)
+{
+  toml_array_t *arr;
+  int i, n;
 
-    if (stop_on_E && line[0] == 'E') {
-      /* End of nested (B..E) scope */
-      break;
-    }
+  if (!tab || !out || out_len <= 0)
+    return 0;
 
-    /* For top-level reads (stop_on_E==0), or any non-'O', push back
-       so the outer #R reader can handle M/E/G/P or '.' */
-    if (line[0] != 'O') {
-      long back = -((long)strlen(line));
-      fseek(fl, back, SEEK_CUR);
-      break;
-    }
+  arr = toml_array_in(tab, key);
+  if (!arr)
+    return 0;
+  n = toml_array_nelem(arr);
+  if (n > out_len)
+    n = out_len;
+  for (i = 0; i < n; i++) {
+    toml_datum_t v = toml_int_at(arr, i);
+    if (v.ok)
+      out[i] = (int)v.u.i;
+  }
+  return n;
+}
 
-    /* Parse object header: O vnum timer weight cost unused */
-    int vnum, timer, weight, cost, unused_cost;
-    if (sscanf(line, "O %d %d %d %d %d", &vnum, &timer, &weight, &cost, &unused_cost) != 5)
-      continue;
+struct roomsave_obj {
+  int vnum;
+  int timer;
+  int weight;
+  int cost;
+  int cost_per_day;
+  int extra_flags[EF_ARRAY_MAX];
+  int wear_flags[TW_ARRAY_MAX];
+  int values[NUM_OBJ_VAL_POSITIONS];
+  int full;
+  struct roomsave_obj *contents;
+  struct roomsave_obj *next;
+};
 
-    /* IMPORTANT: read by VNUM (VIRTUAL), not real index */
-    struct obj_data *obj = read_object((obj_vnum)vnum, VIRTUAL);
-    if (!obj) {
-      mudlog(NRM, LVL_IMMORT, TRUE, "RoomSave: read_object(vnum=%d) failed.", vnum);
-      /* Skip to next object/header or end-of-scope */
-      long backpos;
-      while (fgets(line, sizeof(line), fl)) {
-        if (line[0] == 'O' || line[0] == '.' || (stop_on_E && line[0] == 'E')) {
-          backpos = -((long)strlen(line));
-          fseek(fl, backpos, SEEK_CUR);
-          break;
-        }
-      }
-      continue;
-    }
+struct roomsave_mob_item {
+  int vnum;
+  int wear_pos;
+  struct roomsave_obj *contents;
+  struct roomsave_mob_item *next;
+};
 
-    /* Apply core scalars */
-    GET_OBJ_TIMER(obj)  = timer;
-    GET_OBJ_WEIGHT(obj) = weight;
-    GET_OBJ_COST(obj)   = cost;
-    GET_OBJ_COST_PER_DAY(obj)   = 0;
+struct roomsave_mob {
+  int vnum;
+  struct roomsave_mob_item *equipment;
+  struct roomsave_mob_item *inventory;
+  struct roomsave_mob *next;
+};
 
-    /* Clear array flags so missing slots don't keep proto bits */
-#ifdef EF_ARRAY_MAX
-# ifdef GET_OBJ_EXTRA_AR
-    for (int i = 0; i < EF_ARRAY_MAX; i++) GET_OBJ_EXTRA_AR(obj, i) = 0;
-# else
-    for (int i = 0; i < EF_ARRAY_MAX; i++) GET_OBJ_EXTRA(obj)[i] = 0;
-# endif
-#endif
-#ifdef TW_ARRAY_MAX
-    for (int i = 0; i < TW_ARRAY_MAX; i++) GET_OBJ_WEAR(obj)[i] = 0;
-#endif
+struct roomsave_room {
+  int vnum;
+  long saved_at;
+  struct roomsave_obj *objects;
+  struct roomsave_mob *mobs;
+  struct roomsave_room *next;
+};
 
-    /* Read per-object lines until next 'O' or '.' or 'E'(when nested) */
-    long backpos;
-    while (fgets(line, sizeof(line), fl)) {
-      if (line[0] == 'V') {
-        int idx, val;
-        if (sscanf(line, "V %d %d", &idx, &val) == 2) {
-#ifdef NUM_OBJ_VAL_POSITIONS
-          if (idx >= 0 && idx < NUM_OBJ_VAL_POSITIONS) GET_OBJ_VAL(obj, idx) = val;
-#else
-          if (idx >= 0 && idx < 6) GET_OBJ_VAL(obj, idx) = val;
-#endif
-        }
-        continue;
-      } else if (line[0] == 'X') { /* extra flags */
-        int idx, val;
-        if (sscanf(line, "X %d %d", &idx, &val) == 2) {
-#if defined(EF_ARRAY_MAX) && defined(GET_OBJ_EXTRA_AR)
-          if (idx >= 0 && idx < EF_ARRAY_MAX) GET_OBJ_EXTRA_AR(obj, idx) = val;
-#elif defined(EF_ARRAY_MAX)
-          if (idx >= 0 && idx < EF_ARRAY_MAX) GET_OBJ_EXTRA(obj)[idx] = val;
-#else
-          if (idx == 0) GET_OBJ_EXTRA(obj) = val;
-#endif
-        }
-        continue;
-      } else if (line[0] == 'W') { /* wear flags */
-        int idx, val;
-        if (sscanf(line, "W %d %d", &idx, &val) == 2) {
-#ifdef TW_ARRAY_MAX
-          if (idx >= 0 && idx < TW_ARRAY_MAX) GET_OBJ_WEAR(obj)[idx] = val;
-#else
-          if (idx == 0) GET_OBJ_WEAR(obj) = val;
-#endif
-        }
-        continue;
-      } else if (line[0] == 'B') {
-        /* Nested contents until matching 'E' */
-        struct obj_data *child_head = roomsave_read_list_ctx(fl, 1 /* stop_on_E */);
+static void roomsave_free_obj_list(struct roomsave_obj *obj)
+{
+  while (obj) {
+    struct roomsave_obj *next = obj->next;
+    if (obj->contents)
+      roomsave_free_obj_list(obj->contents);
+    free(obj);
+    obj = next;
+  }
+}
 
-        /* Detach each node before obj_to_obj(), otherwise we lose siblings */
-        for (struct obj_data *it = child_head, *next; it; it = next) {
-          next = it->next_content;  /* remember original sibling */
-          it->next_content = NULL;  /* detach from temp list */
-          obj_to_obj(it, obj);      /* push into container (LIFO) */
-        }
-        continue;
-      } else if (line[0] == 'O' || line[0] == '.' || (stop_on_E && line[0] == 'E')) {
-        /* Next object / end-of-scope: rewind one line for outer loop to see it */
-        backpos = -((long)strlen(line));
-        fseek(fl, backpos, SEEK_CUR);
-        break;
-      } else {
-        /* ignore unknown lines */
-        continue;
-      }
-    }
+static void roomsave_free_mob_items(struct roomsave_mob_item *item)
+{
+  while (item) {
+    struct roomsave_mob_item *next = item->next;
+    if (item->contents)
+      roomsave_free_obj_list(item->contents);
+    free(item);
+    item = next;
+  }
+}
 
-    /* Append to this scope's list */
-    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
-      update_money_obj(obj);
+static void roomsave_free_mobs(struct roomsave_mob *mob)
+{
+  while (mob) {
+    struct roomsave_mob *next = mob->next;
+    roomsave_free_mob_items(mob->equipment);
+    roomsave_free_mob_items(mob->inventory);
+    free(mob);
+    mob = next;
+  }
+}
 
-    obj->next_content = NULL;
-    if (!head) head = tail = obj;
-    else { tail->next_content = obj; tail = obj; }
+static void roomsave_free_rooms(struct roomsave_room *room)
+{
+  while (room) {
+    struct roomsave_room *next = room->next;
+    roomsave_free_obj_list(room->objects);
+    roomsave_free_mobs(room->mobs);
+    free(room);
+    room = next;
+  }
+}
+
+static struct roomsave_obj *roomsave_parse_obj_table(toml_table_t *tab, int full)
+{
+  struct roomsave_obj *obj;
+  toml_array_t *arr;
+  int i;
+
+  if (!tab)
+    return NULL;
+
+  CREATE(obj, struct roomsave_obj, 1);
+  obj->vnum = roomsave_toml_get_int_default(tab, "vnum", -1);
+  obj->full = full;
+  if (obj->vnum <= 0) {
+    free(obj);
+    return NULL;
   }
 
+  if (full) {
+    obj->timer = roomsave_toml_get_int_default(tab, "timer", 0);
+    obj->weight = roomsave_toml_get_int_default(tab, "weight", 0);
+    obj->cost = roomsave_toml_get_int_default(tab, "cost", 0);
+    obj->cost_per_day = roomsave_toml_get_int_default(tab, "cost_per_day", 0);
+    for (i = 0; i < EF_ARRAY_MAX; i++)
+      obj->extra_flags[i] = 0;
+    for (i = 0; i < TW_ARRAY_MAX; i++)
+      obj->wear_flags[i] = 0;
+    for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
+      obj->values[i] = 0;
+    roomsave_toml_get_int_array(tab, "extra_flags", obj->extra_flags, EF_ARRAY_MAX);
+    roomsave_toml_get_int_array(tab, "wear_flags", obj->wear_flags, TW_ARRAY_MAX);
+    roomsave_toml_get_int_array(tab, "values", obj->values, NUM_OBJ_VAL_POSITIONS);
+  }
+
+  arr = toml_array_in(tab, "contents");
+  if (arr) {
+    struct roomsave_obj *tail = NULL;
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_table_t *ctab = toml_table_at(arr, i);
+      struct roomsave_obj *child = roomsave_parse_obj_table(ctab, full);
+      if (!child)
+        continue;
+      child->next = NULL;
+      if (!obj->contents) {
+        obj->contents = tail = child;
+      } else {
+        tail->next = child;
+        tail = child;
+      }
+    }
+  }
+
+  return obj;
+}
+
+static struct roomsave_mob_item *roomsave_parse_mob_item(toml_table_t *tab, int with_wear)
+{
+  struct roomsave_mob_item *item;
+  toml_array_t *arr;
+  int i;
+
+  if (!tab)
+    return NULL;
+
+  CREATE(item, struct roomsave_mob_item, 1);
+  item->vnum = roomsave_toml_get_int_default(tab, "vnum", -1);
+  item->wear_pos = with_wear ? roomsave_toml_get_int_default(tab, "wear_pos", 0) : -1;
+  if (item->vnum <= 0) {
+    free(item);
+    return NULL;
+  }
+
+  arr = toml_array_in(tab, "contents");
+  if (arr) {
+    struct roomsave_obj *tail = NULL;
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_table_t *ctab = toml_table_at(arr, i);
+      struct roomsave_obj *child = roomsave_parse_obj_table(ctab, 0);
+      if (!child)
+        continue;
+      child->next = NULL;
+      if (!item->contents) {
+        item->contents = tail = child;
+      } else {
+        tail->next = child;
+        tail = child;
+      }
+    }
+  }
+
+  return item;
+}
+
+static struct roomsave_mob *roomsave_parse_mob_table(toml_table_t *tab)
+{
+  struct roomsave_mob *mob;
+  toml_array_t *arr;
+  int i;
+
+  if (!tab)
+    return NULL;
+
+  CREATE(mob, struct roomsave_mob, 1);
+  mob->vnum = roomsave_toml_get_int_default(tab, "vnum", -1);
+  if (mob->vnum <= 0) {
+    free(mob);
+    return NULL;
+  }
+
+  arr = toml_array_in(tab, "equipment");
+  if (arr) {
+    struct roomsave_mob_item *tail = NULL;
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_table_t *itab = toml_table_at(arr, i);
+      struct roomsave_mob_item *item = roomsave_parse_mob_item(itab, 1);
+      if (!item)
+        continue;
+      item->next = NULL;
+      if (!mob->equipment) {
+        mob->equipment = tail = item;
+      } else {
+        tail->next = item;
+        tail = item;
+      }
+    }
+  }
+
+  arr = toml_array_in(tab, "inventory");
+  if (arr) {
+    struct roomsave_mob_item *tail = NULL;
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_table_t *itab = toml_table_at(arr, i);
+      struct roomsave_mob_item *item = roomsave_parse_mob_item(itab, 0);
+      if (!item)
+        continue;
+      item->next = NULL;
+      if (!mob->inventory) {
+        mob->inventory = tail = item;
+      } else {
+        tail->next = item;
+        tail = item;
+      }
+    }
+  }
+
+  return mob;
+}
+
+static struct roomsave_room *roomsave_parse_room_table(toml_table_t *tab)
+{
+  struct roomsave_room *room;
+  toml_array_t *arr;
+  int i;
+
+  if (!tab)
+    return NULL;
+
+  CREATE(room, struct roomsave_room, 1);
+  room->vnum = roomsave_toml_get_int_default(tab, "vnum", -1);
+  room->saved_at = (long)roomsave_toml_get_int_default(tab, "saved_at", 0);
+  if (room->vnum <= 0) {
+    free(room);
+    return NULL;
+  }
+
+  arr = toml_array_in(tab, "object");
+  if (arr) {
+    struct roomsave_obj *tail = NULL;
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_table_t *otab = toml_table_at(arr, i);
+      struct roomsave_obj *obj = roomsave_parse_obj_table(otab, 1);
+      if (!obj)
+        continue;
+      obj->next = NULL;
+      if (!room->objects) {
+        room->objects = tail = obj;
+      } else {
+        tail->next = obj;
+        tail = obj;
+      }
+    }
+  }
+
+  arr = toml_array_in(tab, "mob");
+  if (arr) {
+    struct roomsave_mob *tail = NULL;
+    int n = toml_array_nelem(arr);
+    for (i = 0; i < n; i++) {
+      toml_table_t *mtab = toml_table_at(arr, i);
+      struct roomsave_mob *mob = roomsave_parse_mob_table(mtab);
+      if (!mob)
+        continue;
+      mob->next = NULL;
+      if (!room->mobs) {
+        room->mobs = tail = mob;
+      } else {
+        tail->next = mob;
+        tail = mob;
+      }
+    }
+  }
+
+  return room;
+}
+
+static struct roomsave_room *roomsave_load_file_toml(const char *path)
+{
+  FILE *fp;
+  toml_table_t *tab;
+  toml_array_t *arr;
+  char errbuf[200];
+  struct roomsave_room *head = NULL, *tail = NULL;
+  int i, n;
+
+  fp = fopen(path, "r");
+  if (!fp)
+    return NULL;
+
+  tab = toml_parse_file(fp, errbuf, sizeof(errbuf));
+  fclose(fp);
+  if (!tab) {
+    mudlog(NRM, LVL_IMMORT, TRUE, "RoomSave: parsing %s: %s", path, errbuf);
+    return NULL;
+  }
+
+  arr = toml_array_in(tab, "room");
+  if (!arr) {
+    toml_free(tab);
+    return NULL;
+  }
+
+  n = toml_array_nelem(arr);
+  for (i = 0; i < n; i++) {
+    toml_table_t *rtab = toml_table_at(arr, i);
+    struct roomsave_room *room = roomsave_parse_room_table(rtab);
+    if (!room)
+      continue;
+    room->next = NULL;
+    if (!head) {
+      head = tail = room;
+    } else {
+      tail->next = room;
+      tail = room;
+    }
+  }
+
+  toml_free(tab);
   return head;
 }
 
-/* Keep your existing one-arg API for callers: top-level semantics (stop_on_E = 0). */
-static struct obj_data *roomsave_read_list(FILE *fl)
+static void roomsave_write_inline_int_array(FILE *fp, const int *vals, int len)
 {
-  return roomsave_read_list_ctx(fl, 0);
+  int i;
+  fputc('[', fp);
+  for (i = 0; i < len; i++) {
+    if (i)
+      fputs(", ", fp);
+    fprintf(fp, "%d", vals[i]);
+  }
+  fputc(']', fp);
 }
 
-/* ---------- Minimal line format ----------
-#R <vnum> <unix_time>
-O <vnum> <timer> <extra_flags> <wear_flags> <weight> <cost> <unused>
-V <i> <val[i]>    ; repeated for all value slots present on this obj
-B                 ; begin contents of this object (container)
-E                 ; end contents of this object
-.                 ; end of room
------------------------------------------- */
+static void roomsave_write_int_array(FILE *fp, const char *key, const int *vals, int len)
+{
+  fprintf(fp, "%s = ", key);
+  roomsave_write_inline_int_array(fp, vals, len);
+  fputc('\n', fp);
+}
+
+static void roomsave_write_inline_obj(FILE *fp, struct roomsave_obj *obj)
+{
+  fputs("{ vnum = ", fp);
+  fprintf(fp, "%d", obj->vnum);
+  if (obj->full) {
+    fprintf(fp, ", timer = %d, weight = %d, cost = %d, cost_per_day = %d",
+            obj->timer, obj->weight, obj->cost, obj->cost_per_day);
+    fputs(", extra_flags = ", fp);
+    roomsave_write_inline_int_array(fp, obj->extra_flags, EF_ARRAY_MAX);
+    fputs(", wear_flags = ", fp);
+    roomsave_write_inline_int_array(fp, obj->wear_flags, TW_ARRAY_MAX);
+    fputs(", values = ", fp);
+    roomsave_write_inline_int_array(fp, obj->values, NUM_OBJ_VAL_POSITIONS);
+  }
+  fputs(", contents = [", fp);
+  if (obj->contents) {
+    struct roomsave_obj *child;
+    int first = 1;
+    for (child = obj->contents; child; child = child->next) {
+      if (!first)
+        fputs(", ", fp);
+      roomsave_write_inline_obj(fp, child);
+      first = 0;
+    }
+  }
+  fputs("] }", fp);
+}
+
+static void roomsave_write_room_objects(FILE *fp, struct roomsave_obj *obj)
+{
+  for (; obj; obj = obj->next) {
+    fprintf(fp, "\n[[room.object]]\n");
+    fprintf(fp, "vnum = %d\n", obj->vnum);
+    fprintf(fp, "timer = %d\n", obj->timer);
+    fprintf(fp, "weight = %d\n", obj->weight);
+    fprintf(fp, "cost = %d\n", obj->cost);
+    fprintf(fp, "cost_per_day = %d\n", obj->cost_per_day);
+    roomsave_write_int_array(fp, "extra_flags", obj->extra_flags, EF_ARRAY_MAX);
+    roomsave_write_int_array(fp, "wear_flags", obj->wear_flags, TW_ARRAY_MAX);
+    roomsave_write_int_array(fp, "values", obj->values, NUM_OBJ_VAL_POSITIONS);
+    fputs("contents = [", fp);
+    if (obj->contents) {
+      struct roomsave_obj *child;
+      int first = 1;
+      for (child = obj->contents; child; child = child->next) {
+        if (!first)
+          fputs(", ", fp);
+        roomsave_write_inline_obj(fp, child);
+        first = 0;
+      }
+    }
+    fputs("]\n", fp);
+  }
+}
+
+static void roomsave_write_mob_items(FILE *fp, const char *table_name, struct roomsave_mob_item *item)
+{
+  for (; item; item = item->next) {
+    fprintf(fp, "\n[[room.mob.%s]]\n", table_name);
+    if (!strcmp(table_name, "equipment"))
+      fprintf(fp, "wear_pos = %d\n", item->wear_pos);
+    fprintf(fp, "vnum = %d\n", item->vnum);
+    fputs("contents = [", fp);
+    if (item->contents) {
+      struct roomsave_obj *child;
+      int first = 1;
+      for (child = item->contents; child; child = child->next) {
+        if (!first)
+          fputs(", ", fp);
+        roomsave_write_inline_obj(fp, child);
+        first = 0;
+      }
+    }
+    fputs("]\n", fp);
+  }
+}
+
+static void roomsave_write_rooms(FILE *fp, struct roomsave_room *room)
+{
+  if (!room) {
+    fputs("room = []\n", fp);
+    return;
+  }
+
+  for (; room; room = room->next) {
+    fprintf(fp, "[[room]]\n");
+    fprintf(fp, "vnum = %d\n", room->vnum);
+    fprintf(fp, "saved_at = %ld\n", room->saved_at);
+    roomsave_write_room_objects(fp, room->objects);
+    if (room->mobs) {
+      struct roomsave_mob *mob;
+      for (mob = room->mobs; mob; mob = mob->next) {
+        fprintf(fp, "\n[[room.mob]]\n");
+        fprintf(fp, "vnum = %d\n", mob->vnum);
+        roomsave_write_mob_items(fp, "equipment", mob->equipment);
+        roomsave_write_mob_items(fp, "inventory", mob->inventory);
+      }
+    }
+    fputs("\n", fp);
+  }
+}
+
+static void roomsave_apply_obj_fields(struct obj_data *obj, struct roomsave_obj *rs)
+{
+  int i;
+
+  if (!obj || !rs || !rs->full)
+    return;
+
+  GET_OBJ_TIMER(obj) = rs->timer;
+  GET_OBJ_WEIGHT(obj) = rs->weight;
+  GET_OBJ_COST(obj) = rs->cost;
+  GET_OBJ_COST_PER_DAY(obj) = rs->cost_per_day;
+
+#if defined(EF_ARRAY_MAX) && defined(GET_OBJ_EXTRA_AR)
+  for (i = 0; i < EF_ARRAY_MAX; i++)
+    GET_OBJ_EXTRA_AR(obj, i) = rs->extra_flags[i];
+#elif defined(EF_ARRAY_MAX)
+  for (i = 0; i < EF_ARRAY_MAX; i++)
+    GET_OBJ_EXTRA(obj)[i] = rs->extra_flags[i];
+#else
+  GET_OBJ_EXTRA(obj) = rs->extra_flags[0];
+#endif
+
+#ifdef TW_ARRAY_MAX
+  for (i = 0; i < TW_ARRAY_MAX; i++)
+    GET_OBJ_WEAR(obj)[i] = rs->wear_flags[i];
+#else
+  GET_OBJ_WEAR(obj) = rs->wear_flags[0];
+#endif
+
+#ifdef NUM_OBJ_VAL_POSITIONS
+  for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
+    GET_OBJ_VAL(obj, i) = rs->values[i];
+#else
+  for (i = 0; i < 6; i++)
+    GET_OBJ_VAL(obj, i) = rs->values[i];
+#endif
+}
+
+static void roomsave_restore_obj_contents(struct obj_data *parent, struct roomsave_obj *list)
+{
+  struct roomsave_obj *it;
+
+  if (!parent)
+    return;
+
+  for (it = list; it; it = it->next) {
+    struct obj_data *obj = RS_create_obj_by_vnum((obj_vnum)it->vnum);
+    if (!obj)
+      continue;
+    roomsave_apply_obj_fields(obj, it);
+    obj_to_obj(obj, parent);
+    if (it->contents)
+      roomsave_restore_obj_contents(obj, it->contents);
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      update_money_obj(obj);
+  }
+}
+
+static int roomsave_restore_room_objects(struct roomsave_room *room, room_rnum rnum)
+{
+  struct roomsave_obj *it;
+  int count = 0;
+
+  for (it = room->objects; it; it = it->next) {
+    struct obj_data *obj = RS_create_obj_by_vnum((obj_vnum)it->vnum);
+    if (!obj)
+      continue;
+    roomsave_apply_obj_fields(obj, it);
+    if (it->contents)
+      roomsave_restore_obj_contents(obj, it->contents);
+    obj_to_room(obj, rnum);
+    if (GET_OBJ_TYPE(obj) == ITEM_MONEY)
+      update_money_obj(obj);
+    count++;
+  }
+
+  return count;
+}
+
+static void roomsave_restore_mob_items(struct char_data *mob, struct roomsave_mob_item *items, int is_equipment)
+{
+  struct roomsave_mob_item *it;
+
+  for (it = items; it; it = it->next) {
+    struct obj_data *obj = RS_create_obj_by_vnum((obj_vnum)it->vnum);
+    if (!obj)
+      continue;
+
+    if (is_equipment) {
+      int pos = it->wear_pos;
+      if (pos < 0 || pos >= NUM_WEARS)
+        pos = WEAR_HOLD;
+      equip_char(mob, obj, pos);
+    } else {
+      obj_to_char(obj, mob);
+    }
+
+    if (it->contents)
+      roomsave_restore_obj_contents(obj, it->contents);
+  }
+}
+
+static int roomsave_restore_room_mobs(struct roomsave_room *room, room_rnum rnum)
+{
+  struct roomsave_mob *it;
+  int count = 0;
+
+  for (it = room->mobs; it; it = it->next) {
+    struct char_data *mob = RS_create_mob_by_vnum((mob_vnum)it->vnum);
+    int saw_inventory = 0;
+
+    if (!mob)
+      continue;
+
+    char_to_room(mob, rnum);
+    if (IN_ROOM(mob) != rnum)
+      char_to_room(mob, rnum);
+
+    roomsave_restore_mob_items(mob, it->equipment, 1);
+    roomsave_restore_mob_items(mob, it->inventory, 0);
+
+    if (it->inventory)
+      saw_inventory = 1;
+
+    if (!saw_inventory)
+      RS_apply_inventory_loadout(mob);
+
+    count++;
+  }
+
+  return count;
+}
+
+static struct roomsave_obj *roomsave_build_obj(struct obj_data *obj, int full)
+{
+  struct roomsave_obj *rs;
+  int i;
+
+  if (!obj || GET_OBJ_VNUM(obj) <= 0)
+    return NULL;
+
+  CREATE(rs, struct roomsave_obj, 1);
+  rs->vnum = (int)GET_OBJ_VNUM(obj);
+  rs->full = full;
+
+  if (full) {
+    rs->timer = GET_OBJ_TIMER(obj);
+    rs->weight = GET_OBJ_WEIGHT(obj);
+    rs->cost = GET_OBJ_COST(obj);
+    rs->cost_per_day = GET_OBJ_COST_PER_DAY(obj);
+#if defined(EF_ARRAY_MAX) && defined(GET_OBJ_EXTRA_AR)
+    for (i = 0; i < EF_ARRAY_MAX; i++)
+      rs->extra_flags[i] = GET_OBJ_EXTRA_AR(obj, i);
+#elif defined(EF_ARRAY_MAX)
+    for (i = 0; i < EF_ARRAY_MAX; i++)
+      rs->extra_flags[i] = GET_OBJ_EXTRA(obj)[i];
+#else
+    rs->extra_flags[0] = GET_OBJ_EXTRA(obj);
+#endif
+#ifdef TW_ARRAY_MAX
+    for (i = 0; i < TW_ARRAY_MAX; i++)
+      rs->wear_flags[i] = GET_OBJ_WEAR(obj)[i];
+#else
+    rs->wear_flags[0] = GET_OBJ_WEAR(obj);
+#endif
+#ifdef NUM_OBJ_VAL_POSITIONS
+    for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
+      rs->values[i] = GET_OBJ_VAL(obj, i);
+#else
+    for (i = 0; i < 6; i++)
+      rs->values[i] = GET_OBJ_VAL(obj, i);
+#endif
+  }
+
+  if (obj->contains) {
+    struct roomsave_obj *tail = NULL;
+    struct obj_data *child;
+    for (child = obj->contains; child; child = child->next_content) {
+      struct roomsave_obj *child_rs = roomsave_build_obj(child, full);
+      if (!child_rs)
+        continue;
+      child_rs->next = NULL;
+      if (!rs->contents) {
+        rs->contents = tail = child_rs;
+      } else {
+        tail->next = child_rs;
+        tail = child_rs;
+      }
+    }
+  }
+
+  return rs;
+}
+
+static struct roomsave_mob_item *roomsave_build_mob_item(struct obj_data *obj, int wear_pos)
+{
+  struct roomsave_mob_item *item;
+  struct obj_data *child;
+  struct roomsave_obj *tail = NULL;
+
+  if (!obj || GET_OBJ_VNUM(obj) <= 0)
+    return NULL;
+
+  CREATE(item, struct roomsave_mob_item, 1);
+  item->vnum = (int)GET_OBJ_VNUM(obj);
+  item->wear_pos = wear_pos;
+
+  for (child = obj->contains; child; child = child->next_content) {
+    struct roomsave_obj *child_rs = roomsave_build_obj(child, 0);
+    if (!child_rs)
+      continue;
+    child_rs->next = NULL;
+    if (!item->contents) {
+      item->contents = tail = child_rs;
+    } else {
+      tail->next = child_rs;
+      tail = child_rs;
+    }
+  }
+
+  return item;
+}
+
+static struct roomsave_mob *roomsave_build_mob(struct char_data *mob)
+{
+  struct roomsave_mob *rs;
+  int w;
+  struct obj_data *obj;
+  struct roomsave_mob_item *tail;
+
+  if (!mob || !IS_NPC(mob) || GET_MOB_VNUM(mob) <= 0)
+    return NULL;
+
+  CREATE(rs, struct roomsave_mob, 1);
+  rs->vnum = (int)GET_MOB_VNUM(mob);
+
+  tail = NULL;
+  for (w = 0; w < NUM_WEARS; w++) {
+    obj = GET_EQ(mob, w);
+    if (!obj)
+      continue;
+    {
+      struct roomsave_mob_item *item = roomsave_build_mob_item(obj, w);
+      if (!item)
+        continue;
+      item->next = NULL;
+      if (!rs->equipment) {
+        rs->equipment = tail = item;
+      } else {
+        tail->next = item;
+        tail = item;
+      }
+    }
+  }
+
+  tail = NULL;
+  for (obj = mob->carrying; obj; obj = obj->next_content) {
+    struct roomsave_mob_item *item = roomsave_build_mob_item(obj, -1);
+    if (!item)
+      continue;
+    item->next = NULL;
+    if (!rs->inventory) {
+      rs->inventory = tail = item;
+    } else {
+      tail->next = item;
+      tail = item;
+    }
+  }
+
+  return rs;
+}
+
+static struct roomsave_room *roomsave_build_room(room_rnum rnum)
+{
+  struct roomsave_room *room;
+  struct roomsave_obj *tail_obj = NULL;
+  struct roomsave_mob *tail_mob = NULL;
+  struct obj_data *obj;
+  struct char_data *mob;
+
+  if (rnum == NOWHERE)
+    return NULL;
+
+  CREATE(room, struct roomsave_room, 1);
+  room->vnum = world[rnum].number;
+  room->saved_at = time(0);
+
+  for (obj = world[rnum].contents; obj; obj = obj->next_content) {
+    struct roomsave_obj *rs = roomsave_build_obj(obj, 1);
+    if (!rs)
+      continue;
+    rs->next = NULL;
+    if (!room->objects) {
+      room->objects = tail_obj = rs;
+    } else {
+      tail_obj->next = rs;
+      tail_obj = rs;
+    }
+  }
+
+  for (mob = world[rnum].people; mob; mob = mob->next_in_room) {
+    struct roomsave_mob *rs = roomsave_build_mob(mob);
+    if (!rs)
+      continue;
+    rs->next = NULL;
+    if (!room->mobs) {
+      room->mobs = tail_mob = rs;
+    } else {
+      tail_mob->next = rs;
+      tail_mob = rs;
+    }
+  }
+
+  return room;
+}
 
 static void ensure_dir_exists(const char *path) {
   if (mkdir(path, 0775) == -1 && errno != EEXIST) {
@@ -3143,68 +3801,17 @@ static int roomsave_zone_for_rnum(room_rnum rnum) {
   return zone_table[znum].number; /* e.g., 1 for rooms 100–199, 2 for 200–299, etc. */
 }
 
-/* lib/world/rsv/<zone>.rsv */
+/* lib/world/rsv/<zone>.toml */
 static void roomsave_zone_filename(int zone_vnum, char *out, size_t outsz) {
   snprintf(out, outsz, "%s%d%s", ROOMSAVE_PREFIX, zone_vnum, ROOMSAVE_EXT);
 }
 
-/* Write one object (and its recursive contents) */
-static void write_one_object(FILE *fl, struct obj_data *obj) {
-  int i;
-
-  /* Core scalars (flags printed separately per-slot) */
-  fprintf(fl, "O %d %d %d %d %d\n",
-          GET_OBJ_VNUM(obj),
-          GET_OBJ_TIMER(obj),
-          GET_OBJ_WEIGHT(obj),
-          GET_OBJ_COST(obj),
-          GET_OBJ_COST_PER_DAY(obj));
-
-/* Extra flags array */
-#if defined(EF_ARRAY_MAX) && defined(GET_OBJ_EXTRA_AR)
-  for (i = 0; i < EF_ARRAY_MAX; i++)
-    fprintf(fl, "X %d %d\n", i, GET_OBJ_EXTRA_AR(obj, i));
-#elif defined(EF_ARRAY_MAX)
-  for (i = 0; i < EF_ARRAY_MAX; i++)
-    fprintf(fl, "X %d %d\n", i, GET_OBJ_EXTRA(obj)[i]);
-#else
-  fprintf(fl, "X %d %d\n", 0, GET_OBJ_EXTRA(obj));
-#endif
-
-/* Wear flags array */
-#ifdef TW_ARRAY_MAX
-  for (i = 0; i < TW_ARRAY_MAX; i++)
-    fprintf(fl, "W %d %d\n", i, GET_OBJ_WEAR(obj)[i]);
-#else
-  fprintf(fl, "W %d %d\n", 0, GET_OBJ_WEAR(obj));
-#endif
-
-  /* Values[] (durability, liquids, charges, etc.) */
-#ifdef NUM_OBJ_VAL_POSITIONS
-  for (i = 0; i < NUM_OBJ_VAL_POSITIONS; i++)
-    fprintf(fl, "V %d %d\n", i, GET_OBJ_VAL(obj, i));
-#else
-  for (i = 0; i < 6; i++)
-    fprintf(fl, "V %d %d\n", i, GET_OBJ_VAL(obj, i));
-#endif
-
-  /* Contents (recursive) */
-  if (obj->contains) {
-    struct obj_data *cont;
-    fprintf(fl, "B\n");
-    for (cont = obj->contains; cont; cont = cont->next_content)
-      write_one_object(fl, cont);
-    fprintf(fl, "E\n");
-  }
-}
-
-/* Forward declaration for RoomSave_now*/
-static void RS_write_room_mobs(FILE *out, room_rnum rnum);
-
 /* Public: write the entire room’s contents */
 int RoomSave_now(room_rnum rnum) {
-  char path[PATH_MAX], tmp[PATH_MAX], line[512];
-  FILE *in = NULL, *out = NULL;
+  char path[PATH_MAX], tmp[PATH_MAX];
+  FILE *out = NULL;
+  struct roomsave_room *rooms = NULL, *it = NULL, *prev = NULL;
+  struct roomsave_room *new_room = NULL;
   room_vnum rvnum;
   int zvnum;
 
@@ -3228,72 +3835,60 @@ int RoomSave_now(room_rnum rnum) {
     }
   }
 
+  rooms = roomsave_load_file_toml(path);
+  new_room = roomsave_build_room(rnum);
+  if (!new_room)
+    return 0;
+
+  for (it = rooms; it; it = it->next) {
+    if (it->vnum == (int)rvnum)
+      break;
+    prev = it;
+  }
+
+  if (it) {
+    roomsave_free_obj_list(it->objects);
+    roomsave_free_mobs(it->mobs);
+    it->saved_at = new_room->saved_at;
+    it->objects = new_room->objects;
+    it->mobs = new_room->mobs;
+    free(new_room);
+  } else {
+    if (!rooms) {
+      rooms = new_room;
+    } else if (prev) {
+      prev->next = new_room;
+    }
+  }
+
   if (!(out = fopen(tmp, "w"))) {
     mudlog(NRM, LVL_IMMORT, TRUE,
            "SYSERR: RoomSave: fopen(%s) failed: %s",
            tmp, strerror(errno));
+    roomsave_free_rooms(rooms);
     return 0;
   }
 
-  if ((in = fopen(path, "r")) != NULL) {
-    while (fgets(line, sizeof(line), in)) {
-      if (strncmp(line, "#R ", 3) == 0) {
-        int file_rvnum;
-        long ts;
-        if (sscanf(line, "#R %d %ld", &file_rvnum, &ts) == 2) {
-          if (file_rvnum == (int)rvnum) {
-            /* Skip old block completely until and including '.' line */
-            while (fgets(line, sizeof(line), in)) {
-              if (line[0] == '.') {
-                /* consume it and break */
-                break;
-              }
-            }
-            continue; /* do NOT write skipped lines */
-          }
-        }
-      }
-      fputs(line, out); /* keep unrelated lines */
-    }
-    fclose(in);
-  }
-
-  /* Append new block */
-  fprintf(out, "#R %d %ld\n", rvnum, (long)time(0));
-
-  RS_write_room_mobs(out, rnum);
-
-  for (struct obj_data *obj = world[rnum].contents; obj; obj = obj->next_content)
-    write_one_object(out, obj);
-
-  /* Always terminate block */
-  fprintf(out, ".\n");
+  roomsave_write_rooms(out, rooms);
 
   if (fclose(out) != 0) {
     mudlog(NRM, LVL_IMMORT, TRUE,
            "SYSERR: RoomSave: fclose(%s) failed: %s",
            tmp, strerror(errno));
+    roomsave_free_rooms(rooms);
     return 0;
   }
   if (rename(tmp, path) != 0) {
     mudlog(NRM, LVL_IMMORT, TRUE,
            "SYSERR: RoomSave: rename(%s -> %s) failed: %s",
            tmp, path, strerror(errno));
+    roomsave_free_rooms(rooms);
     return 0;
   }
 
+  roomsave_free_rooms(rooms);
   return 1;
 }
-
-/* --- M/E/G/P load helpers (mob restore) -------------------------------- */
-
-struct rs_load_ctx {
-  room_rnum rnum;
-  struct char_data *cur_mob;      /* last mob spawned by 'M' */
-  struct obj_data  *stack[16];    /* container stack by depth for 'P' */
-  int saw_inventory;             /* saw any inventory lines (G/P from inventory) */
-  int last_item_was_inventory;   /* last item source was inventory (G) */
-};
 
 static struct obj_data *RS_create_obj_by_vnum(obj_vnum ov) {
   obj_rnum ornum;
@@ -3364,33 +3959,6 @@ static void RS_apply_inventory_loadout(struct char_data *mob) {
   }
 }
 
-static void RS_finalize_mob_loadout(struct rs_load_ctx *ctx) {
-  if (!ctx || !ctx->cur_mob)
-    return;
-  if (!ctx->saw_inventory)
-    RS_apply_inventory_loadout(ctx->cur_mob);
-}
-
-
-/* Reset the loader context before reading a new #R block */
-static void RS_ctx_clear(struct rs_load_ctx *ctx) {
-  if (!ctx)
-    return;
-
-  /* DO NOT reset ctx->rnum — each #R block sets this explicitly
-   * before parsing mobs or objects. Resetting it causes cross-room
-   * bleed (e.g., mobs from one room spawning in another).
-   */
-
-  ctx->cur_mob = NULL;
-  ctx->saw_inventory = 0;
-  ctx->last_item_was_inventory = 0;
-
-  /* Clear all container stack pointers */
-  for (int i = 0; i < 16; i++)
-    ctx->stack[i] = NULL;
-}
-
 /* Optional autosave hook (invoked by limits.c:point_update). */
 void RoomSave_autosave_tick(void) {
   /* Iterate all rooms; only save flagged ones. */
@@ -3399,98 +3967,6 @@ void RoomSave_autosave_tick(void) {
       RoomSave_now(rnum);
   }
 }
-
-/* Forward decl so RS_parse_mob_line can use it without implicit declaration */
-static void RS_stack_clear(struct rs_load_ctx *ctx);
-
-/* Handle one line inside a #R block. Returns 1 if handled here. */
-static int RS_parse_mob_line(struct rs_load_ctx *ctx, char *line)
-{
-  if (!line) return 0;
-  while (*line == ' ' || *line == '\t') ++line;
-  if (!*line) return 0;
-
-  switch (line[0]) {
-    case 'M': {
-      mob_vnum mv;
-      if (sscanf(line+1, " %d", (int *)&mv) != 1) return 0;
-
-      RS_finalize_mob_loadout(ctx);
-      ctx->cur_mob = RS_create_mob_by_vnum(mv);
-      if (!ctx->cur_mob) return 1;
-
-      /* Place in the block's room */
-      char_to_room(ctx->cur_mob, ctx->rnum);
-
-      /* Safety: if anything put it elsewhere, force it back */
-      if (IN_ROOM(ctx->cur_mob) != ctx->rnum)
-        char_to_room(ctx->cur_mob, ctx->rnum);
-
-      RS_stack_clear(ctx); /* clear only container stack */
-      ctx->saw_inventory = 0;
-      ctx->last_item_was_inventory = 0;
-      return 1;
-    }
-
-    case 'E': { /* E <wear_pos> <obj_vnum> */
-      int pos; obj_vnum ov; struct obj_data *obj;
-      if (!ctx->cur_mob) return 1;       /* orphan -> ignore */
-      if (sscanf(line+1, " %d %d", &pos, (int *)&ov) != 2) return 0;
-      obj = RS_create_obj_by_vnum(ov);
-      if (!obj) return 1;
-
-      if (pos < 0 || pos >= NUM_WEARS) pos = WEAR_HOLD; /* clamp */
-      equip_char(ctx->cur_mob, obj, pos);
-
-      /* Reset ONLY container stack for following P-lines; keep cur_mob */
-      RS_stack_clear(ctx);
-      ctx->stack[0] = obj;
-      ctx->last_item_was_inventory = 0;
-      return 1;
-    }
-
-    case 'G': { /* G <obj_vnum> */
-      obj_vnum ov; struct obj_data *obj;
-      if (!ctx->cur_mob) return 1;       /* orphan -> ignore */
-      if (sscanf(line+1, " %d", (int *)&ov) != 1) return 0;
-      obj = RS_create_obj_by_vnum(ov);
-      if (!obj) return 1;
-
-      obj_to_char(obj, ctx->cur_mob);
-
-      RS_stack_clear(ctx);
-      ctx->stack[0] = obj;
-      ctx->saw_inventory = 1;
-      ctx->last_item_was_inventory = 1;
-      return 1;
-    }
-
-    case 'P': { /* P <depth> <obj_vnum> : put into last obj at (depth-1) */
-      int depth; obj_vnum ov; struct obj_data *parent, *obj;
-      if (sscanf(line+1, " %d %d", &depth, (int *)&ov) != 2) return 0;
-      if (depth <= 0 || depth >= (int)(sizeof(ctx->stack)/sizeof(ctx->stack[0])))
-        return 1;
-      parent = ctx->stack[depth-1];
-      if (!parent) return 1;
-
-      obj = RS_create_obj_by_vnum(ov);
-      if (!obj) return 1;
-      obj_to_obj(obj, parent);
-
-      ctx->stack[depth] = obj;
-      { int d; for (d = depth+1; d < (int)(sizeof(ctx->stack)/sizeof(ctx->stack[0])); ++d) ctx->stack[d] = NULL; }
-      if (ctx->last_item_was_inventory)
-        ctx->saw_inventory = 1;
-      return 1;
-    }
-
-    default:
-      return 0;
-  }
-}
-
-/* Forward decls for mob restore helpers */
-static void RS_stack_clear(struct rs_load_ctx *ctx);
 
 void RoomSave_boot(void)
 {
@@ -3506,15 +3982,18 @@ void RoomSave_boot(void)
     return;
   }
 
-  log("RoomSave: scanning %s for *.rsv", ROOMSAVE_PREFIX);
+  log("RoomSave: scanning %s for *.toml", ROOMSAVE_PREFIX);
 
   while ((dp = readdir(dirp))) {
     size_t n = strlen(dp->d_name);
-    if (n < 5) continue; /* skip . and .. */
-    if (strcmp(dp->d_name + n - 4, ROOMSAVE_EXT) != 0) continue;
+    size_t extlen = strlen(ROOMSAVE_EXT);
+    if (n <= extlen) continue; /* skip . and .. */
+    if (strcmp(dp->d_name + n - extlen, ROOMSAVE_EXT) != 0) continue;
 
     {
       char path[PATH_MAX];
+      struct roomsave_room *rooms;
+      struct roomsave_room *room;
       int wn = snprintf(path, sizeof(path), "%s%s", ROOMSAVE_PREFIX, dp->d_name);
       if (wn < 0 || wn >= (int)sizeof(path)) {
         mudlog(NRM, LVL_IMMORT, TRUE,
@@ -3523,123 +4002,49 @@ void RoomSave_boot(void)
         continue;
       }
 
-      FILE *fl = fopen(path, "r");
-      if (!fl) {
-        mudlog(NRM, LVL_IMMORT, TRUE,
-               "SYSERR: RoomSave_boot: fopen(%s) failed: %s",
-               path, strerror(errno));
-        continue;
-      }
-
       log("RoomSave: reading %s", path);
+
+      rooms = roomsave_load_file_toml(path);
+      if (!rooms)
+        continue;
 
       int blocks = 0;
       int restored_objs_total = 0;
       int restored_mobs_total = 0;
 
-      /* Outer loop: read every #R block in this .rsv file */
-      char line[512];
-      while (fgets(line, sizeof(line), fl)) {
-
-        /* Skip until a valid #R header */
-        if (strncmp(line, "#R ", 3) != 0)
-          continue;
-
-        /* Parse header line */
-        int rvnum; long ts;
-        if (sscanf(line, "#R %d %ld", &rvnum, &ts) != 2) {
-          mudlog(NRM, LVL_IMMORT, TRUE,
-                 "RoomSave: malformed #R header in %s: %s", path, line);
-          /* Skip malformed block */
-          while (fgets(line, sizeof(line), fl))
-            if (line[0] == '.') break;
-          continue;
-        }
+      for (room = rooms; room; room = room->next) {
+        room_rnum rnum = real_room((room_vnum)room->vnum);
+        int count_objs = 0;
+        int count_mobs = 0;
 
         blocks++;
 
-        /* Resolve the room for this block */
-        room_rnum rnum = real_room((room_vnum)rvnum);
         if (rnum == NOWHERE) {
           mudlog(NRM, LVL_IMMORT, FALSE,
                  "RoomSave: unknown room vnum %d in %s (skipping)",
-                 rvnum, path);
-          /* Skip to next block */
-          while (fgets(line, sizeof(line), fl))
-            if (line[0] == '.') break;
+                 room->vnum, path);
           continue;
         }
 
-        /* Clear this room's ground contents before restoring */
         while (world[rnum].contents)
           extract_obj(world[rnum].contents);
 
-        /* Clear and set mob context for this block */
-        struct rs_load_ctx mctx;
-        RS_ctx_clear(&mctx);
-        mctx.rnum = rnum;
-
-        /* Per-block counts */
-        int count_objs = 0, count_mobs = 0;
-        char inner[512];
-
-        /* Inner loop: read this #R block until '.' */
-        while (fgets(inner, sizeof(inner), fl)) {
-
-          /* Trim spaces */
-          while (inner[0] == ' ' || inner[0] == '\t')
-            memmove(inner, inner + 1, strlen(inner));
-
-          /* Stop at end of block */
-          if (inner[0] == '.')
-            break;
-
-          /* Defensive: stop if another #R starts (malformed file) */
-          if (!strncmp(inner, "#R ", 3)) {
-            fseek(fl, -((long)strlen(inner)), SEEK_CUR);
-            break;
-          }
-
-          /* Handle object blocks */
-          if (inner[0] == 'O') {
-            long pos = ftell(fl);
-            fseek(fl, pos - strlen(inner), SEEK_SET);
-            struct obj_data *list = roomsave_read_list(fl);
-            for (struct obj_data *it = list, *next; it; it = next) {
-              next = it->next_content;
-              it->next_content = NULL;
-              obj_to_room(it, rnum);
-              count_objs++;
-            }
-            continue;
-          }
-
-          /* Handle mob & equipment/inventory */
-          if (RS_parse_mob_line(&mctx, inner)) {
-            if (inner[0] == 'M')
-              count_mobs++;
-            continue;
-          }
-
-          /* Unknown token: ignore gracefully */
-        }
-
-        RS_finalize_mob_loadout(&mctx);
+        count_objs = roomsave_restore_room_objects(room, rnum);
+        count_mobs = roomsave_restore_room_mobs(room, rnum);
 
         restored_objs_total += count_objs;
         restored_mobs_total += count_mobs;
 
         if (count_mobs > 0)
           log("RoomSave: room %d <- %d object(s) and %d mob(s)",
-              rvnum, count_objs, count_mobs);
+              room->vnum, count_objs, count_mobs);
         else
-          log("RoomSave: room %d <- %d object(s)", rvnum, count_objs);
+          log("RoomSave: room %d <- %d object(s)", room->vnum, count_objs);
       }
 
       log("RoomSave: finished %s (blocks=%d, objects=%d, mobs=%d)",
           path, blocks, restored_objs_total, restored_mobs_total);
-
-      fclose(fl);
+      roomsave_free_rooms(rooms);
     }
   }
 
@@ -3647,62 +4052,3 @@ void RoomSave_boot(void)
 }
 
 /* ======== MOB SAVE: write NPCs and their equipment/inventory ========== */
-
-/* Depth-aware writer for container contents under a parent object.
- * Writes: P <depth> <obj_vnum>
- * depth starts at 1 for direct children. */
-static void RS_write_P_chain(FILE *fp, struct obj_data *parent, int depth) {
-  struct obj_data *c;
-  for (c = parent->contains; c; c = c->next_content) {
-    obj_vnum cv = GET_OBJ_VNUM(c);
-    if (cv <= 0) continue;                          /* skip non-proto / invalid */
-    fprintf(fp, "P %d %d\n", depth, (int)cv);
-    if (c->contains)
-      RS_write_P_chain(fp, c, depth + 1);
-  }
-}
-
-/* Writes: E <wear_pos> <obj_vnum>  (then P-chain) */
-static void RS_write_mob_equipment(FILE *fp, struct char_data *mob) {
-  int w;
-  for (w = 0; w < NUM_WEARS; ++w) {
-    struct obj_data *eq = GET_EQ(mob, w);
-    if (!eq) continue;
-    if (GET_OBJ_VNUM(eq) <= 0) continue;
-    fprintf(fp, "E %d %d\n", w, (int)GET_OBJ_VNUM(eq));
-    if (eq->contains) RS_write_P_chain(fp, eq, 1);
-  }
-}
-
-/* Writes: G <obj_vnum> for inventory items (then P-chain) */
-static void RS_write_mob_inventory(FILE *fp, struct char_data *mob) {
-  struct obj_data *o;
-  for (o = mob->carrying; o; o = o->next_content) {
-    if (GET_OBJ_VNUM(o) <= 0) continue;
-    fprintf(fp, "G %d\n", (int)GET_OBJ_VNUM(o));
-    if (o->contains) RS_write_P_chain(fp, o, 1);
-  }
-}
-
-/* Top-level writer: for each NPC in room, emit:
- *   M <mob_vnum>
- *   [E ...]*
- *   [G ...]*
- * (Players are ignored.) */
-static void RS_write_room_mobs(FILE *out, room_rnum rnum) {
-  struct char_data *mob;
-  for (mob = world[rnum].people; mob; mob = mob->next_in_room) {
-    if (!IS_NPC(mob)) continue;
-    if (GET_MOB_VNUM(mob) <= 0) continue;
-    fprintf(out, "M %d\n", (int)GET_MOB_VNUM(mob));
-    RS_write_mob_equipment(out, mob);
-    RS_write_mob_inventory(out, mob);
-  }
-}
-
-/* Clear only the container stack, NOT cur_mob */
-static void RS_stack_clear(struct rs_load_ctx *ctx) {
-  int i;
-  for (i = 0; i < (int)(sizeof(ctx->stack)/sizeof(ctx->stack[0])); ++i)
-    ctx->stack[i] = NULL;
-}

@@ -1,0 +1,1104 @@
+[[object]]
+vnum = 100
+name = "padded armor"
+short = "some padded armor"
+description = "Some padded armor has been discarded here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [17, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 10
+cost = 4
+level = 0
+timer = 0
+
+[[object]]
+vnum = 101
+name = "erdlu leather armor"
+short = "some erdlu leather armor"
+description = "An unfinished object is lying here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [17, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 5
+cost = 5
+level = 0
+timer = 0
+
+[[object]]
+vnum = 102
+name = "studded leather jacket"
+short = "a studded leather jacket"
+description = "A jacket made from studded leather lies here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [17, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [2, 1, 0, 0, 0, 0, 0, 0]
+weight = 13
+cost = 10
+level = 0
+timer = 0
+
+[[object]]
+vnum = 103
+name = "bone chitin armor"
+short = "some bone and chitin armor"
+description = "A piece of armor made from bone and chitin lies here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [17, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 20
+cost = 12
+level = 0
+timer = 0
+
+[[object]]
+vnum = 104
+name = "pair padded sleeves"
+short = "a pair of padded sleeves"
+description = "A pair of padded cloth sleeves lie here abandoned."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [513, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 5
+cost = 10
+level = 0
+timer = 0
+
+[[object]]
+vnum = 105
+name = "pair padded leggings"
+short = "a pair of padded leggings"
+description = "A pair of padded leggings lie here in the dust."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [65, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 5
+cost = 10
+level = 0
+timer = 0
+
+[[object]]
+vnum = 106
+name = "pair cloth gloves"
+short = "a pair of cloth gloves"
+description = "A pair of yellowed cloth gloves lie here."
+main_description = ""
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [257, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 2
+cost = 10
+level = 0
+timer = 0
+
+[[object]]
+vnum = 107
+name = "pair leather gloves"
+short = "a pair of leather gloves"
+description = "A pair of thick leather gloves have been left here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [257, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 6
+cost = 10
+level = 0
+timer = 0
+
+[[object]]
+vnum = 108
+name = "bone helmet"
+short = "a bone helmet"
+description = "A helmet made of bone has been discarded here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [33, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 12
+cost = 18
+level = 0
+timer = 0
+
+[[object]]
+vnum = 109
+name = "padded cloth helmet"
+short = "a padded cloth helmet"
+description = "A padded cloth helmet has been left here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [33, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 4
+cost = 11
+level = 0
+timer = 0
+
+[[object]]
+vnum = 110
+name = "braxat hide jacket"
+short = "a braxat hide jacket"
+description = "A thick jacket made of braxat hide has been abandoned here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [17, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [3, 3, 0, 1, 0, 0, 0, 0]
+weight = 30
+cost = 250
+level = 0
+timer = 0
+
+[[object]]
+vnum = 111
+name = "pair thick leather sleeves"
+short = "a pair of thick leather sleeves"
+description = "Cured and stitched tight, a pair of thick leather sleeves are here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [513, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 14
+cost = 30
+level = 0
+timer = 0
+
+[[object]]
+vnum = 112
+name = "pair sandals"
+short = "a pair of sandals"
+description = "Some cheap looking sandals have been left in the dust here."
+main_description = ""
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [129, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 8
+level = 0
+timer = 0
+
+[[object]]
+vnum = 113
+name = "loincloth"
+short = "a loincloth"
+description = "A scrap of cloth with a string attached has been left here."
+main_description = ""
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [4097, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 1
+level = 0
+timer = 0
+
+[[object]]
+vnum = 114
+name = "erdlu scale shield"
+short = "an erdlu scale shield"
+description = "A shield made from erdlu scales lies here, collecting dust."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [1025, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 5
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 115
+name = "pair thick leather leggings"
+short = "a pair of thick leather leggings"
+description = "A pair of leggings made from thick, dark leather are here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [65, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 12
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 116
+name = "hide wrist wrap wrist-wrap"
+short = "a hide wrist-wrap"
+description = "A simple hide wrist-wrap gathers dust and sand here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [8193, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 2
+cost = 25
+level = 0
+timer = 0
+
+[[object]]
+vnum = 117
+name = "studded hide wrist wrap wrist-wrap"
+short = "a studded hide wrist-wrap"
+description = "A hide wrist-wrap with studded bone bits has been left here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [8193, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 8
+cost = 40
+level = 0
+timer = 0
+
+[[object]]
+vnum = 118
+name = "padded neckguard"
+short = "a padded neckguard"
+description = "A padded neckguard made of cloth is here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [5, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 5
+cost = 25
+level = 0
+timer = 0
+
+[[object]]
+vnum = 119
+name = "pair padded shoes"
+short = "a pair of padded shoes"
+description = "An assuming pair of padded cloth shoes are here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [129, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 8
+cost = 25
+level = 0
+timer = 0
+
+[[object]]
+vnum = 120
+name = "black belt"
+short = "a black belt"
+description = "A belt made of black cloth lies here."
+main_description = ""
+type = 15
+extra_flags = [0, 0, 0, 0]
+wear_flags = [4097, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [10, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 25
+level = 0
+timer = 0
+
+[[object]]
+vnum = 121
+name = "small bag"
+short = "a small bag"
+description = "A small bag made of cloth lies here."
+main_description = ""
+type = 15
+extra_flags = [0, 0, 0, 0]
+wear_flags = [1, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [15, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 25
+level = 0
+timer = 0
+
+[[object]]
+vnum = 122
+name = "bag large"
+short = "a large bag"
+description = "A large bag made of cloth is lying here."
+main_description = ""
+type = 15
+extra_flags = [0, 0, 0, 0]
+wear_flags = [1, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [50, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 123
+name = "pair boots"
+short = "a pair of boots"
+description = "A pair of simple leather boots are here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [129, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 25
+level = 0
+timer = 0
+
+[[object]]
+vnum = 124
+name = "pair thick leather boots"
+short = "a pair of thick leather boots"
+description = "Boots made of thick leather have been left here."
+main_description = ""
+type = 9
+extra_flags = [0, 0, 0, 0]
+wear_flags = [129, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [2, 2, 0, 0, 0, 0, 0, 0]
+weight = 5
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 125
+name = "bone shortsword sword"
+short = "a bone shortsword"
+description = "Made of bone, a shortsword has been left here."
+main_description = ""
+type = 5
+extra_flags = [0, 0, 0, 0]
+wear_flags = [49153, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 6, 11, 0, 0, 0, 0, 0]
+weight = 5
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 126
+name = "bone dagger"
+short = "a bone dagger"
+description = "A dagger made of bone lies here abandoned."
+main_description = ""
+type = 5
+extra_flags = [0, 0, 0, 0]
+wear_flags = [49153, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 4, 11, 0, 0, 0, 0, 0]
+weight = 2
+cost = 25
+level = 0
+timer = 0
+
+[[object]]
+vnum = 127
+name = "bone longsword sword"
+short = "a bone longsword"
+description = "Long and slender, a sword lies here."
+main_description = ""
+type = 5
+extra_flags = [0, 0, 0, 0]
+wear_flags = [16385, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 8, 3, 0, 0, 0, 0, 0]
+weight = 8
+cost = 100
+level = 0
+timer = 0
+
+[[object]]
+vnum = 128
+name = "bone club"
+short = "a bone club"
+description = "Made of bone, a club is lying here."
+main_description = ""
+type = 5
+extra_flags = [0, 0, 0, 0]
+wear_flags = [49153, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 4, 5, 0, 0, 0, 0, 0]
+weight = 5
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 129
+name = "bone javelin"
+short = "a bone javelin"
+description = "A long, bone javelin has been left here."
+main_description = ""
+type = 5
+extra_flags = [0, 0, 0, 0]
+wear_flags = [16385, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 6, 11, 0, 0, 0, 0, 0]
+weight = 5
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 130
+name = "bone spear"
+short = "a bone spear"
+description = "A long piece of bones with a sharpened edge has been left here."
+main_description = ""
+type = 5
+extra_flags = [0, 0, 0, 0]
+wear_flags = [16385, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 6, 11, 0, 0, 0, 0, 0]
+weight = 3
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 131
+name = "backpack pack hide"
+short = "a hide backpack"
+description = "A backpack made of thick hide is lying here."
+main_description = ""
+type = 15
+extra_flags = [0, 0, 0, 0]
+wear_flags = [9, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [75, 0, 0, 0, 0, 0, 0, 0]
+weight = 5
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 132
+name = "counter long rough hewn stone"
+short = "a long, rough-hewn stone counter"
+description = "A long, rough-hewn stone counter is here along the eastern wall."
+main_description = "   This stone countertop is a crude L-shape, allowing the staff of the\nestablishment to enter from behind it as need be.  Carved of stone, it is\nrough-hewn except on the very top, which has been polished down as much as\npossible.  Chips and cracks have formed across its surface, which is beginning\nto show its age.  Most of the counter is relatively clean, but certain spots are\nsticky from spilled drink and food.\n"
+type = 6
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [8, 0, 0, 0, 0, 0, 0, 0]
+weight = 200
+cost = 0
+level = 0
+timer = 0
+
+[[object]]
+vnum = 133
+name = "table long carved stone"
+short = "a long, carved stone table"
+description = "A long, carved stone table is near the southern wall."
+main_description = "Made of one piece of solid stone, this table is easily six feet in length.  At\neach of its corners a thick leg supports the top.  Each leg at the base has been\ncarved to look like an erdlu's foot, with small talons extending out diagonally.\nOver time it has been worn and chipped, leaving it stained but still functional.\n"
+type = 6
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [6, 0, 1, 0, 0, 0, 0, 0]
+weight = 100
+cost = 0
+level = 0
+timer = 0
+
+[[object]]
+vnum = 134
+name = "ledge small stone"
+short = "a small stone ledge"
+description = "A small stone ledge rests against the western wall here."
+main_description = "This makeshift seat is really nothing more than a large slab of stone.  It is\nunfinished, yet shows some attempts to carve it into a more suitable place to\nsit upon.  One end is still slightly jagged, though has been dulled so as not to\neasily hurt someone.\n"
+type = 6
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [2, 0, 0, 0, 0, 0, 0, 0]
+weight = 100
+cost = 0
+level = 0
+timer = 0
+
+[[object]]
+vnum = 135
+name = "mug ale"
+short = "a mug of ale"
+description = "A mug of ale has been left here."
+main_description = "Made of clay, this mug appears to have been fired in a kiln to retain its shape.\nThe craftsmanship is questionable, but it does it job well enough.\n"
+type = 17
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [3, 3, 3, 0, 0, 0, 0, 0]
+weight = 8
+cost = 12
+level = 0
+timer = 0
+
+[[object]]
+vnum = 136
+name = "shot whiskey"
+short = "a shot of whiskey"
+description = "A shot of whiskey has been set here."
+main_description = "This shotglass is made of fired clay and is small enough to hold a single pour\nof spirits.\n"
+type = 17
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 5, 0, 0, 0, 0, 0]
+weight = 1
+cost = 15
+level = 0
+timer = 0
+
+[[object]]
+vnum = 137
+name = "shot firebreather"
+short = "a shot of firebreather"
+description = "A shot of firebreather has been set here."
+main_description = "   Made of discolored stone, this shotglass appears to have been chipped by\nhand.  It could probably hold a small amount of spirits.\n"
+type = 17
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 15
+level = 0
+timer = 0
+
+[[object]]
+vnum = 138
+name = "cup water"
+short = "a cup of water"
+description = "A small cup filled with water is here."
+main_description = "   This small cup is carved from wood and looks like it could hold a fair amount\nof liquid.\n"
+type = 17
+extra_flags = [0, 0, 0, 0]
+wear_flags = [1, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [4, 4, 0, 0, 0, 0, 0, 0]
+weight = 9
+cost = 8
+level = 0
+timer = 0
+
+[[object]]
+vnum = 139
+name = "skewer erdlu meat"
+short = "an erdlu meat skewer"
+description = "A skewer with some browned meat is here."
+main_description = "   A thin piece of wood has been carved into a long skewer, with one end tied\ninto a small hook.  Pieces of dark erdlu meat have been pressed into the skewer\nand cooked over an open fire.\n"
+type = 19
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [2, 2, 1, 0, 0, 0, 0, 0]
+weight = 1
+cost = 12
+level = 0
+timer = 0
+
+[[object]]
+vnum = 140
+name = "steak carru thick"
+short = "a thick carru steak"
+description = "A thick, cooked steak is here."
+main_description = "   This steak is a very large piece of meat that has been cooked over an open\nfire.  Grill marks can be seen on both sides which form small X's.\n"
+type = 19
+extra_flags = [0, 0, 0, 0]
+wear_flags = [1, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [8, 8, 1, 0, 0, 0, 0, 0]
+weight = 2
+cost = 20
+level = 0
+timer = 0
+
+[[object]]
+vnum = 141
+name = "bacon aprig plate"
+short = "a plate of aprig bacon"
+description = "A plate with several slices of cooked bacon is here."
+main_description = "   This plate is small, but piled high with pieces of bacon.  They are cooked to\nthe point that they are still chewy but not quite crunchy.\n"
+type = 19
+extra_flags = [0, 0, 0, 0]
+wear_flags = [1, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [4, 4, 1, 0, 0, 0, 0, 0]
+weight = 1
+cost = 18
+level = 0
+timer = 0
+
+[[object]]
+vnum = 142
+name = "bread hunk"
+short = "a hunk of bread"
+description = "A piece of bread has been torn from a loaf and left here."
+main_description = "   Torn from a larger piece of bread, this hunk is a still a decent size.  The\ncrust is brown and the inside is fluffy.\n"
+type = 19
+extra_flags = [0, 0, 0, 0]
+wear_flags = [1, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [2, 2, 1, 0, 0, 0, 0, 0]
+weight = 1
+cost = 14
+level = 0
+timer = 0
+
+[[object]]
+vnum = 143
+name = "cot small"
+short = "a small cot"
+description = "A small cot has been set up here."
+main_description = "   This cot is made primarily from pieces of wood that are lashed together with\nrope.  Pieces of hide have been tied down, providing a soft yet supportive place\nfor someone to rest upon.\n"
+type = 6
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 0, 0, 0, 0, 0, 0, 0]
+weight = 10
+cost = 100
+level = 0
+timer = 0
+
+[[object]]
+vnum = 144
+name = "barrel water"
+short = "a barrel of water"
+description = "A barrel of water has been placed here."
+main_description = "   This barrel is made of thick agafari wood and bound by pieces of rope to keep\nit from falling apart.  Pitch has been pressed between each each stave.\n"
+type = 17
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [100, 100, 0, 0, 0, 0, 0, 0]
+weight = 20
+cost = 0
+level = 0
+timer = 0
+
+[[object]]
+vnum = 145
+name = "table"
+short = "a squat wooden table"
+description = "A squat wooden table is here, stained and dirty."
+main_description = "   This table was once expertly carved and stained, but years of use have begun\nto show.  Drinks have been spilled on it repeatedly, staining its top in\ndifferent patterns.\n"
+type = 6
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [4, 0, 2, 0, 0, 0, 0, 0]
+weight = 40
+cost = 0
+level = 0
+timer = 0
+
+[[object]]
+vnum = 146
+name = "table long chipped granite"
+short = "a long, chipped granite table"
+description = "A long granite table that is chipped and worn is here."
+main_description = "   Carved from several pieces of granite, this table seems to have been made in\nsuch a way that the pieces can slot into each other to make the final form.  \nLong lines can be seen at various points which have accumulated dirt and debris\nover time.  The pieces don't fit properly in some areas, which has led to them\nbecoming chipped and worn.\n"
+type = 6
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [6, 0, 2, 0, 0, 0, 0, 0]
+weight = 80
+cost = 0
+level = 0
+timer = 0
+
+[[object]]
+vnum = 147
+name = "pen animal wooden"
+short = "a wooden animal pen"
+description = "A wooden animal pen is here, holding several mounts."
+main_description = "   Within the wooden walls of this animal pen, several beasts can be seen\nroaming about.  There isn't a whole lot of room, but enough so that they can\npush past each other to get to the water troughs and feeding bins.\n"
+type = 13
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 100
+cost = 0
+level = 0
+timer = 0
+
+[[object]]
+vnum = 148
+name = "torch bone"
+short = "a bone torch"
+description = "A torch made out of a piece of bone has been discarded here."
+main_description = "   Made out of a piece of broken bone, this torch has some oil-wrapped cloth\nwrapped around one end.\n"
+type = 1
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 8, 0, 0, 0, 0, 0]
+weight = 1
+cost = 20
+level = 0
+timer = 0
+
+[[object]]
+vnum = 149
+name = "torch wooden"
+short = "a wooden torch"
+description = "A wooden torch has been left here."
+main_description = "   A piece of carved wood has been fashioned into a crude torch, with one end\nwrapped in oil-soaked cloth.\n"
+type = 1
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 8, 0, 0, 0, 0, 0]
+weight = 1
+cost = 20
+level = 0
+timer = 0
+
+[[object]]
+vnum = 150
+name = "board rumor"
+short = "the Caleran rumor board"
+description = "A board with rumors has been placed here."
+main_description = "OOC: This is the rumor board for the city of Caleran. Treat it as if you are overhearing\na rumor at the bar.\n"
+type = 13
+extra_flags = [0, 0, 0, 0]
+wear_flags = [0, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 0
+cost = 0
+level = 0
+timer = 0
+
+[[object]]
+vnum = 151
+name = "lantern stone"
+short = "a stone lantern"
+description = "A lantern carved out of grey stone is here."
+main_description = "   Made out of a single piece of grey stone, this lantern has been carved to\nallow for a candle to be placed inside.  A small handle on the top allows the\nuser to carry it.\n"
+type = 1
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 14, 0, 0, 0, 0, 0]
+weight = 2
+cost = 40
+level = 0
+timer = 0
+
+[[object]]
+vnum = 152
+name = "basket wicker"
+short = "a wicker basket"
+description = "A wicker basket has been left here."
+main_description = "   Made of some sort of dried plant reed, this basket has been tightly braided\nwith few visible holes.  A handle has been made that that allows for ease of\ncarry.\n"
+type = 15
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [10, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 40
+level = 0
+timer = 0
+
+[[object]]
+vnum = 153
+name = "backpack pack jozhal hide"
+short = "a jozhal-hide backpack"
+description = "A backpack made out of jozhal hide is lying here."
+main_description = "   This backpack has been made out of several pieces of jozhal hide.  Sewn\ntogether to form the main compartment, it has a pair of shoulder straps that\nwould fit most humanoids.\n"
+type = 15
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32777, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [40, 0, 0, 0, 0, 0, 0, 0]
+weight = 4
+cost = 80
+level = 0
+timer = 0
+
+[[object]]
+vnum = 154
+name = "rope short piece"
+short = "a short piece of rope"
+description = "A short piece of rope has been left here."
+main_description = "   This piece of rope is no more than six feet in length and has been made out\nof some sort of plant fiber.\n"
+type = 13
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 50
+level = 0
+timer = 0
+
+[[object]]
+vnum = 155
+name = "rope coil"
+short = "a coil of rope"
+description = "A long piece of rope has been coiled and left here."
+main_description = "   This piece of rope must be at least thirty feet in length.  Made out of some\nsort of plant fiber, the ends have been waxed slightly to prevent it from\nunraveling.\n"
+type = 13
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 5
+cost = 200
+level = 0
+timer = 0
+
+[[object]]
+vnum = 156
+name = "ring bone"
+short = "a bone ring"
+description = "A simple hoop of bone is lying here."
+main_description = "   This ring is carved from a single piece of yellowed bone.  It is unevenly\nshaped and likely would slip off the finger.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [3, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 10
+level = 0
+timer = 0
+
+[[object]]
+vnum = 157
+name = "ring bone blackened"
+short = "a blackened bone ring"
+description = "A blackened piece of bone in the shape of a ring is here."
+main_description = "   This piece of bone has been carved into the shape of a ring, then blackened\nin a fire.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [3, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 15
+level = 0
+timer = 0
+
+[[object]]
+vnum = 158
+name = "necklace bone"
+short = "a bone necklace"
+description = "A necklace made of pieces of bone is lying here."
+main_description = "   Various pieces of bone have had a hole drilled through them to allow for a\nstring to pass through, forming a simple necklace.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [5, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 25
+level = 0
+timer = 0
+
+[[object]]
+vnum = 159
+name = "necklace blackened bone"
+short = "a blackened bone necklace"
+description = "A blackened bone necklace has been left here."
+main_description = "   Small and thick piece of bone have had a small hole drilled into them to\ncreate this crude necklace.  Each piece seems to have been blackened in a fire,\nthough some are lighter than others.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [5, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 40
+level = 0
+timer = 0
+
+[[object]]
+vnum = 160
+name = "waterskin skin"
+short = "a waterskin"
+description = "A simple waterskin is lying here."
+main_description = "   Made of some sort of animal hide, the pieces have been sewn tightly together\nto form a receptacle that can hold water.\n"
+type = 17
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [4, 4, 0, 0, 0, 0, 0, 0]
+weight = 9
+cost = 40
+level = 0
+timer = 0
+
+[[object]]
+vnum = 161
+name = "waterpouch pouch leather"
+short = "a leather waterpouch"
+description = "A leather waterpouch has been left here."
+main_description = "   Formed out of a few pieces of cheap leather that have been sewn tightly\ntogether, this waterpouch has a small opening on one side which can be capped to\nprevent water spilling out.\n"
+type = 17
+extra_flags = [0, 0, 0, 0]
+wear_flags = [32769, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [4, 4, 0, 0, 0, 0, 0, 0]
+weight = 9
+cost = 40
+level = 0
+timer = 0
+
+[[object]]
+vnum = 162
+name = "cloak dark hooded"
+short = "a dark, hooded cloak"
+description = "A piece of dark fabric lays here in a heap."
+main_description = "   This piece of fabric is made of linen and has been dyed a dark, blackish-blue\ncolor.  It has a few small pockets sewn inside and a clasp near the neck to\nclose it.  A large hood has been attached, allowing the wearer to partially\ncover their face.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [2049, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [1, 1, 0, 10, 0, 0, 0, 0]
+weight = 1
+cost = 10
+level = 0
+timer = 0
+
+[[object]]
+vnum = 163
+name = "pants worn fraying"
+short = "a pair of worn, fraying pants"
+description = "Some worn, fraying fabric is lying here in a heap."
+main_description = "   What was once likely a nice pair of pants has been worn down over several\nyears.  The bottom has frayed and is in tatters, while the knees are completely\nsplit open.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [65, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 5
+level = 0
+timer = 0
+
+[[object]]
+vnum = 164
+name = "shirt worn sleeveless"
+short = "a worn, sleeveless shirt"
+description = "A plain shirt without sleeves lies here."
+main_description = "   This shirt at one point had sleeves, but they have been cut from the body.  \nA plain undyed color, it looks similar in color to sand.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [17, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 5
+level = 0
+timer = 0
+
+[[object]]
+vnum = 165
+name = "shirt sandcloth"
+short = "a sandcloth shirt"
+description = "A shirt made of sandcloth lies here."
+main_description = "   This shirt is made from undyed sandcloth.  Woven to keep out the harsh gritty\nsand that is found nearly everywhere, the fabric is known for being lightweight\nand resistant to the elements.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [17, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 20
+level = 0
+timer = 0
+
+[[object]]
+vnum = 166
+name = "trousers sandcloth pair"
+short = "a pair of sandcloth trousers"
+description = "A pile of undyed sandcloth lies here in a heap."
+main_description = "   These pants have been sewn by a modest tailor and made out of undyed\nsandcloth.  Known for its ruggedness and being lightweight, they look capable of\nkeeping the wearer safe from the elements.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [65, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 2
+cost = 30
+level = 0
+timer = 0
+
+[[object]]
+vnum = 167
+name = "boots carru hide pair"
+short = "a pair of carru-hide boots"
+description = "A pair of boots made out of carru hide are here."
+main_description = "   Made from tanned carru hide, these boots look sturdy and well worn.  The\nstitching is dark and repeats an X pattern, reinforcing them to ensure they\nremain reliable for a long time.  The sole appears to be made of two layers of\nhide, reinforcing the foot from the ground below.\n"
+type = 11
+extra_flags = [0, 0, 0, 0]
+wear_flags = [129, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 1
+cost = 40
+level = 0
+timer = 0
+
+[[object]]
+vnum = 168
+name = "unfinished object"
+short = "unfinished object made by Kinther"
+description = "This is an unfinished object created by Kinther on Wed Dec 31 14:19:06 2025"
+main_description = ""
+type = 0
+extra_flags = [0, 0, 0, 0]
+wear_flags = [1, 0, 0, 0]
+affect_flags = [0, 0, 0, 0]
+values = [0, 0, 0, 0, 0, 0, 0, 0]
+weight = 0
+cost = 0
+level = 0
+timer = 0
+
