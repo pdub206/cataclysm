@@ -38,6 +38,7 @@
 #include "dg_scripts.h"
 #include "fight.h"
 #include "toml.h"
+#include "quest.h"
 
 #include "set.h"
 
@@ -4931,6 +4932,118 @@ ACMD(do_ocreate)
   }
 }
 
+ACMD(do_qcreate)
+{
+  char arg[MAX_INPUT_LENGTH];
+  char buf[MAX_STRING_LENGTH];
+  char namebuf[MAX_NAME_LENGTH];
+  char timestr[64];
+  struct aq_data *quest;
+  qst_vnum vnum;
+  zone_rnum znum;
+  time_t ct;
+
+  if (IS_NPC(ch) || ch->desc == NULL) {
+    send_to_char(ch, "qcreate is only usable by connected players.\r\n");
+    return;
+  }
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch,
+      "Creates a new unfinished quest which can be configured.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  qcreate <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  qcreate 1001\r\n");
+    return;
+  }
+
+  if (!is_number(arg)) {
+    send_to_char(ch,
+      "Creates a new unfinished quest which can be configured.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  qcreate <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  qcreate 1001\r\n");
+    return;
+  }
+
+  vnum = atoi(arg);
+  if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+    send_to_char(ch, "That quest VNUM can't exist.\r\n");
+    return;
+  }
+
+  if (real_quest(vnum) != NOTHING) {
+    send_to_char(ch, "Quest %d already exists.\r\n", vnum);
+    return;
+  }
+
+  znum = real_zone_by_thing(vnum);
+  if (znum == NOWHERE) {
+    send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+    return;
+  }
+
+  if (!can_edit_zone(ch, znum)) {
+    send_cannot_edit(ch, zone_table[znum].number);
+    return;
+  }
+
+  CREATE(quest, struct aq_data, 1);
+  quest->vnum       = vnum;
+  quest->qm         = NOBODY;
+  quest->flags      = 0;
+  quest->type       = AQ_UNDEFINED;
+  quest->target     = NOTHING;
+  quest->prereq     = NOTHING;
+  quest->value[0]   = 0;
+  quest->value[1]   = 0;
+  quest->value[2]   = 0;
+  quest->value[3]   = LVL_IMPL;
+  quest->value[4]   = -1;
+  quest->value[5]   = NOBODY;
+  quest->value[6]   = 1;
+  quest->prev_quest = NOTHING;
+  quest->next_quest = NOTHING;
+  quest->coins_reward = 0;
+  quest->exp_reward = 0;
+  quest->obj_reward = NOTHING;
+  quest->func       = NULL;
+
+  strlcpy(namebuf, GET_NAME(ch), sizeof(namebuf));
+  snprintf(buf, sizeof(buf), "unfinished quest made by %.*s",
+           (int)sizeof(namebuf) - 1, namebuf);
+  quest->name = strdup(buf);
+
+  ct = time(0);
+  strftime(timestr, sizeof(timestr), "%c", localtime(&ct));
+  snprintf(buf, sizeof(buf),
+           "This is an unfinished quest created by %.*s on %.*s",
+           (int)sizeof(namebuf) - 1, namebuf,
+           (int)sizeof(timestr) - 1, timestr);
+  quest->desc = strdup(buf);
+
+  quest->info = strdup("There is no information on this quest.\r\n");
+  quest->done = strdup("You have completed the quest.\r\n");
+  quest->quit = strdup("You have abandoned the quest.\r\n");
+
+  add_quest(quest);
+
+  if (in_save_list(zone_table[znum].number, SL_QST))
+    remove_from_save_list(zone_table[znum].number, SL_QST);
+
+  free_quest(quest);
+
+  send_to_char(ch, "Quest %d created.\r\n", vnum);
+}
+
 ACMD(do_osave)
 {
   char arg[MAX_INPUT_LENGTH];
@@ -5033,6 +5146,73 @@ ACMD(do_osave)
 
   save_objects(znum);
   send_to_char(ch, "osave: object %d saved to disk.\r\n", vnum);
+}
+
+ACMD(do_qsave)
+{
+  char arg[MAX_INPUT_LENGTH];
+  qst_vnum vnum;
+  zone_rnum znum;
+
+  if (IS_NPC(ch) || ch->desc == NULL) {
+    send_to_char(ch, "qsave is only usable by connected players.\r\n");
+    return;
+  }
+
+  one_argument(argument, arg);
+
+  if (!*arg) {
+    send_to_char(ch,
+      "Saves a quest and its current properties to disk, which will load upon next boot.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  qsave <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  qsave 1001\r\n");
+    return;
+  }
+
+  if (!is_number(arg)) {
+    send_to_char(ch,
+      "Saves a quest and its current properties to disk, which will load upon next boot.\r\n"
+      "\r\n"
+      "Usage:\r\n"
+      "  qsave <vnum>\r\n"
+      "\r\n"
+      "Examples:\r\n"
+      "  qsave 1001\r\n");
+    return;
+  }
+
+  vnum = atoi(arg);
+  if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+    send_to_char(ch, "That quest VNUM can't exist.\r\n");
+    return;
+  }
+
+  if (real_quest(vnum) == NOTHING) {
+    send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+    return;
+  }
+
+  znum = real_zone_by_thing(vnum);
+  if (znum == NOWHERE) {
+    send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+    return;
+  }
+
+  if (!can_edit_zone(ch, znum)) {
+    send_cannot_edit(ch, zone_table[znum].number);
+    return;
+  }
+
+  if (!save_quests(znum)) {
+    send_to_char(ch, "qsave: failed.\r\n");
+    return;
+  }
+
+  send_to_char(ch, "qsave: quest %d saved to disk.\r\n", vnum);
 }
 
 /* ====== Builder snapshot: save a staged mob's gear as its prototype loadout ====== */

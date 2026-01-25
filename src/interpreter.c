@@ -254,8 +254,10 @@ cpp_extern const struct command_info cmd_info[] = {
   { "prefedit" , "pre"     , POS_DEAD    , do_oasis_prefedit , 0, 0 },
   { "purge"    , "purge"   , POS_DEAD    , do_purge    , LVL_BUILDER, 0 },
 
+  { "qcreate"  , "qcreate" , POS_DEAD    , do_qcreate  , LVL_BUILDER, 0 },
   { "qedit"    , "qedit"   , POS_DEAD    , do_oasis_qedit, LVL_BUILDER, 0 },
   { "qlist"    , "qlist"   , POS_DEAD    , do_oasis_list, LVL_BUILDER, SCMD_OASIS_QLIST },
+  { "qsave"    , "qsav"    , POS_DEAD    , do_qsave    , LVL_BUILDER, 0 },
   { "quaff"    , "qua"     , POS_RESTING , do_use      , 0, SCMD_QUAFF },
   { "qecho"    , "qec"     , POS_DEAD    , do_qcomm    , LVL_GOD, SCMD_QECHO },
   { "quest"    , "que"     , POS_DEAD    , do_quest    , 0, 0 },

@@ -63,7 +63,7 @@ Changes in v1.3.0-alpha:
  * Migration away from OLC with new command "mset" and for builders to update NPC's
  * Migration away from OLC with new commands "qcreate" and "qset" for builders to create quests
  * Updated mset, oset, and rset commands with missing parameters
- * NPC extra descriptions are supported via mset and [[mob.extra_desc]] in TOML
+ * Added NPC extra descriptions for future support
 
 Features that will be implemented in the next few releases:
 

@@ -13,10 +13,12 @@
 ACMD(do_rset);
 ACMD(do_rcreate);
 ACMD(do_ocreate);
+ACMD(do_qcreate);
 ACMD(do_mcreate);
 ACMD(do_mset);
 ACMD(do_oset);
 ACMD(do_osave);
+ACMD(do_qsave);
 ACMD(do_msave);
 ACMD(do_rsave);
 
