@@ -1731,6 +1731,31 @@ static void parse_mobile_toml(toml_table_t *mob_tab)
         !str_cmp(fname(mob_proto[i].player.short_descr), "the"))
       *mob_proto[i].player.short_descr = LOWER(*mob_proto[i].player.short_descr);
 
+  arr = toml_array_in(mob_tab, "extra_desc");
+  if (arr) {
+    int n = toml_array_nelem(arr);
+    for (j = 0; j < n; j++) {
+      toml_table_t *ed_tab = toml_table_at(arr, j);
+      struct extra_descr_data *new_descr;
+      char *keyword, *description;
+      if (!ed_tab)
+        continue;
+      keyword = toml_get_string_dup(ed_tab, "keyword");
+      description = toml_get_string_dup(ed_tab, "description");
+      if (!keyword || !description) {
+        if (keyword) free(keyword);
+        if (description) free(description);
+        continue;
+      }
+      CREATE(new_descr, struct extra_descr_data, 1);
+      new_descr->keyword = keyword;
+      new_descr->description = description;
+      ensure_newline_terminated(new_descr);
+      new_descr->next = mob_proto[i].mob_specials.ex_description;
+      mob_proto[i].mob_specials.ex_description = new_descr;
+    }
+  }
+
   for (j = 0; j < AF_ARRAY_MAX; j++) {
     MOB_FLAGS(mob_proto + i)[j] = 0;
     AFF_FLAGS(mob_proto + i)[j] = 0;

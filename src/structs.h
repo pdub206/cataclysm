@@ -1088,6 +1088,7 @@ struct mob_special_data
   byte attack_type;   /**< The primary attack type (bite, sting, hit, etc.) */
   byte default_pos;   /**< Default position (standing, sleeping, etc.) */
   byte skills[MAX_SKILLS];     /* NPC-specific skill proficiency (0-100) */
+  struct extra_descr_data *ex_description; /**< Extra descriptions */
 };
 
 /** An affect structure. */

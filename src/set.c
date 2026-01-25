@@ -50,7 +50,9 @@ static void rset_show_usage(struct char_data *ch)
     "  rset add sector <sector>\r\n"
     "  rset add flags <flag> [flag ...]\r\n"
     "  rset add exit <direction> <room number>\r\n"
+    "  rset add exitdesc <direction> <text>\r\n"
     "  rset add door <direction> <name of door>\r\n"
+    "  rset add doorflags <direction> <flag> [flag ...]\r\n"
     "  rset add key <direction> <key number>\r\n"
     "  rset add hidden <direction>\r\n"
     "  rset add forage <object vnum> <dc check>\r\n"
@@ -100,7 +102,9 @@ static void rset_show_add_usage(struct char_data *ch)
     "  rset add sector <sector>\r\n"
     "  rset add flags <flag> [flag ...]\r\n"
     "  rset add exit <direction> <room number>\r\n"
+    "  rset add exitdesc <direction> <text>\r\n"
     "  rset add door <direction> <name of door>\r\n"
+    "  rset add doorflags <direction> <flag> [flag ...]\r\n"
     "  rset add key <direction> <key number>\r\n"
     "  rset add hidden <direction>\r\n"
     "  rset add forage <object vnum> <dc check>\r\n"
@@ -116,7 +120,9 @@ static void rset_show_del_usage(struct char_data *ch)
     "Usage:\r\n"
     "  rset del flags <flag> [flag ...]\r\n"
     "  rset del exit <direction>\r\n"
+    "  rset del exitdesc <direction>\r\n"
     "  rset del door <direction>\r\n"
+    "  rset del doorflags <direction> <flag> [flag ...]\r\n"
     "  rset del key <direction>\r\n"
     "  rset del hidden <direction>\r\n"
     "  rset del forage <object vnum>\r\n"
@@ -208,16 +214,48 @@ static void rset_show_add_exit_usage(struct char_data *ch)
     "  rset add exit n 101\r\n");
 }
 
+static void rset_show_add_exitdesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a description to an existing exit.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  rset add exitdesc <direction> <text>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  rset add exitdesc n A narrow arch leads north.\r\n");
+}
+
 static void rset_show_add_door_usage(struct char_data *ch)
 {
   send_to_char(ch,
-    "Adds a door to an existing exit.\r\n"
+    "Adds a door keyword to an existing exit.\r\n"
     "\r\n"
     "Usage:\r\n"
     "  rset add door <direction> <name of door>\r\n"
     "\r\n"
     "Examples:\r\n"
     "  rset add door n door\r\n");
+}
+
+static void rset_show_add_doorflags_usage(struct char_data *ch)
+{
+  int count = 0;
+
+  while (*exit_bits[count] != '\n')
+    count++;
+
+  send_to_char(ch,
+    "Adds door flags to an existing exit.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  rset add doorflags <direction> <flag> [flag ...]\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  rset add doorflags n closed locked\r\n"
+    "\r\n"
+    "Flags:\r\n");
+  column_list(ch, 0, exit_bits, count, FALSE);
 }
 
 static void rset_show_add_key_usage(struct char_data *ch)
@@ -280,6 +318,18 @@ static void rset_show_del_exit_usage(struct char_data *ch)
     "  rset del exit n\r\n");
 }
 
+static void rset_show_del_exitdesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Deletes the description from an existing exit.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  rset del exitdesc <direction>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  rset del exitdesc n\r\n");
+}
+
 static void rset_show_del_door_usage(struct char_data *ch)
 {
   send_to_char(ch,
@@ -290,6 +340,26 @@ static void rset_show_del_door_usage(struct char_data *ch)
     "\r\n"
     "Examples:\r\n"
     "  rset del door n\r\n");
+}
+
+static void rset_show_del_doorflags_usage(struct char_data *ch)
+{
+  int count = 0;
+
+  while (*exit_bits[count] != '\n')
+    count++;
+
+  send_to_char(ch,
+    "Deletes door flags from an existing exit.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  rset del doorflags <direction> <flag> [flag ...]\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  rset del doorflags n locked\r\n"
+    "\r\n"
+    "Flags:\r\n");
+  column_list(ch, 0, exit_bits, count, FALSE);
 }
 
 static void rset_show_del_key_usage(struct char_data *ch)
@@ -380,6 +450,17 @@ static int rset_find_dir(const char *arg)
   return dir;
 }
 
+static int rset_find_exit_flag(const char *arg)
+{
+  int i;
+
+  for (i = 0; *exit_bits[i] != '\n'; i++)
+    if (is_abbrev(arg, exit_bits[i]))
+      return (1 << i);
+
+  return -1;
+}
+
 static void rset_mark_room_modified(room_rnum rnum)
 {
   if (rnum == NOWHERE || rnum < 0 || rnum > top_of_world)
@@ -436,6 +517,8 @@ static void rset_show_room(struct char_data *ch, struct room_data *room)
       exit->keyword ? exit->keyword : "None",
       keybuf,
       buf);
+    if (exit->general_description && *exit->general_description)
+      send_to_char(ch, "        desc: %s\r\n", exit->general_description);
     count++;
   }
   if (!count)
@@ -831,6 +914,39 @@ ACMD(do_rset)
       return;
     }
 
+    if (is_abbrev(arg2, "exitdesc")) {
+      int dir;
+      char *desc;
+
+      argument = one_argument(argument, arg3);
+      skip_spaces(&argument);
+      desc = argument;
+
+      if (!*arg3 || !*desc) {
+        rset_show_add_exitdesc_usage(ch);
+        return;
+      }
+
+      dir = rset_find_dir(arg3);
+      if (dir < 0) {
+        send_to_char(ch, "Invalid direction.\r\n");
+        return;
+      }
+
+      if (!room->dir_option[dir] || room->dir_option[dir]->to_room == NOWHERE) {
+        send_to_char(ch, "That exit does not exist.\r\n");
+        return;
+      }
+
+      genolc_checkstring(ch->desc, desc);
+      if (room->dir_option[dir]->general_description)
+        free(room->dir_option[dir]->general_description);
+      room->dir_option[dir]->general_description = str_udup(desc);
+      rset_mark_room_modified(rnum);
+      send_to_char(ch, "Exit description set for %s.\r\n", dirs[dir]);
+      return;
+    }
+
     if (is_abbrev(arg2, "door")) {
       int dir;
       char *door_name;
@@ -862,6 +978,56 @@ ACMD(do_rset)
       SET_BIT(room->dir_option[dir]->exit_info, EX_ISDOOR);
       rset_mark_room_modified(rnum);
       send_to_char(ch, "Door added to %s.\r\n", dirs[dir]);
+      return;
+    }
+
+    if (is_abbrev(arg2, "doorflags")) {
+      int dir;
+      bool any = FALSE;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        rset_show_add_doorflags_usage(ch);
+        return;
+      }
+
+      dir = rset_find_dir(arg3);
+      if (dir < 0) {
+        send_to_char(ch, "Invalid direction.\r\n");
+        return;
+      }
+
+      if (!room->dir_option[dir] || room->dir_option[dir]->to_room == NOWHERE) {
+        send_to_char(ch, "That exit does not exist.\r\n");
+        return;
+      }
+
+      if (!*argument) {
+        rset_show_add_doorflags_usage(ch);
+        return;
+      }
+
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg1);
+        if (!*arg1)
+          break;
+
+        flag = rset_find_exit_flag(arg1);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown door flag: %s\r\n", arg1);
+          continue;
+        }
+
+        SET_BIT(room->dir_option[dir]->exit_info, flag);
+        any = TRUE;
+      }
+
+      if (any) {
+        rset_mark_room_modified(rnum);
+        send_to_char(ch, "Door flags updated on %s.\r\n", dirs[dir]);
+      }
       return;
     }
 
@@ -1088,6 +1254,36 @@ ACMD(do_rset)
       return;
     }
 
+    if (is_abbrev(arg2, "exitdesc")) {
+      int dir;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        rset_show_del_exitdesc_usage(ch);
+        return;
+      }
+
+      dir = rset_find_dir(arg3);
+      if (dir < 0) {
+        send_to_char(ch, "Invalid direction.\r\n");
+        return;
+      }
+
+      if (!room->dir_option[dir] || room->dir_option[dir]->to_room == NOWHERE) {
+        send_to_char(ch, "That exit does not exist.\r\n");
+        return;
+      }
+
+      if (room->dir_option[dir]->general_description) {
+        free(room->dir_option[dir]->general_description);
+        room->dir_option[dir]->general_description = NULL;
+      }
+
+      rset_mark_room_modified(rnum);
+      send_to_char(ch, "Exit description removed from %s.\r\n", dirs[dir]);
+      return;
+    }
+
     if (is_abbrev(arg2, "door")) {
       int dir;
 
@@ -1120,6 +1316,56 @@ ACMD(do_rset)
       REMOVE_BIT(room->dir_option[dir]->exit_info, EX_HIDDEN);
       rset_mark_room_modified(rnum);
       send_to_char(ch, "Door removed from %s.\r\n", dirs[dir]);
+      return;
+    }
+
+    if (is_abbrev(arg2, "doorflags")) {
+      int dir;
+      bool any = FALSE;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3) {
+        rset_show_del_doorflags_usage(ch);
+        return;
+      }
+
+      dir = rset_find_dir(arg3);
+      if (dir < 0) {
+        send_to_char(ch, "Invalid direction.\r\n");
+        return;
+      }
+
+      if (!room->dir_option[dir] || room->dir_option[dir]->to_room == NOWHERE) {
+        send_to_char(ch, "That exit does not exist.\r\n");
+        return;
+      }
+
+      if (!*argument) {
+        rset_show_del_doorflags_usage(ch);
+        return;
+      }
+
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg1);
+        if (!*arg1)
+          break;
+
+        flag = rset_find_exit_flag(arg1);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown door flag: %s\r\n", arg1);
+          continue;
+        }
+
+        REMOVE_BIT(room->dir_option[dir]->exit_info, flag);
+        any = TRUE;
+      }
+
+      if (any) {
+        rset_mark_room_modified(rnum);
+        send_to_char(ch, "Door flags updated on %s.\r\n", dirs[dir]);
+      }
       return;
     }
 
@@ -1309,6 +1555,7 @@ static void oset_show_usage(struct char_data *ch)
     "  oset add weight <obj> <value>\r\n"
     "  oset add cost <obj> <value>\r\n"
     "  oset add oval <obj> <oval number> <value>\r\n"
+    "  oset add edesc <obj> <keyword> <description>\r\n"
     "  oset del <obj> <field>\r\n"
     "  oset clear <obj> force\r\n"
     "  oset validate <obj>\r\n");
@@ -1329,7 +1576,8 @@ static void oset_show_add_usage(struct char_data *ch)
     "  oset add wear <obj> <wear type> [wear types]\r\n"
     "  oset add weight <obj> <value>\r\n"
     "  oset add cost <obj> <value>\r\n"
-    "  oset add oval <obj> <oval number> <value>\r\n");
+    "  oset add oval <obj> <oval number> <value>\r\n"
+    "  oset add edesc <obj> <keyword> <description>\r\n");
 }
 
 static void oset_show_add_keywords_usage(struct char_data *ch)
@@ -1442,6 +1690,18 @@ static void oset_show_add_oval_usage(struct char_data *ch)
     "  oset add oval sword weapon_type slashing (for weapons)\r\n");
 }
 
+static void oset_show_add_edesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds an extra description to the object.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  oset add edesc <obj> <keyword> <description>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset add edesc sword rune A rune is etched along the blade.\r\n");
+}
+
 static void oset_show_del_usage(struct char_data *ch)
 {
   send_to_char(ch,
@@ -1452,6 +1712,7 @@ static void oset_show_del_usage(struct char_data *ch)
     "  oset del <obj> flags <flags> [flags]\r\n"
     "  oset del <obj> wear <wear type> [wear types]\r\n"
     "  oset del <obj> oval <oval number|oval name>\r\n"
+    "  oset del <obj> edesc <keyword>\r\n"
     "\r\n"
     "Examples:\r\n"
     "  oset del sword keywords sword\r\n"
@@ -1500,6 +1761,18 @@ static void oset_show_clear_usage(struct char_data *ch)
     "\r\n"
     "Examples:\r\n"
     "  oset clear sword force\r\n");
+}
+
+static void oset_show_del_edesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Deletes an extra description from the object.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  oset del <obj> edesc <keyword>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  oset del sword edesc rune\r\n");
 }
 
 static struct obj_data *oset_get_target_obj_keyword(struct char_data *ch, char *keyword)
@@ -1718,6 +1991,15 @@ static void oset_show_object(struct char_data *ch, struct obj_data *obj)
     const char *label = labels ? labels[i] : "Value";
     send_to_char(ch, "  [%d] %s: %d\r\n", i, label, GET_OBJ_VAL(obj, i));
   }
+
+  send_to_char(ch, "Extra Descs:\r\n");
+  i = 0;
+  for (struct extra_descr_data *desc = obj->ex_description; desc; desc = desc->next) {
+    send_to_char(ch, "  %s\r\n", desc->keyword ? desc->keyword : "<None>");
+    i++;
+  }
+  if (!i)
+    send_to_char(ch, "  None.\r\n");
 }
 
 static void oset_desc_edit(struct char_data *ch, struct obj_data *obj)
@@ -1759,7 +2041,7 @@ static void oset_clear_object(struct obj_data *obj)
   GET_OBJ_COST(obj) = 0;
   GET_OBJ_COST_PER_DAY(obj) = 0;
   GET_OBJ_TIMER(obj) = 0;
-  GET_OBJ_LEVEL(obj) = 0;
+  GET_OBJ_LEVEL(obj) = 1;
 
   memset(obj->obj_flags.extra_flags, 0, sizeof(obj->obj_flags.extra_flags));
   memset(obj->obj_flags.wear_flags, 0, sizeof(obj->obj_flags.wear_flags));
@@ -1807,6 +2089,33 @@ static void oset_validate_object(struct char_data *ch, struct obj_data *obj)
   if (GET_OBJ_COST(obj) <= 0) {
     send_to_char(ch, "Error: cost must be above zero.\r\n");
     errors++;
+  }
+
+  if (GET_OBJ_LEVEL(obj) != 1) {
+    send_to_char(ch, "Error: object level must be 1.\r\n");
+    errors++;
+  }
+
+  if (GET_OBJ_TIMER(obj) != 0) {
+    send_to_char(ch, "Error: object timer must be 0.\r\n");
+    errors++;
+  }
+
+  if (GET_OBJ_COST_PER_DAY(obj) != 0) {
+    send_to_char(ch, "Error: cost per day must be 0.\r\n");
+    errors++;
+  }
+
+  for (struct extra_descr_data *desc = obj->ex_description; desc; desc = desc->next) {
+    if (!desc->keyword || !*desc->keyword) {
+      send_to_char(ch, "Error: extra description is missing a keyword.\r\n");
+      errors++;
+    }
+    if (!desc->description || !*desc->description) {
+      send_to_char(ch, "Error: extra description for %s is missing text.\r\n",
+        desc->keyword ? desc->keyword : "<None>");
+      errors++;
+    }
   }
 
   if (!errors)
@@ -2160,6 +2469,40 @@ ACMD(do_oset)
       return;
     }
 
+    if (is_abbrev(arg2, "edesc")) {
+      struct extra_descr_data *desc;
+      char *keyword;
+      char *edesc;
+
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      skip_spaces(&argument);
+      keyword = arg4;
+      edesc = argument;
+
+      if (!*arg3 || !*keyword || !*edesc) {
+        oset_show_add_edesc_usage(ch);
+        return;
+      }
+
+      obj = oset_get_target_obj_keyword(ch, arg3);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg3), arg3);
+        return;
+      }
+
+      genolc_checkstring(ch->desc, edesc);
+      genolc_checkstring(ch->desc, keyword);
+
+      CREATE(desc, struct extra_descr_data, 1);
+      desc->keyword = str_udup(keyword);
+      desc->description = str_udup(edesc);
+      desc->next = obj->ex_description;
+      obj->ex_description = desc;
+      send_to_char(ch, "Extra description added.\r\n");
+      return;
+    }
+
     oset_show_add_usage(ch);
     return;
   }
@@ -2289,6 +2632,46 @@ ACMD(do_oset)
       return;
     }
 
+    if (is_abbrev(arg3, "edesc")) {
+      struct extra_descr_data *desc;
+      struct extra_descr_data *prev = NULL;
+
+      argument = one_argument(argument, arg4);
+      if (!*arg4) {
+        oset_show_del_edesc_usage(ch);
+        return;
+      }
+      obj = oset_get_target_obj_keyword(ch, arg2);
+      if (!obj) {
+        send_to_char(ch, "You don't seem to have %s %s.\r\n", AN(arg2), arg2);
+        return;
+      }
+
+      for (desc = obj->ex_description; desc; desc = desc->next) {
+        if (desc->keyword && isname(arg4, desc->keyword))
+          break;
+        prev = desc;
+      }
+
+      if (!desc) {
+        send_to_char(ch, "No extra description found for %s.\r\n", arg4);
+        return;
+      }
+
+      if (prev)
+        prev->next = desc->next;
+      else
+        obj->ex_description = desc->next;
+
+      if (desc->keyword)
+        free(desc->keyword);
+      if (desc->description)
+        free(desc->description);
+      free(desc);
+      send_to_char(ch, "Extra description removed.\r\n");
+      return;
+    }
+
     oset_show_del_usage(ch);
     return;
   }
@@ -2359,6 +2742,7 @@ static void mset_show_usage(struct char_data *ch)
     "  mset add ldesc <npc> <text>\r\n"
     "  mset add desc <npc> (enters editor)\r\n"
     "  mset add background <npc> (enters editor)\r\n"
+    "  mset add edesc <npc> <keyword> <description>\r\n"
     "  mset add attack <npc> <attack type>\r\n"
     "  mset add sex <npc> <male/female/neutral>\r\n"
     "  mset add species <npc> <species name>\r\n"
@@ -2439,6 +2823,18 @@ static void mset_show_add_background_usage(struct char_data *ch)
     "\r\n"
     "Usage:\r\n"
     "  mset add background <npc>\r\n");
+}
+
+static void mset_show_add_edesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds an extra description to the NPC.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  mset add edesc <npc> <keyword> <description>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset add edesc guard scar A jagged scar cuts across the cheek.\r\n");
 }
 
 static void mset_show_add_attack_usage(struct char_data *ch)
@@ -2597,6 +2993,7 @@ static void mset_show_del_usage(struct char_data *ch)
     "  mset del <npc> ldesc\r\n"
     "  mset del <npc> desc\r\n"
     "  mset del <npc> background\r\n"
+    "  mset del <npc> edesc <keyword>\r\n"
     "  mset del <npc> attack\r\n"
     "  mset del <npc> sex\r\n"
     "  mset del <npc> species\r\n"
@@ -2607,6 +3004,18 @@ static void mset_show_del_usage(struct char_data *ch)
     "  mset del <npc> flags <flags> [flags]\r\n"
     "  mset del <npc> affect <affect> [affects]\r\n"
     "  mset del <npc> skinning <vnum>\r\n");
+}
+
+static void mset_show_del_edesc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Deletes an extra description from the NPC.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  mset del <npc> edesc <keyword>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  mset del guard edesc scar\r\n");
 }
 
 static void mset_show_del_flags_usage(struct char_data *ch)
@@ -2754,6 +3163,19 @@ static void mset_update_proto_keywords(mob_rnum rnum, const char *value)
     free(old);
 }
 
+static void mset_update_proto_edesc(mob_rnum rnum, struct extra_descr_data *old)
+{
+  struct char_data *mob;
+
+  if (rnum < 0)
+    return;
+
+  for (mob = character_list; mob; mob = mob->next) {
+    if (GET_MOB_RNUM(mob) == rnum && mob->mob_specials.ex_description == old)
+      mob->mob_specials.ex_description = mob_proto[rnum].mob_specials.ex_description;
+  }
+}
+
 static void mset_replace_string(struct char_data *mob, char **field, const char *value, const char *proto_field)
 {
   if (*field && (!proto_field || *field != proto_field))
@@ -2867,6 +3289,15 @@ static void mset_show_mob(struct char_data *ch, struct char_data *mob)
   } else {
     send_to_char(ch, "  None.\r\n");
   }
+
+  send_to_char(ch, "Extra Descs:\r\n");
+  i = 0;
+  for (struct extra_descr_data *desc = mob->mob_specials.ex_description; desc; desc = desc->next) {
+    send_to_char(ch, "  %s\r\n", desc->keyword ? desc->keyword : "<None>");
+    i++;
+  }
+  if (!i)
+    send_to_char(ch, "  None.\r\n");
 }
 
 static void mset_desc_edit(struct char_data *ch, char **field, const char *label)
@@ -2930,6 +3361,33 @@ static void mset_validate_mob(struct char_data *ch, struct char_data *mob)
 
   if (!HAS_VALID_CLASS(mob)) {
     send_to_char(ch, "Error: class is not set.\r\n");
+    errors++;
+  }
+
+  for (struct extra_descr_data *desc = mob->mob_specials.ex_description; desc; desc = desc->next) {
+    if (!desc->keyword || !*desc->keyword) {
+      send_to_char(ch, "Error: extra description is missing a keyword.\r\n");
+      errors++;
+    }
+    if (!desc->description || !*desc->description) {
+      send_to_char(ch, "Error: extra description for %s is missing text.\r\n",
+        desc->keyword ? desc->keyword : "<None>");
+      errors++;
+    }
+  }
+
+  if (GET_LEVEL(mob) != 1) {
+    send_to_char(ch, "Error: level must be 1.\r\n");
+    errors++;
+  }
+
+  if (GET_DEFAULT_POS(mob) != POS_STANDING) {
+    send_to_char(ch, "Error: default position must be standing.\r\n");
+    errors++;
+  }
+
+  if (GET_EXP(mob) != 0) {
+    send_to_char(ch, "Error: EXP must be 0.\r\n");
     errors++;
   }
 
@@ -3162,6 +3620,46 @@ ACMD(do_mset)
         mset_desc_edit(ch, &mob->player.background, "mob background");
       }
 
+      return;
+    }
+
+    if (is_abbrev(arg2, "edesc")) {
+      struct extra_descr_data *desc;
+      struct extra_descr_data *old;
+      char *keyword;
+      char *edesc;
+
+      argument = one_argument(argument, arg1);
+      skip_spaces(&argument);
+      keyword = arg1;
+      edesc = argument;
+
+      if (!*keyword || !*edesc) {
+        mset_show_add_edesc_usage(ch);
+        return;
+      }
+
+      genolc_checkstring(ch->desc, edesc);
+      genolc_checkstring(ch->desc, keyword);
+
+      if (rnum != NOBODY) {
+        old = mob_proto[rnum].mob_specials.ex_description;
+        CREATE(desc, struct extra_descr_data, 1);
+        desc->keyword = str_udup(keyword);
+        desc->description = str_udup(edesc);
+        desc->next = mob_proto[rnum].mob_specials.ex_description;
+        mob_proto[rnum].mob_specials.ex_description = desc;
+        mset_update_proto_edesc(rnum, old);
+        mset_mark_mob_modified(vnum);
+      } else {
+        CREATE(desc, struct extra_descr_data, 1);
+        desc->keyword = str_udup(keyword);
+        desc->description = str_udup(edesc);
+        desc->next = mob->mob_specials.ex_description;
+        mob->mob_specials.ex_description = desc;
+      }
+
+      send_to_char(ch, "Extra description added.\r\n");
       return;
     }
 
@@ -3663,6 +4161,74 @@ ACMD(do_mset)
       return;
     }
 
+    if (is_abbrev(arg3, "edesc")) {
+      struct extra_descr_data *desc;
+      struct extra_descr_data *prev = NULL;
+      struct extra_descr_data *old;
+
+      argument = one_argument(argument, arg1);
+      if (!*arg1) {
+        mset_show_del_edesc_usage(ch);
+        return;
+      }
+
+      if (rnum != NOBODY) {
+        old = mob_proto[rnum].mob_specials.ex_description;
+        desc = mob_proto[rnum].mob_specials.ex_description;
+        while (desc) {
+          if (desc->keyword && isname(arg1, desc->keyword))
+            break;
+          prev = desc;
+          desc = desc->next;
+        }
+
+        if (!desc) {
+          send_to_char(ch, "No extra description found for %s.\r\n", arg1);
+          return;
+        }
+
+        if (prev)
+          prev->next = desc->next;
+        else
+          mob_proto[rnum].mob_specials.ex_description = desc->next;
+
+        if (desc->keyword)
+          free(desc->keyword);
+        if (desc->description)
+          free(desc->description);
+        free(desc);
+        mset_update_proto_edesc(rnum, old);
+        mset_mark_mob_modified(vnum);
+      } else {
+        desc = mob->mob_specials.ex_description;
+        while (desc) {
+          if (desc->keyword && isname(arg1, desc->keyword))
+            break;
+          prev = desc;
+          desc = desc->next;
+        }
+
+        if (!desc) {
+          send_to_char(ch, "No extra description found for %s.\r\n", arg1);
+          return;
+        }
+
+        if (prev)
+          prev->next = desc->next;
+        else
+          mob->mob_specials.ex_description = desc->next;
+
+        if (desc->keyword)
+          free(desc->keyword);
+        if (desc->description)
+          free(desc->description);
+        free(desc);
+      }
+
+      send_to_char(ch, "Extra description removed.\r\n");
+      return;
+    }
+
     if (is_abbrev(arg3, "attack")) {
       mob->mob_specials.attack_type = 0;
       if (rnum != NOBODY) {
@@ -3946,6 +4512,8 @@ ACMD(do_mset)
     }
 
     if (rnum != NOBODY) {
+      struct extra_descr_data *old_edesc = mob_proto[rnum].mob_specials.ex_description;
+
       if (mob_proto[rnum].player.name)
         free(mob_proto[rnum].player.name);
       if (mob_proto[rnum].player.short_descr)
@@ -3956,17 +4524,25 @@ ACMD(do_mset)
         free(mob_proto[rnum].player.description);
       if (mob_proto[rnum].player.background)
         free(mob_proto[rnum].player.background);
+      if (mob_proto[rnum].mob_specials.ex_description)
+        free_ex_descriptions(mob_proto[rnum].mob_specials.ex_description);
 
       mob_proto[rnum].player.name = strdup("An unfinished NPC");
       mob_proto[rnum].player.short_descr = strdup("the unfinished npc");
       mob_proto[rnum].player.long_descr = strdup("An unfinished npc stands here.\r\n");
       mob_proto[rnum].player.description = strdup("It looks unfinished.\r\n");
       mob_proto[rnum].player.background = strdup("No background has been recorded.\r\n");
+      mob_proto[rnum].mob_specials.ex_description = NULL;
+      mset_update_proto_edesc(rnum, old_edesc);
 
       mob_proto[rnum].mob_specials.attack_type = 0;
       GET_SEX(&mob_proto[rnum]) = SEX_NEUTRAL;
       GET_CLASS(&mob_proto[rnum]) = CLASS_UNDEFINED;
       GET_SPECIES(&mob_proto[rnum]) = SPECIES_UNDEFINED;
+      GET_LEVEL(&mob_proto[rnum]) = 1;
+      GET_DEFAULT_POS(&mob_proto[rnum]) = POS_STANDING;
+      GET_POS(&mob_proto[rnum]) = POS_STANDING;
+      GET_EXP(&mob_proto[rnum]) = 0;
 
       mset_set_stat_value(&mob_proto[rnum], ABIL_STR, 10, FALSE);
       mset_set_stat_value(&mob_proto[rnum], ABIL_DEX, 10, FALSE);
@@ -3997,11 +4573,19 @@ ACMD(do_mset)
       mset_replace_string(mob, &GET_LDESC(mob), "An unfinished npc stands here.\r\n", NULL);
       mset_replace_string(mob, &mob->player.description, "It looks unfinished.\r\n", NULL);
       mset_replace_string(mob, &mob->player.background, "No background has been recorded.\r\n", NULL);
+      if (mob->mob_specials.ex_description) {
+        free_ex_descriptions(mob->mob_specials.ex_description);
+        mob->mob_specials.ex_description = NULL;
+      }
 
       mob->mob_specials.attack_type = 0;
       GET_SEX(mob) = SEX_NEUTRAL;
       GET_CLASS(mob) = CLASS_UNDEFINED;
       GET_SPECIES(mob) = SPECIES_UNDEFINED;
+      GET_LEVEL(mob) = 1;
+      GET_DEFAULT_POS(mob) = POS_STANDING;
+      GET_POS(mob) = POS_STANDING;
+      GET_EXP(mob) = 0;
 
       mset_set_stat_value(mob, ABIL_STR, 10, TRUE);
       mset_set_stat_value(mob, ABIL_DEX, 10, TRUE);
@@ -4157,6 +4741,9 @@ ACMD(do_mcreate)
   init_mobile(newmob);
 
   GET_LEVEL(newmob) = 1;
+  GET_DEFAULT_POS(newmob) = POS_STANDING;
+  GET_POS(newmob) = POS_STANDING;
+  GET_EXP(newmob) = 0;
 
   GET_NAME(newmob) = strdup("An unfinished NPC");
   GET_KEYWORDS(newmob) = strdup("unfinished npc");
@@ -4288,6 +4875,10 @@ ACMD(do_ocreate)
 
   CREATE(newobj, struct obj_data, 1);
   clear_object(newobj);
+
+  GET_OBJ_LEVEL(newobj) = 1;
+  GET_OBJ_TIMER(newobj) = 0;
+  GET_OBJ_COST_PER_DAY(newobj) = 0;
 
   newobj->name = strdup("unfinished object");
   strlcpy(namebuf, GET_NAME(ch), sizeof(namebuf));

@@ -128,6 +128,11 @@ static void extract_mobile_all(mob_vnum vnum)
         if (ch->player.background && ch->player.background != mob_proto[i].player.background)
           free(ch->player.background);
         ch->player.background = NULL;
+
+        if (ch->mob_specials.ex_description &&
+            ch->mob_specials.ex_description != mob_proto[i].mob_specials.ex_description)
+          free_ex_descriptions(ch->mob_specials.ex_description);
+        ch->mob_specials.ex_description = NULL;
     
         /* free script proto list if it's not the prototype */
         if (ch->proto_script && ch->proto_script != mob_proto[i].proto_script)
@@ -208,6 +213,8 @@ int copy_mobile_strings(struct char_data *t, struct char_data *f)
     t->player.description = strdup(f->player.description);
   if (f->player.background)
     t->player.background = strdup(f->player.background);
+  if (f->mob_specials.ex_description)
+    copy_ex_descriptions(&t->mob_specials.ex_description, f->mob_specials.ex_description);
   return TRUE;
 }
 
@@ -223,6 +230,7 @@ int update_mobile_strings(struct char_data *t, struct char_data *f)
     t->player.description = f->player.description;
   if (f->player.background)
     t->player.background = f->player.background;
+  t->mob_specials.ex_description = f->mob_specials.ex_description;
   return TRUE;
 }
 
@@ -238,6 +246,10 @@ int free_mobile_strings(struct char_data *mob)
     free(mob->player.description);
   if (mob->player.background)
     free(mob->player.background);
+  if (mob->mob_specials.ex_description) {
+    free_ex_descriptions(mob->mob_specials.ex_description);
+    mob->mob_specials.ex_description = NULL;
+  }
   return TRUE;
 }
 
@@ -266,6 +278,9 @@ int free_mobile(struct char_data *mob)
       free(mob->player.description);
     if (mob->player.background && mob->player.background != mob_proto[i].player.background)
       free(mob->player.background);
+    if (mob->mob_specials.ex_description &&
+        mob->mob_specials.ex_description != mob_proto[i].mob_specials.ex_description)
+      free_ex_descriptions(mob->mob_specials.ex_description);
     /* free script proto list if it's not the prototype */
     if (mob->proto_script && mob->proto_script != mob_proto[i].proto_script)
       free_proto_script(mob, MOB_TRIGGER);
@@ -407,6 +422,7 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
   char ldesc[MAX_STRING_LENGTH];
   char ddesc[MAX_STRING_LENGTH];
   char bdesc[MAX_STRING_LENGTH];
+  char edesc_buf[MAX_STRING_LENGTH];
   int has_bdesc = 0;
 
   ldesc[MAX_STRING_LENGTH - 1] = '\0';
@@ -437,6 +453,22 @@ int write_mobile_record(mob_vnum mvnum, struct char_data *mob, FILE *fd)
   toml_write_kv_string(fd, "description", ddesc);
   if (has_bdesc)
     toml_write_kv_string_opt(fd, "background", bdesc);
+
+  if (mob->mob_specials.ex_description) {
+    struct extra_descr_data *xdesc;
+    for (xdesc = mob->mob_specials.ex_description; xdesc; xdesc = xdesc->next) {
+      if (!xdesc->keyword || !xdesc->description || !*xdesc->keyword || !*xdesc->description) {
+        mudlog(BRF, LVL_IMMORT, TRUE, "SYSERR: GenOLC: write_mobile_record: Corrupt ex_desc!");
+        continue;
+      }
+      strncpy(edesc_buf, xdesc->description, sizeof(edesc_buf) - 1);
+      edesc_buf[sizeof(edesc_buf) - 1] = '\0';
+      strip_cr(edesc_buf);
+      fprintf(fd, "\n[[mob.extra_desc]]\n");
+      toml_write_kv_string(fd, "keyword", xdesc->keyword);
+      toml_write_kv_string(fd, "description", edesc_buf);
+    }
+  }
 
   fprintf(fd, "flags = [%d, %d, %d, %d]\n",
           MOB_FLAGS(mob)[0], MOB_FLAGS(mob)[1],
