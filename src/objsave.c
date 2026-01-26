@@ -629,28 +629,28 @@ static obj_save_data *objsave_parse_objects_from_toml(toml_table_t *tab, const c
 
     str = toml_get_string_dup(obj_tab, "name");
     if (str) {
-      if (temp->name)
+      if (!VALID_OBJ_RNUM(temp) && temp->name)
         free(temp->name);
       temp->name = str;
     }
 
     str = toml_get_string_dup(obj_tab, "short");
     if (str) {
-      if (temp->short_description)
+      if (!VALID_OBJ_RNUM(temp) && temp->short_description)
         free(temp->short_description);
       temp->short_description = str;
     }
 
     str = toml_get_string_dup(obj_tab, "description");
     if (str) {
-      if (temp->description)
+      if (!VALID_OBJ_RNUM(temp) && temp->description)
         free(temp->description);
       temp->description = str;
     }
 
     str = toml_get_string_dup(obj_tab, "main_description");
     if (str) {
-      if (temp->main_description)
+      if (!VALID_OBJ_RNUM(temp) && temp->main_description)
         free(temp->main_description);
       temp->main_description = str;
     }

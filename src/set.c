@@ -5215,6 +5215,1205 @@ ACMD(do_qsave)
   send_to_char(ch, "qsave: quest %d saved to disk.\r\n", vnum);
 }
 
+static void qset_show_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Usage:\r\n"
+    "  qset show <vnum>\r\n"
+    "  qset add name <vnum> <text>\r\n"
+    "  qset add desc <vnum> <text>\r\n"
+    "  qset add msg <vnum> <type> <text>\r\n"
+    "  qset add flags <vnum> <flags> [flags]\r\n"
+    "  qset add type <vnum> <type>\r\n"
+    "  qset add npc <vnum> <npc vnum>\r\n"
+    "  qset add target <vnum> <target vnum>\r\n"
+    "  qset add amount <vnum> <amount of coins>\r\n"
+    "  qset add reward <vnum> <amount of coins>\r\n"
+    "  qset add prereq <vnum> <prerequisite object vnum>\r\n"
+    "  qset add prev <vnum> <previous quest vnum>\r\n"
+    "  qset del <vnum> <field>\r\n"
+    "  qset clear <vnum> force\r\n"
+    "  qset validate <vnum>\r\n");
+}
+
+static void qset_show_add_name_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a name to the quest.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add name <vnum> <text>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  qset add name 101 Deliver scroll to House Tsalaxa\r\n");
+}
+
+static void qset_show_add_desc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a description to the quest. Useful for identifying quest lines or simple quests.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add desc <vnum> <text>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  qset add desc 101 Introduction quest to House Tsalaxa\r\n");
+}
+
+static void qset_show_add_msg_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a message to the quest that the player sees. Can be an accept, completion,\r\n"
+    "or abandonment/quit message.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add msg <vnum> <type> <text>\r\n"
+    "\r\n"
+    "Examples:\r\n"
+    "  qset add msg 101 accept You have agreed to take the scroll to House Tsalaxa.\r\n"
+    "  qset add msg 101 complete You hand over the scroll to House Tsalaxa's courier.\r\n"
+    "  qset add msg 101 quit You decide not to deliver the scroll and discard it.\r\n");
+}
+
+static void qset_show_add_flags_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds flags to the quest. Useful for repeatable quests or one-offs.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add flags <vnum> repeatable\r\n"
+    "\r\n"
+    "Flags:\r\n");
+  column_list(ch, 0, aq_flags, NUM_AQ_FLAGS, FALSE);
+}
+
+static void qset_show_add_type_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Determines the type of quest. Generally is either an object or NPC.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add type <vnum> <type>\r\n"
+    "\r\n"
+    "Types:\r\n");
+  column_list(ch, 0, quest_types, NUM_AQ_TYPES, FALSE);
+  send_to_char(ch,
+    "\r\n"
+    "You can use the number (1-%d) or a name/abbrev: object, room, find,\r\n"
+    "kill, save, return, clear.\r\n",
+    NUM_AQ_TYPES);
+}
+
+static void qset_show_add_npc_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Determines the starting NPC of the quest.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add npc <vnum> <npc vnum>\r\n");
+}
+
+static void qset_show_add_target_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Determines the target vnum of the quest. Generally is either an object or\r\n"
+    "NPC.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add target <vnum> <obj/npc vnum>\r\n");
+}
+
+static void qset_show_add_amount_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a currency reward given to a player when they complete the quest.\r\n"
+    "Defaults to 0 if not specified.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add amount <vnum> <amount of coins>\r\n");
+}
+
+static void qset_show_add_reward_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds a currency reward given to a player when they complete the quest.\r\n"
+    "Defaults to 0 if not specified.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add reward <vnum> <amount of coins>\r\n");
+}
+
+static void qset_show_add_prereq_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds the object required to accept the quest. If not set, the quest\r\n"
+    "does not require an item to be accepted.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add prereq <vnum> <prerequisite object vnum>\r\n");
+}
+
+static void qset_show_add_prev_usage(struct char_data *ch)
+{
+  send_to_char(ch,
+    "Adds the previous quest that must be completed before this quest can be\r\n"
+    "accepted. If not set, the quest has no prerequisite quest.\r\n"
+    "\r\n"
+    "Usage:\r\n"
+    "  qset add prev <vnum> <previous quest vnum>\r\n");
+}
+
+static void qset_mark_quest_modified(qst_vnum vnum)
+{
+  zone_rnum znum = real_zone_by_thing(vnum);
+
+  if (znum == NOWHERE)
+    return;
+
+  add_to_save_list(zone_table[znum].number, SL_QST);
+}
+
+static int qset_find_flag(const char *arg)
+{
+  int i;
+
+  for (i = 0; *aq_flags[i] != '\n'; i++)
+    if (is_abbrev(arg, aq_flags[i]))
+      return (1 << i);
+
+  return -1;
+}
+
+static int qset_find_type(const char *arg)
+{
+  int type;
+  char buf[MAX_INPUT_LENGTH];
+
+  if (!arg || !*arg)
+    return -1;
+
+  if (is_number(arg)) {
+    type = atoi(arg);
+    if (type >= 0 && type < NUM_AQ_TYPES)
+      return type;
+    if (type > 0 && type <= NUM_AQ_TYPES)
+      return type - 1;
+    return -1;
+  }
+
+  strlcpy(buf, arg, sizeof(buf));
+  for (type = 0; type < NUM_AQ_TYPES; type++)
+    if (is_abbrev(buf, quest_types[type]))
+      return type;
+
+  return -1;
+}
+
+static void qset_build_msg(char *out, size_t outsz, const char *input)
+{
+  size_t len;
+
+  if (!input || !*input) {
+    *out = '\0';
+    return;
+  }
+
+  strlcpy(out, input, outsz);
+  len = strlen(out);
+  if (len < 2 || out[len - 2] != '\r' || out[len - 1] != '\n')
+    strlcat(out, "\r\n", outsz);
+}
+
+static void qset_show_quest(struct char_data *ch, qst_rnum rnum)
+{
+  char flags[MAX_STRING_LENGTH];
+  char targetname[MAX_STRING_LENGTH];
+  mob_rnum qmrnum;
+  const char *type_name = "Unknown";
+
+  sprintbit(QST_FLAGS(rnum), aq_flags, flags, sizeof(flags));
+
+  if (QST_TYPE(rnum) >= 0 && QST_TYPE(rnum) < NUM_AQ_TYPES)
+    type_name = quest_types[QST_TYPE(rnum)];
+
+  switch (QST_TYPE(rnum)) {
+    case AQ_OBJ_FIND:
+    case AQ_OBJ_RETURN:
+      snprintf(targetname, sizeof(targetname), "%s",
+               real_object(QST_TARGET(rnum)) == NOTHING ?
+               "An unknown object" :
+               obj_proto[real_object(QST_TARGET(rnum))].short_description);
+      break;
+    case AQ_ROOM_FIND:
+    case AQ_ROOM_CLEAR:
+      snprintf(targetname, sizeof(targetname), "%s",
+               real_room(QST_TARGET(rnum)) == NOWHERE ?
+               "An unknown room" :
+               world[real_room(QST_TARGET(rnum))].name);
+      break;
+    case AQ_MOB_FIND:
+    case AQ_MOB_KILL:
+    case AQ_MOB_SAVE:
+      snprintf(targetname, sizeof(targetname), "%s",
+               real_mobile(QST_TARGET(rnum)) == NOBODY ?
+               "An unknown mobile" :
+               GET_NAME(&mob_proto[real_mobile(QST_TARGET(rnum))]));
+      break;
+    default:
+      snprintf(targetname, sizeof(targetname), "Unknown");
+      break;
+  }
+
+  qmrnum = real_mobile(QST_MASTER(rnum));
+  send_to_char(ch, "Quest [%d]: %s\r\n", QST_NUM(rnum),
+               QST_NAME(rnum) ? QST_NAME(rnum) : "<None>");
+  send_to_char(ch, "Description: %s\r\n", QST_DESC(rnum) ? QST_DESC(rnum) : "<None>");
+  send_to_char(ch, "Accept Message:\r\n%s", QST_INFO(rnum) ? QST_INFO(rnum) : "  <None>\r\n");
+  send_to_char(ch, "Completion Message:\r\n%s", QST_DONE(rnum) ? QST_DONE(rnum) : "  <None>\r\n");
+  send_to_char(ch, "Quit Message:\r\n%s", QST_QUIT(rnum) ? QST_QUIT(rnum) : "  <None>\r\n");
+  send_to_char(ch, "Flags: %s\r\n", flags);
+  send_to_char(ch, "Type: %s\r\n", type_name);
+  send_to_char(ch, "Quest Master: [%d] %s\r\n",
+               QST_MASTER(rnum) == NOBODY ? -1 : QST_MASTER(rnum),
+               qmrnum == NOBODY ? "Invalid Mob" : mob_proto[qmrnum].player.short_descr);
+  send_to_char(ch, "Target: [%d] %s\r\n",
+               QST_TARGET(rnum) == NOTHING ? -1 : QST_TARGET(rnum), targetname);
+  send_to_char(ch, "Amount: %d\r\n", QST_QUANTITY(rnum));
+  send_to_char(ch, "Reward: %d coin%s\r\n", QST_COINS(rnum),
+               QST_COINS(rnum) == 1 ? "" : "s");
+  if (QST_PREREQ(rnum) == NOTHING) {
+    send_to_char(ch, "Prereq: None\r\n");
+  } else {
+    obj_rnum ornum = real_object(QST_PREREQ(rnum));
+    const char *sdesc = ornum == NOTHING ? "an unknown object" : obj_proto[ornum].short_description;
+    send_to_char(ch, "Prereq: [%d] %s\r\n", QST_PREREQ(rnum), sdesc);
+  }
+}
+
+static void qset_validate_quest(struct char_data *ch, qst_rnum rnum)
+{
+  int errors = 0;
+
+  if (!QST_NAME(rnum) || !*QST_NAME(rnum)) {
+    send_to_char(ch, "Error: quest name is not set.\r\n");
+    errors++;
+  }
+
+  if (!QST_DESC(rnum) || !*QST_DESC(rnum)) {
+    send_to_char(ch, "Error: quest description is not set.\r\n");
+    errors++;
+  }
+
+  if (!QST_INFO(rnum) || !*QST_INFO(rnum)) {
+    send_to_char(ch, "Error: quest accept message is not set.\r\n");
+    errors++;
+  }
+
+  if (!QST_DONE(rnum) || !*QST_DONE(rnum)) {
+    send_to_char(ch, "Error: quest completion message is not set.\r\n");
+    errors++;
+  }
+
+  if (!QST_QUIT(rnum) || !*QST_QUIT(rnum)) {
+    send_to_char(ch, "Error: quest quit message is not set.\r\n");
+    errors++;
+  }
+
+  if (QST_TYPE(rnum) < 0 || QST_TYPE(rnum) >= NUM_AQ_TYPES) {
+    send_to_char(ch, "Error: quest type is invalid.\r\n");
+    errors++;
+  }
+
+  if (QST_MASTER(rnum) == NOBODY) {
+    send_to_char(ch, "Error: quest NPC is not set.\r\n");
+    errors++;
+  } else if (real_mobile(QST_MASTER(rnum)) == NOBODY) {
+    send_to_char(ch, "Error: quest NPC vnum %d is invalid.\r\n", QST_MASTER(rnum));
+    errors++;
+  }
+
+  if (QST_TARGET(rnum) == NOTHING) {
+    send_to_char(ch, "Error: quest target is not set.\r\n");
+    errors++;
+  } else if (QST_TYPE(rnum) >= 0 && QST_TYPE(rnum) < NUM_AQ_TYPES) {
+    if ((QST_TYPE(rnum) == AQ_OBJ_FIND || QST_TYPE(rnum) == AQ_OBJ_RETURN) &&
+        real_object(QST_TARGET(rnum)) == NOTHING) {
+      send_to_char(ch, "Error: quest target object vnum %d is invalid.\r\n", QST_TARGET(rnum));
+      errors++;
+    }
+    if ((QST_TYPE(rnum) == AQ_ROOM_FIND || QST_TYPE(rnum) == AQ_ROOM_CLEAR) &&
+        real_room(QST_TARGET(rnum)) == NOWHERE) {
+      send_to_char(ch, "Error: quest target room vnum %d is invalid.\r\n", QST_TARGET(rnum));
+      errors++;
+    }
+    if ((QST_TYPE(rnum) == AQ_MOB_FIND || QST_TYPE(rnum) == AQ_MOB_KILL ||
+         QST_TYPE(rnum) == AQ_MOB_SAVE) &&
+        real_mobile(QST_TARGET(rnum)) == NOBODY) {
+      send_to_char(ch, "Error: quest target mobile vnum %d is invalid.\r\n", QST_TARGET(rnum));
+      errors++;
+    }
+  }
+
+  if (!errors)
+    send_to_char(ch, "Quest validates cleanly.\r\n");
+  else
+    send_to_char(ch, "Validation failed: %d issue%s.\r\n", errors, errors == 1 ? "" : "s");
+}
+
+ACMD(do_qset)
+{
+  char arg1[MAX_INPUT_LENGTH];
+  char arg2[MAX_INPUT_LENGTH];
+  char arg3[MAX_INPUT_LENGTH];
+  char arg4[MAX_INPUT_LENGTH];
+  qst_vnum vnum;
+  qst_rnum rnum;
+  zone_rnum znum;
+
+  if (IS_NPC(ch) || ch->desc == NULL) {
+    send_to_char(ch, "qset is only usable by connected players.\r\n");
+    return;
+  }
+
+  argument = one_argument(argument, arg1);
+  if (!*arg1) {
+    qset_show_usage(ch);
+    return;
+  }
+
+  if (is_abbrev(arg1, "show")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2 || !is_number(arg2)) {
+      qset_show_usage(ch);
+      return;
+    }
+
+    vnum = atoi(arg2);
+    if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+      send_to_char(ch, "That quest VNUM can't exist.\r\n");
+      return;
+    }
+
+    if ((rnum = real_quest(vnum)) == NOTHING) {
+      send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+      return;
+    }
+
+    znum = real_zone_by_thing(vnum);
+    if (znum == NOWHERE) {
+      send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+      return;
+    }
+
+    if (!can_edit_zone(ch, znum)) {
+      send_cannot_edit(ch, zone_table[znum].number);
+      return;
+    }
+
+    qset_show_quest(ch, rnum);
+    return;
+  }
+
+  if (is_abbrev(arg1, "add")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2) {
+      qset_show_usage(ch);
+      return;
+    }
+
+    if (is_abbrev(arg2, "name")) {
+      argument = one_argument(argument, arg3);
+      skip_spaces(&argument);
+      if (!*arg3 || !is_number(arg3) || !*argument) {
+        qset_show_add_name_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      if (!genolc_checkstring(ch->desc, argument))
+        return;
+      argument[MAX_QUEST_NAME - 1] = '\0';
+      if (QST_NAME(rnum))
+        free(QST_NAME(rnum));
+      QST_NAME(rnum) = str_udup(argument);
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest name set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "desc")) {
+      argument = one_argument(argument, arg3);
+      skip_spaces(&argument);
+      if (!*arg3 || !is_number(arg3) || !*argument) {
+        qset_show_add_desc_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      if (!genolc_checkstring(ch->desc, argument))
+        return;
+      argument[MAX_QUEST_DESC - 1] = '\0';
+      if (QST_DESC(rnum))
+        free(QST_DESC(rnum));
+      QST_DESC(rnum) = str_udup(argument);
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest description set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "msg")) {
+      char msgbuf[MAX_QUEST_MSG];
+      int msg_type = -1;
+
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      skip_spaces(&argument);
+      if (!*arg3 || !is_number(arg3) || !*arg4 || !*argument) {
+        qset_show_add_msg_usage(ch);
+        return;
+      }
+
+      if (is_abbrev(arg4, "accept"))
+        msg_type = QEDIT_INFO;
+      else if (is_abbrev(arg4, "complete") || is_abbrev(arg4, "completion"))
+        msg_type = QEDIT_COMPLETE;
+      else if (is_abbrev(arg4, "quit") || is_abbrev(arg4, "abandon") || is_abbrev(arg4, "abandonment"))
+        msg_type = QEDIT_ABANDON;
+      else {
+        qset_show_add_msg_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      if (!genolc_checkstring(ch->desc, argument))
+        return;
+
+      qset_build_msg(msgbuf, sizeof(msgbuf), argument);
+      msgbuf[MAX_QUEST_MSG - 1] = '\0';
+
+      if (msg_type == QEDIT_INFO) {
+        if (QST_INFO(rnum))
+          free(QST_INFO(rnum));
+        QST_INFO(rnum) = str_udup(msgbuf);
+      } else if (msg_type == QEDIT_COMPLETE) {
+        if (QST_DONE(rnum))
+          free(QST_DONE(rnum));
+        QST_DONE(rnum) = str_udup(msgbuf);
+      } else {
+        if (QST_QUIT(rnum))
+          free(QST_QUIT(rnum));
+        QST_QUIT(rnum) = str_udup(msgbuf);
+      }
+
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest message set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "flags")) {
+      bool any = FALSE;
+
+      argument = one_argument(argument, arg3);
+      if (!*arg3 || !is_number(arg3)) {
+        qset_show_add_flags_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      if (!*argument) {
+        qset_show_add_flags_usage(ch);
+        return;
+      }
+
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg4);
+        if (!*arg4)
+          break;
+
+        flag = qset_find_flag(arg4);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown quest flag: %s\r\n", arg4);
+          continue;
+        }
+
+        SET_BIT(QST_FLAGS(rnum), flag);
+        any = TRUE;
+      }
+
+      if (any) {
+        qset_mark_quest_modified(vnum);
+        send_to_char(ch, "Quest flags updated.\r\n");
+      }
+      return;
+    }
+
+    if (is_abbrev(arg2, "type")) {
+      int type;
+
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      if (!*arg3 || !is_number(arg3) || !*arg4) {
+        qset_show_add_type_usage(ch);
+        return;
+      }
+
+      type = qset_find_type(arg4);
+      if (type < 0) {
+        qset_show_add_type_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      QST_TYPE(rnum) = type;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest type set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "npc")) {
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      if (!*arg3 || !is_number(arg3) || !*arg4 || !is_number(arg4)) {
+        qset_show_add_npc_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      if (real_mobile(atoi(arg4)) == NOBODY) {
+        send_to_char(ch, "That NPC vnum does not exist.\r\n");
+        return;
+      }
+
+      QST_MASTER(rnum) = atoi(arg4);
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest NPC set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "target")) {
+      int target;
+
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      if (!*arg3 || !is_number(arg3) || !*arg4 || !is_number(arg4)) {
+        qset_show_add_target_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      target = atoi(arg4);
+      if (QST_TYPE(rnum) == AQ_OBJ_FIND || QST_TYPE(rnum) == AQ_OBJ_RETURN) {
+        if (real_object(target) == NOTHING) {
+          send_to_char(ch, "That object vnum does not exist.\r\n");
+          return;
+        }
+      } else if (QST_TYPE(rnum) == AQ_ROOM_FIND || QST_TYPE(rnum) == AQ_ROOM_CLEAR) {
+        if (real_room(target) == NOWHERE) {
+          send_to_char(ch, "That room vnum does not exist.\r\n");
+          return;
+        }
+      } else if (QST_TYPE(rnum) == AQ_MOB_FIND || QST_TYPE(rnum) == AQ_MOB_KILL ||
+                 QST_TYPE(rnum) == AQ_MOB_SAVE) {
+        if (real_mobile(target) == NOBODY) {
+          send_to_char(ch, "That NPC vnum does not exist.\r\n");
+          return;
+        }
+      }
+
+      QST_TARGET(rnum) = target;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest target set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "amount")) {
+      int amount;
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      if (!*arg3 || !is_number(arg3) || !*arg4 || !is_number(arg4) || *argument) {
+        qset_show_add_amount_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      amount = atoi(arg4);
+      QST_COINS(rnum) = LIMIT(amount, 0, 99999);
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest reward set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "reward")) {
+      int reward;
+
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      if (!*arg3 || !is_number(arg3) || !*arg4 || !is_number(arg4)) {
+        qset_show_add_reward_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      reward = atoi(arg4);
+      QST_COINS(rnum) = LIMIT(reward, 0, 99999);
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest reward set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "prereq")) {
+      int prereq;
+
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      if (!*arg3 || !is_number(arg3) || !*arg4 || !is_number(arg4)) {
+        qset_show_add_prereq_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      prereq = atoi(arg4);
+      if (real_object(prereq) == NOTHING) {
+        send_to_char(ch, "That object vnum does not exist.\r\n");
+        return;
+      }
+
+      QST_PREREQ(rnum) = prereq;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest prerequisite set.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg2, "prev")) {
+      qst_vnum prev;
+
+      argument = one_argument(argument, arg3);
+      argument = one_argument(argument, arg4);
+      if (!*arg3 || !is_number(arg3) || !*arg4 || !is_number(arg4)) {
+        qset_show_add_prev_usage(ch);
+        return;
+      }
+
+      vnum = atoi(arg3);
+      if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+        send_to_char(ch, "That quest VNUM can't exist.\r\n");
+        return;
+      }
+
+      if ((rnum = real_quest(vnum)) == NOTHING) {
+        send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+        return;
+      }
+
+      znum = real_zone_by_thing(vnum);
+      if (znum == NOWHERE) {
+        send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+        return;
+      }
+
+      if (!can_edit_zone(ch, znum)) {
+        send_cannot_edit(ch, zone_table[znum].number);
+        return;
+      }
+
+      prev = atoi(arg4);
+      if (real_quest(prev) == NOTHING) {
+        send_to_char(ch, "That previous quest vnum does not exist.\r\n");
+        return;
+      }
+
+      QST_PREV(rnum) = prev;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest previous requirement set.\r\n");
+      return;
+    }
+
+    qset_show_usage(ch);
+    return;
+  }
+
+  if (is_abbrev(arg1, "del")) {
+    argument = one_argument(argument, arg2);
+    argument = one_argument(argument, arg3);
+    if (!*arg2 || !is_number(arg2) || !*arg3) {
+      qset_show_usage(ch);
+      return;
+    }
+
+    vnum = atoi(arg2);
+    if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+      send_to_char(ch, "That quest VNUM can't exist.\r\n");
+      return;
+    }
+
+    if ((rnum = real_quest(vnum)) == NOTHING) {
+      send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+      return;
+    }
+
+    znum = real_zone_by_thing(vnum);
+    if (znum == NOWHERE) {
+      send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+      return;
+    }
+
+    if (!can_edit_zone(ch, znum)) {
+      send_cannot_edit(ch, zone_table[znum].number);
+      return;
+    }
+
+    if (is_abbrev(arg3, "name")) {
+      if (QST_NAME(rnum))
+        free(QST_NAME(rnum));
+      QST_NAME(rnum) = strdup("");
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest name cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "desc")) {
+      if (QST_DESC(rnum))
+        free(QST_DESC(rnum));
+      QST_DESC(rnum) = strdup("");
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest description cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "msg")) {
+      int msg_type = -1;
+
+      argument = one_argument(argument, arg4);
+      if (*arg4) {
+        if (is_abbrev(arg4, "accept"))
+          msg_type = QEDIT_INFO;
+        else if (is_abbrev(arg4, "complete") || is_abbrev(arg4, "completion"))
+          msg_type = QEDIT_COMPLETE;
+        else if (is_abbrev(arg4, "quit") || is_abbrev(arg4, "abandon") || is_abbrev(arg4, "abandonment"))
+          msg_type = QEDIT_ABANDON;
+        else {
+          qset_show_add_msg_usage(ch);
+          return;
+        }
+      }
+
+      if (msg_type == QEDIT_INFO || msg_type == -1) {
+        if (QST_INFO(rnum))
+          free(QST_INFO(rnum));
+        QST_INFO(rnum) = strdup("");
+      }
+      if (msg_type == QEDIT_COMPLETE || msg_type == -1) {
+        if (QST_DONE(rnum))
+          free(QST_DONE(rnum));
+        QST_DONE(rnum) = strdup("");
+      }
+      if (msg_type == QEDIT_ABANDON || msg_type == -1) {
+        if (QST_QUIT(rnum))
+          free(QST_QUIT(rnum));
+        QST_QUIT(rnum) = strdup("");
+      }
+
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest message cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "flags")) {
+      bool any = FALSE;
+
+      if (!*argument) {
+        if (QST_FLAGS(rnum)) {
+          QST_FLAGS(rnum) = 0;
+          qset_mark_quest_modified(vnum);
+        }
+        send_to_char(ch, "Quest flags cleared.\r\n");
+        return;
+      }
+
+      while (*argument) {
+        int flag;
+
+        argument = one_argument(argument, arg4);
+        if (!*arg4)
+          break;
+
+        flag = qset_find_flag(arg4);
+        if (flag < 0) {
+          send_to_char(ch, "Unknown quest flag: %s\r\n", arg4);
+          continue;
+        }
+
+        REMOVE_BIT(QST_FLAGS(rnum), flag);
+        any = TRUE;
+      }
+
+      if (any) {
+        qset_mark_quest_modified(vnum);
+        send_to_char(ch, "Quest flags updated.\r\n");
+      }
+      return;
+    }
+
+    if (is_abbrev(arg3, "type")) {
+      QST_TYPE(rnum) = AQ_UNDEFINED;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest type cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "npc")) {
+      QST_MASTER(rnum) = NOBODY;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest NPC cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "target")) {
+      QST_TARGET(rnum) = NOTHING;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest target cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "amount")) {
+      QST_COINS(rnum) = 0;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest reward cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "reward")) {
+      QST_COINS(rnum) = 0;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest reward cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "prereq")) {
+      QST_PREREQ(rnum) = NOTHING;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest prerequisite cleared.\r\n");
+      return;
+    }
+
+    if (is_abbrev(arg3, "prev")) {
+      QST_PREV(rnum) = NOTHING;
+      qset_mark_quest_modified(vnum);
+      send_to_char(ch, "Quest previous requirement cleared.\r\n");
+      return;
+    }
+
+    qset_show_usage(ch);
+    return;
+  }
+
+  if (is_abbrev(arg1, "clear")) {
+    argument = one_argument(argument, arg2);
+    argument = one_argument(argument, arg3);
+    if (!*arg2 || !is_number(arg2) || !*arg3 || !is_abbrev(arg3, "force")) {
+      qset_show_usage(ch);
+      return;
+    }
+
+    vnum = atoi(arg2);
+    if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+      send_to_char(ch, "That quest VNUM can't exist.\r\n");
+      return;
+    }
+
+    if ((rnum = real_quest(vnum)) == NOTHING) {
+      send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+      return;
+    }
+
+    znum = real_zone_by_thing(vnum);
+    if (znum == NOWHERE) {
+      send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+      return;
+    }
+
+    if (!can_edit_zone(ch, znum)) {
+      send_cannot_edit(ch, zone_table[znum].number);
+      return;
+    }
+
+    free_quest_strings(&aquest_table[rnum]);
+    QST_NAME(rnum) = strdup("Undefined Quest");
+    QST_DESC(rnum) = strdup("Quest definition is incomplete.");
+    QST_INFO(rnum) = strdup("There is no information on this quest.\r\n");
+    QST_DONE(rnum) = strdup("You have completed the quest.\r\n");
+    QST_QUIT(rnum) = strdup("You have abandoned the quest.\r\n");
+    QST_FLAGS(rnum) = 0;
+    QST_TYPE(rnum) = AQ_UNDEFINED;
+    QST_MASTER(rnum) = NOBODY;
+    QST_TARGET(rnum) = NOTHING;
+    QST_PREREQ(rnum) = NOTHING;
+    QST_POINTS(rnum) = 0;
+    QST_PENALTY(rnum) = 0;
+    QST_MINLEVEL(rnum) = 0;
+    QST_MAXLEVEL(rnum) = LVL_IMPL;
+    QST_TIME(rnum) = -1;
+    QST_RETURNMOB(rnum) = NOBODY;
+    QST_QUANTITY(rnum) = 1;
+    QST_COINS(rnum) = 0;
+    QST_EXP(rnum) = 0;
+    QST_OBJ(rnum) = NOTHING;
+    QST_PREV(rnum) = NOTHING;
+    QST_NEXT(rnum) = NOTHING;
+
+    qset_mark_quest_modified(vnum);
+    send_to_char(ch, "Quest cleared.\r\n");
+    return;
+  }
+
+  if (is_abbrev(arg1, "validate")) {
+    argument = one_argument(argument, arg2);
+    if (!*arg2 || !is_number(arg2)) {
+      qset_show_usage(ch);
+      return;
+    }
+
+    vnum = atoi(arg2);
+    if (vnum < IDXTYPE_MIN || vnum > IDXTYPE_MAX) {
+      send_to_char(ch, "That quest VNUM can't exist.\r\n");
+      return;
+    }
+
+    if ((rnum = real_quest(vnum)) == NOTHING) {
+      send_to_char(ch, "Quest %d does not exist.\r\n", vnum);
+      return;
+    }
+
+    znum = real_zone_by_thing(vnum);
+    if (znum == NOWHERE) {
+      send_to_char(ch, "Sorry, there is no zone for that number!\r\n");
+      return;
+    }
+
+    if (!can_edit_zone(ch, znum)) {
+      send_cannot_edit(ch, zone_table[znum].number);
+      return;
+    }
+
+    qset_validate_quest(ch, rnum);
+    return;
+  }
+
+  qset_show_usage(ch);
+}
+
 /* ====== Builder snapshot: save a staged mob's gear as its prototype loadout ====== */
 static void msave_loadout_append(struct mob_loadout **head,
                                  struct mob_loadout **tail,

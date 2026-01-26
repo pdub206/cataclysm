@@ -14,6 +14,7 @@ ACMD(do_rset);
 ACMD(do_rcreate);
 ACMD(do_ocreate);
 ACMD(do_qcreate);
+ACMD(do_qset);
 ACMD(do_mcreate);
 ACMD(do_mset);
 ACMD(do_oset);
