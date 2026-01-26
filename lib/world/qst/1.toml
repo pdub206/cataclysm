@@ -1,1 +1,20 @@
-quest = []
+[[quest]]
+vnum = 100
+name = "Test quest"
+description = "Test desc"
+info = "You accept the test quest\n"
+done = "You finished the test quest\n"
+quit = "You quit the test quest.\n"
+type = 0
+quest_master = 100
+flags = 0
+target = 100
+prev_quest = -1
+next_quest = -1
+prereq = -1
+values = [0, 0, 0, 5, -1, -1, 1]
+[quest.rewards]
+coins = 100
+exp = 0
+obj_vnum = -1
+

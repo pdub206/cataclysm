@@ -22,6 +22,8 @@ sex = 1
 [mob.enhanced]
 class = 3
 species = 0
+age = 18
+attack_type = 0
 
 [mob.enhanced.abilities]
 str = 16
@@ -42,30 +44,39 @@ cha = 0
 [[mob.enhanced.skills]]
 id = 132
 level = 5
+
 [[mob.enhanced.skills]]
 id = 134
 level = 5
+
 [[mob.enhanced.skills]]
 id = 137
 level = 5
+
 [[mob.enhanced.skills]]
 id = 141
 level = 5
+
 [[mob.enhanced.skills]]
 id = 142
 level = 5
+
 [[mob.enhanced.skills]]
 id = 143
 level = 5
+
 [[mob.enhanced.skills]]
 id = 144
 level = 5
+
 [[mob.enhanced.skills]]
 id = 145
 level = 5
+
 [[mob.enhanced.skills]]
 id = 146
 level = 5
+
 [[mob.enhanced.skills]]
 id = 147
 level = 5
@@ -74,42 +85,52 @@ level = 5
 wear_pos = 3
 vnum = 118
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 5
 vnum = 131
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 6
 vnum = 110
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 7
 vnum = 108
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 8
 vnum = 115
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 9
 vnum = 124
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 10
 vnum = 107
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 11
 vnum = 111
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 15
 vnum = 117
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 16
 vnum = 117
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 17
 vnum = 127
@@ -139,6 +160,8 @@ sex = 2
 [mob.enhanced]
 class = 3
 species = 0
+age = 18
+attack_type = 0
 
 [mob.enhanced.abilities]
 str = 11
@@ -159,39 +182,51 @@ cha = 0
 [[mob.enhanced.skills]]
 id = 132
 level = 5
+
 [[mob.enhanced.skills]]
 id = 134
-level = 5
+level = 50
+
 [[mob.enhanced.skills]]
 id = 137
 level = 5
+
 [[mob.enhanced.skills]]
 id = 140
 level = 5
+
 [[mob.enhanced.skills]]
 id = 141
 level = 5
+
 [[mob.enhanced.skills]]
 id = 142
 level = 5
+
 [[mob.enhanced.skills]]
 id = 143
 level = 5
+
 [[mob.enhanced.skills]]
 id = 144
 level = 5
+
 [[mob.enhanced.skills]]
 id = 145
 level = 5
+
 [[mob.enhanced.skills]]
 id = 146
 level = 5
+
 [[mob.enhanced.skills]]
 id = 152
 level = 5
+
 [[mob.enhanced.skills]]
 id = 156
 level = 5
+
 [[mob.enhanced.skills]]
 id = 163
 level = 5
@@ -200,42 +235,52 @@ level = 5
 wear_pos = 3
 vnum = 118
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 5
 vnum = 131
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 6
 vnum = 110
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 7
 vnum = 108
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 8
 vnum = 115
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 9
 vnum = 124
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 10
 vnum = 107
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 11
 vnum = 111
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 15
 vnum = 117
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 16
 vnum = 117
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 17
 vnum = 127
@@ -263,6 +308,10 @@ default_pos = 8
 sex = 1
 
 [mob.enhanced]
+class = -1
+species = -1
+age = 18
+attack_type = 0
 
 [mob.enhanced.abilities]
 str = 11
@@ -284,6 +333,7 @@ cha = 0
 wear_pos = 14
 vnum = 113
 quantity = 1
+
 [[mob.loadout]]
 wear_pos = 9
 vnum = 112
@@ -311,6 +361,10 @@ default_pos = 8
 sex = 2
 
 [mob.enhanced]
+class = -1
+species = -1
+age = 18
+attack_type = 0
 
 [mob.enhanced.abilities]
 str = 11
@@ -331,30 +385,39 @@ cha = 0
 [[mob.enhanced.skills]]
 id = 131
 level = 5
+
 [[mob.enhanced.skills]]
 id = 133
 level = 5
+
 [[mob.enhanced.skills]]
 id = 135
 level = 5
+
 [[mob.enhanced.skills]]
 id = 138
 level = 5
+
 [[mob.enhanced.skills]]
 id = 139
 level = 5
+
 [[mob.enhanced.skills]]
 id = 140
 level = 5
+
 [[mob.enhanced.skills]]
 id = 142
 level = 5
+
 [[mob.enhanced.skills]]
 id = 143
 level = 5
+
 [[mob.enhanced.skills]]
 id = 144
 level = 5
+
 [[mob.enhanced.skills]]
 id = 147
 level = 5
@@ -382,6 +445,7 @@ default_pos = 8
 sex = 2
 
 [mob.enhanced]
+class = -1
 species = 25
 age = 42
 attack_type = 4
@@ -425,7 +489,9 @@ default_pos = 8
 sex = 0
 
 [mob.enhanced]
+class = -1
 species = 21
+age = 18
 attack_type = 4
 
 [mob.enhanced.abilities]
