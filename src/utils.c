@@ -660,6 +660,39 @@ void stop_follower(struct char_data *ch)
   REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_CHARM);
 }
 
+void stop_follower_quiet(struct char_data *ch)
+{
+  struct follow_type *j, *k;
+
+  if (ch->master == NULL) {
+    core_dump();
+    return;
+  }
+
+  if (AFF_FLAGGED(ch, AFF_CHARM)) {
+    if (affected_by_spell(ch, SPELL_CHARM))
+      affect_from_char(ch, SPELL_CHARM);
+  }
+
+  if (ch->master->followers->follower == ch) {
+    k = ch->master->followers;
+    ch->master->followers = k->next;
+    free(k);
+  } else {
+    for (k = ch->master->followers; k->next->follower != ch; k = k->next)
+      ;
+
+    j = k->next;
+    k->next = j->next;
+    free(j);
+  }
+
+  ch->master = NULL;
+  if (HITCHED_TO(ch))
+    HITCHED_TO(ch) = NULL;
+  REMOVE_BIT_AR(AFF_FLAGS(ch), AFF_CHARM);
+}
+
 /** Finds the number of follows that are following, and charmed by, the
  * character (PC or NPC).
  * @param ch The character to check for charmed followers.

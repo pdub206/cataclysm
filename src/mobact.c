@@ -87,7 +87,7 @@ void mobile_activity(void)
     {
       /* If the mob is charmed, do not move the mob. */
       if (ch->master == NULL)
-        perform_move(ch, door, 1);
+        queue_movement(ch, door, 1);
     }
 
     /* Aggressive Mobs */

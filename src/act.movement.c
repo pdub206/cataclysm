@@ -22,6 +22,7 @@
 #include "py_triggers.h"
 #include "act.h"
 #include "fight.h"
+#include "mud_event.h"
 #include "oasis.h" /* for buildwalk */
 
 
@@ -51,6 +52,12 @@ static int count_hitched_mounts(struct char_data *ch);
 static int max_hitched_mounts(struct char_data *ch);
 static struct char_data *first_hitched_mount_in_room(struct char_data *ch);
 static struct char_data *find_hitched_mount_for_pack(struct char_data *ch, struct obj_data *obj);
+static int get_move_delay_qsec(struct char_data *ch);
+static long get_move_delay_pulses(struct char_data *ch);
+static void clear_move_queue(struct char_data *ch);
+static bool enqueue_move(struct char_data *ch, int dir, int need_specials_check);
+static bool dequeue_move(struct char_data *ch, int *dir, int *need_specials_check);
+void queue_movement(struct char_data *ch, int dir, int need_specials_check);
 
 
 /* simple function to determine if char can walk on water */
@@ -402,6 +409,133 @@ static struct char_data *find_hitched_mount_for_pack(struct char_data *ch, struc
 
   return NULL;
 }
+
+static int get_move_delay_qsec(struct char_data *ch)
+{
+  int base_qsec;
+  int dex_mod;
+  int delay;
+
+  if (!ch)
+    return 1;
+
+  if (AFF_FLAGGED(ch, AFF_SNEAK))
+    base_qsec = 24; /* 6 seconds */
+  else if (GET_MOVE_MODE(ch) == MOVE_MODE_RUN)
+    base_qsec = 8;  /* 2 seconds */
+  else
+    base_qsec = 16; /* 4 seconds */
+
+  dex_mod = GET_ABILITY_MOD(GET_DEX(ch));
+  delay = base_qsec - dex_mod;
+  if (delay < 1)
+    delay = 1;
+
+  return delay;
+}
+
+static long get_move_delay_pulses(struct char_data *ch)
+{
+  long delay = (get_move_delay_qsec(ch) * PASSES_PER_SEC + 2) / 4;
+  if (delay < 1)
+    delay = 1;
+  return delay;
+}
+
+static void clear_move_queue(struct char_data *ch)
+{
+  if (!ch)
+    return;
+  ch->char_specials.move_queue_len = 0;
+}
+
+static bool enqueue_move(struct char_data *ch, int dir, int need_specials_check)
+{
+  int idx;
+
+  if (!ch)
+    return FALSE;
+  if (ch->char_specials.move_queue_len >= MOVE_QUEUE_MAX)
+    return FALSE;
+
+  idx = ch->char_specials.move_queue_len++;
+  ch->char_specials.move_queue_dir[idx] = dir;
+  ch->char_specials.move_queue_special[idx] = need_specials_check ? 1 : 0;
+  return TRUE;
+}
+
+static bool dequeue_move(struct char_data *ch, int *dir, int *need_specials_check)
+{
+  int len;
+
+  if (!ch)
+    return FALSE;
+  len = ch->char_specials.move_queue_len;
+  if (len <= 0)
+    return FALSE;
+
+  if (dir)
+    *dir = ch->char_specials.move_queue_dir[0];
+  if (need_specials_check)
+    *need_specials_check = ch->char_specials.move_queue_special[0] ? 1 : 0;
+
+  if (len > 1) {
+    memmove(&ch->char_specials.move_queue_dir[0], &ch->char_specials.move_queue_dir[1],
+            sizeof(ch->char_specials.move_queue_dir[0]) * (len - 1));
+    memmove(&ch->char_specials.move_queue_special[0], &ch->char_specials.move_queue_special[1],
+            sizeof(ch->char_specials.move_queue_special[0]) * (len - 1));
+  }
+  ch->char_specials.move_queue_len--;
+  return TRUE;
+}
+
+void queue_movement(struct char_data *ch, int dir, int need_specials_check)
+{
+  int moved;
+
+  if (!ch)
+    return;
+  if (dir < 0 || dir >= NUM_OF_DIRS)
+    return;
+
+  if (char_has_mud_event(ch, eMOVE))
+  {
+    enqueue_move(ch, dir, need_specials_check);
+    return;
+  }
+
+  moved = perform_move(ch, dir, need_specials_check);
+  if (!moved)
+    return;
+
+  NEW_EVENT(eMOVE, ch, NULL, get_move_delay_pulses(ch));
+}
+
+EVENTFUNC(event_movement)
+{
+  struct mud_event_data *pMudEvent;
+  struct char_data *ch;
+  int dir = 0;
+  int need_specials_check = 0;
+  int moved;
+
+  pMudEvent = (struct mud_event_data *)event_obj;
+  if (!pMudEvent)
+    return 0;
+
+  ch = (struct char_data *)pMudEvent->pStruct;
+  if (!ch)
+    return 0;
+
+  if (!dequeue_move(ch, &dir, &need_specials_check))
+    return 0;
+
+  moved = perform_move(ch, dir, need_specials_check);
+  if (!moved)
+    return 0;
+
+  return get_move_delay_pulses(ch);
+}
 /** Move a PC/NPC character from their current location to a new location. This
  * is the standard movement locomotion function that all normal walking
  * movement by characters should be sent through. This function also defines
@@ -580,8 +714,26 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   if (AFF_FLAGGED(ch, AFF_SNEAK)) {
     stealth_process_room_movement(ch, was_in, dir, TRUE);
   } else {
-    snprintf(leave_message, sizeof(leave_message), "$n leaves %s.", dirs[dir]);
-    act(leave_message, TRUE, ch, 0, 0, TO_ROOM);
+    char sdesc_buf[MAX_INPUT_LENGTH];
+    const char *name_desc;
+    const char *verb;
+
+    if (get_char_sdesc(ch) && *get_char_sdesc(ch)) {
+      strlcpy(sdesc_buf, get_char_sdesc(ch), sizeof(sdesc_buf));
+      if (*sdesc_buf)
+        sdesc_buf[0] = UPPER(sdesc_buf[0]);
+      name_desc = sdesc_buf;
+    } else {
+      name_desc = "Someone";
+    }
+
+    if (GET_MOVE_MODE(ch) == MOVE_MODE_RUN)
+      verb = "runs";
+    else
+      verb = "walks";
+
+    snprintf(leave_message, sizeof(leave_message), "%s %s to the %s.", name_desc, verb, dirs[dir]);
+    send_to_room(was_in, "%s\r\n", leave_message);
   }
 
   char_from_room(ch);
@@ -605,8 +757,34 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
   /* Display arrival information to anyone in the destination room... */
   if (AFF_FLAGGED(ch, AFF_SNEAK))
     stealth_process_room_movement(ch, going_to, dir, FALSE);
-  else
-    act("$n has arrived.", TRUE, ch, 0, 0, TO_ROOM);
+  else {
+    char arrive_message[SMALL_BUFSIZE];
+    char sdesc_buf[MAX_INPUT_LENGTH];
+    const char *name_desc;
+    const char *verb;
+    int rev = (dir >= 0 && dir < NUM_OF_DIRS) ? rev_dir[dir] : -1;
+
+    if (get_char_sdesc(ch) && *get_char_sdesc(ch)) {
+      strlcpy(sdesc_buf, get_char_sdesc(ch), sizeof(sdesc_buf));
+      if (*sdesc_buf)
+        sdesc_buf[0] = UPPER(sdesc_buf[0]);
+      name_desc = sdesc_buf;
+    } else {
+      name_desc = "Someone";
+    }
+
+    if (GET_MOVE_MODE(ch) == MOVE_MODE_RUN)
+      verb = "runs";
+    else
+      verb = "walks";
+
+    if (rev >= 0)
+      snprintf(arrive_message, sizeof(arrive_message), "%s %s in from the %s.", name_desc, verb, dirs[rev]);
+    else
+      snprintf(arrive_message, sizeof(arrive_message), "%s %s in.", name_desc, verb);
+
+    send_to_room(going_to, "%s\r\n", arrive_message);
+  }
 
   /* ... and the room description to the character. */
   if (ch->desc != NULL)
@@ -684,8 +862,21 @@ int perform_move(struct char_data *ch, int dir, int need_specials_check)
       next = k->next;
       if ((IN_ROOM(k->follower) == was_in) &&
 	  (GET_POS(k->follower) >= POS_STANDING)) {
-	act("You follow $N.\r\n", FALSE, k->follower, 0, ch, TO_CHAR);
-	perform_move(k->follower, dir, 1);
+        if (!IS_NPC(ch) && !IS_NPC(k->follower)) {
+          if (get_move_delay_qsec(ch) < get_move_delay_qsec(k->follower)) {
+            if (rand_number(1, 100) <= 2) {
+              send_to_char(k->follower, "You struggle to keep up and fall behind.\r\n");
+              stop_follower_quiet(k->follower);
+              clear_move_queue(k->follower);
+              continue;
+            }
+          }
+        }
+        act("You follow $N.\r\n", FALSE, k->follower, 0, ch, TO_CHAR);
+        if (IS_NPC(k->follower))
+          perform_move(k->follower, dir, 1);
+        else
+          queue_movement(k->follower, dir, 1);
       }
     }
     return (1);
@@ -696,7 +887,26 @@ int perform_move(struct char_data *ch, int dir, int need_specials_check)
 ACMD(do_move)
 {
   /* These subcmd defines are mapped precisely to the direction defines. */
-  perform_move(ch, subcmd, 0);
+  queue_movement(ch, subcmd, 0);
+}
+
+ACMD(do_walk)
+{
+  if (AFF_FLAGGED(ch, AFF_SNEAK))
+    affect_from_char(ch, SKILL_SNEAK);
+
+  SET_MOVE_MODE(ch, MOVE_MODE_WALK);
+  send_to_char(ch, "You settle into a walking pace.\r\n");
+}
+
+ACMD(do_run)
+{
+  if (AFF_FLAGGED(ch, AFF_SNEAK))
+    affect_from_char(ch, SKILL_SNEAK);
+
+  SET_MOVE_MODE(ch, MOVE_MODE_RUN);
+  GET_STAMINA(ch) -= 2;
+  send_to_char(ch, "You pick up the pace and start running.\r\n");
 }
 
 static int find_door(struct char_data *ch, const char *type, char *dir, const char *cmdname)
@@ -1054,7 +1264,7 @@ ACMD(do_enter)
       if (EXIT(ch, door))
         if (EXIT(ch, door)->keyword)
           if (!str_cmp(EXIT(ch, door)->keyword, buf)) {
-            perform_move(ch, door, 1);
+            queue_movement(ch, door, 1);
             return;
           }
     send_to_char(ch, "There is no %s here.\r\n", buf);
@@ -1067,7 +1277,7 @@ ACMD(do_enter)
 	if (EXIT(ch, door)->to_room != NOWHERE)
 	  if (!EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED) &&
 	      ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_INDOORS)) {
-	    perform_move(ch, door, 1);
+	    queue_movement(ch, door, 1);
 	    return;
 	  }
     send_to_char(ch, "You can't seem to find anything to enter.\r\n");
@@ -1086,7 +1296,7 @@ ACMD(do_leave)
 	if (EXIT(ch, door)->to_room != NOWHERE)
 	  if (!EXIT_FLAGGED(EXIT(ch, door), EX_CLOSED) &&
 	    !ROOM_FLAGGED(EXIT(ch, door)->to_room, ROOM_INDOORS)) {
-	    perform_move(ch, door, 1);
+	    queue_movement(ch, door, 1);
 	    return;
 	  }
     send_to_char(ch, "I see no obvious exits to the outside.\r\n");

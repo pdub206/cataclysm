@@ -69,6 +69,14 @@
 
 #define NUM_OF_DIRS 10
 
+/* Movement modes */
+#define MOVE_MODE_WALK  0
+#define MOVE_MODE_RUN   1
+#define MOVE_MODE_SNEAK 2
+
+/* Movement queue size (per character) */
+#define MOVE_QUEUE_MAX 10
+
 /* Room flags: used in room_data.room_flags */
 /* WARNING: In the world files, NEVER set the bits marked "R" ("Reserved") */
 #define ROOM_DARK           0   /**< Dark room, light needed to see */
@@ -1018,6 +1026,10 @@ struct char_special_data
   int timer;        /**< Timer for update */
   int stealth_check;  /* last rolled Stealth value for Hide; 0 = not hiding/opposed */
   bool custom_ldesc;  /* temporary ldesc override from change command */
+  byte move_mode;     /* MOVE_MODE_* current movement mode */
+  byte move_queue_len; /* queued movement steps */
+  int move_queue_dir[MOVE_QUEUE_MAX];
+  byte move_queue_special[MOVE_QUEUE_MAX];
 
   struct char_special_data_saved saved; /**< Constants saved for PCs. */
 };
@@ -1378,6 +1390,8 @@ struct recent_player
 /* Helper macros */
 #define GET_STEALTH_CHECK(ch)   ((ch)->char_specials.stealth_check)
 #define SET_STEALTH_CHECK(ch,v) ((ch)->char_specials.stealth_check = (v))
+#define GET_MOVE_MODE(ch)       ((ch)->char_specials.move_mode)
+#define SET_MOVE_MODE(ch,v)     ((ch)->char_specials.move_mode = (v))
 
 /* NPC loadout macros */
 #define MOB_PROTO(ch)           (&mob_proto[GET_MOB_RNUM(ch)]) /* Resolve proto from instance */

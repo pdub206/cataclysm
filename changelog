@@ -69,7 +69,7 @@ Changes in v1.3.0-alpha:
 Changes in v1.4.0-alpha:
  * Standardized on 10 minutes per in game hour, 9 hours/day, 9 days/week, 90 days/month, 8 months/year (~45 real life days)
  * Adjusted moon cycles to align with new day/month/year plan
- * Movement between rooms is slowed down, introducing commands "walk" and "run"
+ * Movement between rooms is slowed down for PC's and NPC's, introduced commands "walk" and "run" to alter movement speed
 
 Features that will be implemented in the next few releases:
 

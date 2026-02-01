@@ -282,7 +282,7 @@ void hunt_victim(struct char_data *ch)
     do_say(ch, buf, 0, 0);
     HUNTING(ch) = NULL;
   } else {
-    perform_move(ch, dir, 1);
+    queue_movement(ch, dir, 1);
     if (IN_ROOM(ch) == IN_ROOM(HUNTING(ch)))
       hit(ch, HUNTING(ch), TYPE_UNDEFINED);
   }

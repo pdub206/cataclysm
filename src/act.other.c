@@ -133,6 +133,11 @@ ACMD(do_quit)
       ch->desc->snoop_by = NULL;
     }
 
+    SET_MOVE_MODE(ch, MOVE_MODE_WALK);
+    ch->char_specials.move_queue_len = 0;
+    if (AFF_FLAGGED(ch, AFF_SNEAK))
+      affect_from_char(ch, SKILL_SNEAK);
+
     extract_char(ch);   /* Char is saved before extracting. */
   }
   else {
@@ -159,6 +164,11 @@ ACMD(do_quit)
       ch->desc->snoop_by->snooping = NULL;
       ch->desc->snoop_by = NULL;
     }
+
+    SET_MOVE_MODE(ch, MOVE_MODE_WALK);
+    ch->char_specials.move_queue_len = 0;
+    if (AFF_FLAGGED(ch, AFF_SNEAK))
+      affect_from_char(ch, SKILL_SNEAK);
 
     SET_BIT_AR(PLR_FLAGS(ch), PLR_QUITING);
     extract_char(ch);   /* Char is saved before extracting. */
@@ -685,15 +695,6 @@ static void sleight_check_observers(struct char_data *actor,
   }
 }
 
-static int sneak_effect_duration(struct char_data *ch)
-{
-  int skill = get_stealth_skill_value(ch);
-  if (skill <= 0)
-    return 1;
-
-  return MAX(1, skill / 10);
-}
-
 bool can_scan_for_sneak(struct char_data *ch)
 {
   if (!AFF_FLAGGED(ch, AFF_SCAN))
@@ -743,7 +744,7 @@ ACMD(do_sneak)
     return; 
   }    /* you can't sneak while in active melee */
 
-  send_to_char(ch, "Okay, you'll try to move silently for a while.\r\n");
+  send_to_char(ch, "Okay, you'll try to move silently until you stop sneaking.\r\n");
 
   /* Remove prior sneak affect if present (refresh logic) */
   if (AFF_FLAGGED(ch, AFF_SNEAK))
@@ -765,7 +766,7 @@ ACMD(do_sneak)
   af.spell    = SKILL_SNEAK;
   af.location = APPLY_NONE;
   af.modifier = 0;
-  af.duration = sneak_effect_duration(ch);
+  af.duration = -1;
   memset(af.bitvector, 0, sizeof(af.bitvector));
   SET_BIT_AR(af.bitvector, AFF_SNEAK);
   affect_to_char(ch, &af);
@@ -773,6 +774,7 @@ ACMD(do_sneak)
   /* Store a stealth check value for movement contests (reuse Hide’s field) */
   /* If you’ve already hidden with a higher roll, keep the stronger value. */
   SET_STEALTH_CHECK(ch, MAX(GET_STEALTH_CHECK(ch), total));
+  SET_MOVE_MODE(ch, MOVE_MODE_SNEAK);
 
   gain_skill(ch, "stealth", TRUE);
   GET_STAMINA(ch) -= 10;
@@ -908,7 +910,7 @@ void stealth_process_room_movement(struct char_data *ch, room_rnum room, int dir
   }
 
   format = leaving ?
-    "%s tries to stealthily move to the %s." :
+    "%s stealthily moves to the %s." :
     "%s stealthily moves in from the %s.";
   snprintf(msg, sizeof(msg), format, name_desc, dir_word);
 

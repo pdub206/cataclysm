@@ -180,6 +180,7 @@ ACMD(do_hitch);
 ACMD(do_leave);
 ACMD(do_mount);
 ACMD(do_move);
+ACMD(do_run);
 ACMD(do_pack);
 ACMD(do_rest);
 ACMD(do_dismount);
@@ -190,6 +191,8 @@ ACMD(do_unhitch);
 ACMD(do_unpack);
 ACMD(do_unfollow);
 ACMD(do_wake);
+ACMD(do_walk);
+void queue_movement(struct char_data *ch, int dir, int need_specials_check);
 /* Global variables from act.movement.c */
 extern const char *cmd_door[];
 

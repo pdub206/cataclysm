@@ -286,6 +286,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "rcopy"    , "rcopy"   , POS_DEAD    , do_oasis_copy, LVL_GOD, CON_REDIT },
   { "roomflags", "roomflags", POS_DEAD   , do_gen_tog  , LVL_IMMORT, SCMD_SHOWVNUMS },
   { "rsave"    , "rsave"   , POS_DEAD    , do_rsave    , LVL_BUILDER, 0 },
+  { "run"      , "run"     , POS_STANDING, do_run     , 0, 0 },
 
   { "say"      , "s"       , POS_RESTING , do_say      , 0, 0 },
   { "score"    , "sc"      , POS_DEAD    , do_score    , 0, 0 },
@@ -356,6 +357,7 @@ cpp_extern const struct command_info cmd_info[] = {
   { "vstat"    , "vstat"   , POS_DEAD    , do_vstat    , LVL_IMMORT, 0 },
   { "vdelete"  , "vdelete" , POS_DEAD    , do_vdelete  , LVL_BUILDER, 0 },
 
+  { "walk"     , "wal"     , POS_STANDING, do_walk    , 0, 0 },
   { "wake"     , "wake"    , POS_SLEEPING, do_wake     , 0, 0 },
   { "wear"     , "wea"     , POS_RESTING , do_wear     , 0, 0 },
   { "weather"  , "weather" , POS_RESTING , do_weather  , 0, 0 },

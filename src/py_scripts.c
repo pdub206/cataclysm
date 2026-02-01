@@ -20,6 +20,7 @@
 #include "py_event.h"
 #include "class.h"
 #include "species.h"
+#include "act.h"
 #include "py_scripts.h"
 #include "graph.h"
 
@@ -615,7 +616,7 @@ static PyObject *mud_move(PyObject *self, PyObject *args, PyObject *kwargs)
       if (dir < 0)
         Py_RETURN_FALSE;
 
-      perform_move(ch, dir, 0);
+      queue_movement(ch, dir, 0);
       Py_RETURN_TRUE;
     }
 

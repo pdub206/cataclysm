@@ -176,7 +176,7 @@ SPECIAL(mayor)
   case '1':
   case '2':
   case '3':
-    perform_move(ch, path[path_index] - '0', 1);
+    queue_movement(ch, path[path_index] - '0', 1);
     break;
 
   case 'W':
