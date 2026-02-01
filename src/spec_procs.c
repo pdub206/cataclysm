@@ -157,11 +157,11 @@ SPECIAL(mayor)
   static bool move = FALSE;
 
   if (!move) {
-    if (time_info.hours == 6) {
+    if (time_info.hours == 2) {
       move = TRUE;
       path = open_path;
       path_index = 0;
-    } else if (time_info.hours == 20) {
+    } else if (time_info.hours == 7) {
       move = TRUE;
       path = close_path;
       path_index = 0;

@@ -66,6 +66,11 @@ Changes in v1.3.0-alpha:
  * Added NPC extra descriptions for future support
  * Introduced Python scripting as DG Scripts replacement, using "pylist" and storing scripts in lib/scripts
 
+Changes in v1.4.0-alpha:
+ * Standardized on 10 minutes per in game hour, 9 hours/day, 9 days/week, 90 days/month, 8 months/year (~45 real life days)
+ * Adjusted moon cycles to align with new day/month/year plan
+ * Movement between rooms is slowed down, introducing commands "walk" and "run"
+
 Features that will be implemented in the next few releases:
 
 * Height and weight normalized to species
@@ -92,7 +97,6 @@ Features that will be implemented in the next few releases:
 * Components for some magical spells
 * Reading/writing limited to specific castes of society
 * Haggling and bartering system
-* New calendar and moon cycles
 * Heat based on time of day increases/decreases, changing hunger/thirst levels
 * Weather updates and sandstorms limiting visibility
 * Shaded rooms providing bonuses to regeneration
@@ -112,7 +116,6 @@ Features that will be implemented in the next few releases:
 
 ...and down the road:
 
-* Replace DG Scripts with a Python abstraction layer for modern scripting support
 * Replace Oasis OLC with more modern interface for easing builder duties
 * Discord server integration for ticketing and community
 * Full documentation for admins and easy to follow improvement guides

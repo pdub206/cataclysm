@@ -543,13 +543,14 @@ struct time_info_data *mud_time_passed(time_t t2, time_t t1)
 
   secs = t2 - t1;
 
-  now.hours = (secs / SECS_PER_MUD_HOUR) % 24;	/* 0..23 hours */
+  now.hours = (secs / SECS_PER_MUD_HOUR) % 9;	/* 0..8 hours */
   secs -= SECS_PER_MUD_HOUR * now.hours;
+  now.hours++; /* Use 1..9 hours in game time. */
 
-  now.day = (secs / SECS_PER_MUD_DAY) % 35;	/* 0..34 days  */
+  now.day = (secs / SECS_PER_MUD_DAY) % 90;	/* 0..89 days  */
   secs -= SECS_PER_MUD_DAY * now.day;
 
-  now.month = (secs / SECS_PER_MUD_MONTH) % 17;	/* 0..16 months */
+  now.month = (secs / SECS_PER_MUD_MONTH) % 8;	/* 0..7 months */
   secs -= SECS_PER_MUD_MONTH * now.month;
 
   now.year = (secs / SECS_PER_MUD_YEAR);	/* 0..XX? years */
@@ -566,7 +567,7 @@ time_t mud_time_to_secs(struct time_info_data *now)
   when += now->year  * SECS_PER_MUD_YEAR;
   when += now->month * SECS_PER_MUD_MONTH;
   when += now->day   * SECS_PER_MUD_DAY;
-  when += now->hours * SECS_PER_MUD_HOUR;
+  when += (now->hours - 1) * SECS_PER_MUD_HOUR;
   return (time(NULL) - when);
 }
 
@@ -953,13 +954,16 @@ int room_is_dark(room_rnum room)
   if (ROOM_FLAGGED(room, ROOM_DARK))
     return (TRUE);
 
+  if (ROOM_FLAGGED(room, ROOM_INDOORS))
+    return (FALSE);
+
   if (SECT(room) == SECT_INSIDE || SECT(room) == SECT_CITY)
     return (FALSE);
 
   if (SECT(room) == SECT_UNDERGROUND)
     return (TRUE);
 
-  if (weather_info.sunlight == SUN_SET || weather_info.sunlight == SUN_DARK)
+  if (weather_info.sunlight == SUN_DARK)
     return (TRUE);
 
   return (FALSE);

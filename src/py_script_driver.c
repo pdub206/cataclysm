@@ -1709,7 +1709,7 @@ static void process_wait(void *go, trig_data *trig, int type, char *cmd,
 
     /* calculate pulse of day of current time */
     when = (pulse % (SECS_PER_MUD_HOUR * PASSES_PER_SEC)) +
-      (time_info.hours * SECS_PER_MUD_HOUR * PASSES_PER_SEC);
+      ((time_info.hours - 1) * SECS_PER_MUD_HOUR * PASSES_PER_SEC);
 
     if (when >= ntime) /* adjust for next day */
       when = (SECS_PER_MUD_DAY * PASSES_PER_SEC) - when + ntime;

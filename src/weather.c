@@ -43,40 +43,41 @@ static void another_hour(int mode)
 {
   time_info.hours++;
 
+  if (time_info.hours > 9) {
+    time_info.hours = 1;
+    time_info.day++;
+
+    if (time_info.day > 89) {
+      time_info.day = 0;
+      time_info.month++;
+
+      if (time_info.month > 7) {
+        time_info.month = 0;
+        time_info.year++;
+      }
+    }
+  }
+
   if (mode) {
     switch (time_info.hours) {
-    case 5:
+    case 1:
       weather_info.sunlight = SUN_RISE;
       send_to_outdoor("The sun rises in the east.\r\n");
       break;
-    case 6:
+    case 2:
       weather_info.sunlight = SUN_LIGHT;
       send_to_outdoor("The day has begun.\r\n");
       break;
-    case 21:
+    case 7:
       weather_info.sunlight = SUN_SET;
       send_to_outdoor("The sun slowly disappears in the west.\r\n");
       break;
-    case 22:
+    case 8:
       weather_info.sunlight = SUN_DARK;
       send_to_outdoor("The night has begun.\r\n");
       break;
     default:
       break;
-    }
-  }
-  if (time_info.hours > 23) {	/* Changed by HHS due to bug ??? */
-    time_info.hours -= 24;
-    time_info.day++;
-
-    if (time_info.day > 34) {
-      time_info.day = 0;
-      time_info.month++;
-
-      if (time_info.month > 16) {
-	time_info.month = 0;
-	time_info.year++;
-      }
     }
   }
 }
@@ -90,7 +91,7 @@ static void weather_change(void)
 {
   int diff, change;
   
-  if ((time_info.month >= 9) && (time_info.month <= 16))
+  if (time_info.month >= 4)
     diff = (weather_info.pressure > 985 ? -2 : 2);
   else
     diff = (weather_info.pressure > 1015 ? -2 : 2);

@@ -1036,7 +1036,7 @@ static int scan_effect_duration(struct char_data *ch)
   else
     minutes = 45;
 
-  /* Affect durations tick once per mud hour (75 seconds). */
+  /* Affect durations tick once per mud hour. */
   return MAX(1, (minutes * SECS_PER_REAL_MIN) / SECS_PER_MUD_HOUR);
 }
 

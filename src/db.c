@@ -846,17 +846,15 @@ static void reset_time(void)
   }
 
   if (beginning_of_time == 0)
-    beginning_of_time = 650336715;
+    beginning_of_time = time(0) - (12 * SECS_PER_MUD_YEAR);
 
 time_info = *mud_time_passed(time(0), beginning_of_time);
 
-  if (time_info.hours <= 4)
-    weather_info.sunlight = SUN_DARK;
-  else if (time_info.hours == 5)
+  if (time_info.hours == 1)
     weather_info.sunlight = SUN_RISE;
-  else if (time_info.hours <= 20)
+  else if (time_info.hours <= 6)
     weather_info.sunlight = SUN_LIGHT;
-  else if (time_info.hours == 21)
+  else if (time_info.hours == 7)
     weather_info.sunlight = SUN_SET;
   else
     weather_info.sunlight = SUN_DARK;
@@ -865,7 +863,7 @@ time_info = *mud_time_passed(time(0), beginning_of_time);
 	  time_info.day, time_info.month, time_info.year);
 
   weather_info.pressure = 960;
-  if ((time_info.month >= 7) && (time_info.month <= 12))
+  if (time_info.month >= 4)
     weather_info.pressure += dice(1, 50);
   else
     weather_info.pressure += dice(1, 80);

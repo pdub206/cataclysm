@@ -685,34 +685,40 @@ int movement_loss[] =
 
 /** The names of the days of the mud week. Not used in sprinttype(). */
 const char *weekdays[] = {
-  "the Day of the Moon",
-  "the Day of the Bull",
-  "the Day of the Deception",
-  "the Day of Thunder",
-  "the Day of Freedom",
-  "the Day of the Great Gods",
-  "the Day of the Sun"
+  "Dagon",
+  "Monsda",
+  "Berova",
+  "Kalac",
+  "Bjarn",
+  "Waelok",
+  "Tomeun",
+  "Pzeta",
+  "Dunden"
+};
+
+/** The names of the hours of the mud day. Not used in sprinttype(). */
+const char *hour_names[] = {
+  "dawn",
+  "early morning",
+  "late morning",
+  "high sun",
+  "early afternoon",
+  "late afternoon",
+  "dusk",
+  "late at night",
+  "before dawn"
 };
 
 /** The names of the mud months. Not used in sprinttype(). */
 const char *month_name[] = {
-  "Month of Winter",		/* 0 */
-  "Month of the Winter Wolf",
-  "Month of the Frost Giant",
-  "Month of the Old Forces",
-  "Month of the Grand Struggle",
-  "Month of the Spring",
-  "Month of Nature",
-  "Month of Futility",
-  "Month of the Dragon",
+  "Month of the Dragon",		/* 0 */
+  "Month of the Missing",
+  "Month of Rebirth",
   "Month of the Sun",
-  "Month of the Heat",
-  "Month of the Battle",
-  "Month of the Dark Shades",
-  "Month of the Shadows",
-  "Month of the Long Shadows",
-  "Month of the Ancient Darkness",
-  "Month of the Great Evil"
+  "Month of Life",
+  "Month of Endless Heat",
+  "Month of Hunger",
+  "Month of Kings"
 };
 
 /** Names for mob trigger types. */

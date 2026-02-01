@@ -231,17 +231,17 @@ void char_from_furniture(struct char_data *ch);
 
 /** Number of real life seconds per mud hour.
  * @todo The definitions based on SECS_PER_MUD_HOUR should be configurable.
- * See act.informative.c and utils.c for other places to change. */
-#define SECS_PER_MUD_HOUR	75
+ * See act.informative.c, utils.c, weather.c, and db.c for other places to change. */
+#define SECS_PER_MUD_HOUR	(10 * SECS_PER_REAL_MIN)
 /** Real life seconds in one mud day.
- * Current calculation = 30 real life minutes. */
-#define SECS_PER_MUD_DAY	(24*SECS_PER_MUD_HOUR)
+ * Current calculation = 90 real life minutes. */
+#define SECS_PER_MUD_DAY	(9 * SECS_PER_MUD_HOUR)
 /** Real life seconds per mud month.
- * Current calculation = 17.5 real life hours */
-#define SECS_PER_MUD_MONTH	(35*SECS_PER_MUD_DAY)
-/** Real life seconds per mud month.
- * Current calculation ~= 12.4 real life days */
-#define SECS_PER_MUD_YEAR	(17*SECS_PER_MUD_MONTH)
+ * Current calculation = 135 real life hours. */
+#define SECS_PER_MUD_MONTH	(90 * SECS_PER_MUD_DAY)
+/** Real life seconds per mud year.
+ * Current calculation = 45 real life days. */
+#define SECS_PER_MUD_YEAR	(8 * SECS_PER_MUD_MONTH)
 
 #define MIN_CHAR_AGE 18
 #define MAX_CHAR_AGE 65

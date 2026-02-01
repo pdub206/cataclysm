@@ -901,6 +901,12 @@ void look_at_room(struct char_data *ch, int ignore_brief)
   if (!ch->desc)
     return;
 
+  if (OUTSIDE(ch) && weather_info.sunlight == SUN_DARK &&
+      !world[IN_ROOM(ch)].light && !PRF_FLAGGED(ch, PRF_HOLYLIGHT)) {
+    send_to_char(ch, "It is pitch black...\r\n");
+    return;
+  }
+
   if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch)) {
     send_to_char(ch, "It is pitch black...\r\n");
     return;
@@ -965,6 +971,12 @@ static void look_in_direction(struct char_data *ch, int dir)
   const char *door_name = NULL;
   int distance;
   bool blocked = FALSE;
+
+  if (OUTSIDE(ch) && weather_info.sunlight == SUN_DARK &&
+      !PRF_FLAGGED(ch, PRF_HOLYLIGHT)) {
+    send_to_char(ch, "Nothing but darkness.\r\n");
+    return;
+  }
 
   if (start_exit && start_exit->to_room != NOWHERE &&
       EXIT_FLAGGED(start_exit, EX_ISDOOR) &&
@@ -1656,24 +1668,13 @@ ACMD(do_equipment)
 ACMD(do_time)
 {
   const char *suf;
-  int weekday, day;
+  int weekday, day, year;
 
-  /* day in [1..35] */
   day = time_info.day + 1;
+  year = time_info.year + 12;
+  weekday = ((90 * time_info.month) + time_info.day) % 9;
 
-  /* 35 days in a month, 7 days a week */
-  weekday = ((35 * time_info.month) + day) % 7;
-
-  send_to_char(ch, "It is %d o'clock %s, on %s.\r\n",
-      (time_info.hours % 12 == 0) ? 12 : (time_info.hours % 12),
-      time_info.hours >= 12 ? "pm" : "am", weekdays[weekday]);
-
-  /* Peter Ajamian supplied the following as a fix for a bug introduced in the
-   * ordinal display that caused 11, 12, and 13 to be incorrectly displayed as
-   * 11st, 12nd, and 13rd.  Nate Winters had already submitted a fix, but it
-   * hard-coded a limit on ordinal display which I want to avoid. -dak */
   suf = "th";
-
   if (((day % 100) / 10) != 1) {
     switch (day % 10) {
     case 1:
@@ -1687,8 +1688,11 @@ ACMD(do_time)
       break;
     }
   }
-  send_to_char(ch, "The %d%s Day of the %s, Year %d.\r\n",
-      day, suf, month_name[time_info.month], time_info.year);
+
+  send_to_char(ch, "It is %s on %s, the %d%s day of the %s.\r\n",
+      hour_names[time_info.hours - 1], weekdays[weekday],
+      day, suf, month_name[time_info.month]);
+  send_to_char(ch, "In the year %d of the Age of Broken Chains.\r\n", year);
 }
 
 ACMD(do_weather)

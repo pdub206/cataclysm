@@ -59,7 +59,7 @@
 #define MAX_MOB_EXP          150000
 
 /* this is one mud year.. */
-#define MAX_OBJ_TIMER       1071000
+#define MAX_OBJ_TIMER       SECS_PER_MUD_YEAR
 
 
 /* this defines how much memory is alloacted for 'bit strings' when saving in

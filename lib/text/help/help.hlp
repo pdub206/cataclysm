@@ -10132,21 +10132,21 @@ TIME TICKS
 
 Usage: time
 
-Gives you the current game time. tbaMUD uses zulu time 0-24 hours. There are
-75 seconds per hour, 35 days per month, and 17 months per year. 1 MUD year 
-takes about 12 days.
+Gives you the current game time. The game day is 9 hours long, each hour is
+10 real-life minutes, and the hours are numbered 1-9. There are 90 days per
+month and 8 months per year. One MUD year takes 45 real-life days.
 
 /** Number of real life seconds per mud hour.
-@#define SECS_PER_MUD_HOUR       75
+@#define SECS_PER_MUD_HOUR       (10 * SECS_PER_REAL_MIN)
 /** Real life seconds in one mud day.
- * Current calculation = 30 real life minutes. */
-@#define SECS_PER_MUD_DAY        (24*SECS_PER_MUD_HOUR)
+ * Current calculation = 90 real life minutes. */
+@#define SECS_PER_MUD_DAY        (9*SECS_PER_MUD_HOUR)
 /** Real life seconds per mud month.
- * Current calculation = 17.5 real life hours */
-@#define SECS_PER_MUD_MONTH      (35*SECS_PER_MUD_DAY)
-/** Real life seconds per mud month.
- * Current calculation ~= 12.4 real life days */
-@#define SECS_PER_MUD_YEAR       (17*SECS_PER_MUD_MONTH)
+ * Current calculation = 135 real life hours. */
+@#define SECS_PER_MUD_MONTH      (90*SECS_PER_MUD_DAY)
+/** Real life seconds per mud year.
+ * Current calculation = 45 real life days. */
+@#define SECS_PER_MUD_YEAR       (8*SECS_PER_MUD_MONTH)
  
 /* real-life time (remember Real Life?) */
 @n#define SECS_PER_REAL_MIN       60

@@ -38,6 +38,7 @@ extern const char *drinknames[];
 extern const char *color_liquid[];
 extern const char *fullness[];
 extern const char *weekdays[];
+extern const char *hour_names[];
 extern const char *month_name[];
 extern int rev_dir[];
 extern int movement_loss[];
