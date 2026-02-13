@@ -733,7 +733,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
       verb = "walks";
 
     snprintf(leave_message, sizeof(leave_message), "%s %s to the %s.", name_desc, verb, dirs[dir]);
-    send_to_room(was_in, "%s\r\n", leave_message);
+    act(leave_message, FALSE, ch, 0, 0, TO_ROOM);
   }
 
   char_from_room(ch);
@@ -783,7 +783,7 @@ int do_simple_move(struct char_data *ch, int dir, int need_specials_check)
     else
       snprintf(arrive_message, sizeof(arrive_message), "%s %s in.", name_desc, verb);
 
-    send_to_room(going_to, "%s\r\n", arrive_message);
+    act(arrive_message, FALSE, ch, 0, 0, TO_ROOM);
   }
 
   /* ... and the room description to the character. */
