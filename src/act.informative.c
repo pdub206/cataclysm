@@ -890,6 +890,22 @@ ACMD(do_exits)
       send_to_char(ch, " None.\r\n");
 }
 
+/** Return the directional look distance (in rooms) provided by moonlight.
+ * Only meaningful when weather_info.sunlight == SUN_DARK and OUTSIDE(ch).
+ * Returns: 0 = no moonlight, 1 = Ral only, 2 = Guthay only, 3 = both moons. */
+static int get_moonlight_vis(void)
+{
+  if (weather_info.sunlight != SUN_DARK)
+    return 0;
+  if (weather_info.guthay != MOON_NONE && weather_info.ral != MOON_NONE)
+    return 3;
+  if (weather_info.guthay != MOON_NONE)
+    return 2;
+  if (weather_info.ral != MOON_NONE)
+    return 1;
+  return 0;
+}
+
 void look_at_room(struct char_data *ch, int ignore_brief)
 {
   trig_data * t;
@@ -902,12 +918,14 @@ void look_at_room(struct char_data *ch, int ignore_brief)
     return;
 
   if (OUTSIDE(ch) && weather_info.sunlight == SUN_DARK &&
-      !world[IN_ROOM(ch)].light && !PRF_FLAGGED(ch, PRF_HOLYLIGHT)) {
+      !world[IN_ROOM(ch)].light && !PRF_FLAGGED(ch, PRF_HOLYLIGHT) &&
+      get_moonlight_vis() == 0) {
     send_to_char(ch, "It is pitch black...\r\n");
     return;
   }
 
-  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch)) {
+  if (IS_DARK(IN_ROOM(ch)) && !CAN_SEE_IN_DARK(ch) &&
+      !(OUTSIDE(ch) && get_moonlight_vis() > 0)) {
     send_to_char(ch, "It is pitch black...\r\n");
     return;
   }
@@ -969,13 +987,16 @@ static void look_in_direction(struct char_data *ch, int dir)
   room_rnum room = IN_ROOM(ch);
   struct room_direction_data *start_exit = W_EXIT(room, dir);
   const char *door_name = NULL;
-  int distance;
+  int distance, max_vis = 3;
   bool blocked = FALSE;
 
   if (OUTSIDE(ch) && weather_info.sunlight == SUN_DARK &&
       !PRF_FLAGGED(ch, PRF_HOLYLIGHT)) {
-    send_to_char(ch, "Nothing but darkness.\r\n");
-    return;
+    max_vis = get_moonlight_vis();
+    if (max_vis == 0) {
+      send_to_char(ch, "Nothing but darkness.\r\n");
+      return;
+    }
   }
 
   if (start_exit && start_exit->to_room != NOWHERE &&
@@ -991,7 +1012,7 @@ static void look_in_direction(struct char_data *ch, int dir)
     send_to_char(ch, "You look to the %s and see:\r\n", dirs[dir]);
   }
 
-  for (distance = 0; distance < 3; distance++) {
+  for (distance = 0; distance < max_vis; distance++) {
     struct room_direction_data *exit = NULL;
 
     if (!blocked) {
@@ -1703,20 +1724,28 @@ ACMD(do_weather)
     "rainy",
     "lit by flashes of lightning"
   };
+  const char *moon_pos[] = {
+    "not in the sky",
+    "in the eastern sky",
+    "high in the sky",
+    "in the western sky"
+  };
 
-  if (OUTSIDE(ch))
-    {
+  if (OUTSIDE(ch)) {
     send_to_char(ch, "The sky is %s and %s.\r\n", sky_look[weather_info.sky],
         weather_info.change >= 0 ? "you feel a warm wind from south" :
          "your foot tells you bad weather is due");
+    if (weather_info.guthay != MOON_NONE)
+      send_to_char(ch, "Guthay, the golden moon, is %s.\r\n", moon_pos[weather_info.guthay]);
+    if (weather_info.ral != MOON_NONE)
+      send_to_char(ch, "Ral, the dark green moon, is %s.\r\n", moon_pos[weather_info.ral]);
     if (GET_LEVEL(ch) >= LVL_GOD)
       send_to_char(ch, "Pressure: %d (change: %d), Sky: %d (%s)\r\n",
                  weather_info.pressure,
                  weather_info.change,
                  weather_info.sky,
                  sky_look[weather_info.sky]);
-    }
-  else
+  } else
     send_to_char(ch, "You have no feeling about the weather at all.\r\n");
 }
 

@@ -859,6 +859,8 @@ time_info = *mud_time_passed(time(0), beginning_of_time);
   else
     weather_info.sunlight = SUN_DARK;
 
+  update_moon_states();
+
   log("   Current Gametime: %dH %dD %dM %dY.", time_info.hours,
 	  time_info.day, time_info.month, time_info.year);
 

@@ -574,6 +574,12 @@
 #define SKY_RAINING    2  /**< Weather = Rain */
 #define SKY_LIGHTNING  3  /**< Weather = Lightning storm */
 
+/* Moon states for weather_data (Guthay and Ral) */
+#define MOON_NONE  0  /**< Moon not visible */
+#define MOON_EAST  1  /**< Moon in eastern sky */
+#define MOON_HIGH  2  /**< Moon high in sky */
+#define MOON_WEST  3  /**< Moon in western sky */
+
 /* Save codes (legacy) */
 #define SAVE_UNDEF      0 /**< Character inv save status = undefined */
 #define SAVE_CRASH      1 /**< Character inv save status = game crash */
@@ -1326,6 +1332,8 @@ struct weather_data
   int change; /**< How fast and what way does it change? */
   int sky; /**< How is the sky? */
   int sunlight; /**< And how much sun? */
+  int guthay; /**< Guthay moon state: MOON_NONE/EAST/HIGH/WEST */
+  int ral;    /**< Ral moon state: MOON_NONE/EAST/HIGH/WEST */
 };
 
 /** Element in monster and object index-tables.

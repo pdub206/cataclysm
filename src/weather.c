@@ -20,6 +20,52 @@
 static void another_hour(int mode);
 static void weather_change(void);
 
+/* Hours per calendar unit, used for epoch-based moon cycle calculation. */
+#define MOON_HOURS_PER_DAY    9
+#define MOON_HOURS_PER_MONTH  810    /* 90 days * 9 hours */
+#define MOON_HOURS_PER_YEAR   6480   /* 8 months * 810 hours */
+
+/* Guthay: 3h on, 5h off (8h cycle). Ral: 6h on, 8h off (14h cycle). */
+#define GUTHAY_CYCLE  8
+#define RAL_CYCLE     14
+
+/** Compute moon states from the absolute in-game hour count derived from
+ * time_info.  Called on boot (reset_time) and each hour (another_hour).
+ * Guthay cycle: 3h on (east/high/west), 5h off = 8h total.
+ * Ral cycle:    6h on (2h each position), 8h off = 14h total.
+ */
+void update_moon_states(void)
+{
+  long total_hours;
+  int  guthay_cycle, ral_cycle;
+
+  total_hours = (long)time_info.year  * MOON_HOURS_PER_YEAR  +
+                (long)time_info.month * MOON_HOURS_PER_MONTH +
+                (long)time_info.day   * MOON_HOURS_PER_DAY   +
+                (time_info.hours - 1);
+
+  guthay_cycle = (int)(total_hours % GUTHAY_CYCLE);
+  ral_cycle    = (int)(total_hours % RAL_CYCLE);
+
+  if (guthay_cycle == 0)
+    weather_info.guthay = MOON_EAST;
+  else if (guthay_cycle == 1)
+    weather_info.guthay = MOON_HIGH;
+  else if (guthay_cycle == 2)
+    weather_info.guthay = MOON_WEST;
+  else
+    weather_info.guthay = MOON_NONE;
+
+  if (ral_cycle <= 1)
+    weather_info.ral = MOON_EAST;
+  else if (ral_cycle <= 3)
+    weather_info.ral = MOON_HIGH;
+  else if (ral_cycle <= 5)
+    weather_info.ral = MOON_WEST;
+  else
+    weather_info.ral = MOON_NONE;
+}
+
 /** Call this function every mud hour to increment the gametime (by one hour)
  * and the weather patterns.
  * @param mode Really, this parameter has the effect of a boolean. In the
@@ -41,6 +87,9 @@ void weather_and_time(int mode)
  */
 static void another_hour(int mode)
 {
+  int old_guthay = weather_info.guthay;
+  int old_ral    = weather_info.ral;
+
   time_info.hours++;
 
   if (time_info.hours > 9) {
@@ -78,6 +127,38 @@ static void another_hour(int mode)
       break;
     default:
       break;
+    }
+
+    update_moon_states();
+
+    if (old_guthay != weather_info.guthay) {
+      if (old_guthay == MOON_NONE && weather_info.guthay == MOON_EAST)
+        send_to_outdoor("Guthay begins to ascend in the sky to the east.\r\n");
+      else if (old_guthay == MOON_EAST && weather_info.guthay == MOON_HIGH) {
+        if (weather_info.sunlight == SUN_DARK)
+          send_to_outdoor("The darkness fades as Guthay illuminates the landscape in a golden light.\r\n");
+        else
+          send_to_outdoor("Guthay reaches the middle of the sky.\r\n");
+      }
+      else if (old_guthay == MOON_HIGH && weather_info.guthay == MOON_WEST)
+        send_to_outdoor("Guthay begins to descend in the sky to the west.\r\n");
+      else if (old_guthay == MOON_WEST && weather_info.guthay == MOON_NONE)
+        send_to_outdoor("Guthay disappears over the horizon to the west.\r\n");
+    }
+
+    if (old_ral != weather_info.ral) {
+      if (old_ral == MOON_NONE && weather_info.ral == MOON_EAST)
+        send_to_outdoor("Ral begins to ascend in the sky to the east.\r\n");
+      else if (old_ral == MOON_EAST && weather_info.ral == MOON_HIGH) {
+        if (weather_info.sunlight == SUN_DARK)
+          send_to_outdoor("Ral rises into the sky, bathing the ground in a soft green light.\r\n");
+        else
+          send_to_outdoor("Ral reaches the middle of the sky.\r\n");
+      }
+      else if (old_ral == MOON_HIGH && weather_info.ral == MOON_WEST)
+        send_to_outdoor("Ral begins to descend in the sky to the west.\r\n");
+      else if (old_ral == MOON_WEST && weather_info.ral == MOON_NONE)
+        send_to_outdoor("Ral disappears over the horizon to the west.\r\n");
     }
   }
 }

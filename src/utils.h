@@ -127,6 +127,7 @@ bool has_stealth_disadv(struct char_data *ch);
 
 /* Public functions made available form weather.c */
 void weather_and_time(int mode);
+void update_moon_states(void);
 
 /** Creates a core dump for diagnostic purposes, but will keep (if it can)
  * the mud running after the core has been dumped. Call this in the place
